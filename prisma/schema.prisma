@@ -1,0 +1,650 @@
+// Prisma schema for Pharmnos Lite — multi-tenant pharmacy wholesale ERP
+// Provider-independent: PostgreSQL-standard types only.
+// All tenant-owned tables include `tenant_id` for application-layer enforcement
+// and future Row-Level Security (RLS) readiness.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ═══════════════════════════════════════════════════════════
+// Enums
+// ═══════════════════════════════════════════════════════════
+
+enum SystemRole {
+  ADMIN
+  BILLING
+  INVENTORY
+  MANAGER
+}
+
+enum PermissionAction {
+  // users & tenants
+  manage_users
+  manage_roles
+  manage_business_profile
+
+  // masters
+  create_product
+  edit_product
+  view_product
+  create_customer
+  edit_customer
+  view_customer
+  create_supplier
+  edit_supplier
+  view_supplier
+
+  // purchases
+  create_purchase
+  edit_purchase
+  view_purchase
+  finalize_purchase
+
+  // billing
+  create_invoice
+  edit_invoice
+  view_invoice
+  finalize_invoice
+  cancel_invoice
+
+  // inventory
+  view_inventory
+  adjust_stock
+  manage_batches
+
+  // ledgers & reports
+  view_customer_ledger
+  view_supplier_ledger
+  view_reports
+  view_audit_log
+}
+
+enum InvoiceStatus {
+  DRAFT
+  FINALIZED
+  CANCELLED
+}
+
+enum PaymentMode {
+  CASH
+  CARD
+  UPI
+  CREDIT
+  MIXED
+}
+
+enum StockMovementType {
+  PURCHASE_IN
+  SALE_OUT
+  ADJUSTMENT_IN
+  ADJUSTMENT_OUT
+  SALES_RETURN_IN
+  PURCHASE_RETURN_OUT
+  OPENING_STOCK
+}
+
+enum ScheduleClass {
+  H
+  H1
+  X
+  SCHEDULE_H
+  SCHEDULE_H1
+  SCHEDULE_X
+  OTC
+  OTHER
+}
+
+enum AuditEventType {
+  AUTH_LOGIN
+  AUTH_LOGOUT
+  USER_INVITED
+  USER_ROLE_CHANGED
+  BUSINESS_PROFILE_UPDATED
+  INVOICE_CREATED
+  INVOICE_FINALIZED
+  INVOICE_CANCELLED
+  PURCHASE_CREATED
+  PURCHASE_FINALIZED
+  STOCK_ADJUSTED
+  PRICE_UPDATED
+  PRODUCT_CREATED
+  PRODUCT_UPDATED
+}
+
+enum LedgerEntryType {
+  INVOICE
+  PAYMENT_RECEIVED
+  CREDIT_NOTE
+  PURCHASE
+  PAYMENT_MADE
+  DEBIT_NOTE
+  OPENING_BALANCE
+}
+
+// ═══════════════════════════════════════════════════════════
+// Tenant / Auth / Identity core
+// ═══════════════════════════════════════════════════════════
+
+model tenants {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  business_name String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  users               memberships[]
+  business_profile    business_profiles?
+  products            products[]
+  product_batches     product_batches[]
+  customers           customers[]
+  suppliers           suppliers[]
+  purchase_invoices   purchase_invoices[]
+  sales_invoices      sales_invoices[]
+  stock_movements       stock_movements[]
+  customer_ledger       customer_ledgers[]
+  supplier_ledger       supplier_ledgers[]
+  audit_logs            audit_logs[]
+  payments              payments[]
+  purchase_invoice_items purchase_invoice_items[]
+  sales_invoice_items    sales_invoice_items[]
+
+  @@index([slug])
+}
+
+model users {
+  id           String   @id @default(cuid())
+  external_id  String?  @unique
+  email        String   @unique
+  full_name    String?
+  phone        String?
+  avatar_url   String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  memberships memberships[]
+  audit_logs  audit_logs[]   @relation("audit_actor")
+}
+
+model memberships {
+  id         String     @id @default(cuid())
+  tenant_id  String
+  user_id    String
+  role_id    String
+  status     String     @default("active")
+  invited_by String?
+  invited_at DateTime?
+  joined_at  DateTime?
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+
+  tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user   users   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role   roles   @relation(fields: [role_id], references: [id], onDelete: Restrict)
+
+  @@unique([tenant_id, user_id])
+  @@index([tenant_id])
+  @@index([user_id])
+}
+
+model roles {
+  id          String   @id @default(cuid())
+  tenant_id   String
+  name        String
+  system_role SystemRole?
+  description String?
+  is_default  Boolean  @default(false)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  permissions role_permissions[]
+  memberships memberships[]
+
+  @@unique([tenant_id, name])
+  @@index([tenant_id])
+}
+
+model role_permissions {
+  id         String           @id @default(cuid())
+  role_id    String
+  permission PermissionAction
+  created_at DateTime         @default(now())
+
+  role roles @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@unique([role_id, permission])
+  @@index([role_id])
+}
+
+model business_profiles {
+  id                 String   @id @default(cuid())
+  tenant_id          String   @unique
+  address_line_1     String?
+  address_line_2     String?
+  city               String?
+  state              String?
+  pincode            String?
+  country            String   @default("India")
+  gstin              String?
+  pan                String?
+  drug_license_no_1  String?
+  drug_license_no_2  String?
+  contact_phone      String?
+  contact_email      String?
+  invoice_prefix     String   @default("INV")
+  invoice_next_seq   Int      @default(1)
+  purchase_prefix    String   @default("PUR")
+  purchase_next_seq  Int      @default(1)
+  default_gst_rate   Decimal? @db.Decimal(5, 2)
+  near_expiry_days   Int      @default(60)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+}
+
+// ═══════════════════════════════════════════════════════════
+// Masters: Products, Customers, Suppliers
+// ═══════════════════════════════════════════════════════════
+
+model products {
+  id                     String           @id @default(cuid())
+  tenant_id              String
+  sku                    String?
+  name                   String
+  generic_name           String?
+  manufacturer           String?
+  pack_size              String?
+  hsn_code               String?
+  gst_rate               Decimal          @db.Decimal(5, 2)
+  schedule_classification ScheduleClass?
+  mrp                    Decimal?         @db.Decimal(12, 2)
+  standard_sale_rate     Decimal?         @db.Decimal(12, 2)
+  purchase_rate          Decimal?         @db.Decimal(12, 2)
+  reorder_level          Int              @default(0)
+  is_active              Boolean          @default(true)
+  created_at             DateTime         @default(now())
+  updated_at             DateTime         @updatedAt
+  created_by             String?
+
+  tenant          tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  batches         product_batches[]
+  purchase_items  purchase_invoice_items[]
+  invoice_items   sales_invoice_items[]
+  stock_movements stock_movements[]
+
+  @@unique([tenant_id, sku])
+  @@index([tenant_id])
+  @@index([tenant_id, name])
+  @@index([tenant_id, is_active])
+}
+
+model product_batches {
+  id            String   @id @default(cuid())
+  tenant_id     String
+  product_id    String
+  batch_no      String
+  expiry_date   DateTime?
+  mrp           Decimal? @db.Decimal(12, 2)
+  purchase_rate Decimal? @db.Decimal(12, 2)
+  sale_rate     Decimal? @db.Decimal(12, 2)
+  received_qty  Int      @default(0)
+  available_qty Int      @default(0)
+  supplier_id   String?
+  purchase_id   String?
+  is_blocked    Boolean  @default(false)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  tenant          tenants              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  product         products             @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  supplier        suppliers?           @relation(fields: [supplier_id], references: [id])
+  purchase_invoice purchase_invoices?  @relation(fields: [purchase_id], references: [id])
+  stock_movements  stock_movements[]
+  sales_invoice_items sales_invoice_items[]
+
+  @@unique([tenant_id, product_id, batch_no])
+  @@index([tenant_id])
+  @@index([tenant_id, expiry_date])
+  @@index([tenant_id, available_qty])
+}
+
+model customers {
+  id                 String   @id @default(cuid())
+  tenant_id          String
+  code               String?
+  business_name      String
+  contact_person     String?
+  phone              String?
+  mobile             String?
+  email              String?
+  billing_address_1  String?
+  billing_address_2  String?
+  billing_city       String?
+  billing_state      String?
+  billing_pincode    String?
+  gstin              String?
+  drug_license_no_1  String?
+  drug_license_no_2  String?
+  credit_limit       Decimal? @db.Decimal(14, 2)
+  opening_balance    Decimal? @db.Decimal(14, 2)
+  receivable_balance Decimal  @default(0) @db.Decimal(14, 2)
+  is_active          Boolean  @default(true)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  tenant     tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  invoices   sales_invoices[]
+  ledger     customer_ledgers[]
+  payments   payments[]
+
+  @@unique([tenant_id, code])
+  @@index([tenant_id])
+  @@index([tenant_id, business_name])
+}
+
+model suppliers {
+  id               String   @id @default(cuid())
+  tenant_id        String
+  code             String?
+  business_name    String
+  contact_person   String?
+  phone            String?
+  mobile           String?
+  email            String?
+  address_1        String?
+  address_2        String?
+  city             String?
+  state            String?
+  pincode          String?
+  gstin            String?
+  drug_license_no  String?
+  opening_balance  Decimal? @db.Decimal(14, 2)
+  payable_balance  Decimal  @default(0) @db.Decimal(14, 2)
+  is_active        Boolean  @default(true)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  tenant          tenants              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  purchases       purchase_invoices[]
+  batches         product_batches[]
+  ledger          supplier_ledgers[]
+
+  @@unique([tenant_id, code])
+  @@index([tenant_id])
+  @@index([tenant_id, business_name])
+}
+
+// ═══════════════════════════════════════════════════════════
+// Purchases
+// ═══════════════════════════════════════════════════════════
+
+model purchase_invoices {
+  id              String        @id @default(cuid())
+  tenant_id       String
+  invoice_no      String
+  supplier_id     String
+  supplier_invoice_no String?
+  invoice_date    DateTime
+  status          InvoiceStatus @default(DRAFT)
+  gross_amount    Decimal       @db.Decimal(14, 2)
+  total_discount  Decimal       @default(0) @db.Decimal(14, 2)
+  total_tax       Decimal       @default(0) @db.Decimal(14, 2)
+  round_off       Decimal       @default(0) @db.Decimal(10, 2)
+  net_amount      Decimal       @db.Decimal(14, 2)
+  notes           String?
+  created_by      String?
+  finalized_at    DateTime?
+  cancelled_at    DateTime?
+  cancelled_by    String?
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+
+  tenant   tenants                @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  supplier suppliers              @relation(fields: [supplier_id], references: [id], onDelete: Restrict)
+  items    purchase_invoice_items[]
+  batches  product_batches[]
+  ledger   supplier_ledgers[]
+
+  @@unique([tenant_id, invoice_no])
+  @@index([tenant_id])
+  @@index([tenant_id, status])
+  @@index([tenant_id, supplier_id])
+  @@index([tenant_id, invoice_date])
+}
+
+model purchase_invoice_items {
+  id               String   @id @default(cuid())
+  tenant_id        String
+  purchase_id      String
+  product_id       String
+  batch_no         String
+  expiry_date      DateTime?
+  quantity         Int
+  free_qty         Int      @default(0)
+  purchase_rate    Decimal  @db.Decimal(12, 2)
+  discount_pct     Decimal? @db.Decimal(5, 2)
+  discount_amount  Decimal  @default(0) @db.Decimal(12, 2)
+  gst_rate         Decimal  @db.Decimal(5, 2)
+  gst_amount       Decimal  @default(0) @db.Decimal(12, 2)
+  mrp              Decimal? @db.Decimal(12, 2)
+  sale_rate        Decimal? @db.Decimal(12, 2)
+  line_total       Decimal  @db.Decimal(14, 2)
+  created_at       DateTime @default(now())
+
+  tenant   tenants           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  purchase purchase_invoices @relation(fields: [purchase_id], references: [id], onDelete: Cascade)
+  product  products          @relation(fields: [product_id], references: [id], onDelete: Restrict)
+
+  @@index([tenant_id])
+  @@index([purchase_id])
+  @@index([product_id])
+}
+
+// ═══════════════════════════════════════════════════════════
+// Sales / Billing
+// ═══════════════════════════════════════════════════════════
+
+model sales_invoices {
+  id              String        @id @default(cuid())
+  tenant_id       String
+  invoice_no      String
+  customer_id     String?
+  invoice_date    DateTime
+  status          InvoiceStatus @default(DRAFT)
+  is_cash_sale    Boolean       @default(false)
+  gross_amount    Decimal       @db.Decimal(14, 2)
+  total_discount  Decimal       @default(0) @db.Decimal(14, 2)
+  total_tax       Decimal       @default(0) @db.Decimal(14, 2)
+  round_off       Decimal       @default(0) @db.Decimal(10, 2)
+  net_amount      Decimal       @db.Decimal(14, 2)
+  paid_amount     Decimal       @default(0) @db.Decimal(14, 2)
+  balance_due     Decimal       @default(0) @db.Decimal(14, 2)
+  payment_mode    PaymentMode?
+  notes           String?
+  created_by      String?
+  finalized_at    DateTime?
+  cancelled_at    DateTime?
+  cancelled_by    String?
+  cancel_reason   String?
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+
+  tenant   tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  customer customers?          @relation(fields: [customer_id], references: [id])
+  items    sales_invoice_items[]
+  payments payments[]
+  ledger   customer_ledgers[]
+
+  @@unique([tenant_id, invoice_no])
+  @@index([tenant_id])
+  @@index([tenant_id, status])
+  @@index([tenant_id, customer_id])
+  @@index([tenant_id, invoice_date])
+}
+
+model sales_invoice_items {
+  id              String   @id @default(cuid())
+  tenant_id       String
+  invoice_id      String
+  product_id      String
+  batch_id        String?
+  batch_no        String
+  quantity        Int
+  free_qty        Int      @default(0)
+  sale_rate       Decimal  @db.Decimal(12, 2)
+  mrp             Decimal? @db.Decimal(12, 2)
+  discount_pct    Decimal? @db.Decimal(5, 2)
+  discount_amount Decimal  @default(0) @db.Decimal(12, 2)
+  gst_rate        Decimal  @db.Decimal(5, 2)
+  gst_amount      Decimal  @default(0) @db.Decimal(12, 2)
+  line_total      Decimal  @db.Decimal(14, 2)
+  created_at      DateTime @default(now())
+
+  tenant  tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  invoice sales_invoices   @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+  product products         @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  batch   product_batches? @relation(fields: [batch_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([invoice_id])
+  @@index([product_id])
+  @@index([batch_id])
+}
+
+model payments {
+  id            String          @id @default(cuid())
+  tenant_id     String
+  customer_id   String?
+  invoice_id    String?
+  entry_type    LedgerEntryType
+  payment_mode  PaymentMode?
+  amount        Decimal         @db.Decimal(14, 2)
+  reference_no  String?
+  payment_date  DateTime
+  notes         String?
+  created_by    String?
+  created_at    DateTime        @default(now())
+
+  tenant    tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  customer  customers?          @relation(fields: [customer_id], references: [id])
+  invoice   sales_invoices?     @relation(fields: [invoice_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([tenant_id, customer_id])
+  @@index([tenant_id, invoice_id])
+  @@index([tenant_id, payment_date])
+}
+
+// ═══════════════════════════════════════════════════════════
+// Inventory
+// ═══════════════════════════════════════════════════════════
+
+model stock_movements {
+  id             String             @id @default(cuid())
+  tenant_id      String
+  product_id     String
+  batch_id       String?
+  movement_type  StockMovementType
+  quantity_delta Int
+  reference_type String?
+  reference_id   String?
+  unit_rate      Decimal?           @db.Decimal(12, 2)
+  notes          String?
+  created_by     String?
+  created_at     DateTime           @default(now())
+
+  tenant  tenants         @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  product products        @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  batch   product_batches? @relation(fields: [batch_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([tenant_id, product_id])
+  @@index([tenant_id, batch_id])
+  @@index([tenant_id, movement_type])
+  @@index([tenant_id, created_at])
+}
+
+// ═══════════════════════════════════════════════════════════
+// Ledgers
+// ═══════════════════════════════════════════════════════════
+
+model customer_ledgers {
+  id           String          @id @default(cuid())
+  tenant_id    String
+  customer_id  String
+  entry_type   LedgerEntryType
+  debit        Decimal         @default(0) @db.Decimal(14, 2)
+  credit       Decimal         @default(0) @db.Decimal(14, 2)
+  balance      Decimal         @db.Decimal(14, 2)
+  reference_type String?
+  reference_id String?
+  invoice_id   String?
+  narration    String?
+  entry_date   DateTime
+  created_at   DateTime        @default(now())
+
+  tenant    tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  customer  customers        @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  invoice   sales_invoices?  @relation(fields: [invoice_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([tenant_id, customer_id])
+  @@index([tenant_id, entry_date])
+}
+
+model supplier_ledgers {
+  id           String          @id @default(cuid())
+  tenant_id    String
+  supplier_id  String
+  entry_type   LedgerEntryType
+  debit        Decimal         @default(0) @db.Decimal(14, 2)
+  credit       Decimal         @default(0) @db.Decimal(14, 2)
+  balance      Decimal         @db.Decimal(14, 2)
+  reference_type String?
+  reference_id String?
+  purchase_id  String?
+  narration    String?
+  entry_date   DateTime
+  created_at   DateTime        @default(now())
+
+  tenant    tenants            @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  supplier  suppliers          @relation(fields: [supplier_id], references: [id], onDelete: Cascade)
+  purchase  purchase_invoices? @relation(fields: [purchase_id], references: [id])
+
+  @@index([tenant_id])
+  @@index([tenant_id, supplier_id])
+  @@index([tenant_id, entry_date])
+}
+
+// ═══════════════════════════════════════════════════════════
+// Audit
+// ═══════════════════════════════════════════════════════════
+
+model audit_logs {
+  id            String          @id @default(cuid())
+  tenant_id     String
+  event_type    AuditEventType
+  actor_id      String?
+  target_type   String?
+  target_id     String?
+  metadata      Json?
+  ip_address    String?
+  user_agent    String?
+  created_at    DateTime        @default(now())
+
+  tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  actor  users?  @relation("audit_actor", fields: [actor_id], references: [id], onDelete: SetNull)
+
+  @@index([tenant_id])
+  @@index([tenant_id, event_type])
+  @@index([tenant_id, created_at])
+  @@index([tenant_id, actor_id])
+}
