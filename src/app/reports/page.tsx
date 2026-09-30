@@ -17,34 +17,144 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { BarChart3, Download, TrendingUp, FileSpreadsheet, Calendar } from "lucide-react";
+import {
+  BarChart3,
+  FileSpreadsheet,
+  AlertTriangle,
+  Truck,
+  Users,
+  Package,
+  ClipboardList,
+  CalendarDays,
+  Calendar as CalendarIcon,
+  Receipt,
+  FileText,
+  TrendingUp,
+  ExternalLink,
+  Clock,
+} from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { isPostgresConfigured } from "@/lib/db/prisma";
+import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { repos } from "@/repositories";
 
 export const metadata: Metadata = {
   title: "Reports",
 };
 
-const kpis = [
-  { label: "Sales this month", value: "₹ 8,42,180", delta: "+12.4% MoM", variant: "success" as const, icon: TrendingUp },
-  { label: "Gross margin", value: "19.2%", delta: "+0.6 pts", variant: "success" as const, icon: BarChart3 },
-  { label: "Avg invoice value", value: "₹ 16,820", delta: "+4.2%", variant: "default" as const, icon: FileSpreadsheet },
-  { label: "Invoices (MTD)", value: "50", delta: "-2 vs last month", variant: "secondary" as const, icon: Calendar },
+const aliveReports = [
+  {
+    name: "Sales register",
+    description: "Daily sales summary with invoice details, counterparty, taxes and net totals.",
+    href: "/reports/sales-register",
+    icon: Receipt,
+    tab: "sales",
+    alive: true,
+    deferred: false,
+  },
+  {
+    name: "Purchase register",
+    description: "Supplier purchase entries by date range, supplier invoice reference.",
+    href: "/reports/purchase-register",
+    icon: Truck,
+    tab: "sales",
+    alive: true,
+    deferred: false,
+  },
+  {
+    name: "Customer dues (aging)",
+    description: "Receivables by customer with 0-30 / 31-60 / 61-90 / 90+ days buckets.",
+    href: "/reports/customer-dues",
+    icon: Users,
+    tab: "ledger",
+    alive: true,
+    deferred: false,
+  },
+  {
+    name: "Supplier payables (aging)",
+    description: "Payables by supplier with same 4 aging buckets, weekly payment cycle support.",
+    href: "/reports/supplier-payables",
+    icon: Package,
+    tab: "ledger",
+    alive: true,
+    deferred: false,
+  },
+  {
+    name: "Stock valuation",
+    description: "Closing stock value at average purchase rate, expiry status, SKU-level detail.",
+    href: "/reports/stock-valuation",
+    icon: FileSpreadsheet,
+    tab: "inventory",
+    alive: true,
+    deferred: false,
+  },
+  {
+    name: "Batch expiry calendar",
+    description: "Expiry schedule by month, batches at risk, near-expiry prioritized actions.",
+    href: "#",
+    icon: CalendarDays,
+    tab: "inventory",
+    alive: false,
+    deferred: true,
+  },
+  {
+    name: "GST summary (B2B / HSN)",
+    description: "IGST/CGST/SGST by tax rate and HSN code for GST returns filing.",
+    href: "#",
+    icon: FileText,
+    tab: "sales",
+    alive: false,
+    deferred: true,
+  },
+  {
+    name: "Daybook",
+    description: "Ledger-style chronological daybook, debit/credit running balance.",
+    href: "#",
+    icon: ClipboardList,
+    tab: "ledger",
+    alive: false,
+    deferred: true,
+  },
 ];
 
-const reports = [
-  { name: "Sales register", description: "Daily sales summary with taxes and line-item detail", href: "#" },
-  { name: "Purchase register", description: "Supplier purchase entries by date range", href: "#" },
-  { name: "Stock position", description: "Closing stock value, stock-turn by product", href: "#" },
-  { name: "Customer aging", description: "Receivables in 0-30 / 31-60 / 61-90 / 90+ buckets", href: "#" },
-  { name: "Supplier aging", description: "Payables by credit terms and due date", href: "#" },
-  { name: "Batch expiry", description: "Expiry schedule by month, batches at risk", href: "#" },
-  { name: "GST summary", description: "IGST/CGST/SGST by tax rate, HSN summary", href: "#" },
-  { name: "Daybook", description: "Ledger-style chronological daybook", href: "#" },
-];
+export default async function ReportsPage() {
+  let dbOk = isPostgresConfigured();
+  const ctx = dbOk ? await requireServerTenantContext().catch(() => null) : null;
+  let summary: { salesNet: number; purchaseNet: number; duesTotal: number; payablesTotal: number; invoicesCount: number } = {
+    salesNet: 0, purchaseNet: 0, duesTotal: 0, payablesTotal: 0, invoicesCount: 0,
+  };
+  if (dbOk && ctx) {
+    try {
+      const [sales, purchase, dues, pays] = await Promise.all([
+        repos.salesInvoices.monthlyStats(ctx, 1).catch(() => null),
+        repos.purchaseInvoices.monthlyStats(ctx, 1).catch(() => null),
+        repos.customerLedgers.agedReceivablesTotals(ctx).catch(() => null),
+        repos.supplierLedgers.agedPayablesTotals(ctx).catch(() => null),
+      ]);
+      summary = {
+        salesNet: Number(sales?._sum?.net_amount ?? 0),
+        purchaseNet: Number(purchase?._sum?.net_amount ?? 0),
+        duesTotal: Number(dues?.total ?? 0),
+        payablesTotal: Number(pays?.total ?? 0),
+        invoicesCount: Number(sales?._count?.id ?? 0),
+      };
+    } catch { dbOk = false; }
+  }
 
-export default function ReportsPage() {
+  const rupee = (n: number) => `₹ ${n.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
+  const summaryCards = [
+    { label: "Sales this month", value: rupee(summary.salesNet), delta: `${summary.invoicesCount} invoices`, variant: "success" as const, icon: TrendingUp },
+    { label: "Purchases this month", value: rupee(summary.purchaseNet), delta: dbOk ? "Landed stock" : "Aggregates loading…", variant: "default" as const, icon: BarChart3 },
+    { label: "Customer dues", value: rupee(summary.duesTotal), delta: summary.duesTotal > 0 ? "Aging buckets → Customer dues" : "No dues outstanding", variant: summary.duesTotal > 0 ? ("warning" as const) : ("success" as const), icon: Users },
+    { label: "Supplier payables", value: rupee(summary.payablesTotal), delta: summary.payablesTotal > 0 ? "Weekly payment cycle" : "All payables settled", variant: summary.payablesTotal > 0 ? ("badge-orange" as const) : ("success" as const), icon: Truck },
+  ];
+
   return (
-    <DashboardLayout>
+    <DashboardLayout
+      tenantName="Maharashtra Pharma Distributors"
+      userName="Rajesh Kumar"
+      userInitials="RK"
+    >
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 px-0 pb-5">
         <div>
           <CardTitle className="text-display-sm tracking-brand">Reports</CardTitle>
@@ -54,30 +164,31 @@ export default function ReportsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary">
-            <Calendar className="h-4 w-4" /> Month: Sep 2026
-          </Button>
-          <Button variant="secondary">
-            <Download className="h-4 w-4" /> Export
+            <CalendarIcon className="h-4 w-4" /> Month: {new Date().toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
           </Button>
         </div>
       </CardHeader>
 
+      {!dbOk && (
+        <div role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+          <div>
+            <strong className="font-semibold">Showing placeholder numbers until database is connected.</strong>
+            <span className="ml-1">Temporary Supabase pooler timeout — retry in 60 seconds.</span>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
-        {kpis.map((k) => {
+        {summaryCards.map((k) => {
           const Icon = k.icon;
           return (
             <CardCanvas key={k.label}>
               <CardContent className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-caption font-medium uppercase tracking-wide text-muted">
-                    {k.label}
-                  </p>
-                  <p className="mt-1 text-display-sm font-display tracking-brand text-ink">
-                    {k.value}
-                  </p>
-                  <div className="mt-2">
-                    <Badge variant={k.variant}>{k.delta}</Badge>
-                  </div>
+                  <p className="text-caption font-medium uppercase tracking-wide text-muted">{k.label}</p>
+                  <p className="mt-1 text-display-sm font-display tracking-brand text-ink">{k.value}</p>
+                  <div className="mt-2"><Badge variant={k.variant}>{k.delta}</Badge></div>
                 </div>
                 <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-card border border-hairline text-ink">
                   <Icon className="h-5 w-5" />
@@ -91,7 +202,7 @@ export default function ReportsPage() {
       <Tabs defaultValue="catalog">
         <TabsList className="mb-5">
           <TabsTrigger value="catalog">Report catalog</TabsTrigger>
-          <TabsTrigger value="sales">Sales</TabsTrigger>
+          <TabsTrigger value="sales">Sales / Purchases</TabsTrigger>
           <TabsTrigger value="inventory">Inventory</TabsTrigger>
           <TabsTrigger value="ledger">Ledgers</TabsTrigger>
         </TabsList>
@@ -104,25 +215,160 @@ export default function ReportsPage() {
                   <TableRow>
                     <TableHead>Report</TableHead>
                     <TableHead>Description</TableHead>
-                    <TableHead></TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reports.map((r) => (
-                    <TableRow key={r.name}>
-                      <TableCell className="font-medium text-ink">{r.name}</TableCell>
-                      <TableCell className="text-body">{r.description}</TableCell>
-                      <TableCell className="text-right">
-                        <Button asChild size="sm" variant="secondary">
-                          <Link href={r.href}>Open</Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {aliveReports.map((r) => {
+                    const Icon = r.icon;
+                    return (
+                      <TableRow key={r.name}>
+                        <TableCell className="font-medium text-ink">
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-canvas border border-hairline text-muted shrink-0">
+                              <Icon className="h-4 w-4" />
+                            </span>
+                            {r.name}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-body max-w-lg">{r.description}</TableCell>
+                        <TableCell>
+                          {r.deferred ? (
+                            <Badge variant="secondary" className="gap-1">
+                              <Clock className="h-3 w-3" /> Deferred Phase 7
+                            </Badge>
+                          ) : (
+                            <Badge variant="success" className="gap-1">
+                              <BarChart3 className="h-3 w-3" /> Available now
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {r.deferred ? (
+                            <Button size="sm" variant="ghost" disabled>
+                              Coming soon
+                            </Button>
+                          ) : (
+                            <Button asChild size="sm" variant="secondary" className="gap-1">
+                              <Link href={r.href}>
+                                Open <ExternalLink className="h-3 w-3" />
+                              </Link>
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
           </CardCanvas>
+        </TabsContent>
+
+        <TabsContent value="sales">
+          <div className="grid gap-4 md:grid-cols-2">
+            {aliveReports.filter((r) => r.tab === "sales").map((r) => (
+              <CardCanvas key={r.name}>
+                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-canvas border border-hairline text-ink">
+                      <r.icon className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <CardTitle className="text-lg tracking-brand">{r.name}</CardTitle>
+                      <p className="mt-1 text-body-sm text-muted">{r.description}</p>
+                    </div>
+                  </div>
+                  {r.deferred ? (
+                    <Badge variant="secondary">Phase 7</Badge>
+                  ) : (
+                    <Badge variant="success">Available</Badge>
+                  )}
+                </CardHeader>
+                <CardContent className="pt-4 flex items-end justify-between gap-4 flex-wrap">
+                  <div className="text-body-sm text-muted">Date range + counterparty filter + 50 rows pagination + CSV export.</div>
+                  {r.deferred ? (
+                    <Button variant="ghost" disabled>Coming soon</Button>
+                  ) : (
+                    <Button asChild variant="secondary"><Link href={r.href}>Open report</Link></Button>
+                  )}
+                </CardContent>
+              </CardCanvas>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="inventory">
+          <div className="grid gap-4 md:grid-cols-2">
+            {aliveReports.filter((r) => r.tab === "inventory").map((r) => (
+              <CardCanvas key={r.name}>
+                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-canvas border border-hairline text-ink">
+                      <r.icon className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <CardTitle className="text-lg tracking-brand">{r.name}</CardTitle>
+                      <p className="mt-1 text-body-sm text-muted">{r.description}</p>
+                    </div>
+                  </div>
+                  {r.deferred ? (
+                    <Badge variant="secondary">Phase 7</Badge>
+                  ) : (
+                    <Badge variant="success">Available</Badge>
+                  )}
+                </CardHeader>
+                <CardContent className="pt-4 flex items-end justify-between gap-4 flex-wrap">
+                  <div className="text-body-sm text-muted">
+                    {r.name === "Stock valuation"
+                      ? "Method: average purchase rate per batch × available quantity; footer method disclosure."
+                      : "Month-by-month expiry calendar; batch prioritization for dispatch."}
+                  </div>
+                  {r.deferred ? (
+                    <Button variant="ghost" disabled>Coming soon</Button>
+                  ) : (
+                    <Button asChild variant="secondary"><Link href={r.href}>Open report</Link></Button>
+                  )}
+                </CardContent>
+              </CardCanvas>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="ledger">
+          <div className="grid gap-4 md:grid-cols-2">
+            {aliveReports.filter((r) => r.tab === "ledger").map((r) => (
+              <CardCanvas key={r.name}>
+                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-canvas border border-hairline text-ink">
+                      <r.icon className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <CardTitle className="text-lg tracking-brand">{r.name}</CardTitle>
+                      <p className="mt-1 text-body-sm text-muted">{r.description}</p>
+                    </div>
+                  </div>
+                  {r.deferred ? (
+                    <Badge variant="secondary">Phase 7</Badge>
+                  ) : (
+                    <Badge variant="success">Available</Badge>
+                  )}
+                </CardHeader>
+                <CardContent className="pt-4 flex items-end justify-between gap-4 flex-wrap">
+                  <div className="text-body-sm text-muted">
+                    {r.name === "Daybook" ? "Debit/credit chronological daybook by entry date, running balance per ledger." : "Aging 4 buckets; CSV with totals for collection / AP weeklies."}
+                  </div>
+                  {r.deferred ? (
+                    <Button variant="ghost" disabled>Coming soon</Button>
+                  ) : (
+                    <Button asChild variant="secondary"><Link href={r.href}>Open report</Link></Button>
+                  )}
+                </CardContent>
+              </CardCanvas>
+            ))}
+          </div>
         </TabsContent>
       </Tabs>
     </DashboardLayout>

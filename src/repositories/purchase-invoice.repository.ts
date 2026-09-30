@@ -107,4 +107,22 @@ export class PurchaseInvoiceRepository extends BaseRepository<
     const cnt = await this.prisma.purchase_invoices.count({ where: { tenant_id: t.tenantId } });
     return cnt + 1;
   }
+
+  async monthlyStats(ctx: TenantContext, monthsBack: number = 1) {
+    const t = this.withTenant(ctx);
+    const start = new Date();
+    start.setMonth(start.getMonth() - monthsBack);
+    start.setDate(1);
+    start.setHours(0, 0, 0, 0);
+    return this.prisma.purchase_invoices.aggregate({
+      where: { tenant_id: t.tenantId, invoice_date: { gte: start }, status: "FINALIZED" },
+      _sum: {
+        gross_amount: true,
+        total_discount: true,
+        total_tax: true,
+        net_amount: true,
+      },
+      _count: { id: true },
+    });
+  }
 }

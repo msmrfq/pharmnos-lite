@@ -3,6 +3,12 @@ import type { sales_invoices } from "@prisma/client";
 import { BaseRepository, ListParams, type PagedResult } from "@/lib/db/base-repository";
 import type { TenantContext } from "@/lib/db/tenant-context";
 
+export type SalesInvoiceListParams = ListParams & {
+  customerId?: string;
+  startDate?: string;
+  endDate?: string;
+};
+
 export class SalesInvoiceRepository extends BaseRepository<
   sales_invoices,
   Prisma.sales_invoicesCreateInput,
@@ -62,11 +68,20 @@ export class SalesInvoiceRepository extends BaseRepository<
     await this.prisma.sales_invoices.delete({ where: { id, tenant_id: t.tenantId } });
   }
 
-  async list(params: ListParams, ctx: TenantContext): Promise<PagedResult<sales_invoices>> {
+  async list(params: SalesInvoiceListParams, ctx: TenantContext): Promise<PagedResult<sales_invoices>> {
     const t = this.withTenant(ctx);
-    const { skip = 0, take = 50, orderBy = { invoice_date: "desc" }, search } = params;
+    const { skip = 0, take = 50, orderBy = { invoice_date: "desc" }, search, customerId, startDate, endDate } = params;
     const where: Prisma.sales_invoicesWhereInput = {
       tenant_id: t.tenantId,
+      ...(customerId ? { customer_id: customerId } : {}),
+      ...(startDate || endDate
+        ? {
+            invoice_date: {
+              ...(startDate ? { gte: new Date(startDate) } : {}),
+              ...(endDate ? { lte: new Date(endDate + "T23:59:59.999Z") } : {}),
+            },
+          }
+        : {}),
       ...(search
         ? {
             OR: [

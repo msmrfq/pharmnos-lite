@@ -376,4 +376,13 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  .thermal-only {
+    display: none !important;
+  }
+}
+
+@media screen {
+  .thermal-only {
+    display: none !important;
+  }
 }

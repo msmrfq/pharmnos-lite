@@ -1,6 +1,6 @@
 "use server";
 
-import { assertPostgresConfigured } from "@/lib/db/prisma";
+import { assertPostgresConfigured, prisma } from "@/lib/db/prisma";
 import { repos } from "@/repositories";
 import { requireServerTenantContext } from "@/lib/db/tenant-context";
 
@@ -209,4 +209,146 @@ export async function exportSalesRegisterCsvAction(): Promise<Response> {
     ]);
   }
   return respondCsv(`sales-register-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+}
+
+export async function exportCustomerDuesCsvAction(): Promise<Response> {
+  assertPostgresConfigured("exportCustomerDuesCsvAction");
+  const ctx = await requireServerTenantContext();
+  const result = await repos.customers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx);
+  const rows: string[][] = [
+    ["Customer code", "Business", "Contact", "City", "State", "Phone", "Total due", "Current 0-30", "31-60", "61-90", "90+", "Oldest overdue days", "Receivable balance", "Active"],
+  ];
+  for (const c of (result.items as any) ?? []) {
+    let buckets = { current: 0, d30: 0, d60: 0, d90: 0, over90: 0, total: 0 };
+    let oldestDays = 0;
+    try {
+      buckets = await repos.customerLedgers.getAgingBuckets(ctx, c.id);
+    } catch {
+      buckets = { current: 0, d30: 0, d60: 0, d90: 0, over90: 0, total: 0 };
+    }
+    try {
+      oldestDays = await repos.customerLedgers.getOldestOverdueDays(c.id, ctx);
+    } catch {
+      oldestDays = 0;
+    }
+    const receivable = Number(c.receivable_balance ?? 0);
+    const totalDue = buckets.total > 0 ? buckets.total : receivable;
+    rows.push([
+      c.code ?? "",
+      c.business_name ?? "",
+      c.contact_person ?? "",
+      c.billing_city ?? "",
+      c.billing_state ?? "",
+      c.phone ?? c.mobile ?? "",
+      String(totalDue),
+      String(buckets.current),
+      String(buckets.d30),
+      String(buckets.d60),
+      String(buckets.over90),
+      String(oldestDays),
+      String(receivable),
+      c.is_active === false ? "No" : "Yes",
+    ]);
+  }
+  return respondCsv(`customer-dues-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+}
+
+export async function exportSupplierPayablesCsvAction(): Promise<Response> {
+  assertPostgresConfigured("exportSupplierPayablesCsvAction");
+  const ctx = await requireServerTenantContext();
+  const result = await repos.suppliers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx);
+  const rows: string[][] = [
+    ["Supplier code", "Business", "Contact", "City", "State", "Phone", "Total payable", "Current 0-30", "31-60", "61-90", "90+", "Oldest overdue days", "Payable balance", "Active"],
+  ];
+  for (const s of (result.items as any) ?? []) {
+    let buckets = { current: 0, d30: 0, d60: 0, d90: 0, over90: 0, total: 0 };
+    let oldestDays = 0;
+    try {
+      buckets = await repos.supplierLedgers.getAgingBuckets(ctx, s.id);
+    } catch {
+      buckets = { current: 0, d30: 0, d60: 0, d90: 0, over90: 0, total: 0 };
+    }
+    try {
+      oldestDays = await repos.supplierLedgers.getOldestOverdueDays(s.id, ctx);
+    } catch {
+      oldestDays = 0;
+    }
+    const payable = Number(s.payable_balance ?? 0);
+    const totalPayable = buckets.total > 0 ? buckets.total : payable;
+    rows.push([
+      s.code ?? "",
+      s.business_name ?? "",
+      s.contact_person ?? "",
+      s.city ?? "",
+      s.state ?? "",
+      s.phone ?? s.mobile ?? "",
+      String(totalPayable),
+      String(buckets.current),
+      String(buckets.d30),
+      String(buckets.d60),
+      String(buckets.over90),
+      String(oldestDays),
+      String(payable),
+      s.is_active === false ? "No" : "Yes",
+    ]);
+  }
+  return respondCsv(`supplier-payables-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+}
+
+export async function exportStockValuationCsvAction(): Promise<Response> {
+  assertPostgresConfigured("exportStockValuationCsvAction");
+  const ctx = await requireServerTenantContext();
+  const t = ctx;
+  const items = await (prisma as any).products.findMany({
+    where: { tenant_id: t.tenantId },
+    include: {
+      batches: {
+        orderBy: { expiry_date: "asc" },
+      },
+    },
+    take: 25000,
+    orderBy: { name: "asc" },
+  });
+
+  const nearCutoff = new Date();
+  nearCutoff.setDate(nearCutoff.getDate() + 60);
+
+  const rows: string[][] = [
+    ["SKU", "Product", "Schedule", "HSN", "MRP", "Avg purchase rate", "Total available qty", "Total batches", "Total value (₹)", "Near expiry batches"],
+  ];
+
+  for (const p of items as any[]) {
+    const batches = p.batches ?? [];
+    const avail = batches.reduce((s: number, b: any) => s + Number(b.available_qty ?? 0), 0);
+    const batchesCount = batches.length;
+    let weightedSum = 0;
+    for (const b of batches) {
+      weightedSum += Number(b.available_qty ?? 0) * Number(b.purchase_rate ?? 0);
+    }
+    const avgRate = avail > 0 ? weightedSum / avail : 0;
+    const totalValue = avail * avgRate;
+    let nearExpireCount = 0;
+    for (const b of batches) {
+      if (b.expiry_date && Number(b.available_qty ?? 0) > 0) {
+        const exp = new Date(b.expiry_date);
+        if (exp.getTime() <= nearCutoff.getTime()) {
+          nearExpireCount++;
+        }
+      }
+    }
+    rows.push([
+      p.sku ?? "",
+      p.name ?? "",
+      p.schedule_classification ?? "",
+      p.hsn_code ?? "",
+      String(p.mrp ?? ""),
+      String(Number.isFinite(avgRate) ? avgRate.toFixed(2) : ""),
+      String(avail),
+      String(batchesCount),
+      String(Number.isFinite(totalValue) ? totalValue.toFixed(2) : ""),
+      String(nearExpireCount),
+    ]);
+  }
+
+  return respondCsv(`stock-valuation-${new Date().toISOString().slice(0, 10)}.csv`, rows);
 }

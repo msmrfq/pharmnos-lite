@@ -20,11 +20,11 @@ export const metadata: Metadata = {
 export default async function EditCustomerPage({
   params,
 }: {
-  params: { id: string };
+  params: { customerId: string };
 }) {
   let customer: any = null;
   try {
-    customer = await getCustomerForEdit(params.id);
+    customer = await getCustomerForEdit(params.customerId);
   } catch (_e) {
     customer = null;
   }
@@ -58,7 +58,7 @@ export default async function EditCustomerPage({
           </CardContent>
         </CardCanvas>
       ) : (
-        <CustomerEditForm customerId={params.id} existing={customer as any} />
+        <CustomerEditForm customerId={params.customerId} existing={customer as any} />
       )}
     </DashboardLayout>
   );

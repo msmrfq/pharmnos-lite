@@ -26,7 +26,7 @@ import SuccessCreatedToast from "@/components/toast/creation-success-toast";
 import ExportCsvButton from "@/components/ui/export-csv-button";
 import { exportCustomersCsvAction } from "@/app/_actions/exports.actions";
 import { deleteCustomerAction } from "@/app/_actions/masters.actions";
-import MasterActionsCell from "@/components/ui/master-actions-cell";
+import CustomerActionsCell from "./_actions-cell";
 
 export const metadata: Metadata = {
   title: "Customers",
@@ -207,7 +207,7 @@ export default async function CustomersPage({
                           </TableCell>
                           <TableCell className="text-right">
                             {dbOk && (
-                              <MasterActionsCell
+                              <CustomerActionsCell
                                 entityId={c.id}
                                 entityLabel="Customer"
                                 editHref={`/customers/${c.id}/edit`}

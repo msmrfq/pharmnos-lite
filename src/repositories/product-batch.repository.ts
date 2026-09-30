@@ -140,4 +140,41 @@ export class ProductBatchRepository extends BaseRepository<
       orderBy: [{ expiry_date: "asc" }, { available_qty: "desc" }],
     }) as any;
   }
+
+  async stockValuation(ctx: TenantContext, nearExpiryDays: number = 60) {
+    const t = this.withTenant(ctx);
+    const nearCutoff = new Date();
+    nearCutoff.setDate(nearCutoff.getDate() + nearExpiryDays);
+    const batches = await this.prisma.product_batches.findMany({
+      where: { tenant_id: t.tenantId, is_blocked: false },
+      select: {
+        product_id: true,
+        available_qty: true,
+        received_qty: true,
+        purchase_rate: true,
+        expiry_date: true,
+      },
+    });
+    let total_value_inr = 0;
+    let near_expiry_60d_value = 0;
+    const skuSeen = new Set<string>();
+    let batches_count = 0;
+    for (const b of batches) {
+      const rate = Number(b.purchase_rate ?? 0);
+      const avail = Number(b.available_qty ?? 0);
+      const lineValue = avail * rate;
+      total_value_inr += lineValue;
+      batches_count += 1;
+      if (b.product_id) skuSeen.add(b.product_id);
+      if (b.expiry_date && b.expiry_date <= nearCutoff && avail > 0) {
+        near_expiry_60d_value += lineValue;
+      }
+    }
+    return {
+      total_value_inr,
+      sku_count: skuSeen.size,
+      batches_count,
+      near_expiry_60d_value,
+    };
+  }
 }

@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, ExternalLink } from "lucide-react";
+import { CheckCircle2, XCircle, ExternalLink, Printer } from "lucide-react";
 import {
   cancelSalesDraftAction,
   finalizeSalesInvoiceAction,
@@ -93,6 +94,8 @@ export default function SaleActionsCell({ saleId, status, invoiceNo }: Props) {
     });
   };
 
+  const isFinalized = status === "FINALIZED";
+
   return (
     <div className="flex items-center justify-end gap-1">
       <Button
@@ -129,6 +132,30 @@ export default function SaleActionsCell({ saleId, status, invoiceNo }: Props) {
             <XCircle className={`h-3.5 w-3.5 ${cancelPending ? "animate-pulse" : ""}`} /> Cancel
           </Button>
         </>
+      )}
+      {isFinalized ? (
+        <Button variant="ghost" size="sm" asChild>
+          <Link
+            href={`/billing/${encodeURIComponent(saleId)}/print`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Print invoice"
+          >
+            <Printer className="h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      ) : (
+        <Button
+          variant="ghost"
+          size="sm"
+          type="button"
+          aria-label="Print invoice"
+          disabled
+          title="Print available after finalize"
+          className="opacity-50"
+        >
+          <Printer className="h-3.5 w-3.5" />
+        </Button>
       )}
     </div>
   );

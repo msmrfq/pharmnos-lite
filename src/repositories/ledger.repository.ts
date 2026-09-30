@@ -115,6 +115,7 @@ export class CustomerLedgerRepository extends BaseRepository<
 
   async getAgingBuckets(
     ctx: TenantContext,
+    customerId?: string,
   ): Promise<{
     current: number;
     d30: number;
@@ -129,7 +130,7 @@ export class CustomerLedgerRepository extends BaseRepository<
     const d60 = new Date(today); d60.setDate(d60.getDate() - 60);
     const d90 = new Date(today); d90.setDate(d90.getDate() - 90);
     const rows = await this.prisma.customer_ledgers.findMany({
-      where: { tenant_id: t.tenantId },
+      where: { tenant_id: t.tenantId, ...(customerId ? { customer_id: customerId } : {}) },
       select: { entry_date: true, debit: true, credit: true },
     });
     let current = 0, b30 = 0, b60 = 0, b90 = 0, over90 = 0;
@@ -148,6 +149,17 @@ export class CustomerLedgerRepository extends BaseRepository<
       d90: b90,
       over90,
       total: current + b30 + b60 + b90 + over90,
+    };
+  }
+
+  async agedReceivablesTotals(ctx: TenantContext) {
+    const buckets = await this.getAgingBuckets(ctx);
+    return {
+      current_30: buckets.current,
+      bucket_31_60: buckets.d30,
+      bucket_61_90: buckets.d60,
+      bucket_over_90: buckets.over90,
+      total: buckets.total,
     };
   }
 }
@@ -231,5 +243,79 @@ export class SupplierLedgerRepository extends BaseRepository<
     const sum = result._sum;
     if (!sum) return 0;
     return Number(sum.credit ?? 0) - Number(sum.debit ?? 0);
+  }
+
+  async getOldestOverdueDays(supplierId: string, ctx: TenantContext, asOf: Date = new Date()): Promise<number> {
+    const t = this.withTenant(ctx);
+    const rows = await this.prisma.supplier_ledgers.findMany({
+      where: { tenant_id: t.tenantId, supplier_id: supplierId },
+      orderBy: { entry_date: "asc" },
+      select: { entry_date: true, debit: true, credit: true },
+    });
+    if (rows.length === 0) return 0;
+    let running = 0;
+    let oldestUnpaid: Date | null = null;
+    for (const r of rows) {
+      running += Number(r.credit ?? 0) - Number(r.debit ?? 0);
+      if (running > 0 && oldestUnpaid === null) {
+        oldestUnpaid = r.entry_date ? new Date(r.entry_date) : null;
+      }
+    }
+    if (running <= 0 || !oldestUnpaid) return 0;
+    const todayMs = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate()).getTime();
+    const oldMs = new Date(
+      oldestUnpaid.getFullYear(),
+      oldestUnpaid.getMonth(),
+      oldestUnpaid.getDate(),
+    ).getTime();
+    const days = Math.floor((todayMs - oldMs) / 86400000);
+    return Math.max(0, Number.isFinite(days) ? days : 0);
+  }
+
+  async getAgingBuckets(ctx: TenantContext, supplierId?: string): Promise<{
+    current: number;
+    d30: number;
+    d60: number;
+    d90: number;
+    over90: number;
+    total: number;
+  }> {
+    const t = this.withTenant(ctx);
+    const today = new Date();
+    const d30 = new Date(today); d30.setDate(d30.getDate() - 30);
+    const d60 = new Date(today); d60.setDate(d60.getDate() - 60);
+    const d90 = new Date(today); d90.setDate(d90.getDate() - 90);
+    const rows = await this.prisma.supplier_ledgers.findMany({
+      where: { tenant_id: t.tenantId, ...(supplierId ? { supplier_id: supplierId } : {}) },
+      select: { entry_date: true, debit: true, credit: true },
+    });
+    let current = 0, b30 = 0, b60 = 0, b90 = 0, over90 = 0;
+    for (const row of rows) {
+      const bal = Number(row.credit ?? 0) - Number(row.debit ?? 0);
+      if (bal <= 0) continue;
+      if (row.entry_date >= d30) current += bal;
+      else if (row.entry_date >= d60) b30 += bal;
+      else if (row.entry_date >= d90) b60 += bal;
+      else over90 += bal;
+    }
+    return {
+      current,
+      d30: b30,
+      d60: b60,
+      d90: b90,
+      over90,
+      total: current + b30 + b60 + b90 + over90,
+    };
+  }
+
+  async agedPayablesTotals(ctx: TenantContext) {
+    const buckets = await this.getAgingBuckets(ctx);
+    return {
+      current_30: buckets.current,
+      bucket_31_60: buckets.d30,
+      bucket_61_90: buckets.d60,
+      bucket_over_90: buckets.over90,
+      total: buckets.total,
+    };
   }
 }

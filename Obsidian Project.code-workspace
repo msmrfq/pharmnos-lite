@@ -8,6 +8,7 @@
 		"files.exclude": {
 			"**/.obsidian": true
 		},
-		"workbench.localHistory.enabled": true
+		"workbench.localHistory.enabled": true,
+		"markdown.validate.enabled": true
 	}
 }

@@ -1,7 +1,14 @@
 import { Prisma } from "@prisma/client";
-import type { audit_logs } from "@prisma/client";
+import type { audit_logs, AuditEventType } from "@prisma/client";
 import { BaseRepository, ListParams, type PagedResult } from "@/lib/db/base-repository";
 import type { TenantContext } from "@/lib/db/tenant-context";
+
+export type AuditLogListParams = ListParams & {
+  eventType?: AuditEventType;
+  userId?: string;
+  startDate?: string;
+  endDate?: string;
+};
 
 export class AuditLogRepository extends BaseRepository<
   audit_logs,
@@ -43,11 +50,30 @@ export class AuditLogRepository extends BaseRepository<
     throw new Error("Audit logs are immutable and cannot be deleted.");
   }
 
-  async list(params: ListParams, ctx: TenantContext): Promise<PagedResult<audit_logs>> {
+  async list(params: AuditLogListParams, ctx: TenantContext): Promise<PagedResult<audit_logs>> {
     const t = this.withTenant(ctx);
-    const { skip = 0, take = 50, orderBy = { created_at: "desc" }, search } = params;
+    const {
+      skip = 0,
+      take = 50,
+      orderBy = { created_at: "desc" },
+      search,
+      eventType,
+      userId,
+      startDate,
+      endDate,
+    } = params;
     const where: Prisma.audit_logsWhereInput = {
       tenant_id: t.tenantId,
+      ...(eventType ? { event_type: eventType } : {}),
+      ...(userId ? { actor_id: userId } : {}),
+      ...(startDate || endDate
+        ? {
+            created_at: {
+              ...(startDate ? { gte: new Date(startDate) } : {}),
+              ...(endDate ? { lte: new Date(endDate + "T23:59:59.999Z") } : {}),
+            },
+          }
+        : {}),
       ...(search
         ? {
             OR: [
@@ -69,7 +95,7 @@ export class AuditLogRepository extends BaseRepository<
       this.prisma.audit_logs.count({ where }),
     ]);
     const items: any = rawItems;
-    if (search) {
+    if (search && !eventType && !userId && !startDate && !endDate) {
       const byActor = await this.prisma.audit_logs.findMany({
         where: {
           tenant_id: t.tenantId,
