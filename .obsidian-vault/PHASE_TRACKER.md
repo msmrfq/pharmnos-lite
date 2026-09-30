@@ -9,7 +9,7 @@
 > 4. Flip Status of the phase just finished from `🚧 IN PROGRESS → ✅ DONE` (with sub-bullet line "Completed yyyy-mm-dd").
 > 5. After ANY edit to this file → scroll to bottom → run cross-reference update list (3 linked locations).
 
-**Working phase numbering (PROJECT-WIDE MANDATORY):** We use 7 working phases P1…P7. The PRD `reference docs/prd-technical-architecture.md §29 Suggested Development Phases` originally proposed 6 phases (Phase 0…Phase 5). The crosswalk column below maps every working phase to its corresponding PRD coverage area so we never confuse the two. **Always use P1…P7 working phase numbers in all notes, bugs, specs, decisions, retro, TODO lists, and commit messages going forward.** Do NOT use PRD numbering in day-to-day work.
+**Working phase numbering (PROJECT-WIDE MANDATORY):** We use 7 working phases P1…P7. The PRD `.obsidian-vault/prd-technical-architecture.md §29 Suggested Development Phases` originally proposed 6 phases (Phase 0…Phase 5). The crosswalk column below maps every working phase to its corresponding PRD coverage area so we never confuse the two. **Always use P1…P7 working phase numbers in all notes, bugs, specs, decisions, retro, TODO lists, and commit messages going forward.** Do NOT use PRD numbering in day-to-day work.
 
 **Last updated:** `2026-09-30`
 
@@ -50,6 +50,6 @@ Overall project progress: ~50% (P1≈15% P2≈20% P3≈20% completed = weighted 
 ## Cross-reference update list (run after any edit to this file)
 
 1. Canonical briefing: `.obsidian-vault/CLAUDE.md` → File map section → add/update `PHASE_TRACKER.md` line with label "Central working-phase tracker (P1…P7); Current phase lives here"
-2. Reference docs: `reference docs/prd-technical-architecture.md` §29 Suggested phases → append "Working phase crosswalk" table right below PRD Phase 5
+2. Reference docs: `.obsidian-vault/prd-technical-architecture.md` §29 Suggested phases → append "Working phase crosswalk" table right below PRD Phase 5
 3. Vault note: `.obsidian-vault/daily/_PROMPT-session-end-generate-daily-note.md` → append Task 0 "Before triage, confirm PHASE_TRACKER.md Last updated stamp is today; if not, update current phase progress & status first"
 4. **MANDATORY after CLAUDE.md canonical update:** `& .\sync-agent-briefings.ps1` to propagate to 6 AI mirrors (CLAUDE.md root, .cursorrules, .windsurfrules, copilot-instructions, AGENT.md, AI_BRIEFING.md)
