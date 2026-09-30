@@ -12,6 +12,9 @@ import { ArrowLeft, FileSpreadsheet, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getProductForEdit, updateProductAction } from "@/app/_actions/masters.actions";
 import ProductEditForm from "./_form";
+import { repos } from "@/repositories";
+import { isPostgresConfigured } from "@/lib/db/prisma";
+import { requireServerTenantContext } from "@/lib/db/tenant-context";
 
 export const metadata: Metadata = {
   title: "Edit product",
@@ -23,10 +26,20 @@ export default async function EditProductPage({
   params: { id: string };
 }) {
   let product: any = null;
+  let batches: any[] = [];
   try {
     product = await getProductForEdit(params.id);
   } catch (_e) {
     product = null;
+  }
+  let dbOk = isPostgresConfigured() && product !== null;
+  if (dbOk) {
+    try {
+      const ctx = await requireServerTenantContext();
+      batches = await repos.productBatches.listForProduct(params.id, ctx, true);
+    } catch (_e) {
+      batches = [];
+    }
   }
 
   return (
@@ -58,7 +71,7 @@ export default async function EditProductPage({
           </CardContent>
         </CardCanvas>
       ) : (
-        <ProductEditForm productId={params.id} existing={product as any} />
+        <ProductEditForm productId={params.id} existing={product as any} batches={batches} />
       )}
     </DashboardLayout>
   );

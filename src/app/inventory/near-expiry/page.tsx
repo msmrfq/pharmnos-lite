@@ -185,9 +185,13 @@ export default async function NearExpiryPage() {
                       <TableCell className="text-right text-body">{qty}</TableCell>
                       <TableCell className="text-right font-semibold text-ink">{rupee(value)}</TableCell>
                       <TableCell>
-                        <Button asChild size="sm" variant="secondary" aria-disabled title="Manage batch (Phase 3c)">
-                          <Link href="/inventory">Manage</Link>
-                        </Button>
+                        {(b as any).product?.id ? (
+                          <Button asChild size="sm" variant="secondary">
+                            <Link href={`/inventory/products/${(b as any).product.id}/edit#batches`}>Manage batches</Link>
+                          </Button>
+                        ) : (
+                          <span className="text-muted text-caption">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   );

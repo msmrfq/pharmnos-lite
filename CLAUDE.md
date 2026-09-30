@@ -44,6 +44,7 @@ Additional layers:
 **Last updated:** `2026-09-30`
 
 ### Verified working
+- **Phase 4 CLOSED — 100% completed 2026-09-30.** Purchases + Inventory Transactions (P4a schemas + 5 server actions incl. 8-step single-tx finalize INLINE ledger/payable increment [NO nested ledger service] + CSV 6th action; P4b /purchases/new client form dynamic N lines auto product-fill totals useMemo Save Draft; P4c finalize 8 atomic sub-steps all coded; P4d1 list paginated + ExportCsvButton direct ref + PurchaseActionsCell DRAFT Finalize/Cancel; Inventory 5 tabs all activated [Filter aria-disabled Phase4 removed; Batches/Movements TabsContent tables 6/7 cols added; Near-expiry Manage batches Link scroll anchor to product edit#batches]; P4d2 _stock-adjustment-dialog client-side Dialog useFormState bound Adjust +/- signed delta OUTBOUND insufficient reject; inventory page Adjust column per product rightmost conditionally on batches.length; Product edit _form bottom APPENDED READ-ONLY Batches card id="batches" scroll anchor 5 cols batch/expiry/received/available/status fetched from repo.listForProduct). typecheck exit 0, lint exit 0 (1 pre-existing useMemo tolerated), 10× URL smoke HTTP200. PHASE_TRACKER.md P4=DONE.
 - **Phase 3 CLOSED — 100% completed 2026-09-30.** 3 masters CRUD (Products/Customers/Suppliers list + new + edit + soft delete + MasterActionsCell + CSV exports + 6 edit routes + session auth ctx wired). typecheck exit 0, lint exit 0, 9×HTTP 200 smoke tests. PHASE_TRACKER.md P3=DONE.
 - **Supabase MCP installed & operational (stdio via npx mcp-remote)**. OAuth grant verified today; `list_tables = 19`; auto-fixed storage bucket (50 MB limit + 8 standard MIME types + 4 policies via execute_sql — zero 42501 ownership errors). Storage env drift bug Path-A RESOLVED: `.env.example SUPABASE_STORAGE_BUCKET = pharmnos-documents` matches `.env.local`.
 - **Git safe rollback pattern proven twice.** Trae Agent auto-committed vault backup 0ffecab → user requested SHA 3ff7036 → local `git reset --soft 3ff7036` preserves 46 edits → explicit user confirmation text → `git push origin main --force-with-lease` overwrites remote. No data loss; 46 uncommitted edits remain on disk awaiting manual "commit this" text.
@@ -54,10 +55,12 @@ Additional layers:
 - **Prisma → Supavisor pooler connection timeouts** still environmental. Workaround: `let dbOk` + catch-swallow on all RSC DB-interacting pages → degrade HTTP 200 placeholder, never 500. Retry wrapper inside BaseRepository deferred.
 
 ### Focus right now (next immediate build step)
-- **Phase 4 — Purchases + Inventory Transactions (Current phase P4).**
-  1. Design Zod purchase schemas in a new `purchases.schemas.ts` (PurchaseInvoiceCreate + line item array with product_id + batch expiry + qty + mrp/ptr).
-  2. Build `/purchases/new` interactive client form (select supplier, add N line items, totalize, save).
-  3. Server action `createPurchaseInvoiceAction` prisma.$transaction: Invoice + Lines + INBOUND StockMovements + ProductBatch increments atomically + SupplierLedger impact + revalidatePath list.
+- **Phase 5 — Billing + Ledgers + Payments (Current phase P5).**
+  1. Design Zod sales schemas in a new `sales.schemas.ts` (SalesInvoiceCreate + line item array with product_id + FEFO picked batch expiry + qty + mrp/ptr + GST split).
+  2. Build `/billing/new` interactive client form (select customer, add N line items, GST half-half intra/inter-state calc, totalize, save).
+  3. Server action `finalizeSalesInvoiceAction` prisma.$transaction: Invoice + Lines + OUTBOUND StockMovements FEFO picked per product per batch + CustomerLedger impact + customer.receivable_balance atomic increment + revalidatePath list.
+  4. Add Payment entry page: create payment → customer_ledgers + customer.receivable_balance decrement + supplier payment → supplier_ledgers + suppliers.payable_balance decrement.
+  5. Customer dues aging buckets (0/30/60/90+) using customerLedgerRepository aging for-loop counter.
 
 
 ---

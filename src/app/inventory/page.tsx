@@ -17,17 +17,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Warehouse, AlertTriangle, Plus, Clock, FileSpreadsheet, Filter, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Warehouse, AlertTriangle, Plus, Clock, FileSpreadsheet, Filter, ChevronLeft, ChevronRight, Download, RefreshCcw } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { repos } from "@/repositories";
 import { isPostgresConfigured } from "@/lib/db/prisma";
 import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { ScheduleClass } from "@prisma/client";
+import { ScheduleClass, StockMovementType } from "@prisma/client";
 import ExportCsvButton from "@/components/ui/export-csv-button";
 import { exportInventoryCsvAction } from "@/app/_actions/exports.actions";
 import { deleteProductAction } from "@/app/_actions/masters.actions";
 import MasterActionsCell from "@/components/ui/master-actions-cell";
 import SuccessCreatedToast from "@/components/toast/creation-success-toast";
+import StockAdjustmentDialog from "./_stock-adjustment-dialog";
 
 export const metadata: Metadata = {
   title: "Inventory",
@@ -87,35 +88,48 @@ export default async function InventoryPage({
   let summaryActiveProducts = 0;
   let summaryActiveBatches = 0;
   let summaryNearExpiry = 0;
+  let batchItems: any[] = [];
+  let batchTotal = 0;
+  let movementItems: any[] = [];
+  let movementTotal = 0;
   let dbOk = isPostgresConfigured();
 
   if (dbOk) {
     try {
       const ctx = await requireServerTenantContext();
       // Session ctx wired. Demo fallback active when no Supabase auth session exists or DB membership missing.
-      const result = await repos.products.list({ skip: (page - 1) * pageSize, take: pageSize, orderBy: { name: "asc" } }, ctx);
+      const [result, allCount, batchesResult, movementsResult] = await Promise.all([
+        repos.products.list({ skip: (page - 1) * pageSize, take: pageSize, orderBy: { name: "asc" } }, ctx),
+        repos.products.list({ take: 10000 }, ctx),
+        repos.productBatches.list({ skip: 0, take: 50, orderBy: { expiry_date: "asc" } }, ctx),
+        repos.stockMovements.list({ skip: 0, take: 50, orderBy: { created_at: "desc" } }, ctx),
+      ]);
       items = (result.items as unknown) as ProductWithBatches[];
       total = result.total;
 
-      const allCount = await repos.products.list({ take: 10000 }, ctx);
       summaryActiveProducts = allCount.total;
 
-      let batchTotal = 0;
+      let bTotal = 0;
       let lowCount = 0;
       let nearExpiryCount = 0;
       const nowCutoff = new Date();
       nowCutoff.setDate(nowCutoff.getDate() + 60);
       for (const p of (allCount.items as unknown) as ProductWithBatches[]) {
         const avail = p.batches.reduce((s, b) => s + (Number(b.available_qty ?? 0)), 0);
-        batchTotal += p.batches.length;
+        bTotal += p.batches.length;
         if (avail <= (Number((p as any).reorder_level ?? 0) || 10)) lowCount += 1;
         if (p.batches.length && p.batches.some((b) => b.expiry_date && b.expiry_date.getTime() <= nowCutoff.getTime() && Number(b.available_qty ?? 0) > 0)) {
           nearExpiryCount += 1;
         }
       }
-      summaryActiveBatches = batchTotal;
+      summaryActiveBatches = bTotal;
       summaryLowStock = lowCount;
       summaryNearExpiry = nearExpiryCount;
+
+      batchItems = batchesResult.items ?? [];
+      batchTotal = batchesResult.total;
+      movementItems = movementsResult.items ?? [];
+      movementTotal = movementsResult.total;
     } catch (_err) {
       dbOk = false;
     }
@@ -151,7 +165,7 @@ export default async function InventoryPage({
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" type="button" aria-disabled title="Filter (Phase 4)">
+          <Button variant="secondary" type="button">
             <Filter className="h-4 w-4" /> Filter
           </Button>
           <ExportCsvButton variant="secondary" action={exportInventoryCsvAction}>
@@ -200,10 +214,10 @@ export default async function InventoryPage({
             <Link href="/inventory?tab=products">Products</Link>
           </TabsTrigger>
           <TabsTrigger value="batches" asChild>
-            <Link href="/inventory?tab=batches" aria-disabled title="Batches tab (Phase 4)">Batches</Link>
+            <Link href="/inventory?tab=batches">Batches</Link>
           </TabsTrigger>
           <TabsTrigger value="movements" asChild>
-            <Link href="/inventory?tab=movements" aria-disabled title="Movements tab (Phase 4)">Movements</Link>
+            <Link href="/inventory?tab=movements">Movements</Link>
           </TabsTrigger>
           <TabsTrigger value="low-stock" asChild>
             <Link href="/inventory/low-stock">Low stock</Link>
@@ -229,13 +243,14 @@ export default async function InventoryPage({
                     <TableHead className="text-right">Available</TableHead>
                     <TableHead>FEFO expiry</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Adjust</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {dbOk && items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="py-10 text-center text-muted text-body-md">
+                      <TableCell colSpan={12} className="py-10 text-center text-muted text-body-md">
                         No products yet.{" "}
                         <Link href="/inventory/products/new" className="text-ink font-medium underline underline-offset-4 hover:no-underline">
                           Create your first product
@@ -244,7 +259,7 @@ export default async function InventoryPage({
                     </TableRow>
                   ) : !dbOk ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="py-10 text-center text-muted text-body-md">
+                      <TableCell colSpan={12} className="py-10 text-center text-muted text-body-md">
                         Showing placeholder rows until database is connected.
                       </TableCell>
                     </TableRow>
@@ -289,6 +304,15 @@ export default async function InventoryPage({
                             <Badge variant={isLow ? "destructive" : "success"}>
                               {isLow ? "Low stock" : "In stock"}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {dbOk && p.batches.length > 0 && (
+                              <StockAdjustmentDialog product={p} trigger={
+                                <Button size="sm" variant="secondary" type="button">
+                                  <RefreshCcw className="h-4 w-4" /> Adjust
+                                </Button>
+                              } />
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             {dbOk && (
@@ -339,6 +363,160 @@ export default async function InventoryPage({
                 </Link>
               </Button>
             </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="batches">
+          <CardCanvas>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Batch no.</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead className="text-right">Expiry</TableHead>
+                    <TableHead className="text-right">Received</TableHead>
+                    <TableHead className="text-right">Available</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dbOk && batchItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-10 text-center text-muted text-body-md">
+                        No batches yet. Create a purchase invoice to receive stock into batches.
+                      </TableCell>
+                    </TableRow>
+                  ) : !dbOk ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-10 text-center text-muted text-body-md">
+                        Empty grid — connect database to see batches.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    batchItems.map((b: any) => {
+                      const avail = Number(b.available_qty ?? 0);
+                      const received = Number(b.received_qty ?? 0);
+                      const exp = b.expiry_date ? new Date(b.expiry_date) : null;
+                      const daysLeft = exp ? Math.ceil((exp.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
+                      const variant: any = b.is_blocked ? "secondary" : daysLeft <= 0 ? "destructive" : daysLeft <= 90 ? "warning" : "success";
+                      const expStr = exp ? exp.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+                      return (
+                        <TableRow key={b.id}>
+                          <TableCell>
+                            <Badge variant="outline" className="font-mono">{b.batch_no}</Badge>
+                          </TableCell>
+                          <TableCell className="font-medium text-ink">
+                            {(b as any).product?.name ?? "—"}
+                            <p className="text-caption text-muted font-mono">{(b as any).product?.sku ?? "—"}</p>
+                          </TableCell>
+                          <TableCell className="text-right text-body">{expStr}</TableCell>
+                          <TableCell className="text-right text-body">{received}</TableCell>
+                          <TableCell className={`text-right font-semibold ${avail <= 0 ? "text-destructive" : "text-ink"}`}>{avail}</TableCell>
+                          <TableCell>
+                            <Badge variant={variant}>
+                              {b.is_blocked ? "Blocked" : daysLeft <= 0 ? "Expired" : daysLeft <= 90 ? `Expiring ${daysLeft}d` : "Active"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </CardCanvas>
+          <div className="mt-6 flex items-center justify-between">
+            <p className="text-caption text-muted">
+              Showing {dbOk ? Math.min(batchItems.length, batchTotal) : 0} of {batchTotal} batches
+            </p>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="movements">
+          <CardCanvas>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Batch</TableHead>
+                    <TableHead className="text-right">Qty Δ</TableHead>
+                    <TableHead>Reference</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dbOk && movementItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="py-10 text-center text-muted text-body-md">
+                        No stock movements yet. Finalize purchases or adjust stock to create movement rows.
+                      </TableCell>
+                    </TableRow>
+                  ) : !dbOk ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="py-10 text-center text-muted text-body-md">
+                        Empty grid — connect database to see movements.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    movementItems.map((m: any) => {
+                      const delta = Number(m.delta_qty ?? 0);
+                      const d = m.created_at ? new Date(m.created_at) : null;
+                      const dateStr = d ? d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+                      const mt = m.movement_type as StockMovementType;
+                      const typeLabel: Record<string, string> = {
+                        PURCHASE_IN: "Purchase in",
+                        SALE_OUT: "Sale out",
+                        ADJUSTMENT_IN: "Adjust +",
+                        ADJUSTMENT_OUT: "Adjust -",
+                        WRITE_OFF: "Write off",
+                        RETURN_IN: "Return in",
+                        TRANSFER_IN: "Transfer in",
+                        TRANSFER_OUT: "Transfer out",
+                      };
+                      const typeVariant: Record<string, any> = {
+                        PURCHASE_IN: "success",
+                        SALE_OUT: "destructive",
+                        ADJUSTMENT_IN: "success",
+                        ADJUSTMENT_OUT: "destructive",
+                        WRITE_OFF: "destructive",
+                        RETURN_IN: "success",
+                        TRANSFER_IN: "secondary",
+                        TRANSFER_OUT: "secondary",
+                      };
+                      return (
+                        <TableRow key={m.id}>
+                          <TableCell className="text-body text-caption">{dateStr}</TableCell>
+                          <TableCell>
+                            <Badge variant={typeVariant[mt] ?? "secondary"}>{typeLabel[mt] ?? mt}</Badge>
+                          </TableCell>
+                          <TableCell className="font-medium text-ink">
+                            {(m as any).product?.name ?? "—"}
+                            <p className="text-caption text-muted font-mono">{(m as any).product?.sku ?? "—"}</p>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="font-mono">{(m as any).batch?.batch_no ?? "—"}</Badge>
+                          </TableCell>
+                          <TableCell className={`text-right font-semibold ${delta >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                            {delta >= 0 ? `+${delta}` : delta}
+                          </TableCell>
+                          <TableCell className="text-body text-caption font-mono">{m.reference_type ?? "—"}{m.reference_id ? ` #${m.reference_id.slice(0, 8)}` : ""}</TableCell>
+                          <TableCell className="text-body text-muted">{m.notes ?? "—"}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </CardCanvas>
+          <div className="mt-6 flex items-center justify-between">
+            <p className="text-caption text-muted">
+              Showing {dbOk ? Math.min(movementItems.length, movementTotal) : 0} of {movementTotal} movements · newest first
+            </p>
           </div>
         </TabsContent>
       </Tabs>

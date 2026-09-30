@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   CardCanvas,
   CardContent,
@@ -21,7 +22,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileSpreadsheet, Save } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { FileSpreadsheet, Save, Warehouse } from "lucide-react";
 import { updateProductAction } from "@/app/_actions/masters.actions";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
 import type { products } from "@prisma/client";
@@ -60,9 +69,11 @@ const initialState: ActionResult<products> = { ok: false };
 export default function ProductEditForm({
   productId,
   existing,
+  batches = [],
 }: {
   productId: string;
   existing: any;
+  batches?: any[];
 }) {
   const bound = (updateProductAction as any).bind(null, productId);
   const [state, action] = useFormState<ActionResult<products>, FormData>(bound, initialState);
@@ -292,7 +303,7 @@ export default function ProductEditForm({
             <CardHeader className="pb-3">
               <CardTitle className="text-title-md">Save product</CardTitle>
               <CardDescription>
-                Pricing and thresholds apply to new orders. Batch editing is deferred to inventory adjustments (Phase 4).
+                Pricing and thresholds apply to new orders. Batch stock and expiry adjusted via purchases and stock adjustments.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-stretch gap-3">
@@ -313,6 +324,64 @@ export default function ProductEditForm({
             </CardContent>
           </CardCanvas>
         </div>
+      </div>
+
+      <div id="batches" className="scroll-mt-20">
+        <CardCanvas className="mt-8">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-title-md flex items-center gap-2">
+              <Warehouse className="h-5 w-5" /> Existing batches
+            </CardTitle>
+            <CardDescription>
+              Read-only view. Batches are created by purchase invoices and adjusted via Inventory → Adjust stock.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Batch no.</TableHead>
+                  <TableHead className="text-right">Expiry</TableHead>
+                  <TableHead className="text-right">Received qty</TableHead>
+                  <TableHead className="text-right">Available qty</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {batches.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-10 text-center text-muted text-body-md">
+                      No batches yet. Create a purchase invoice for this product to receive stock into a batch.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  batches.map((b: any) => {
+                    const received = Number(b.received_qty ?? 0);
+                    const avail = Number(b.available_qty ?? 0);
+                    const exp = b.expiry_date ? new Date(b.expiry_date) : null;
+                    const daysLeft = exp ? Math.ceil((exp.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
+                    const expStr = exp ? exp.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+                    const variant: any = b.is_blocked ? "secondary" : daysLeft <= 0 ? "destructive" : daysLeft <= 90 ? "warning" : "success";
+                    const label = b.is_blocked ? "Blocked" : daysLeft <= 0 ? "Expired" : daysLeft <= 90 ? `${daysLeft}d left` : "Active";
+                    return (
+                      <TableRow key={b.id}>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono">{b.batch_no}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right text-body">{expStr}</TableCell>
+                        <TableCell className="text-right text-body">{received}</TableCell>
+                        <TableCell className={`text-right font-semibold ${avail <= 0 ? "text-destructive" : "text-ink"}`}>{avail}</TableCell>
+                        <TableCell>
+                          <Badge variant={variant}>{label}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </CardCanvas>
       </div>
     </form>
   );

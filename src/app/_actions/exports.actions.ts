@@ -153,3 +153,30 @@ export async function exportSuppliersCsvAction(): Promise<Response> {
   }
   return respondCsv(`suppliers-${new Date().toISOString().slice(0, 10)}.csv`, rows);
 }
+
+export async function exportPurchaseRegisterCsvAction(): Promise<Response> {
+  assertPostgresConfigured("exportPurchaseRegisterCsvAction");
+  const ctx = await requireServerTenantContext();
+  const result = await repos.purchaseInvoices.list({ skip: 0, take: 25000, orderBy: { invoice_date: "desc" } }, ctx);
+  const rows: string[][] = [
+    ["Invoice no", "Date", "Supplier", "Supplier invoice", "Status", "Gross", "Discount", "Tax", "Round off", "Net", "Created at"],
+  ];
+  for (const p of (result.items as any) ?? []) {
+    const d = p.invoice_date ? new Date(p.invoice_date) : null;
+    const c = p.created_at ? new Date(p.created_at) : null;
+    rows.push([
+      p.invoice_no ?? "",
+      d ? d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "",
+      p.supplier?.business_name ?? "",
+      p.supplier_invoice_no ?? "",
+      p.status ?? "",
+      String(p.gross_amount ?? ""),
+      String(p.total_discount ?? ""),
+      String(p.total_tax ?? ""),
+      String(p.round_off ?? ""),
+      String(p.net_amount ?? ""),
+      c ? c.toLocaleString("en-IN") : "",
+    ]);
+  }
+  return respondCsv(`purchase-register-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+}
