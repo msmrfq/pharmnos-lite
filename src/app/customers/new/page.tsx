@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -247,7 +247,9 @@ function SuccessToastIfCreated() {
 export default function NewCustomerPage() {
   return (
     <DashboardLayout>
-      <SuccessToastIfCreated />
+      <Suspense fallback={null}>
+        <SuccessToastIfCreated />
+      </Suspense>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 px-0 pb-5">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>

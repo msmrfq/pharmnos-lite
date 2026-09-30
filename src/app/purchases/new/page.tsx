@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,7 +59,9 @@ export default async function NewPurchasePage() {
           </div>
         </div>
       </CardHeader>
-      <PurchasesNewClientForm suppliers={suppliers} products={products} />
+      <Suspense fallback={null}>
+        <PurchasesNewClientForm suppliers={suppliers} products={products} />
+      </Suspense>
     </DashboardLayout>
   );
 }

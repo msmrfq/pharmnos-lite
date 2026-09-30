@@ -90,6 +90,15 @@ export async function getServerTenantContext(): Promise<SessionCtxResult> {
         demoFallback: true,
       };
     }
+
+    try {
+      if (externalId && m.tenant_id) {
+        await authAdapter.setAppMetadataTenantId(externalId, m.tenant_id);
+      }
+    } catch (_e) {
+      // Best-effort backfill; failures should never break page loads.
+    }
+
     const roles: string[] = m.role ? [m.role.name] : [];
     const permissions: string[] = (m.role?.permissions ?? [])
       .map((rp) => (rp as any).permission as PermissionAction | string)

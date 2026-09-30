@@ -384,3 +384,37 @@ If something breaks, read this table FIRST. Do not improvise until you try the p
 4. **Code + vault = one Git repo, one commit at end of day.**
 
 If you do these 4 things and follow Section 2 daily, the second brain builds itself. Everything else is detail.
+
+---
+
+## Go-live Release Checklist (Phase 7)
+
+1.  - [ ] Git working tree is clean: `git status` reports nothing to commit, no untracked files, no staged changes
+2.  - [ ] All environment variables match the production manifest: compare `.env.local` keys against `.env.example` and confirm no extra keys, no missing keys, no placeholder values remain
+3.  - [ ] `pnpm typecheck` runs and exits with code 0 (zero TypeScript errors)
+4.  - [ ] `pnpm lint` runs and reports ≤1 warning (zero errors, at most one acceptable warning with a documented exemption)
+5.  - [ ] `pnpm build` runs and exits with code 0; no build errors or Next.js static generation failures
+6.  - [ ] Vercel production deploy completes successfully; deployment URL returns HTTP 200 and dashboard loads
+7.  - [ ] Supabase Auth real end-to-end signup works: create a new tenant user via the sign-up form, receive and confirm the OTP/email link, sign in
+8.  - [ ] Onboarding transaction completes end-to-end: tenant profile is saved, 3 masters initial seed rows are inserted, user is redirected to the dashboard
+9.  - [ ] JWT token decoded at jwt.io shows `app_metadata.tenant_id` set to the newly-created tenant UUID and matches the `auth.users` row
+10. - [ ] RLS policy count = exactly 19: query `SELECT count(*) FROM pg_policies WHERE tablename IN (<all protected tables>)` and confirm total equals 19
+11. - [ ] Cross-tenant isolation probe passes: run the `SET simulate_tenant = '<wrong-tenant>'` script and confirm it returns 0 rows for every protected table
+12. - [ ] 3 masters CRUD works: create, read, update, delete operations succeed for Customers, Suppliers, and Products masters with valid tenant context
+13. - [ ] New product creation flow works end-to-end: product saved to DB, appears in masters list, audit log event written with correct actor and tenant
+14. - [ ] Purchase finalize with FEFO batch selection works: purchase invoice created, batches allocated using First-Expiry-First-Out, stock quantities updated correctly
+15. - [ ] Sale finalize with FEFO ledger impact works: sales invoice created, FEFO batches consumed, cost-of-goods calculated, ledger entries posted for revenue and inventory
+16. - [ ] Payment clamp warning displays correctly when a user attempts to overpay an invoice beyond the configured threshold; clamp behavior and toast match the spec
+17. - [ ] Inventory 5 tabs render without errors: Products, Batches, Stock Movement, Low Stock, Near Expiry — all tabs load data and show zero console errors
+18. - [ ] 8 Reports pages render: Sales Register, Purchase Register, Stock Valuation, Customer Dues, Supplier Payables, GST Summary, Expiry Report, Batch Movement — all return HTTP 200
+19. - [ ] 8 CSV exports generate with file size > 0 bytes: every report page's Export CSV button downloads a non-empty file and opens correctly in Excel/LibreOffice
+20. - [ ] Dashboard 4 KPIs show real tenant-scoped data: Today's Revenue, Outstanding Invoices, Low Stock Count, Expiring Soon — values non-zero on seeded tenant
+21. - [ ] Audit log table displays 6 required columns with correct Badge colors: Timestamp, Actor, Event, Entity, Tenant, IP — Badge variants match severity levels (info/success/warning/error)
+22. - [ ] Invoice print works for A4 and 80mm thermal layouts: open print preview, verify both paper size options render columns correctly with no overflow and total at bottom
+23. - [ ] Customer statement print displays all 4 Badge variants correctly: Paid, Pending, Overdue, Refund — each status badge uses the correct color class
+24. - [ ] Storage smoke end-to-end test PASS: upload a 50KB test PDF via the document attachment flow, confirm bucket policy allows tenant-only read/download, then delete and confirm deletion succeeds
+25. - [ ] EXPLAIN ANALYZE on the top 5 most-used queries (invoice list, customer search, dashboard KPI, stock lookup, audit list) shows no sequential scan on any table with rows > 300
+26. - [ ] Audit event filters work: filter by date range, event type, actor, and entity; results are tenant-isolated and counts match unfiltered totals minus exclusions
+27. - [ ] 30+ routes return HTTP 200 with zero 500 errors: crawl all authenticated app routes (masters, transactions, reports, settings, print) and collect status codes — confirm every route is 2xx and no 500
+28. - [ ] Sentry integration marked deferred: confirm project package.json does not include Sentry SDK, no DSN env var is required, and the Future backlog tracking issue is linked for future enablement
+29. - [ ] Notify team stakeholders: send go-live confirmation message to the project channel with links to the Vercel deploy, Supabase project, and final Phase 7 checklist pass

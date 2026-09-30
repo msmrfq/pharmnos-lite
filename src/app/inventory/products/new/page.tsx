@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
@@ -417,7 +417,9 @@ function SuccessToastIfCreated() {
 export default function NewProductPage() {
   return (
     <DashboardLayout>
-      <SuccessToastIfCreated />
+      <Suspense fallback={null}>
+        <SuccessToastIfCreated />
+      </Suspense>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 px-0 pb-5">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>

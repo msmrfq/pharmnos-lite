@@ -183,6 +183,15 @@ export class SupabaseAuthAdapter implements IAuthAdapter {
       expiresAt: data.session?.expires_at ? new Date(data.session.expires_at * 1000) : undefined,
     };
   }
+
+  async setAppMetadataTenantId(externalUserId: string, tenantId: string): Promise<void> {
+    if (!externalUserId || !tenantId) return;
+    const sb = createServiceClient();
+    const { error } = await sb.auth.admin.updateUserById(externalUserId, {
+      app_metadata: { tenant_id: tenantId },
+    });
+    if (error) throw error;
+  }
 }
 
 export const authAdapter: IAuthAdapter = new SupabaseAuthAdapter();

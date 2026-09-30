@@ -91,29 +91,29 @@ const aliveReports = [
   {
     name: "Batch expiry calendar",
     description: "Expiry schedule by month, batches at risk, near-expiry prioritized actions.",
-    href: "#",
+    href: "/reports/batch-expiry",
     icon: CalendarDays,
     tab: "inventory",
-    alive: false,
-    deferred: true,
+    alive: true,
+    deferred: false,
   },
   {
     name: "GST summary (B2B / HSN)",
     description: "IGST/CGST/SGST by tax rate and HSN code for GST returns filing.",
-    href: "#",
+    href: "/reports/gst-hsn-summary",
     icon: FileText,
     tab: "sales",
-    alive: false,
-    deferred: true,
+    alive: true,
+    deferred: false,
   },
   {
     name: "Daybook",
     description: "Ledger-style chronological daybook, debit/credit running balance.",
-    href: "#",
+    href: "/reports/daybook",
     icon: ClipboardList,
     tab: "ledger",
-    alive: false,
-    deferred: true,
+    alive: true,
+    deferred: false,
   },
 ];
 
@@ -236,7 +236,7 @@ export default async function ReportsPage() {
                         <TableCell>
                           {r.deferred ? (
                             <Badge variant="secondary" className="gap-1">
-                              <Clock className="h-3 w-3" /> Deferred Phase 7
+                              <Clock className="h-3 w-3" /> Deferred Deferred
                             </Badge>
                           ) : (
                             <Badge variant="success" className="gap-1">
@@ -281,7 +281,7 @@ export default async function ReportsPage() {
                     </div>
                   </div>
                   {r.deferred ? (
-                    <Badge variant="secondary">Phase 7</Badge>
+                    <Badge variant="secondary">Deferred</Badge>
                   ) : (
                     <Badge variant="success">Available</Badge>
                   )}
@@ -314,7 +314,7 @@ export default async function ReportsPage() {
                     </div>
                   </div>
                   {r.deferred ? (
-                    <Badge variant="secondary">Phase 7</Badge>
+                    <Badge variant="secondary">Deferred</Badge>
                   ) : (
                     <Badge variant="success">Available</Badge>
                   )}
@@ -351,7 +351,7 @@ export default async function ReportsPage() {
                     </div>
                   </div>
                   {r.deferred ? (
-                    <Badge variant="secondary">Phase 7</Badge>
+                    <Badge variant="secondary">Deferred</Badge>
                   ) : (
                     <Badge variant="success">Available</Badge>
                   )}

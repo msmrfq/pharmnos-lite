@@ -118,7 +118,7 @@ export async function onboardNewTenant(params: OnboardingTenantParams) {
     throw new Error("Workspace URL is already taken. Please choose a different business name.");
   }
 
-  return prisma.$transaction(async (tx: any) => {
+  const result = await prisma.$transaction(async (tx: any) => {
     const tenant = await tx.tenants.create({
       data: {
         slug,
@@ -194,6 +194,13 @@ export async function onboardNewTenant(params: OnboardingTenantParams) {
 
     return tenant;
   });
+
+  try {
+    await authAdapter.setAppMetadataTenantId(params.external_user_id, result.id);
+  } catch (_e) {
+    console.warn("[onboardNewTenant] setAppMetadataTenantId failed, onboarding ok, claim deferred to sign-in backfill");
+  }
+  return result;
 }
 
 export async function signInAction(

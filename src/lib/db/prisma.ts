@@ -8,6 +8,17 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+function parsePgUrl(url: string) {
+  const u = new URL(url.replace(/^postgres(ql)?:\/\//, "http://"));
+  return {
+    host: u.hostname,
+    port: parseInt(u.port || "5432", 10),
+    database: u.pathname.replace(/^\//, "") || "postgres",
+    user: decodeURIComponent(u.username),
+    password: decodeURIComponent(u.password),
+  };
+}
+
 function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
@@ -15,11 +26,17 @@ function createPrismaClient(): PrismaClient {
       log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
     });
   }
+  const { host, port, database, user, password } = parsePgUrl(connectionString);
   const pool = new Pool({
-    connectionString,
-    max: 20,
+    host, port, database, user, password,
+    max: 10,
     idleTimeoutMillis: 60_000,
-    connectionTimeoutMillis: 15_000,
+    connectionTimeoutMillis: 60_000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
+    ssl: {
+      rejectUnauthorized: false,
+    },
   });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({

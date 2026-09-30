@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactElement, cloneElement, isValidElement, useActionState, useEffect, useState } from "react";
+import { ReactElement, cloneElement, isValidElement, useEffect, useState } from "react";
+import { useFormState } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import {
@@ -55,7 +56,7 @@ const REASONS = [
 
 export default function StockAdjustmentDialog({ product, trigger }: Props) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, isPending] = useActionState<ActionResult<{ id: string }>, FormData>(
+  const [state, formAction, isPending] = useFormState<ActionResult<{ id: string }>, FormData>(
     createStockAdjustmentAction as any,
     { ok: false, errors: undefined, message: undefined },
   );

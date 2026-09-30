@@ -352,3 +352,245 @@ export async function exportStockValuationCsvAction(): Promise<Response> {
 
   return respondCsv(`stock-valuation-${new Date().toISOString().slice(0, 10)}.csv`, rows);
 }
+
+export async function exportBatchExpiryCsvAction(): Promise<Response> {
+  assertPostgresConfigured("exportBatchExpiryCsvAction");
+  const ctx = await requireServerTenantContext();
+  const t = ctx;
+  const batches = await (prisma as any).product_batches.findMany({
+    where: { tenant_id: t.tenantId, is_blocked: false },
+    include: {
+      product: { select: { name: true, sku: true } },
+      supplier: { select: { business_name: true } },
+    },
+    orderBy: { expiry_date: "asc" },
+    take: 25000,
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const rows: string[][] = [
+    ["Batch no.", "Product", "SKU", "Supplier", "Expiry date", "Days left", "MRP", "Purchase rate", "Received qty", "Available qty", "Status"],
+  ];
+
+  for (const b of batches as any[]) {
+    const exp = b.expiry_date ? new Date(b.expiry_date) : null;
+    const expStr = exp ? exp.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "";
+    let daysLeft: number | null = null;
+    let status = "Healthy";
+    if (exp) {
+      daysLeft = Math.ceil((exp.getTime() - today.getTime()) / 86400000);
+      if (daysLeft < 0) status = "Expired";
+      else if (daysLeft <= 30) status = "\u226430 days";
+      else if (daysLeft <= 60) status = "\u226460 days";
+      else if (daysLeft <= 90) status = "\u226490 days";
+      else status = "Healthy";
+    }
+    rows.push([
+      b.batch_no ?? "",
+      b.product?.name ?? "",
+      b.product?.sku ?? "",
+      b.supplier?.business_name ?? "",
+      expStr,
+      daysLeft === null ? "" : String(daysLeft),
+      String(b.mrp ?? ""),
+      String(b.purchase_rate ?? ""),
+      String(b.received_qty ?? 0),
+      String(b.available_qty ?? 0),
+      status,
+    ]);
+  }
+
+  return respondCsv(`batch-expiry-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+}
+
+export async function exportGstHsnSummaryCsvAction(): Promise<Response> {
+  assertPostgresConfigured("exportGstHsnSummaryCsvAction");
+  const ctx = await requireServerTenantContext();
+  const t = ctx;
+
+  const now = new Date();
+  const fromDefault = new Date(now.getFullYear(), now.getMonth(), 1);
+  const toDefault = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const yyyymmdd = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, "");
+  const fromStr = yyyymmdd(fromDefault);
+  const toStr = yyyymmdd(toDefault);
+
+  const profile = await (prisma as any).business_profiles.findFirst({
+    where: { tenant_id: t.tenantId },
+    select: { state: true },
+  }).catch(() => null);
+  const tenantState = profile?.state ?? null;
+
+  const invoices = await (prisma as any).sales_invoices.findMany({
+    where: { tenant_id: t.tenantId, status: "FINALIZED", invoice_date: { gte: fromDefault, lte: new Date(toDefault.getTime() + 86399999) } },
+    include: {
+      customer: { select: { gstin: true, billing_state: true } },
+      items: {
+        include: { product: { select: { hsn_code: true, gst_rate: true } } },
+      },
+    },
+    take: 25000,
+  });
+
+  const groupMap = new Map<string, {
+    hsn: string; description: string; ratePct: number; taxableValue: number;
+    totalQty: number; cgst: number; sgst: number; igst: number; invoicesSet: Set<string>;
+  }>();
+
+  for (const inv of invoices as any[]) {
+    const invId = inv.id;
+    const custState = inv.customer?.billing_state ?? null;
+    const isInterstate = Boolean(tenantState && custState && tenantState !== custState);
+    const items = inv.items ?? [];
+    for (const it of items) {
+      const hsn = it.product?.hsn_code ?? "UNCLASSIFIED";
+      const ratePct = Number(it.product?.gst_rate ?? it.gst_rate ?? 0);
+      const gstAmount = Number(it.gst_amount ?? 0);
+      const lineTotal = Number(it.line_total ?? 0);
+      const taxableValue = lineTotal - gstAmount;
+      const key = `${hsn}||${ratePct}`;
+      let g = groupMap.get(key);
+      if (!g) {
+        g = { hsn, description: "", ratePct, taxableValue: 0, totalQty: 0, cgst: 0, sgst: 0, igst: 0, invoicesSet: new Set() };
+        groupMap.set(key, g);
+      }
+      g.description = it.product?.name ?? g.description;
+      g.taxableValue += taxableValue;
+      g.totalQty += Number(it.quantity ?? 0) + Number(it.free_qty ?? 0);
+      if (isInterstate) {
+        g.igst += gstAmount;
+      } else {
+        g.cgst += gstAmount / 2;
+        g.sgst += gstAmount / 2;
+      }
+      g.invoicesSet.add(invId);
+    }
+  }
+
+  const rows: string[][] = [
+    ["HSN", "Description", "Tax rate %", "Qty", "Taxable value \u20B9", "CGST \u20B9", "SGST \u20B9", "IGST \u20B9", "Total tax \u20B9", "Invoices count", "Total invoice value \u20B9"],
+  ];
+
+  for (const g of groupMap.values()) {
+    const totalGst = g.cgst + g.sgst + g.igst;
+    const totalValue = g.taxableValue + totalGst;
+    rows.push([
+      g.hsn,
+      g.description,
+      String(Number.isFinite(g.ratePct) ? g.ratePct.toFixed(2) : ""),
+      String(g.totalQty),
+      String(Number.isFinite(g.taxableValue) ? g.taxableValue.toFixed(2) : ""),
+      String(Number.isFinite(g.cgst) ? g.cgst.toFixed(2) : ""),
+      String(Number.isFinite(g.sgst) ? g.sgst.toFixed(2) : ""),
+      String(Number.isFinite(g.igst) ? g.igst.toFixed(2) : ""),
+      String(Number.isFinite(totalGst) ? totalGst.toFixed(2) : ""),
+      String(g.invoicesSet.size),
+      String(Number.isFinite(totalValue) ? totalValue.toFixed(2) : ""),
+    ]);
+  }
+
+  return respondCsv(`gst-hsn-summary-${fromStr}-${toStr}.csv`, rows);
+}
+
+export async function exportDaybookCsvAction(): Promise<Response> {
+  assertPostgresConfigured("exportDaybookCsvAction");
+  const ctx = await requireServerTenantContext();
+  const t = ctx;
+
+  const now = new Date();
+  const fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  const toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  fromDate.setHours(0, 0, 0, 0);
+  toDate.setHours(23, 59, 59, 999);
+
+  const custBefore = await (prisma as any).customer_ledgers.findMany({
+    where: { tenant_id: t.tenantId, entry_date: { lt: fromDate } },
+    select: { debit: true, credit: true },
+  });
+  const suppBefore = await (prisma as any).supplier_ledgers.findMany({
+    where: { tenant_id: t.tenantId, entry_date: { lt: fromDate } },
+    select: { debit: true, credit: true },
+  });
+  let openingBal = 0;
+  for (const r of custBefore as any[]) openingBal += Number(r.debit ?? 0) - Number(r.credit ?? 0);
+  for (const r of suppBefore as any[]) openingBal += Number(r.debit ?? 0) - Number(r.credit ?? 0);
+
+  const custRows = await (prisma as any).customer_ledgers.findMany({
+    where: { tenant_id: t.tenantId, entry_date: { gte: fromDate, lte: toDate } },
+    include: { customer: { select: { business_name: true } }, invoice: { select: { invoice_no: true } } },
+    orderBy: { entry_date: "asc" },
+    take: 25000,
+  });
+  const suppRows = await (prisma as any).supplier_ledgers.findMany({
+    where: { tenant_id: t.tenantId, entry_date: { gte: fromDate, lte: toDate } },
+    include: { supplier: { select: { business_name: true } }, purchase: { select: { invoice_no: true } } },
+    orderBy: { entry_date: "asc" },
+    take: 25000,
+  });
+
+  type Unified = {
+    entry_date: Date; voucherType: string; counterparty: string;
+    debit: number; credit: number; narration: string | null; ref: string | null;
+  };
+  const unified: Unified[] = [];
+  for (const r of custRows as any[]) {
+    let vt = "Customer Invoice";
+    if (r.entry_type === "PAYMENT_RECEIVED") vt = "Customer Payment";
+    else if (r.entry_type === "OPENING_BALANCE") vt = "Opening balance";
+    unified.push({
+      entry_date: r.entry_date, voucherType: vt,
+      counterparty: r.customer?.business_name ?? "",
+      debit: Number(r.debit ?? 0), credit: Number(r.credit ?? 0),
+      narration: r.narration ?? null, ref: r.invoice?.invoice_no ?? r.reference_id ?? null,
+    });
+  }
+  for (const r of suppRows as any[]) {
+    let vt = "Supplier Invoice";
+    if (r.entry_type === "PAYMENT_MADE") vt = "Supplier Payment";
+    else if (r.entry_type === "OPENING_BALANCE") vt = "Opening balance";
+    unified.push({
+      entry_date: r.entry_date, voucherType: vt,
+      counterparty: r.supplier?.business_name ?? "",
+      debit: Number(r.debit ?? 0), credit: Number(r.credit ?? 0),
+      narration: r.narration ?? null, ref: r.purchase?.invoice_no ?? r.reference_id ?? null,
+    });
+  }
+  unified.sort((a, b) => a.entry_date.getTime() - b.entry_date.getTime());
+
+  const yyyymmdd = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, "");
+  const fmt = (n: number) => Number.isFinite(n) ? n.toFixed(2) : "";
+
+  const rows: string[][] = [
+    ["Date", "Voucher type", "Counterparty", "Debit \u20B9", "Credit \u20B9", "Balance \u20B9", "Narration", "Invoice ref"],
+  ];
+
+  let running = openingBal;
+  rows.push([
+    fromDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+    "Opening balance",
+    "",
+    "",
+    "",
+    fmt(openingBal),
+    "Brought forward",
+    "",
+  ]);
+
+  for (const r of unified) {
+    running += r.debit - r.credit;
+    rows.push([
+      new Date(r.entry_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+      r.voucherType,
+      r.counterparty,
+      r.debit > 0 ? fmt(r.debit) : "",
+      r.credit > 0 ? fmt(r.credit) : "",
+      fmt(running),
+      r.narration ?? "",
+      r.ref ?? "",
+    ]);
+  }
+
+  return respondCsv(`daybook-${yyyymmdd(fromDate)}-${yyyymmdd(toDate)}.csv`, rows);
+}

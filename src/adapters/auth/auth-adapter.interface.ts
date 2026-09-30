@@ -56,4 +56,5 @@ export interface IAuthAdapter {
   sendPasswordReset(params: PasswordResetParams): Promise<void>;
   updatePassword(params: UpdatePasswordParams): Promise<void>;
   verifyOtp?(email: string, token: string, type: "signup" | "recovery"): Promise<AuthSession>;
+  setAppMetadataTenantId(externalUserId: string, tenantId: string): Promise<void>;
 }
