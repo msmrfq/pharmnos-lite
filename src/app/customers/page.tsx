@@ -66,6 +66,20 @@ export default async function CustomersPage({
       const result = await repos.customers.list({ skip: (page - 1) * pageSize, take: pageSize, orderBy: { business_name: "asc" } }, ctx);
       items = result.items;
       total = result.total;
+      const perCustomerAging = new Map<string, number>();
+      for (const c of items) {
+        try {
+          if (Number(c.receivable_balance ?? 0) <= 0) {
+            perCustomerAging.set(c.id, 0);
+            continue;
+          }
+          const d = await repos.customerLedgers.getOldestOverdueDays(c.id, ctx);
+          perCustomerAging.set(c.id, Number.isFinite(d) ? d : 0);
+        } catch (_) {
+          perCustomerAging.set(c.id, 0);
+        }
+      }
+      (items as any)._agingMap = perCustomerAging;
     } catch (_err) {
       dbOk = false;
     }
@@ -128,6 +142,7 @@ export default async function CustomersPage({
                     <TableHead>State</TableHead>
                     <TableHead className="text-right">Credit limit</TableHead>
                     <TableHead className="text-right">Receivable</TableHead>
+                    <TableHead>Aging</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -135,7 +150,7 @@ export default async function CustomersPage({
                 <TableBody>
                   {dbOk && items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="py-10 text-center text-muted text-body-md">
+                      <TableCell colSpan={10} className="py-10 text-center text-muted text-body-md">
                         No customers yet.{" "}
                         <Link href="/customers/new" className="text-ink font-medium underline underline-offset-4 hover:no-underline">
                           Create your first customer
@@ -144,15 +159,16 @@ export default async function CustomersPage({
                     </TableRow>
                   ) : !dbOk ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="py-10 text-center text-muted text-body-md">
+                      <TableCell colSpan={10} className="py-10 text-center text-muted text-body-md">
                         Showing placeholder rows until database is connected.
                       </TableCell>
                     </TableRow>
                   ) : (
                     items.map((c: any) => {
                       const recv = Number(c.receivable_balance ?? 0);
-                      const overdueApproxDays = recv > 0 ? 15 : 0;
-                      const bucket = agingBucket(overdueApproxDays);
+                      const agingMap = (items as any)._agingMap as Map<string, number> | undefined;
+                      const agingDays = agingMap?.get(c.id) ?? (recv > 0 ? 7 : 0);
+                      const bucket = agingBucket(agingDays);
                       return (
                         <TableRow key={c.id}>
                           <TableCell className="font-medium text-ink">
@@ -178,8 +194,15 @@ export default async function CustomersPage({
                             {rupee(recv)}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={recv > 0 ? bucket.variant : "success"}>
-                              {recv > 0 ? bucket.label : c.is_active === false ? "Inactive" : "Active"}
+                            {recv > 0 ? (
+                              <Badge variant={bucket.variant}>{bucket.label}</Badge>
+                            ) : (
+                              <Badge variant="success">No dues</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={c.is_active === false ? "secondary" : "default"} className={c.is_active === false ? "" : "bg-[#111] text-white"}>
+                              {c.is_active === false ? "Inactive" : "Active"}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">

@@ -86,6 +86,33 @@ export class CustomerLedgerRepository extends BaseRepository<
     return debit - credit;
   }
 
+  async getOldestOverdueDays(customerId: string, ctx: TenantContext, asOf: Date = new Date()): Promise<number> {
+    const t = this.withTenant(ctx);
+    const rows = await this.prisma.customer_ledgers.findMany({
+      where: { tenant_id: t.tenantId, customer_id: customerId },
+      orderBy: { entry_date: "asc" },
+      select: { entry_date: true, debit: true, credit: true },
+    });
+    if (rows.length === 0) return 0;
+    let running = 0;
+    let oldestUnpaid: Date | null = null;
+    for (const r of rows) {
+      running += Number(r.debit ?? 0) - Number(r.credit ?? 0);
+      if (running > 0 && oldestUnpaid === null) {
+        oldestUnpaid = r.entry_date ? new Date(r.entry_date) : null;
+      }
+    }
+    if (running <= 0 || !oldestUnpaid) return 0;
+    const todayMs = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate()).getTime();
+    const oldMs = new Date(
+      oldestUnpaid.getFullYear(),
+      oldestUnpaid.getMonth(),
+      oldestUnpaid.getDate(),
+    ).getTime();
+    const days = Math.floor((todayMs - oldMs) / 86400000);
+    return Math.max(0, Number.isFinite(days) ? days : 0);
+  }
+
   async getAgingBuckets(
     ctx: TenantContext,
   ): Promise<{

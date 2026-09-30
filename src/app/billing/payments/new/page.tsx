@@ -11,29 +11,29 @@ import { ArrowLeft } from "lucide-react";
 import { isPostgresConfigured } from "@/lib/db/prisma";
 import { requireServerTenantContext } from "@/lib/db/tenant-context";
 import { repos } from "@/repositories";
-import BillingNewClientForm from "./_form";
+import BillingPaymentNewClientForm from "./_form";
 
 export const metadata: Metadata = {
-  title: "New invoice",
+  title: "Record customer payment",
 };
 
-export default async function NewBillingPage() {
+export default async function NewBillingPaymentPage({
+  searchParams,
+}: {
+  searchParams?: { customer_id?: string };
+}) {
+  const prefillCustomerId = searchParams?.customer_id ?? "";
   let dbOk = isPostgresConfigured();
   let customers: any[] = [];
-  let products: any[] = [];
-  let batches: any[] = [];
 
   if (dbOk) {
     try {
       const ctx = await requireServerTenantContext();
-      const [custRes, prodRes, batchRes] = await Promise.all([
-        repos.customers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx),
-        repos.products.list({ skip: 0, take: 25000, orderBy: { name: "asc" } }, ctx),
-        repos.productBatches.list({ skip: 0, take: 25000, orderBy: { expiry_date: "asc" } }, ctx),
-      ]);
-      customers = (custRes.items as any[]) ?? [];
-      products = (prodRes.items as any[]) ?? [];
-      batches = (batchRes.items as any[]) ?? [];
+      const res = await repos.customers.list(
+        { skip: 0, take: 25000, orderBy: { business_name: "asc" } },
+        ctx,
+      );
+      customers = (res.items as any[]) ?? [];
     } catch (_err) {
       dbOk = false;
     }
@@ -49,9 +49,9 @@ export default async function NewBillingPage() {
             </Link>
           </Button>
           <div>
-            <CardTitle className="text-display-sm tracking-brand">New invoice</CardTitle>
+            <CardTitle className="text-display-sm tracking-brand">Record payment received</CardTitle>
             <CardDescription>
-              Select a customer, add items by batch (FEFO picker), and save draft. Finalize from the billing list when ready.
+              Record a customer payment against their outstanding balance. Dues are automatically reduced; overpayments are clamped to 0.
             </CardDescription>
             {!dbOk && (
               <p className="mt-2 text-caption text-destructive">
@@ -61,7 +61,10 @@ export default async function NewBillingPage() {
           </div>
         </div>
       </CardHeader>
-      <BillingNewClientForm customers={customers} products={products} batches={batches} />
+      <BillingPaymentNewClientForm
+        customers={customers}
+        prefillCustomerId={prefillCustomerId}
+      />
     </DashboardLayout>
   );
 }

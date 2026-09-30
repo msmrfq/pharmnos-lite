@@ -180,3 +180,33 @@ export async function exportPurchaseRegisterCsvAction(): Promise<Response> {
   }
   return respondCsv(`purchase-register-${new Date().toISOString().slice(0, 10)}.csv`, rows);
 }
+
+export async function exportSalesRegisterCsvAction(): Promise<Response> {
+  assertPostgresConfigured("exportSalesRegisterCsvAction");
+  const ctx = await requireServerTenantContext();
+  const result = await repos.salesInvoices.list({ skip: 0, take: 25000, orderBy: { invoice_date: "desc" } }, ctx);
+  const rows: string[][] = [
+    ["Invoice no", "Date", "Customer", "Reference no", "Cash sale", "Status", "Gross", "Discount", "Tax", "Round off", "Net", "Paid", "Balance due", "Created at"],
+  ];
+  for (const p of (result.items as any) ?? []) {
+    const d = p.invoice_date ? new Date(p.invoice_date) : null;
+    const c = p.created_at ? new Date(p.created_at) : null;
+    rows.push([
+      p.invoice_no ?? "",
+      d ? d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "",
+      p.customer?.business_name ?? p.customer?.customer_name ?? "",
+      p.reference_no ?? "",
+      p.is_cash_sale ? "Yes" : "No",
+      p.status ?? "",
+      String(p.gross_amount ?? ""),
+      String(p.total_discount ?? ""),
+      String(p.total_tax ?? ""),
+      String(p.round_off ?? ""),
+      String(p.net_amount ?? ""),
+      String(p.paid_amount ?? ""),
+      String(p.balance_due ?? ""),
+      c ? c.toLocaleString("en-IN") : "",
+    ]);
+  }
+  return respondCsv(`sales-register-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+}
