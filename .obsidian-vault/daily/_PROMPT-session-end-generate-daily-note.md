@@ -36,6 +36,17 @@ All file paths you reference in the daily note body must use the FULL explicit v
 
 You have full access to this session's chat history, all code changes, git diff, and uncommitted changes for this project.
 
+### Task 0 (MANDATORY — DO BEFORE Task 1): Confirm phase tracker is up to date.
+
+1. Open `PHASE_TRACKER.md` at the project root.
+2. Check the `Last updated:` date stamp on line 17-ish. Is it TODAY'S actual date? If NOT:
+   a. Update `Last updated:` to today's date.
+   b. If the session finished a working phase end-to-end (e.g. Phase 3 complete — all AC checkboxes in the 3 Masters CRUD spec passed), flip Status column line of that phase from `🚧 IN PROGRESS → ✅ DONE (completed YYYY-MM-DD)` with today's date.
+   c. Move the `✅ YES` in `Current?` column exactly ONE row down to the NEXT working phase (only one current phase at a time; we never work on two phases simultaneously).
+   d. Update the `Current working phase:` banner line on line 19-ish to match the newly current phase title.
+   e. Update the `% complete` column for the phase with a realistic confidence-weighted % — never % from planning alone; only bump when real code is actually shipped and passing typecheck/lint/smoke.
+3. If you touched `PHASE_TRACKER.md` in step 2, THEN also run the cross-reference update list in the footer of PHASE_TRACKER.md (at minimum open CLAUDE.md canonical → confirm File map section still contains the `PHASE_TRACKER.md` row with correct current phase label → then run `& .\sync-agent-briefings.ps1` so all 6 AI mirrors receive the phase shift).
+
 ### Task 1: Generate the daily working note
 
 Create the file at `.obsidian-vault/daily/YYYY-MM-DD.md` using today's actual date.

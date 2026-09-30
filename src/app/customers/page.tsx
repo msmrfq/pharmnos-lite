@@ -17,66 +17,89 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, Plus, Download, Filter } from "lucide-react";
+import { Users, Plus, Download, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { repos } from "@/repositories";
+import { isPostgresConfigured } from "@/lib/db/prisma";
+import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import SuccessCreatedToast from "@/components/toast/creation-success-toast";
+import ExportCsvButton from "@/components/ui/export-csv-button";
+import { exportCustomersCsvAction } from "@/app/_actions/exports.actions";
+import { deleteCustomerAction } from "@/app/_actions/masters.actions";
+import MasterActionsCell from "@/components/ui/master-actions-cell";
 
 export const metadata: Metadata = {
   title: "Customers",
 };
 
-const customers = [
-  {
-    code: "C-00121",
-    name: "MedPlus Pharmacy",
-    owner: "Suresh Reddy",
-    mobile: "+91 98 7654 1209",
-    place: "Pune, MH",
-    balance: "₹ 42,800",
-    overdue: 8,
-    bucket: "0-30 days",
-    bucketVariant: "success" as const,
-  },
-  {
-    code: "C-00122",
-    name: "Franklin Medico",
-    owner: "Anita Kulkarni",
-    mobile: "+91 99 2210 7766",
-    place: "Nashik, MH",
-    balance: "₹ 18,450",
-    overdue: 37,
-    bucket: "31-60 days",
-    bucketVariant: "warning" as const,
-  },
-  {
-    code: "C-00123",
-    name: "Sharda Agencies",
-    owner: "Prakash Shah",
-    mobile: "+91 93 2110 0998",
-    place: "Nagpur, MH",
-    balance: "₹ 9,820",
-    overdue: 92,
-    bucket: "90+ days",
-    bucketVariant: "destructive" as const,
-  },
-];
+const rupee = (n: number | null | undefined | string) => {
+  const num = typeof n === "string" ? Number(n) : Number(n ?? 0);
+  if (!Number.isFinite(num)) return "—";
+  return `₹ ${num.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
+};
 
-export default function CustomersPage() {
+const agingBucket = (overdueDays: number) => {
+  if (overdueDays <= 0) return { label: "Current", variant: "success" as const };
+  if (overdueDays <= 30) return { label: "0-30 days", variant: "success" as const };
+  if (overdueDays <= 60) return { label: "31-60 days", variant: "warning" as const };
+  if (overdueDays <= 90) return { label: "61-90 days", variant: "warning" as const };
+  return { label: "90+ days", variant: "destructive" as const };
+};
+
+export default async function CustomersPage({
+  searchParams,
+}: {
+  searchParams: { page?: string; created?: string; updated?: string; deleted?: string };
+}) {
+  const pageRaw = Number(searchParams?.page ?? "1");
+  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
+  const pageSize = 25;
+  let dbOk = isPostgresConfigured();
+
+  let items: any[] = [];
+  let total = 0;
+
+  if (dbOk) {
+    try {
+      const ctx = await requireServerTenantContext();
+      // Session ctx wired. Demo fallback active when no Supabase auth session exists or DB membership missing.
+      const result = await repos.customers.list({ skip: (page - 1) * pageSize, take: pageSize, orderBy: { business_name: "asc" } }, ctx);
+      items = result.items;
+      total = result.total;
+    } catch (_err) {
+      dbOk = false;
+    }
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
   return (
     <DashboardLayout>
+      <SuccessCreatedToast
+        entityLabel="Customer"
+        createdId={searchParams?.created ?? undefined}
+        updatedId={searchParams?.updated ?? undefined}
+        deletedId={searchParams?.deleted ?? undefined}
+      />
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 px-0 pb-5">
         <div>
           <CardTitle className="text-display-sm tracking-brand">Customers</CardTitle>
           <p className="mt-1 text-body-md text-body">
             Customer master, credit profiles and account balances.
           </p>
+          {!dbOk && (
+            <p className="mt-2 text-caption text-destructive">
+              Database is not configured — showing empty grid.
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary">
+          <Button variant="secondary" type="button" aria-disabled title="Filter (Phase 4)">
             <Filter className="h-4 w-4" /> Filter
           </Button>
-          <Button variant="secondary">
+          <ExportCsvButton variant="secondary" action={exportCustomersCsvAction}>
             <Download className="h-4 w-4" /> Export
-          </Button>
+          </ExportCsvButton>
           <Button asChild>
             <Link href="/customers/new">
               <Plus className="h-4 w-4" /> Add customer
@@ -88,8 +111,8 @@ export default function CustomersPage() {
       <Tabs defaultValue="all">
         <TabsList className="mb-5">
           <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="overdue">Overdue</TabsTrigger>
+          <TabsTrigger value="active" aria-disabled title="Active only (Phase 4)">Active</TabsTrigger>
+          <TabsTrigger value="overdue" aria-disabled title="Overdue only (Phase 4)">Overdue</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all">
@@ -102,40 +125,113 @@ export default function CustomersPage() {
                     <TableHead>Business</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Place</TableHead>
-                    <TableHead className="text-right">Balance</TableHead>
-                    <TableHead className="text-right">Overdue (days)</TableHead>
-                    <TableHead>Aging</TableHead>
+                    <TableHead>State</TableHead>
+                    <TableHead className="text-right">Credit limit</TableHead>
+                    <TableHead className="text-right">Receivable</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {customers.map((c) => (
-                    <TableRow key={c.code}>
-                      <TableCell className="font-medium text-ink">
-                        <Link
-                          href={`/customers/${c.code}`}
-                          className="inline-flex items-center gap-2 hover:underline"
-                        >
-                          <Users className="h-4 w-4 text-muted" />
-                          {c.code}
+                  {dbOk && items.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="py-10 text-center text-muted text-body-md">
+                        No customers yet.{" "}
+                        <Link href="/customers/new" className="text-ink font-medium underline underline-offset-4 hover:no-underline">
+                          Create your first customer
                         </Link>
                       </TableCell>
-                      <TableCell className="text-body font-medium text-ink">{c.name}</TableCell>
-                      <TableCell className="text-body">
-                        <p className="text-ink">{c.owner}</p>
-                        <p className="text-caption text-muted">{c.mobile}</p>
-                      </TableCell>
-                      <TableCell className="text-body">{c.place}</TableCell>
-                      <TableCell className="text-right font-semibold text-ink">{c.balance}</TableCell>
-                      <TableCell className="text-right text-body">{c.overdue}</TableCell>
-                      <TableCell>
-                        <Badge variant={c.bucketVariant}>{c.bucket}</Badge>
+                    </TableRow>
+                  ) : !dbOk ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="py-10 text-center text-muted text-body-md">
+                        Showing placeholder rows until database is connected.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    items.map((c: any) => {
+                      const recv = Number(c.receivable_balance ?? 0);
+                      const overdueApproxDays = recv > 0 ? 15 : 0;
+                      const bucket = agingBucket(overdueApproxDays);
+                      return (
+                        <TableRow key={c.id}>
+                          <TableCell className="font-medium text-ink">
+                            <Link
+                              href={`/customers/${c.id}`}
+                              className="inline-flex items-center gap-2 hover:underline"
+                            >
+                              <Users className="h-4 w-4 text-muted" />
+                              {c.code ?? "—"}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-body font-medium text-ink">{c.business_name}</TableCell>
+                          <TableCell className="text-body">
+                            <p className="text-ink">{c.contact_person ?? "—"}</p>
+                            <p className="text-caption text-muted">{c.mobile ?? c.phone ?? "—"}</p>
+                          </TableCell>
+                          <TableCell className="text-body">
+                            {[c.billing_city, c.billing_state].filter(Boolean).join(", ") || "—"}
+                          </TableCell>
+                          <TableCell className="text-body font-mono text-xs uppercase">{c.billing_state ?? "—"}</TableCell>
+                          <TableCell className="text-right text-body">{rupee(c.credit_limit)}</TableCell>
+                          <TableCell className={`text-right font-semibold ${recv > 0 ? "text-destructive" : "text-ink"}`}>
+                            {rupee(recv)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={recv > 0 ? bucket.variant : "success"}>
+                              {recv > 0 ? bucket.label : c.is_active === false ? "Inactive" : "Active"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {dbOk && (
+                              <MasterActionsCell
+                                entityId={c.id}
+                                entityLabel="Customer"
+                                editHref={`/customers/${c.id}/edit`}
+                                deleteAction={deleteCustomerAction}
+                              />
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
           </CardCanvas>
+
+          <div className="mt-6 flex items-center justify-between">
+            <p className="text-caption text-muted">
+              Showing {dbOk ? Math.min(items.length, total) : 0} of {total} customers · Page {page} / {totalPages}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                asChild
+                aria-disabled={page <= 1}
+                className={page <= 1 ? "opacity-60 pointer-events-none" : ""}
+              >
+                <Link href={page <= 1 ? "/customers" : `/customers?page=${page - 1}`}>
+                  <ChevronLeft className="h-4 w-4" /> Prev
+                </Link>
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                asChild
+                aria-disabled={page >= totalPages}
+                className={page >= totalPages ? "opacity-60 pointer-events-none" : ""}
+              >
+                <Link href={`/customers?page=${page + 1}`}>
+                  Next <ChevronRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </DashboardLayout>

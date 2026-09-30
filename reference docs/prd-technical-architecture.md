@@ -1072,6 +1072,23 @@ Impact:
 - performance tuning
 - backup and recovery planning
 
+---
+
+## Working phase crosswalk (29a) — Project-wide MANDATORY numbering P1…P7
+
+> ⚠️ **Phase numbering convention clarification (read this before planning):**
+> The 6 phases above (Phase 0…Phase 5) are the original PRD suggested phases written during Phase 0 planning. **For day-to-day work, commit messages, vault notes, status updates, TODO lists, and AI planning prompts — USE THE 7 WORKING PHASES P1…P7 BELOW exclusively.** The 6 PRD phases above remain for historical-reference / coverage-area mapping only; never re-use Phase 0…Phase 5 in conversation. All 7 working phases live-tracked in `PHASE_TRACKER.md` at project root (central source of truth, current phase indicator, % complete, last updated date).
+
+| Working Phase | Title (day-to-day name) | Status (as of 2026-09-30) | PRD §29 phase area covered |
+|---|---|---|---|
+| P1 | Foundation & Scaffold (Next.js 14, Prisma, Design System, 4 routes, typecheck/lint clean) | ✅ DONE 2026-09-29 | PRD Phase 0 Foundation |
+| P2 | Dashboard Shells + 17 Repositories + 4 Domain Services + Auth Forms + Supabase Cloud Go-Live + Seed Live + Triage | ✅ DONE 2026-09-29 | PRD Phase 1 first half (business profile, users, roles, schema) |
+| P3 | Core Masters CRUD — Products → Customers → Suppliers (list + new form + Zod + repo tx + opening balance ledger rows) | 🚧 CURRENT (5% spec done, code next) | PRD Phase 1 second half (products, customers, suppliers) |
+| P4 | Purchases + Inventory Transactions (purchase entry, FEFO batch consumption, stock adjusts, low-stock/near-expiry tabs live) | 🔴 NOT STARTED | PRD Phase 2 Purchases and Inventory |
+| P5 | Billing + Ledgers + Payments (sales invoice flow, GST calc, payment capture, customer dues aging) | 🔴 NOT STARTED | PRD Phase 3 Billing and Ledger |
+| P6 | Reports + Audit + Dashboard KPIs (paginated reports, audit log timeline, KPI widgets live data) | 🔴 NOT STARTED | PRD Phase 4 Dashboard and Audit |
+| P7 | Hardening + Release (RLS tenant_id policies, Storage bucket bug resolved, exports, perf tuning, backup SOP, go-live checklist) | 🔴 NOT STARTED | PRD Phase 5 Hardening |
+
 ## 30. Risks and Mitigations
 
 ### 30.1 Free Tier Limits

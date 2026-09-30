@@ -1,4 +1,0 @@
-drilldown,business_name,slug,id,email,role_name,status
-tenant,Maharashtra Pharma Distributors,maharashtra-pharma-distributors,tn_maharashtra_pharma_0000000000001,null,null,null
-admin_user,Rajesh Kumar,demo-rajesh-0001,usr_rajesh_kumar_0000000000001,owner@maharashtrapharma.in,null,null
-admin_membership,null,null,mb_rajesh_admin_0000000000001,owner@maharashtrapharma.in,ADMIN,active

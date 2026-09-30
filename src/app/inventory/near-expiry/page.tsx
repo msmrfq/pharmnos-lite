@@ -17,38 +17,81 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Clock, Filter, Download, AlertTriangle } from "lucide-react";
+import ExportCsvButton from "@/components/ui/export-csv-button";
+import { exportNearExpiryCsvAction } from "@/app/_actions/exports.actions";
+import { Clock, Download, AlertTriangle } from "lucide-react";
+import { repos } from "@/repositories";
+import { isPostgresConfigured } from "@/lib/db/prisma";
+import { requireServerTenantContext } from "@/lib/db/tenant-context";
 
 export const metadata: Metadata = {
   title: "Near expiry",
 };
 
-const batches = [
-  { product: "Cetirizine 10mg (10x10)", batch: "CT-4021", expiry: "15 Nov 2026", daysLeft: 47, qty: 120, unit: "Strip", value: "₹ 25,200", variant: "badge-orange" as const },
-  { product: "Amoxicillin 250mg (10x10)", batch: "AM-7730", expiry: "28 Feb 2027", daysLeft: 152, qty: 480, unit: "Strip", value: "₹ 2,01,600", variant: "warning" as const },
-  { product: "Montelukast 10mg (10x10)", batch: "MN-5112", expiry: "10 Dec 2028", daysLeft: 802, qty: 92, unit: "Strip", value: "₹ 53,360", variant: "success" as const },
-];
+const rupee = (n: number | null | undefined | string) => {
+  const num = typeof n === "string" ? Number(n) : Number(n ?? 0);
+  if (!Number.isFinite(num)) return "—";
+  return `₹ ${num.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
+};
 
-export default function NearExpiryPage() {
+const daysBetween = (target: Date | string | null | undefined): number => {
+  if (!target) return 0;
+  const t = target instanceof Date ? target : new Date(target);
+  if (!Number.isFinite(t.getTime())) return 0;
+  const ms = t.getTime() - Date.now();
+  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+};
+
+const bucketVariant = (days: number): "destructive" | "warning" | "success" | "secondary" => {
+  if (days <= 0) return "destructive";
+  if (days <= 90) return "destructive";
+  if (days <= 180) return "warning";
+  return "success";
+};
+
+export default async function NearExpiryPage() {
+  let dbOk = isPostgresConfigured();
+  const windows = [60, 180, 365];
+  let items: any[] = [];
+  let valAtRisk = 0;
+  if (dbOk) {
+    try {
+      const ctx = await requireServerTenantContext();
+      // Session ctx wired. Demo fallback active when no Supabase auth session exists or DB membership missing.
+      const maxWindow = Math.max(...windows);
+      const rows = await repos.productBatches.listNearExpiry(ctx, maxWindow);
+      items = rows;
+      for (const b of rows as any) {
+        valAtRisk += Number(b.mrp ?? b.product?.mrp ?? 0) * Number(b.available_qty ?? 0);
+      }
+    } catch (_err) {
+      dbOk = false;
+    }
+  }
+  const in90 = items.filter((b) => daysBetween(b.expiry_date) <= 90).length;
+  const in180 = items.filter((b) => {
+    const d = daysBetween(b.expiry_date);
+    return d > 90 && d <= 180;
+  }).length;
+  const autoBlock = items.filter((b) => daysBetween(b.expiry_date) <= 0).length;
+
   return (
     <DashboardLayout>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 px-0 pb-5">
         <div>
           <CardTitle className="text-display-sm tracking-brand flex items-center gap-2">
-            <Clock className="h-6 w-6 text-badge-orange" />
+            <Clock className="h-6 w-6" style={{ color: "var(--color-orange)" }} />
             Near expiry
           </CardTitle>
           <p className="mt-1 text-body-md text-body">
-            Batches expiring in the next 90, 180, and 365 days — protect margin, block stock.
+            Batches expiring within the next 180 days. Protect margin, flag for blocking.
           </p>
+          {!dbOk && <p className="mt-2 text-caption text-destructive">Database not configured.</p>}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary">
-            <Filter className="h-4 w-4" /> Window: 90 days
-          </Button>
-          <Button variant="secondary">
+          <ExportCsvButton variant="secondary" action={exportNearExpiryCsvAction}>
             <Download className="h-4 w-4" /> Export
-          </Button>
+          </ExportCsvButton>
         </div>
       </CardHeader>
 
@@ -57,10 +100,10 @@ export default function NearExpiryPage() {
           <CardContent className="flex items-start justify-between gap-3">
             <div>
               <p className="text-caption font-medium uppercase tracking-wide text-muted">At risk (≤90d)</p>
-              <p className="mt-1 text-display-sm font-display tracking-brand text-ink">₹ 25,200</p>
-              <Badge variant="destructive" className="mt-2">1 batch</Badge>
+              <p className="mt-1 text-display-sm font-display tracking-brand text-ink">{in90}</p>
+              <Badge variant="destructive" className="mt-2">{in90} batches</Badge>
             </div>
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-card border border-hairline text-semantic-error">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-card border border-hairline text-destructive">
               <AlertTriangle className="h-5 w-5" />
             </span>
           </CardContent>
@@ -69,10 +112,10 @@ export default function NearExpiryPage() {
           <CardContent className="flex items-start justify-between gap-3">
             <div>
               <p className="text-caption font-medium uppercase tracking-wide text-muted">≤ 180 days</p>
-              <p className="mt-1 text-display-sm font-display tracking-brand text-ink">₹ 2,26,800</p>
-              <Badge variant="warning" className="mt-2">2 batches</Badge>
+              <p className="mt-1 text-display-sm font-display tracking-brand text-ink">{in90 + in180}</p>
+              <Badge variant="warning" className="mt-2">{in180} more</Badge>
             </div>
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-card border border-hairline text-badge-orange">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-card border border-hairline" style={{ color: "var(--color-orange)" }}>
               <Clock className="h-5 w-5" />
             </span>
           </CardContent>
@@ -80,9 +123,9 @@ export default function NearExpiryPage() {
         <CardCanvas>
           <CardContent className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-caption font-medium uppercase tracking-wide text-muted">Blocked batches</p>
-              <p className="mt-1 text-display-sm font-display tracking-brand text-ink">1</p>
-              <Badge variant="secondary" className="mt-2">CT-4021 · auto</Badge>
+              <p className="text-caption font-medium uppercase tracking-wide text-muted">Blocked / expired</p>
+              <p className="mt-1 text-display-sm font-display tracking-brand text-ink">{autoBlock}</p>
+              <Badge variant="secondary" className="mt-2">Value {rupee(valAtRisk)}</Badge>
             </div>
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-card border border-hairline text-ink">
               <AlertTriangle className="h-5 w-5" />
@@ -106,27 +149,50 @@ export default function NearExpiryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {batches.map((b) => (
-                <TableRow key={b.batch}>
-                  <TableCell className="font-medium text-ink">{b.product}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{b.batch}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right text-body">{b.expiry}</TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant={b.variant}>{b.daysLeft}d</Badge>
-                  </TableCell>
-                  <TableCell className="text-right text-body">
-                    {b.qty} {b.unit}
-                  </TableCell>
-                  <TableCell className="text-right font-semibold text-ink">{b.value}</TableCell>
-                  <TableCell>
-                    <Button asChild size="sm" variant="secondary">
-                      <Link href="#">Manage</Link>
-                    </Button>
+              {dbOk && items.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-10 text-center text-muted text-body-md">
+                    No batches near expiry.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : !dbOk ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-10 text-center text-muted text-body-md">
+                    Empty grid — connect database to see near-expiry batches.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                items.map((b: any) => {
+                  const days = daysBetween(b.expiry_date);
+                  const exp = b.expiry_date ? new Date(b.expiry_date) : null;
+                  const expStr = exp ? exp.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+                  const qty = Number(b.available_qty ?? 0);
+                  const mrp = Number(b.mrp ?? b.product?.mrp ?? 0);
+                  const value = qty * mrp;
+                  return (
+                    <TableRow key={b.id}>
+                      <TableCell className="font-medium text-ink">
+                        {b.product?.name ?? "—"}
+                        <p className="text-caption text-muted font-mono">{b.product?.sku ?? "—"}</p>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{b.batch_no}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right text-body">{expStr}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant={bucketVariant(days)}>{days}d</Badge>
+                      </TableCell>
+                      <TableCell className="text-right text-body">{qty}</TableCell>
+                      <TableCell className="text-right font-semibold text-ink">{rupee(value)}</TableCell>
+                      <TableCell>
+                        <Button asChild size="sm" variant="secondary" aria-disabled title="Manage batch (Phase 3c)">
+                          <Link href="/inventory">Manage</Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </CardContent>

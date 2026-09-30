@@ -17,70 +17,146 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Warehouse, AlertTriangle, Plus, Clock, FileSpreadsheet, Filter } from "lucide-react";
+import { Warehouse, AlertTriangle, Plus, Clock, FileSpreadsheet, Filter, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { repos } from "@/repositories";
+import { isPostgresConfigured } from "@/lib/db/prisma";
+import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { ScheduleClass } from "@prisma/client";
+import ExportCsvButton from "@/components/ui/export-csv-button";
+import { exportInventoryCsvAction } from "@/app/_actions/exports.actions";
+import { deleteProductAction } from "@/app/_actions/masters.actions";
+import MasterActionsCell from "@/components/ui/master-actions-cell";
+import SuccessCreatedToast from "@/components/toast/creation-success-toast";
 
 export const metadata: Metadata = {
   title: "Inventory",
 };
 
-const summary = [
-  { label: "Active products", value: "482", variant: "default" as const, icon: FileSpreadsheet, href: "/inventory/products" },
-  { label: "Active batches", value: "1,304", variant: "default" as const, icon: Warehouse, href: "/inventory" },
-  { label: "Low stock", value: "18", variant: "destructive" as const, icon: AlertTriangle, href: "/inventory/low-stock" },
-  { label: "Near expiry (60d)", value: "7", variant: "badge-orange" as const, icon: Clock, href: "/inventory/near-expiry" },
-];
+const rupee = (n: number | null | undefined | string) => {
+  const num = typeof n === "string" ? Number(n) : Number(n ?? 0);
+  if (!Number.isFinite(num)) return "—";
+  return `₹ ${num.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
+};
 
-const products = [
-  {
-    name: "Paracetamol 500mg Tab (10x10)",
-    sku: "PCM-500-100",
-    stock: 412,
-    unit: "Strip",
-    mrp: "₹ 380",
-    lastSaleRate: "₹ 240",
-    batches: 3,
-    status: "In stock",
-    statusVariant: "success" as const,
-  },
-  {
-    name: "Cetirizine 10mg Tab (10x10)",
-    sku: "CTZ-10-100",
-    stock: 21,
-    unit: "Strip",
-    mrp: "₹ 210",
-    lastSaleRate: "₹ 140",
-    batches: 2,
-    status: "Low",
-    statusVariant: "warning" as const,
-  },
-  {
-    name: "Omeprazole 20mg Cap (10x10)",
-    sku: "OME-20-100",
-    stock: 8,
-    unit: "Strip",
-    mrp: "₹ 520",
-    lastSaleRate: "₹ 310",
-    batches: 1,
-    status: "Reorder",
-    statusVariant: "destructive" as const,
-  },
-];
+const scheduleLabel = (sc: ScheduleClass | null | undefined): string => {
+  if (!sc) return "—";
+  switch (sc) {
+    case ScheduleClass.SCHEDULE_H:
+      return "Schedule H";
+    case ScheduleClass.SCHEDULE_H1:
+      return "Schedule H1";
+    case ScheduleClass.SCHEDULE_X:
+      return "Schedule X";
+    default:
+      return sc;
+  }
+};
 
-export default function InventoryPage() {
+type ProductWithBatches = {
+  id: string;
+  sku: string | null;
+  name: string;
+  schedule_classification: ScheduleClass | null;
+  hsn_code: string | null;
+  mrp: any;
+  standard_sale_rate: any;
+  pack_size: string | null;
+  reorder_level: number;
+  batches: Array<{
+    id: string;
+    batch_no: string;
+    expiry_date: Date;
+    available_qty: number;
+  }>;
+};
+
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: { page?: string; tab?: string; created?: string; updated?: string; deleted?: string };
+}) {
+  const pageRaw = Number(searchParams?.page ?? "1");
+  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
+  const pageSize = 25;
+  const tabValue = searchParams?.tab ?? "products";
+
+  let items: ProductWithBatches[] = [];
+  let total = 0;
+  let summaryLowStock = 0;
+  let summaryActiveProducts = 0;
+  let summaryActiveBatches = 0;
+  let summaryNearExpiry = 0;
+  let dbOk = isPostgresConfigured();
+
+  if (dbOk) {
+    try {
+      const ctx = await requireServerTenantContext();
+      // Session ctx wired. Demo fallback active when no Supabase auth session exists or DB membership missing.
+      const result = await repos.products.list({ skip: (page - 1) * pageSize, take: pageSize, orderBy: { name: "asc" } }, ctx);
+      items = (result.items as unknown) as ProductWithBatches[];
+      total = result.total;
+
+      const allCount = await repos.products.list({ take: 10000 }, ctx);
+      summaryActiveProducts = allCount.total;
+
+      let batchTotal = 0;
+      let lowCount = 0;
+      let nearExpiryCount = 0;
+      const nowCutoff = new Date();
+      nowCutoff.setDate(nowCutoff.getDate() + 60);
+      for (const p of (allCount.items as unknown) as ProductWithBatches[]) {
+        const avail = p.batches.reduce((s, b) => s + (Number(b.available_qty ?? 0)), 0);
+        batchTotal += p.batches.length;
+        if (avail <= (Number((p as any).reorder_level ?? 0) || 10)) lowCount += 1;
+        if (p.batches.length && p.batches.some((b) => b.expiry_date && b.expiry_date.getTime() <= nowCutoff.getTime() && Number(b.available_qty ?? 0) > 0)) {
+          nearExpiryCount += 1;
+        }
+      }
+      summaryActiveBatches = batchTotal;
+      summaryLowStock = lowCount;
+      summaryNearExpiry = nearExpiryCount;
+    } catch (_err) {
+      dbOk = false;
+    }
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const summary = [
+    { label: "Active products", value: String(summaryActiveProducts), variant: "default" as const, icon: FileSpreadsheet, href: "/inventory" },
+    { label: "Active batches", value: String(summaryActiveBatches), variant: "default" as const, icon: Warehouse, href: "/inventory" },
+    { label: "Low stock", value: String(summaryLowStock), variant: "destructive" as const, icon: AlertTriangle, href: "/inventory/low-stock" },
+    { label: "Near expiry (60d)", value: String(summaryNearExpiry), variant: "badge-orange" as const, icon: Clock, href: "/inventory/near-expiry" },
+  ];
+
   return (
     <DashboardLayout>
+      <SuccessCreatedToast
+        entityLabel="Product"
+        createdId={searchParams?.created ?? undefined}
+        updatedId={searchParams?.updated ?? undefined}
+        deletedId={searchParams?.deleted ?? undefined}
+      />
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 px-0 pb-5">
         <div>
           <CardTitle className="text-display-sm tracking-brand">Inventory</CardTitle>
           <p className="mt-1 text-body-md text-body">
             Browse products, track batches, monitor low stock and near-expiry items.
           </p>
+          {!dbOk && (
+            <p className="mt-2 text-caption text-destructive">
+              Database is not configured — showing empty grid. Go to Dashboard for setup instructions.
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary">
+          <Button variant="secondary" type="button" aria-disabled title="Filter (Phase 4)">
             <Filter className="h-4 w-4" /> Filter
           </Button>
+          <ExportCsvButton variant="secondary" action={exportInventoryCsvAction}>
+            <Download className="h-4 w-4" /> Export
+          </ExportCsvButton>
           <Button asChild>
             <Link href="/inventory/products/new">
               <Plus className="h-4 w-4" /> Add product
@@ -118,13 +194,23 @@ export default function InventoryPage() {
         })}
       </div>
 
-      <Tabs defaultValue="products">
+      <Tabs defaultValue={tabValue === "products" || tabValue === "batches" || tabValue === "movements" || tabValue === "low-stock" || tabValue === "near-expiry" ? tabValue : "products"}>
         <TabsList className="mb-5">
-          <TabsTrigger value="products">Products</TabsTrigger>
-          <TabsTrigger value="batches">Batches</TabsTrigger>
-          <TabsTrigger value="movements">Movements</TabsTrigger>
-          <TabsTrigger value="low-stock">Low stock</TabsTrigger>
-          <TabsTrigger value="near-expiry">Near expiry</TabsTrigger>
+          <TabsTrigger value="products" asChild>
+            <Link href="/inventory?tab=products">Products</Link>
+          </TabsTrigger>
+          <TabsTrigger value="batches" asChild>
+            <Link href="/inventory?tab=batches" aria-disabled title="Batches tab (Phase 4)">Batches</Link>
+          </TabsTrigger>
+          <TabsTrigger value="movements" asChild>
+            <Link href="/inventory?tab=movements" aria-disabled title="Movements tab (Phase 4)">Movements</Link>
+          </TabsTrigger>
+          <TabsTrigger value="low-stock" asChild>
+            <Link href="/inventory/low-stock">Low stock</Link>
+          </TabsTrigger>
+          <TabsTrigger value="near-expiry" asChild>
+            <Link href="/inventory/near-expiry">Near expiry</Link>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="products">
@@ -133,42 +219,127 @@ export default function InventoryPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Product</TableHead>
                     <TableHead>SKU</TableHead>
-                    <TableHead className="text-right">Stock</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Schedule</TableHead>
+                    <TableHead>HSN</TableHead>
                     <TableHead className="text-right">MRP</TableHead>
-                    <TableHead className="text-right">Last rate</TableHead>
-                    <TableHead className="text-right">Batches</TableHead>
+                    <TableHead className="text-right">PTR</TableHead>
+                    <TableHead>Pack</TableHead>
+                    <TableHead className="text-right">Available</TableHead>
+                    <TableHead>FEFO expiry</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {products.map((p) => (
-                    <TableRow key={p.sku}>
-                      <TableCell className="font-medium text-ink">
-                        <Link
-                          href={`/inventory/products/${p.sku}`}
-                          className="hover:underline"
-                        >
-                          {p.name}
+                  {dbOk && items.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="py-10 text-center text-muted text-body-md">
+                        No products yet.{" "}
+                        <Link href="/inventory/products/new" className="text-ink font-medium underline underline-offset-4 hover:no-underline">
+                          Create your first product
                         </Link>
                       </TableCell>
-                      <TableCell className="text-body">{p.sku}</TableCell>
-                      <TableCell className="text-right text-body">
-                        {p.stock} {p.unit}
-                      </TableCell>
-                      <TableCell className="text-right text-body">{p.mrp}</TableCell>
-                      <TableCell className="text-right text-body">{p.lastSaleRate}</TableCell>
-                      <TableCell className="text-right text-body">{p.batches}</TableCell>
-                      <TableCell>
-                        <Badge variant={p.statusVariant}>{p.status}</Badge>
+                    </TableRow>
+                  ) : !dbOk ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="py-10 text-center text-muted text-body-md">
+                        Showing placeholder rows until database is connected.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    items.map((p) => {
+                      const availableQty = p.batches.reduce((s, b) => s + Number(b.available_qty ?? 0), 0);
+                      const lowStockThreshold = Number((p as any).reorder_level ?? 0) || 10;
+                      const isLow = availableQty <= lowStockThreshold;
+                      const fefoBatch = p.batches.find((b) => Number(b.available_qty ?? 0) > 0);
+                      const fefoDate = fefoBatch?.expiry_date
+                        ? new Date(fefoBatch.expiry_date)
+                        : null;
+                      return (
+                        <TableRow key={p.id}>
+                          <TableCell className="font-mono text-xs text-muted">{p.sku ?? "—"}</TableCell>
+                          <TableCell className="font-medium text-ink">
+                            <Link
+                              href={`/inventory/products/${p.id}`}
+                              className="hover:underline"
+                            >
+                              {p.name}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-body">{scheduleLabel(p.schedule_classification)}</TableCell>
+                          <TableCell className="text-body font-mono text-xs">{p.hsn_code ?? "—"}</TableCell>
+                          <TableCell className="text-right text-body">{rupee(p.mrp)}</TableCell>
+                          <TableCell className="text-right text-body">{rupee(p.standard_sale_rate)}</TableCell>
+                          <TableCell className="text-body">{p.pack_size ?? "—"}</TableCell>
+                          <TableCell className={`text-right font-medium ${isLow ? "text-destructive" : "text-ink"}`}>
+                            {availableQty}
+                          </TableCell>
+                          <TableCell className="text-body">
+                            {fefoDate && !Number.isNaN(fefoDate.getTime()) ? (
+                              <time dateTime={fefoDate.toISOString()}>
+                                {fefoDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
+                              </time>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={isLow ? "destructive" : "success"}>
+                              {isLow ? "Low stock" : "In stock"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {dbOk && (
+                              <MasterActionsCell
+                                entityId={p.id}
+                                entityLabel="Product"
+                                editHref={`/inventory/products/${p.id}/edit`}
+                                deleteAction={deleteProductAction}
+                              />
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
           </CardCanvas>
+
+          <div className="mt-6 flex items-center justify-between">
+            <p className="text-caption text-muted">
+              Showing {dbOk ? Math.min(items.length, total) : 0} of {total} products · Page {page} / {totalPages}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                asChild
+                aria-disabled={page <= 1}
+                className={page <= 1 ? "opacity-60 pointer-events-none" : ""}
+              >
+                <Link href={page <= 1 ? "/inventory" : `/inventory?page=${page - 1}${tabValue !== "products" ? `&tab=${tabValue}` : ""}`}>
+                  <ChevronLeft className="h-4 w-4" /> Prev
+                </Link>
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                asChild
+                aria-disabled={page >= totalPages}
+                className={page >= totalPages ? "opacity-60 pointer-events-none" : ""}
+              >
+                <Link href={`/inventory?page=${page + 1}${tabValue !== "products" ? `&tab=${tabValue}` : ""}`}>
+                  Next <ChevronRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </DashboardLayout>
