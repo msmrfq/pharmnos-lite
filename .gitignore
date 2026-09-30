@@ -2,6 +2,7 @@
 .obsidian-vault/.obsidian/workspace-mobile.json
 node_modules
 .next
+*.tsbuildinfo
 out
 dist
 build
