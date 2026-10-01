@@ -12,7 +12,7 @@ A reusable Copilot prompt. Run this at the END of every coding session. Copilot 
 ## ▶️ How to invoke (copy this line into Copilot Agent chat)
 ```
 Read this file exactly: .obsidian-vault/daily/_PROMPT-session-end-generate-daily-note.md
-Then execute the prompt instructions it contains. Use today's actual date.
+Then execute the prompt instructions it contains. Use today's actual date and time according to the Indian Standard Time.
 ```
 
 ---
@@ -21,12 +21,14 @@ Then execute the prompt instructions it contains. Use today's actual date.
 
 ### ⚠️ NON-NEGOTIABLE GROUND RULES — READ FIRST BEFORE DOING ANYTHING
 
-The project has TWO files named `CLAUDE.md`. You MUST understand this distinction.
+1. ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. AND IF ANY FILE NAMING EXPLICITELY NEEDED BOTH DATE AND TIME THEN USE `YYYY-MM-DDTHH-MM-SS` THIS FORMAT.
 
-| File | What it is | Write to it? |
-|---|---|---|
-| `.obsidian-vault/CLAUDE.md` | ✅ **CANONICAL SOURCE OF TRUTH** — the only file humans and agents may edit. | ✅ YES (but this prompt session you are generating the daily note only, not editing CLAUDE.md — that happens in the Triage prompt later) |
-| `./CLAUDE.md` (at project root, next to `.gitignore`) | 🔁 **AUTOMATICALLY GENERATED MIRROR** for Claude Code CLI. The human runs `& .\sync-agent-briefings.ps1` to regenerate it from the canonical file. | ❌ **NEVER write to the root `./CLAUDE.md` mirror under ANY circumstances.** |
+2. The project has TWO files named `CLAUDE.md`. You MUST understand this distinction.
+
+| File                                                  | What it is                                                                                                                                         | Write to it?                                                                                                                            |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `.obsidian-vault/CLAUDE.md`                           | ✅ **CANONICAL SOURCE OF TRUTH** — the only file humans and agents may edit.                                                                        | ✅ YES (but this prompt session you are generating the daily note only, not editing CLAUDE.md — that happens in the Triage prompt later) |
+| `./CLAUDE.md` (at project root, next to `.gitignore`) | 🔁 **AUTOMATICALLY GENERATED MIRROR** for Claude Code CLI. The human runs `& .\sync-agent-briefings.ps1` to regenerate it from the canonical file. | ❌ **NEVER write to the root `./CLAUDE.md` mirror under ANY circumstances.**                                                             |
 
 Same rule for all mirror files outside the vault: `.cursorrules`, `.windsurfrules`, `.github/copilot-instructions.md` are all auto-generated mirrors. You only ever read or write to paths INSIDE `.obsidian-vault/`.
 
@@ -39,9 +41,9 @@ You have full access to this session's chat history, all code changes, git diff,
 ### Task 0 (MANDATORY — DO BEFORE Task 1): Confirm phase tracker is up to date.
 
 1. Open `PHASE_TRACKER.md` at the project root.
-2. Check the `Last updated:` date stamp on line 17-ish. Is it TODAY'S actual date? If NOT:
-   a. Update `Last updated:` to today's date.
-   b. If the session finished a working phase end-to-end (e.g. Phase 3 complete — all AC checkboxes in the 3 Masters CRUD spec passed), flip Status column line of that phase from `🚧 IN PROGRESS → ✅ DONE (completed YYYY-MM-DD)` with today's date.
+2. Check the `Last updated:` date and time stamp on line 17-ish. Is it TODAY'S actual date and Current time? If NOT:
+   a. Update `Last updated:` to today's date and current time.
+   b. If the session finished a working phase end-to-end (e.g. Phase 3 complete — all AC checkboxes in the 3 Masters CRUD spec passed), flip Status column line of that phase from `🚧 IN PROGRESS → ✅ DONE (completed Date: YYYY-MM-DD Time: HH-MM-SS)` with today's date and current timing according to the Indian Standard Time.
    c. Move the `✅ YES` in `Current?` column exactly ONE row down to the NEXT working phase (only one current phase at a time; we never work on two phases simultaneously).
    d. Update the `Current working phase:` banner line on line 19-ish to match the newly current phase title.
    e. Update the `% complete` column for the phase with a realistic confidence-weighted % — never % from planning alone; only bump when real code is actually shipped and passing typecheck/lint/smoke.
@@ -49,12 +51,12 @@ You have full access to this session's chat history, all code changes, git diff,
 
 ### Task 1: Generate the daily working note
 
-Create the file at `.obsidian-vault/daily/YYYY-MM-DD.md` using today's actual date.
+Create the file at `.obsidian-vault/daily/YYYY-MM-DDTHH-MM-SS.md` using today's actual date and time according to Indian Standard Time.
 
 Structure the file EXACTLY like this:
 
 ```markdown
-# YYYY-MM-DD — [short descriptive headline of the session's main focus, max 10 words]
+# YYYY-MM-DDTHH-MM-SS — [short descriptive headline of the session's main focus, max 10 words]
 
 ## What I (we) did today
 (List 3-8 bullet points of concrete completed work.

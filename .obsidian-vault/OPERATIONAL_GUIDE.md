@@ -1,6 +1,8 @@
 # Operational Guide — Universal Second Brain Vault
 
-This file is the **one starting page for any new user** (human or AI agent) of this project template. Read it fully before writing any code or notes.
+`N.B: READ ONLY FOR AI AGENTS: AI AGENTS ARE STRICTLY NOT ALLOWED TO MAKE ANY CHANGES HERE.` 
+
+This file is the **one starting page for any new user** (human or AI agent) of the project template named Vaulted. Github: https://github.com/msmrfq/Vaulted. This guide is only to understand why `.obsidian-vault/` folder exist in this repo and how human should use it. For AI Agents this guide is only a context file which will help AI Agents to understand how human user is managing the work. Read it fully before writing any code or notes.
 
 ---
 
@@ -88,7 +90,7 @@ Open **[.obsidian-vault/CLAUDE.md](CLAUDE.md)** in Obsidian or VS Code. Fill the
 2. **`## What this is`** → Write 1–2 sentences that would brief a new senior dev on this project. Delete the InvoiceFlow example text once you write yours.
 3. **`## Tech stack`** table → Keep the 12-row skeleton but replace every placeholder with your real stack. Delete any inapplicable rows. Keep the "Note vault" row locked to Obsidian.
 4. **`## Current state`** →
-   - Set `**Last updated:** YYYY-MM-DD` to today.
+   - Set `**Last updated:** Date: YYYY-MM-DD  Time: HH-MM-SS (IST)` to today and current time according to the Indian Standard Time.
    - Write 2–3 bullets for each subsection (`### Working`, `### Broken / Blocked`, `### Focus right now`). If a subsection is empty, write the word `None` explicitly so AI doesn't hallucinate content.
    - Delete the InvoiceFlow examples once you write yours.
 5. **`## Key decisions made`** → If you already have settled decisions, list them in the required format: `**[Decision label]**: [summary]. ← ADR: decisions/NNN-slug.md`. Otherwise leave empty (this fills in over time).
@@ -177,12 +179,14 @@ When you're done for the day:
 
    ```
    Read this file exactly: .obsidian-vault/daily/_PROMPT-session-end-generate-daily-note.md
-   Then execute the prompt instructions it contains. Use today's actual date.
+   Then execute the prompt instructions it contains. Use today's actual date and time according to the Indian Standard Time.
    ```
 
 3. Wait ~30–60 seconds. Copilot reads git status, git diff, today's commits, the chat history, and creates:
-   - [.obsidian-vault/daily/YYYY-MM-DD.md](daily/) with 5 sections (see the Session End prompt for the exact layout), plus
+   - [.obsidian-vault/daily/YYYY-MM-DDTHH-MM-SS.md](daily/) with 5 sections (see the Session End prompt for the exact layout), plus
    - A confidence breakdown table in chat, a list of what it CANNOT know (you add this next), and suggested migrations.
+
+**Safeguard:** If `.obsidian-vault/daily/YYYY-MM-DDTHH-MM-SS.md` already exists for today's date with exactly same time, do not regenerate or edit that daily note. Instead generate a new daily note with current timing. And ask permission from the human user if they want to run the Triage prompt from `.obsidian-vault/daily/_PROMPT-triage-daily-note-migrate.md` or update anything until you are commanded to run.
 
 ### Step 2.3 — [2] The 3-minute human edit. (HARD LIMIT 3 minutes.)
 
@@ -210,7 +214,7 @@ Paste this EXACT one-liner into Copilot Agent chat. Do not rephrase:
 
 ```
 Read this file exactly: .obsidian-vault/daily/_PROMPT-triage-daily-note-migrate.md
-Then execute the prompt instructions it contains. Use today's actual date.
+Then execute the prompt instructions it contains. Use today's actual date and time according to the Indian Standard Time.
 ```
 
 The Triage prompt does 4 things automatically:
@@ -256,7 +260,7 @@ Guide rule: vault and code live in the same repo, commit together, branch togeth
 
 ```powershell
 git add -A
-git commit -m "daily: 2026-09-28 session + triage migrations"
+git commit -m "daily: YYYY-MM-DDTHH-MM-SS session + triage migrations"
 ```
 
 (Change the date to today's actual date.)
@@ -348,7 +352,7 @@ git push   # if team project
 
 1. Write one final retro: `retro/999-project-postmortem.md`
 2. Final canonical CLAUDE.md edit → `## Current state` → write something like:
-   > Project shipped / archived / handed off to Team Name on YYYY-MM-DD.
+   > Project shipped / archived / handed off to Team Name on YYYY-MM-DDTHH-MM-SS.
    > Final state: v1.2.3 running on Vercel + Supabase.
    > Last stable commit: abc1234.
    > Handoff doc: <link>.

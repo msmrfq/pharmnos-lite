@@ -62,10 +62,12 @@ Additional layers:
 
 > **Update this section EVERY SESSION before you stop working. Thirty seconds here saves five minutes of re-orientation next time.**
 
-**Last updated:** `2026-10-01`
+**Last updated:** `Date: 2026-10-01  Time: 19-04-55 (IST)` 
+
+N.B: ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. AND IF ANY FILE NAMING EXPLICITELY NEEDED BOTH DATE AND TIME THEN USE `YYYY-MM-DDTHH-MM-SS` THIS FORMAT.
 
 ### Verified working
-- **P1–P7 complete 100%;** current phase is NONE. Final local gates pass: typecheck, lint with one existing warning, build, diff check, and 39 filesystem-derived routes.
+- **P1–P7 complete 100%;** current phase is POST-P7 — PRE-PRODUCTION VALIDATION/Financial E2E infrastructure. Final local gates pass: typecheck, lint with one existing warning, build, diff check, and 39 filesystem-derived routes.
 - **Supabase live verification passes:** 19/19 public tables have RLS enabled; `jwt_tenant_id()` uses fixed `search_path`; public and Storage tenant predicates are live; `pharmnos-documents` remains private.
 - **Storage hardening complete:** canonical tenant path builder, traversal checks, tenant-scoped smoke path, four live tenant-scoped Storage policies, and cleanup smoke all pass.
 - **Supabase MCP authenticated read-only and controlled SQL access verified.** No financial runtime mutations or deployment performed during final validation.
@@ -76,10 +78,9 @@ Additional layers:
 - **Supabase Auth leaked-password protection remains disabled.** This is project-level hardening, not an application-code defect.
 
 ### Focus right now (next immediate build step)
-- **No active working phase.** Complete operational go-live checklist in `.obsidian-vault/OPERATIONAL_GUIDE.md` before deployment.
+- **POST-P7 — PRE-PRODUCTION VALIDATION.** 
 - **Before deployment:** validate financial mutations in disposable staging, verify production Prisma connectivity, and enable leaked-password protection.
 - **After checklist approval:** user-owned commit, push, and Vercel deployment gates remain separate and require explicit authorization.
-- **Future backlog:** financial E2E harness, FK workload review, Sentry, role CRUD, batch import, returns, GST e-invoice, scheduled backups, and pooler retry/stability work.
 
 ---
 
@@ -96,9 +97,10 @@ Record NEW decisions here ONLY after they are finalised AND have an ADR written 
 
 ## File map
 
-Replace the generic tree below with the ACTUAL folder structure of THIS project — the parts that matter to a human or AI looking for files. The `.obsidian-vault/` section is FIXED and should not be changed (it's the second brain). Code source folders are examples — edit them to match your project's actual language and layout.
+The `.obsidian-vault/` section is FIXED and should not be changed (it's the second brain). Code source folders are examples — edit them to match your project's actual language and layout.
+`UPDATE THE CORRECT REPO ORDER EVERYTIME THIS FILE IS UPDATED`
 
-```text
+```
 project/
 ├── CLAUDE.md                         # 🔁 MIRROR: Claude Code CLI (Anthropic) auto-load
 ├── .cursorrules                      # 🔁 MIRROR: Cursor IDE native
@@ -118,7 +120,7 @@ project/
 │   ├── AGENT.md                      # 🔁 MIRROR: generic "agent" keyword alias
 │   ├── AI_BRIEFING.md                # 🔁 MIRROR: generic "briefing" keyword alias
 │   ├── 00-inbox.md                   # Capture zone / quick notes / unsorted thoughts
-│   ├── daily/                        # Daily working notes (1 file per coding session)
+│   ├── daily/                        # Daily working notes
 │   ├── specs/                        # Feature specs BEFORE coding (use templates/_template-spec.md)
 │   ├── decisions/                    # Architecture Decision Records (ADRs)
 │   ├── bugs/                         # Bug reports + investigation notes
@@ -129,8 +131,8 @@ project/
 └── .gitignore                        # Git ignore rules for the repo and vault
 ```
 
-**IMPORTANT — Working Phase Numbering Locked (day-to-day use P1…P7 ONLY):**
-- We use **7 working phases P1 through P7** for all planning, status updates, commit messages, and day-to-day conversation. (Defined fully in `.obsidian-vault/PHASE_TRACKER.md`.)
+**IMPORTANT — Working Phase Numbering Locked (day-to-day use P1…P7 ONLY. After P7 mention by PRE-PRODUCTION VALIDATION with respective stages.**  
+- We use **7 working phases P1 through P7** and after  P7 mention by "PRE-PRODUCTION VALIDATION" with respective stages for all planning, status updates, commit messages, and day-to-day conversation. (Defined fully in `.obsidian-vault/PHASE_TRACKER.md`.)
 - The 6 phases (Phase 0…Phase 5) in `.obsidian-vault/prd-technical-architecture.md §29 Suggested Development Phases` are for **historical-reference / PRD coverage mapping only** — they are NOT our day-to-day working numbering. The crosswalk in PHASE_TRACKER.md maps them 1:1 so nobody gets confused.
 - Current working phase today = `PHASE 4 — PURCHASES + INVENTORY TRANSACTIONS` (Purchase entry → Stock adjustments → Batch FEFO). If you ever open a vault/bug/spec/retro/decision file or TODO list that mentions PRD phase numbers, convert silently via PHASE_TRACKER.md crosswalk.
 
@@ -148,8 +150,10 @@ Add rules BELOW the two permanent meta-rules as you lock in decisions. Format ea
 
 **🔒 Permanent meta-rules (always enforced for this second-brain system — do not delete):**
 - Do not install Obsidian plugins that store data in a proprietary, non-Markdown format. All notes MUST remain portable plain Markdown so they work in any editor.
+- Do not generate any formal documentation, reports, adr, logs in the root folder. Always save them in the respective folders in `.obsidian-vault/`. If you cannot find a matching folder for your unique generated document then create a folder inside `.obsidian-vault/`
 - Do not refactor a file "just because it looks like it could be cleaner." Only touch code that is directly related to the specific task being worked on right now.
-- Do not edit ANY mirror AI briefing file outside `.obsidian-vault/` (root CLAUDE.md, .cursorrules, .windsurfrules, .github/copilot-instructions.md, AGENT.md, AI_BRIEFING.md). Edit ONLY `.obsidian-vault/CLAUDE.md` then run `& .\sync-agent-briefings.ps1`.
+- Do not edit ANY mirror AI briefing file outside `.obsidian-vault/` (root CLAUDE.md, .cursorrules, .windsurfrules, .github/copilot-instructions.md, AGENT.md, AI_BRIEFING.md). Edit ONLY `.obsidian-vault/CLAUDE.md` then prompt the user to run `& .\sync-agent-briefings.ps1`.
+- While pointing to a specific file or folder use relative address. like do not use `E:\PharmnosLite\.obsidian-vault\specs` instead use `.obsidian-vault\specs`
 
 **🛠️ Project-specific hard rules (fill these in as decisions solidify):**
 - Do not build the MVP on paid-only infrastructure. The project must stay free-first for initial build, testing, and validation.

@@ -12,7 +12,7 @@ A reusable Copilot prompt. Run this AFTER the Session End prompt AND after you h
 ## ▶️ How to invoke (copy this line into Copilot Agent chat)
 ```
 Read this file exactly: .obsidian-vault/daily/_PROMPT-triage-daily-note-migrate.md
-Then execute the prompt instructions it contains. Use today's actual date.
+Then execute the prompt instructions it contains. Use today's actual date and time according to the Indian Standard Time.
 ```
 
 ---
@@ -21,7 +21,9 @@ Then execute the prompt instructions it contains. Use today's actual date.
 
 ### ⚠️ NON-NEGOTIABLE GROUND RULES — READ FIRST BEFORE DOING ANYTHING
 
-The project has TWO files named `CLAUDE.md`. You MUST understand this distinction or you will break the workflow.
+1. ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. AND IF ANY FILE NAMING EXPLICITELY NEEDED BOTH DATE AND TIME THEN USE `YYYY-MM-DDTHH-MM-SS` THIS FORMAT.
+
+2. The project has TWO files named `CLAUDE.md`. You MUST understand this distinction or you will break the workflow.
 
 | File | What it is | Write to it? |
 |---|---|---|
@@ -33,7 +35,8 @@ Same rule applies to all mirror files in the project: **you only ever write to f
 When you finish editing `.obsidian-vault/CLAUDE.md` in Step 1 below, your FINAL output must remind the human to run the sync script.
 
 ### Step 0: Read today's daily note
-Read `.obsidian-vault/daily/YYYY-MM-DD.md` (today's actual date).
+Read `.obsidian-vault/daily/YYYY-MM-DDTHH-MM-SS.md & YYYY-MM-DD.md` (today's actual date & time according to the Indian Standard Time). Only 3 `YYYY-MM-DD.md` files availiable with this file name. There are different file naming because we changed the naming format of daily reports after this 3 files to keep the trail detectable. 
+
 If the file does not exist, stop and say "No daily note found for today. Run the Session End prompt first."
 
 ### Step 1: Update .obsidian-vault/CLAUDE.md (CANONICAL) Current State section
@@ -41,7 +44,7 @@ Read `.obsidian-vault/CLAUDE.md`. Rewrite ONLY the `## Current State` section (a
 
 Rules for `.obsidian-vault/CLAUDE.md` edits:
 - Keep it TIGHT: maximum 5 bullets per subsection. Prefer 2-3.
-- Always update the `**Last updated:** YYYY-MM-DD` date stamp to today.
+- Always update the `**Last updated: Date: YYYY-MM-DD  Time: HH-MM-SS (IST)**` date and time stamp to today's date and current timing according to the Indian Standard Time.
 - Do NOT touch any other sections of `.obsidian-vault/CLAUDE.md`.
 - If something in the daily note belongs in the `## Do Not` section, flag it separately in the report (Step 4) — do NOT add to Do Not without a confirmation flag first.
 
@@ -58,7 +61,7 @@ For each finding in the daily note that qualifies, CREATE the corresponding file
 
 Rules for Step 2:
 - Always populate frontmatter `title` with a human-readable version of the slug.
-- Always populate frontmatter `date` with today's date using `YYYY-MM-DD` format.
+- Always populate frontmatter `date` with today's date using `YYYY-MM-DD` and `time` with `HH-MM-SS` format.
 - For the body sections, synthesize intelligently from the daily note. Don't just copy-paste raw paragraphs.
 - Do NOT create formal files for throwaway one-off ideas. Only create a formal file if the content is:
   - Something future-us will need for a decision, or
@@ -87,14 +90,14 @@ Output in this chat:
 
 **Summary of changes made:**
 
-| Location | Action | Confidence | Needs human review? 🟡/🟢 |
-|---|---|---|---|
-| .obsidian-vault/CLAUDE.md (canonical) Current State | Updated 3 subsections + date stamp | High/Medium/Low | 🟡 / 🟢 |
-| bugs/filename.md | Created new bug report | High/Medium/Low | 🟡 / 🟢 |
-| decisions/NNN-slug.md | Proposed new ADR draft | High/Medium/Low | 🟡 / 🟢 |
-| specs/filename.md | Created new spec draft | High/Medium/Low | 🟡 / 🟢 |
-| retro/NNN-slug.md | Created new retro draft | High/Medium/Low | 🟡 / 🟢 |
-| daily/YYYY-MM-DD.md | Added migration breadcrumbs at top | High | 🟢 |
+| Location                                            | Action                             | Confidence      | Needs human review? 🟡/🟢 |
+| --------------------------------------------------- | ---------------------------------- | --------------- | ------------------------- |
+| .obsidian-vault/CLAUDE.md (canonical) Current State | Updated 3 subsections + date stamp | High/Medium/Low | 🟡 / 🟢                   |
+| bugs/filename.md                                    | Created new bug report             | High/Medium/Low | 🟡 / 🟢                   |
+| decisions/NNN-slug.md                               | Proposed new ADR draft             | High/Medium/Low | 🟡 / 🟢                   |
+| specs/filename.md                                   | Created new spec draft             | High/Medium/Low | 🟡 / 🟢                   |
+| retro/NNN-slug.md                                   | Created new retro draft            | High/Medium/Low | 🟡 / 🟢                   |
+| daily/YYYY-MM-DDTHH-MM-SS.md                        | Added migration breadcrumbs at top | High            | 🟢                        |
 
 **Deliberately NOT migrated (with why):**
 - Bulleted list of items in today's note that you considered but decided NOT to promote, each with a 1-sentence reason.
