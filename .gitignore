@@ -1,5 +1,6 @@
 .obsidian-vault/.obsidian/workspace.json
 .obsidian-vault/.obsidian/workspace-mobile.json
+.vercel/
 node_modules
 .next
 *.tsbuildinfo
