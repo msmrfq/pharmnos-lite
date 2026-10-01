@@ -62,27 +62,21 @@ Additional layers:
 
 > **Update this section EVERY SESSION before you stop working. Thirty seconds here saves five minutes of re-orientation next time.**
 
-**Last updated:** `Date: 2026-10-01  Time: 19-35-00 (IST)` 
-
-N.B: ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. AND IF ANY FILE NAMING EXPLICITELY NEEDED BOTH DATE AND TIME THEN USE `YYYY-MM-DDTHH-MM-SS` THIS FORMAT.
+**Last updated:** `Date: 2026-10-02  Time: 04-14-16 (IST)` 
 
 ### Verified working
 - **P1–P7 complete 100%;** current phase is POST-P7 — PRE-PRODUCTION VALIDATION. Final local gates pass: typecheck, lint with one existing warning, build, diff check, and 39 filesystem-derived routes.
 - **Supabase live verification passes:** 19/19 public tables have RLS enabled; `jwt_tenant_id()` uses fixed `search_path`; public and Storage tenant predicates are live; `pharmnos-documents` remains private.
 - **Storage hardening complete:** canonical tenant path builder, traversal checks, tenant-scoped smoke path, four live tenant-scoped Storage policies, and cleanup smoke all pass.
 - **Supabase MCP authenticated read-only and controlled SQL access verified.** No financial runtime mutations or deployment performed during final validation.
-- **Financial E2E validation harness implemented:** `scripts/financial-e2e.mjs` with hard safety guards (`ALLOW_FINANCIAL_E2E=true`, `TEST_DATABASE_URL`, `TEST_DATABASE_NAME`, `TEST_DATABASE_MARKER=pharmnos-financial-e2e`, `application_name=pharmnos-financial-e2e`), `financial:e2e:safe` script added to `package.json`. Runtime execution BLOCKED — no isolated test database configured.
-- **Temporary `/api/health/db` endpoint removed** after successful Preview connectivity validation (HTTP 200 `{"database":"ok"}`).
-- **PHASE_TRACKER.md updated** with canonical P1–P7 scope labels and POST-P7 validation matrix.
-- **OPERATIONAL_GUIDE.md** Step 2.2 updated with same-day safeguard rule.
+- **Financial E2E harness implemented with hard safety guards.** Runtime execution remains blocked because no isolated test database is configured.
+- **Temporary `/api/health/db` endpoint removed after Preview connectivity validation.** Canonical phase tracker and operational guide workflow are current.
 
 ### Broken / blocked (deferred — acceptable workaround)
 - **Financial runtime verification remains unverified:** no executable test suite, disposable tenant fixture, reset harness, or staging environment exists. Demo data was not mutated for tests.
 - **Production Prisma/Vercel connectivity remains unverified.** Local Supavisor/pg-wire failures are environment-dependent; HTTPS/MCP access works.
 - **Supabase Auth leaked-password protection remains disabled.** This is project-level hardening, not an application-code defect.
-- **Financial E2E harness runtime execution BLOCKED:** no isolated test database configured (`TEST_DATABASE_URL` not set, `ALLOW_FINANCIAL_E2E=true` not set).
-- **Backup/restore operational drill UNVERIFIED:** SOP documented but no restore drill executed.
-- **Leaked-password protection disabled** (Supabase Security Advisor warning) — project-level hardening, not an application-code defect.
+- **Backup/restore operational drill remains unverified.** SOP is documented; no restore drill executed.
 
 ### Focus right now (next immediate build step)
 - **POST-P7 — PRE-PRODUCTION VALIDATION.**
@@ -105,8 +99,10 @@ Record NEW decisions here ONLY after they are finalised AND have an ADR written 
 
 ## File map
 
+`UPDATE THE CORRECT REPO ORDER EVERYTIME THIS FILE IS UPDATED BY TRIAGE PROMPT`
+
 The `.obsidian-vault/` section is FIXED and should not be changed (it's the second brain). Code source folders are examples — edit them to match your project's actual language and layout.
-`UPDATE THE CORRECT REPO ORDER EVERYTIME THIS FILE IS UPDATED`
+
 
 ```
 project/
@@ -143,6 +139,7 @@ project/
 - We use **7 working phases P1 through P7** and after  P7 mention by "PRE-PRODUCTION VALIDATION" with respective stages for all planning, status updates, commit messages, and day-to-day conversation. (Defined fully in `.obsidian-vault/PHASE_TRACKER.md`.)
 - The 6 phases (Phase 0…Phase 5) in `.obsidian-vault/prd-technical-architecture.md §29 Suggested Development Phases` are for **historical-reference / PRD coverage mapping only** — they are NOT our day-to-day working numbering. The crosswalk in PHASE_TRACKER.md maps them 1:1 so nobody gets confused.
 - Current working phase today = `PHASE 4 — PURCHASES + INVENTORY TRANSACTIONS` (Purchase entry → Stock adjustments → Batch FEFO). If you ever open a vault/bug/spec/retro/decision file or TODO list that mentions PRD phase numbers, convert silently via PHASE_TRACKER.md crosswalk.
+- ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. AND IF ANY FILE NAMING EXPLICITELY NEEDED BOTH DATE AND TIME THEN USE `YYYY-MM-DDTHH-MM-SS` THIS FORMAT.
 
 **IMPORTANT**: Next.js App Router + Prisma application code scaffold is complete (P1 + P2 + P3 shipped). Reference docs live only inside vault `.obsidian-vault/` (project root `reference docs/` folder no longer exists — see Do Not section below).
 
