@@ -39,26 +39,24 @@ Additional layers:
 
 > **Update this section EVERY SESSION before you stop working. Thirty seconds here saves five minutes of re-orientation next time.**
 
-**Last updated:** `2026-09-30`
+**Last updated:** `2026-10-01`
 
 ### Verified working
-- **P1…P7 ALL SHIPPED 100% 2026-09-30 + 7 hotbug fixes applied post-P7 + mock sale E2E PASS + PDF saved.** (a) 7 runtime fixes: Landing page hydration Badge `<div>`→`<span>` [src/components/ui/badge.tsx:29-35](file:///E:/PharmnosLite/src/components/ui/badge.tsx#L29-L35); TLS self-signed `parsePgUrl` + Pool `ssl:{rejectUnauthorized:false}` keepAlive + `sslaccept=accept_invalid_certs` env params [src/lib/db/prisma.ts:11-40](file:///E:/PharmnosLite/src/lib/db/prisma.ts#L11-L40); 5 FATAL prerender routes `Suspense` wraps for `useSearchParams` clients; build WARNING `useActionState`→`useFormState` rename [src/app/inventory/_stock-adjustment-dialog.tsx:3-59](file:///E:/PharmnosLite/src/app/inventory/_stock-adjustment-dialog.tsx#L3-L59). (b) "Phase 8" AI invented name → user-approved rename "Future backlog" 5 vault doc locations + sync mirrors exit 0. (c) Mock demo tenant writes (Supabase MCP execute_sql HTTPS bypass local pgwire): 1 customer MedPlus MP-042 / 1 supplier Alembic / 2 products / 3 FINALIZED purchases (payable ₹213,201) / 1 FINALIZED sale INV-00001 FEFO depletion AM=900 PX=1800 MK=1275 correct / customer receivable ₹42,147.40 / 6 stock_movements / 4 audit_logs / invoice_next_seq 2. (d) Playwright render print `/billing/si_inv00001_mock/print` FULL invoice text (A4 + 80mm thermal layouts) → PDF A4 71.7 KB saved + 170 KB success PNG [mock-sales-outputs/](file:///E:/PharmnosLite/mock-sales-outputs/). (e) pnpm build **DOUBLE EXIT 0** 34 routes, pnpm lint ≤1 legacy, **HTTP 37/37 routes 200** (actual Next.js App Router glob mapping). (f) P7 4-gate recheck post-fixes still PASS: AC19 pkg/lock/schema diff empty 0 new packages 0 frozen 19 models edits; AC20 @supabase/supabase-js imports ONLY [src/adapters/storage/supabase-storage.adapter.ts:1](file:///E:/PharmnosLite/src/adapters/storage/supabase-storage.adapter.ts#L1-L1); AC21 cross-tenant fake UUID products=0; Constraint3 hot paths 0 lines touched. 17 CSV export actions total.
-- **Playwright MCP 28 tools operational + Chromium 1243 rev installed + junction 1200→1243.** Successfully navigated, get_visible_text, screenshot, save_as_pdf — print page renders perfectly post-`.next` full purge + cold restart. `.next` staleness PROVEN FIX PATTERN kill server → purge → restart now a documented command.
-- **Git safe rollback + commit/push gate discipline intact.** Obsidian Git autosave intervals OFF (L6 `autoSaveInterval:0` L7 `autoPushInterval:0` L23 `autoBackupAfterFileChange:false` ADR 0002 verified). User explicit owns commit + push; gates stand literal `"commit this"` + exact `git push origin main --force-with-lease`.
+- **P1–P7 complete 100%;** current phase is NONE. Final local gates pass: typecheck, lint with one existing warning, build, diff check, and 39 filesystem-derived routes.
+- **Supabase live verification passes:** 19/19 public tables have RLS enabled; `jwt_tenant_id()` uses fixed `search_path`; public and Storage tenant predicates are live; `pharmnos-documents` remains private.
+- **Storage hardening complete:** canonical tenant path builder, traversal checks, tenant-scoped smoke path, four live tenant-scoped Storage policies, and cleanup smoke all pass.
+- **Supabase MCP authenticated read-only and controlled SQL access verified.** No financial runtime mutations or deployment performed during final validation.
 
 ### Broken / blocked (deferred — acceptable workaround)
-- **Supabase SQL Editor 42501 ownership error on storage.objects DDL/POLICY** — dashboard session `postgres` role is not table owner; only MCP execute_sql / Storage Dashboard Policies UI works. Workaround: **use Supabase MCP for storage admin**.
-- **Local-only pg-wire proxy drops SASL Postgres handshake (NOT Supabase pooler P1001 NOT code defect).** VLESS/V2Ray 10808 allows TCP/5432 open but DROPS binary pgwire auth packets. 3× `scripts/db-tls-smoke.mjs` FAIL Connection terminated. **Workarounds already live:** (a) ALL DB list pages `let dbOk` degrade → HTTP 200 amber banner never 500 crash; (b) writes for this mock used Supabase MCP `execute_sql` HTTPS 443 path (100% works); (c) Vercel deploy AWS Mumbai peer region routes clean → no local proxy, pg-wire resolves normally. Future backlog optional: Prisma retry wrapper BaseRepository inside / Supabase pro / direct network Mumbai.
-- **Deploy BLOCKED by explicit user instruction.** User literal: `"then give me results and wait for my green signal"`. No Vercel deploy, no commit, no push performed.
+- **Financial runtime verification remains unverified:** no executable test suite, disposable tenant fixture, reset harness, or staging environment exists. Demo data was not mutated for tests.
+- **Production Prisma/Vercel connectivity remains unverified.** Local Supavisor/pg-wire failures are environment-dependent; HTTPS/MCP access works.
+- **Supabase Auth leaked-password protection remains disabled.** This is project-level hardening, not an application-code defect.
 
 ### Focus right now (next immediate build step)
-- **No active working phase — P1…P7 ALL SHIPPED 100% 2026-09-30 + Mock SALE E2E PASS + PDF saved.** Standby WAITING FOR USER EXPLICIT GREEN SIGNAL (message containing "green signal" / "deploy now" / "you have my go") before ANY deploy call. Once green signal received:
-  1. **Step 0 — Pre-commit cleanup:** Delete leftover root-level `S* Supabase Snippet Untitled query.csv` evidence files (never commit). Confirm `scripts/` has only storage-smoke.mjs + db-tls-smoke.mjs. Diff `.env.local` vs `.env.example` to add missing keys to template if any (prompt rule).
-  2. **Step 1 — Go-live checklist 29 items [OPERATIONAL_GUIDE.md end L391-419](file:///E:/PharmnosLite/.obsidian-vault/OPERATIONAL_GUIDE.md#L391-L419):** IRL walk with real Supabase Auth sign-up → confirm email OTP → jwt.io inspect `app_metadata.tenant_id` JWT claim matches onboarding-created tenant id → cross-tenant fake UUID SQL run SELECT 19 tables = 0 rows RLS working → real customer/product/purchase FEFO/sale FEFO/ledger/payment clamp/inventory/8 reports/8 CSV/dashboard KPI/audit Badges/A4 80mm print/customer statement/Storage smoke/EXPLAIN ANALYZE/audit filters/30+ HTTP 200 → Sentry deferred Future backlog → notify stakeholders.
-  3. **Step 2 — ADR 0002 commit gate:** Checklist fully green → user IDE commit or user writes VERBATIM standalone `"commit this"` line.
-  4. **Step 3 — ADR 0002 push gate:** Commit clean → user writes EXACT STANDALONE `git push origin main --force-with-lease`.
-  5. **Step 4 — Vercel Hobby deploy:** Push done → `deploy_to_remote` Vercel target → confirm HTTP 200 + dashboard renders REAL DB data (no local proxy).
-  6. **Step 5 — Future backlog post-go-live (not numbered; always unnumbered):** Sentry error monitoring; role_permissions CRUD UI; batch CSV import; credit/debit note returns; GST e-invoice; scheduled PITR pg_dump backups; BaseRepository Prisma retry wrapper (local env); pooler stability upgrade options.
+- **No active working phase.** Complete operational go-live checklist in `.obsidian-vault/OPERATIONAL_GUIDE.md` before deployment.
+- **Before deployment:** validate financial mutations in disposable staging, verify production Prisma connectivity, and enable leaked-password protection.
+- **After checklist approval:** user-owned commit, push, and Vercel deployment gates remain separate and require explicit authorization.
+- **Future backlog:** financial E2E harness, FK workload review, Sentry, role CRUD, batch import, returns, GST e-invoice, scheduled backups, and pooler retry/stability work.
 
 ---
 
