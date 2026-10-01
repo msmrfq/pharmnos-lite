@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma, assertPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
-import type { sales_invoices, InvoiceStatus, StockMovementType, LedgerEntryType, PaymentMode } from "@prisma/client";
+import type { sales_invoices, InvoiceStatus, StockMovementType, LedgerEntryType, PaymentMode, PermissionAction } from "@prisma/client";
 import {
   SalesInvoiceCreateSchema,
   SalesInvoiceLineCreateSchema,
@@ -156,6 +156,7 @@ export async function createSalesDraftAction(
     }
 
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, "create_invoice" as PermissionAction);
     const data = parsed.data;
 
     const profile = await prisma.business_profiles.findUnique({ where: { tenant_id: ctx.tenantId } });
@@ -244,6 +245,7 @@ export async function cancelSalesDraftAction(id: string): Promise<ActionResult<{
   try {
     assertPostgresConfigured("cancelSalesDraftAction");
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, "cancel_invoice" as PermissionAction);
     const existing = await prisma.sales_invoices.findUnique({
       where: { id, tenant_id: ctx.tenantId },
     });
@@ -276,6 +278,7 @@ export async function finalizeSalesInvoiceAction(
   try {
     assertPostgresConfigured("finalizeSalesInvoiceAction");
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, "finalize_invoice" as PermissionAction);
 
     const invoice = await prisma.$transaction(async (tx) => {
       const existing = await tx.sales_invoices.findUnique({
@@ -336,10 +339,15 @@ export async function finalizeSalesInvoiceAction(
           if (runningQty <= 0) break;
           const deduct = pick.allocated_quantity;
           if (deduct <= 0) continue;
-          await tx.product_batches.update({
-            where: { id: pick.batch_id, tenant_id: ctx.tenantId },
+          const decremented = await tx.product_batches.updateMany({
+            where: { id: pick.batch_id, tenant_id: ctx.tenantId, available_qty: { gte: deduct } },
             data: { available_qty: { decrement: deduct }, updated_at: new Date() },
           });
+          if (decremented.count !== 1) {
+            throw new Error("Stock changed while finalizing this invoice. Please try again.");
+          }
+          const batch = batches.find((candidate) => candidate.id === pick.batch_id);
+          if (batch) batch.available_qty = Number(batch.available_qty ?? 0) - deduct;
           await tx.stock_movements.create({
             data: {
               tenant_id: ctx.tenantId,
@@ -419,6 +427,18 @@ export async function finalizeSalesInvoiceAction(
         data: { receivable_balance: { increment: debit }, updated_at: new Date() },
       });
 
+      await tx.audit_logs.create({
+        data: {
+          tenant_id: ctx.tenantId,
+          event_type: "INVOICE_FINALIZED",
+          actor_id: ctx.userId,
+          target_type: "sales_invoice",
+          target_id: existing.id,
+          metadata: { invoice_no: finalInvoiceNo, net_amount: debit },
+          created_at: new Date(),
+        },
+      });
+
       return updated;
     });
 
@@ -455,6 +475,7 @@ export async function createCustomerPaymentAction(
       };
     }
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, "view_customer_ledger" as PermissionAction);
     const data = parsed.data;
     const entryDate = data.entry_date ?? new Date();
 
@@ -466,9 +487,25 @@ export async function createCustomerPaymentAction(
       if (!cust) throw new Error("Customer not found.");
       const before = Number(cust.receivable_balance ?? 0);
       const credit = Number(data.amount);
-      const clamped = Math.max(0, before - credit);
+      const applied = Math.min(before, credit);
+      const clamped = Math.max(0, before - applied);
       const newBal = round2(clamped);
       const warning = before < credit - 0.001 ? "Payment exceeds total dues; clamped to 0 — please verify." : null;
+
+      const payment = await tx.payments.create({
+        data: {
+          tenant_id: ctx.tenantId,
+          customer_id: data.customer_id,
+          entry_type: __LedgerEntryPAYMENT_RECEIVED,
+          payment_mode: paymentMethodToPrismaMode(data.payment_method),
+          amount: applied,
+          reference_no: data.reference_no,
+          payment_date: entryDate,
+          notes: data.notes,
+          created_by: ctx.userId,
+          created_at: new Date(),
+        },
+      });
 
       const row = await tx.customer_ledgers.create({
         data: {
@@ -476,7 +513,7 @@ export async function createCustomerPaymentAction(
           customer_id: data.customer_id,
           entry_type: __LedgerEntryPAYMENT_RECEIVED,
           debit: 0,
-          credit,
+          credit: applied,
           balance: newBal,
           reference_type: "payment_received",
           reference_id: null,
@@ -490,7 +527,7 @@ export async function createCustomerPaymentAction(
         where: { id: data.customer_id, tenant_id: ctx.tenantId },
         data: { receivable_balance: clamped, updated_at: new Date() },
       });
-      return { id: row.id, warning };
+      return { id: payment.id, warning };
     });
 
     revalidatePath("/billing");
@@ -527,6 +564,7 @@ export async function createSupplierPaymentAction(
       };
     }
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, "view_supplier_ledger" as PermissionAction);
     const data = parsed.data;
     const entryDate = data.entry_date ?? new Date();
 
@@ -538,16 +576,31 @@ export async function createSupplierPaymentAction(
       if (!sup) throw new Error("Supplier not found.");
       const before = Number(sup.payable_balance ?? 0);
       const debit = Number(data.amount);
-      const clamped = Math.max(0, before - debit);
+      const applied = Math.min(before, debit);
+      const clamped = Math.max(0, before - applied);
       const newBal = round2(clamped);
       const warning = before < debit - 0.001 ? "Payment exceeds total payables; clamped to 0 — please verify." : null;
+
+      const payment = await tx.payments.create({
+        data: {
+          tenant_id: ctx.tenantId,
+          entry_type: __LedgerEntryPAYMENT_MADE,
+          payment_mode: paymentMethodToPrismaMode(data.payment_method),
+          amount: applied,
+          reference_no: data.reference_no,
+          payment_date: entryDate,
+          notes: data.notes,
+          created_by: ctx.userId,
+          created_at: new Date(),
+        },
+      });
 
       const row = await tx.supplier_ledgers.create({
         data: {
           tenant_id: ctx.tenantId,
           supplier_id: data.supplier_id,
           entry_type: __LedgerEntryPAYMENT_MADE,
-          debit,
+          debit: applied,
           credit: 0,
           balance: newBal,
           reference_type: "payment_made",
@@ -562,7 +615,7 @@ export async function createSupplierPaymentAction(
         where: { id: data.supplier_id, tenant_id: ctx.tenantId },
         data: { payable_balance: clamped, updated_at: new Date() },
       });
-      return { id: row.id, warning };
+      return { id: payment.id, warning };
     });
 
     revalidatePath("/purchases");

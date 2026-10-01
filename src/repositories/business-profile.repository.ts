@@ -31,7 +31,7 @@ export class BusinessProfileRepository extends BaseRepository<
   ): Promise<business_profiles> {
     const t = this.withTenant(ctx);
     return this.prisma.business_profiles.create({
-      data: { ...input, tenant_id: (input as any).tenant_id ?? t.tenantId },
+      data: { ...input, tenant_id: t.tenantId } as any,
     });
   }
 

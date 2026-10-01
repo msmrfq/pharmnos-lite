@@ -28,7 +28,7 @@ export class SupplierRepository extends BaseRepository<
   async create(input: Prisma.suppliersCreateInput, ctx: TenantContext): Promise<suppliers> {
     const t = this.withTenant(ctx);
     return this.prisma.suppliers.create({
-      data: { ...input, tenant_id: (input as any).tenant_id ?? t.tenantId },
+      data: { ...input, tenant_id: t.tenantId } as any,
     });
   }
 
@@ -53,17 +53,17 @@ export class SupplierRepository extends BaseRepository<
       tenant_id: t.tenantId,
       ...(search
         ? {
-            OR: [
-              { business_name: { contains: search, mode: "insensitive" } },
-              { code: { contains: search, mode: "insensitive" } },
-              { gstin: { contains: search, mode: "insensitive" } },
-              { phone: { contains: search, mode: "insensitive" } },
-              { mobile: { contains: search, mode: "insensitive" } },
-              { email: { contains: search, mode: "insensitive" } },
-              { drug_license_no: { contains: search, mode: "insensitive" } },
-              { contact_person: { contains: search, mode: "insensitive" } },
-            ],
-          }
+          OR: [
+            { business_name: { contains: search, mode: "insensitive" } },
+            { code: { contains: search, mode: "insensitive" } },
+            { gstin: { contains: search, mode: "insensitive" } },
+            { phone: { contains: search, mode: "insensitive" } },
+            { mobile: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+            { drug_license_no: { contains: search, mode: "insensitive" } },
+            { contact_person: { contains: search, mode: "insensitive" } },
+          ],
+        }
         : {}),
       ...(state ? { state: { equals: state, mode: "insensitive" as Prisma.QueryMode } } : {}),
       ...(minPayable !== undefined ? { payable_balance: { gte: minPayable as unknown as Prisma.Decimal } } : {}),

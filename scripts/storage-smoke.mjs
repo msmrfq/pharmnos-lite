@@ -37,6 +37,7 @@ const env = { ...loadEnv(ENV_EXAMPLE), ...loadEnv(ENV_LOCAL), ...process.env };
 const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE = env.SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET = env.SUPABASE_STORAGE_BUCKET || env.SUPABASE_BUCKET || "pharmnos-documents";
+const DEMO_TENANT_ID = "tn_maharashtra_pharma_0000000000001";
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE) {
   console.error("FAIL: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in .env.local");
@@ -45,7 +46,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE) {
 
 const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
 const rand6 = randomBytes(3).toString("hex");
-const KEY = `smoketest/p7-${today}-${rand6}.txt`;
+const KEY = `${DEMO_TENANT_ID}/smoketest/p7-${today}-${rand6}.txt`;
 const CONTENT = `Pharmnos Lite P7 storage smoke. Date: ${new Date().toISOString()}\nRand: ${rand6}\n`;
 const SIGNED_EXPIRES_SEC = 60;
 
@@ -105,7 +106,7 @@ async function main() {
 
   // Step 2: list prefix smoketest/ assert 1 file size>0
   {
-    const { data, error } = await sb.storage.from(BUCKET).list("smoketest/", { limit: 100 });
+    const { data, error } = await sb.storage.from(BUCKET).list(`${DEMO_TENANT_ID}/smoketest/`, { limit: 100 });
     if (error) throw error;
     const items = (data || []).filter((f) => f.name && f.name.endsWith(`${rand6}.txt`));
     assert(items.length === 1, `list prefix smoketest/ => ${items.length} file(s), first size>0 => ${(items[0]?.metadata?.size ?? 0) > 0 ? "yes" : "no"} (${items[0]?.metadata?.size ?? 0} B)`);
@@ -131,7 +132,7 @@ async function main() {
 
   // Step 5: list empty assert
   {
-    const { data, error } = await sb.storage.from(BUCKET).list("smoketest/", { limit: 100 });
+    const { data, error } = await sb.storage.from(BUCKET).list(`${DEMO_TENANT_ID}/smoketest/`, { limit: 100 });
     if (error) throw error;
     const remain = (data || []).filter((f) => f.name && f.name.endsWith(`${rand6}.txt`));
     assert(remain.length === 0, `smoketest/ empty after delete (remaining=${remain.length})`);

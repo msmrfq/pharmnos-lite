@@ -41,7 +41,7 @@ export class ProductBatchRepository extends BaseRepository<
   ): Promise<product_batches> {
     const t = this.withTenant(ctx);
     return this.prisma.product_batches.create({
-      data: { ...input, tenant_id: (input as any).tenant_id ?? t.tenantId },
+      data: { ...input, tenant_id: t.tenantId } as any,
     });
   }
 
@@ -69,11 +69,11 @@ export class ProductBatchRepository extends BaseRepository<
       tenant_id: t.tenantId,
       ...(search
         ? {
-            OR: [
-              { batch_no: { contains: search, mode: "insensitive" } },
-              { product: { name: { contains: search, mode: "insensitive" } } },
-            ],
-          }
+          OR: [
+            { batch_no: { contains: search, mode: "insensitive" } },
+            { product: { name: { contains: search, mode: "insensitive" } } },
+          ],
+        }
         : {}),
     };
     const [items, total] = await Promise.all([

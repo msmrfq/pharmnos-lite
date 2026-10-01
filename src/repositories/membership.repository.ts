@@ -42,7 +42,7 @@ export class MembershipRepository extends BaseRepository<
   ): Promise<memberships> {
     const t = this.withTenant(ctx);
     return this.prisma.memberships.create({
-      data: { ...input, tenant_id: (input as any).tenant_id ?? t.tenantId },
+      data: { ...input, tenant_id: t.tenantId } as any,
     });
   }
 

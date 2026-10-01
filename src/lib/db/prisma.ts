@@ -38,6 +38,11 @@ function createPrismaClient(): PrismaClient {
       rejectUnauthorized: false,
     },
   });
+  pool.on("error", (error) => {
+    if (process.env.NODE_ENV === "development") {
+      console.error("Prisma pool connection error:", error.message);
+    }
+  });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({
     adapter,
@@ -64,7 +69,7 @@ export function assertPostgresConfigured(context: string): void {
   if (isPostgresConfigured()) return;
   throw new Error(
     `${context}: DATABASE_URL in .env.local still points to a default local Supabase stack. ` +
-      `Paste the real Supabase Free Postgres connection strings into .env.local before running DB operations. ` +
-      `See Supabase Dashboard → Project Settings → Database → Connection string (URI).`,
+    `Paste the real Supabase Free Postgres connection strings into .env.local before running DB operations. ` +
+    `See Supabase Dashboard → Project Settings → Database → Connection string (URI).`,
   );
 }

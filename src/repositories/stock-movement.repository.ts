@@ -29,9 +29,9 @@ export class StockMovementRepository extends BaseRepository<
     return this.prisma.stock_movements.create({
       data: {
         ...input,
-        tenant_id: (input as any).tenant_id ?? t.tenantId,
+        tenant_id: t.tenantId,
         created_by: (input as any).created_by ?? t.userId,
-      },
+      } as any,
     });
   }
 
@@ -54,12 +54,12 @@ export class StockMovementRepository extends BaseRepository<
       tenant_id: t.tenantId,
       ...(search
         ? {
-            OR: [
-              { reference_id: { contains: search, mode: "insensitive" } },
-              { reference_type: { contains: search, mode: "insensitive" } },
-              { notes: { contains: search, mode: "insensitive" } },
-            ],
-          }
+          OR: [
+            { reference_id: { contains: search, mode: "insensitive" } },
+            { reference_type: { contains: search, mode: "insensitive" } },
+            { notes: { contains: search, mode: "insensitive" } },
+          ],
+        }
         : {}),
     };
     const [rawItems, total] = await Promise.all([

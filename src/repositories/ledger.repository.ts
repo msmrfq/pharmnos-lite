@@ -27,7 +27,7 @@ export class CustomerLedgerRepository extends BaseRepository<
   ): Promise<customer_ledgers> {
     const t = this.withTenant(ctx);
     return this.prisma.customer_ledgers.create({
-      data: { ...input, tenant_id: (input as any).tenant_id ?? t.tenantId },
+      data: { ...input, tenant_id: t.tenantId } as any,
     });
   }
 
@@ -188,7 +188,7 @@ export class SupplierLedgerRepository extends BaseRepository<
   ): Promise<supplier_ledgers> {
     const t = this.withTenant(ctx);
     return this.prisma.supplier_ledgers.create({
-      data: { ...input, tenant_id: (input as any).tenant_id ?? t.tenantId },
+      data: { ...input, tenant_id: t.tenantId } as any,
     });
   }
 

@@ -34,7 +34,7 @@ export class AuditLogRepository extends BaseRepository<
   ): Promise<audit_logs> {
     const t = this.withTenant(ctx);
     return this.prisma.audit_logs.create({
-      data: { ...input, tenant_id: (input as any).tenant_id ?? t.tenantId, actor_id: (input as any).actor_id ?? t.userId },
+      data: { ...input, tenant_id: t.tenantId, actor_id: t.userId } as any,
     });
   }
 
@@ -68,20 +68,20 @@ export class AuditLogRepository extends BaseRepository<
       ...(userId ? { actor_id: userId } : {}),
       ...(startDate || endDate
         ? {
-            created_at: {
-              ...(startDate ? { gte: new Date(startDate) } : {}),
-              ...(endDate ? { lte: new Date(endDate + "T23:59:59.999Z") } : {}),
-            },
-          }
+          created_at: {
+            ...(startDate ? { gte: new Date(startDate) } : {}),
+            ...(endDate ? { lte: new Date(endDate + "T23:59:59.999Z") } : {}),
+          },
+        }
         : {}),
       ...(search
         ? {
-            OR: [
-              { target_type: { contains: search, mode: "insensitive" } },
-              { target_id: { contains: search, mode: "insensitive" } },
-              { ip_address: { contains: search, mode: "insensitive" } },
-            ],
-          }
+          OR: [
+            { target_type: { contains: search, mode: "insensitive" } },
+            { target_id: { contains: search, mode: "insensitive" } },
+            { ip_address: { contains: search, mode: "insensitive" } },
+          ],
+        }
         : {}),
     };
     const [rawItems, total] = await Promise.all([

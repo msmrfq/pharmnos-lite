@@ -45,9 +45,9 @@ export class SalesInvoiceRepository extends BaseRepository<
     return this.prisma.sales_invoices.create({
       data: {
         ...input,
-        tenant_id: (input as any).tenant_id ?? t.tenantId,
+        tenant_id: t.tenantId,
         created_by: (input as any).created_by ?? t.userId,
-      },
+      } as any,
     });
   }
 
@@ -76,20 +76,20 @@ export class SalesInvoiceRepository extends BaseRepository<
       ...(customerId ? { customer_id: customerId } : {}),
       ...(startDate || endDate
         ? {
-            invoice_date: {
-              ...(startDate ? { gte: new Date(startDate) } : {}),
-              ...(endDate ? { lte: new Date(endDate + "T23:59:59.999Z") } : {}),
-            },
-          }
+          invoice_date: {
+            ...(startDate ? { gte: new Date(startDate) } : {}),
+            ...(endDate ? { lte: new Date(endDate + "T23:59:59.999Z") } : {}),
+          },
+        }
         : {}),
       ...(search
         ? {
-            OR: [
-              { invoice_no: { contains: search, mode: "insensitive" } },
-              { notes: { contains: search, mode: "insensitive" } },
-              { cancel_reason: { contains: search, mode: "insensitive" } },
-            ],
-          }
+          OR: [
+            { invoice_no: { contains: search, mode: "insensitive" } },
+            { notes: { contains: search, mode: "insensitive" } },
+            { cancel_reason: { contains: search, mode: "insensitive" } },
+          ],
+        }
         : {}),
     };
     const [rawItems, total] = await Promise.all([

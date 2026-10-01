@@ -25,6 +25,7 @@ RETURNS text
 LANGUAGE sql
 STABLE
 PARALLEL SAFE
+SET search_path = ''
 AS $$
   SELECT NULLIF(
     (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::text,

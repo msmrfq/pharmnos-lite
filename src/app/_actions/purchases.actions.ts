@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma, assertPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
-import type { purchase_invoices, InvoiceStatus, StockMovementType, LedgerEntryType } from "@prisma/client";
+import type { purchase_invoices, InvoiceStatus, StockMovementType, LedgerEntryType, PermissionAction } from "@prisma/client";
 import {
   PurchaseInvoiceCreateSchema,
   PurchaseInvoiceLineCreateSchema,
@@ -137,6 +137,7 @@ export async function createPurchaseDraftAction(
     }
 
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, "create_purchase" as PermissionAction);
     const data = parsed.data;
 
     const invoice = await prisma.$transaction(async (tx) => {
@@ -206,6 +207,7 @@ export async function cancelPurchaseDraftAction(id: string): Promise<ActionResul
   try {
     assertPostgresConfigured("cancelPurchaseDraftAction");
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, "edit_purchase" as PermissionAction);
     const existing = await prisma.purchase_invoices.findUnique({
       where: { id, tenant_id: ctx.tenantId },
     });
@@ -243,6 +245,7 @@ export async function finalizePurchaseAction(
   try {
     assertPostgresConfigured("finalizePurchaseAction");
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, "finalize_purchase" as PermissionAction);
 
     const invoice = await prisma.$transaction(async (tx) => {
       const existing = await tx.purchase_invoices.findUnique({
@@ -416,6 +419,18 @@ export async function finalizePurchaseAction(
         data: { payable_balance: { increment: credit }, updated_at: new Date() },
       });
 
+      await tx.audit_logs.create({
+        data: {
+          tenant_id: ctx.tenantId,
+          event_type: "PURCHASE_FINALIZED",
+          actor_id: ctx.userId,
+          target_type: "purchase_invoice",
+          target_id: existing.id,
+          metadata: { invoice_no: finalInvoiceNo, net_amount: credit },
+          created_at: new Date(),
+        },
+      });
+
       return updated;
     });
 
@@ -449,6 +464,7 @@ export async function createStockAdjustmentAction(
       };
     }
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, "adjust_stock" as PermissionAction);
     const data = parsed.data;
 
     await prisma.$transaction(async (tx) => {
@@ -483,6 +499,17 @@ export async function createStockAdjustmentAction(
           unit_rate: batch.purchase_rate ? Number(batch.purchase_rate) : 0,
           notes: data.reason + (data.notes ? ` — ${data.notes}` : ""),
           created_by: ctx.userId,
+          created_at: new Date(),
+        },
+      });
+      await tx.audit_logs.create({
+        data: {
+          tenant_id: ctx.tenantId,
+          event_type: "STOCK_ADJUSTED",
+          actor_id: ctx.userId,
+          target_type: "product_batch",
+          target_id: batch.id,
+          metadata: { quantity_delta: delta, product_id: batch.product_id },
           created_at: new Date(),
         },
       });

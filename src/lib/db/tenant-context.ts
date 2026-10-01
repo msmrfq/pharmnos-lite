@@ -22,6 +22,13 @@ export function requireTenant(ctx: Partial<TenantContext> | null | undefined): T
   return ctx as TenantContext;
 }
 
+export function requirePermission(ctx: TenantContext, permission: PermissionAction): void {
+  if (ctx.tenantId === DEMO_TENANT_ID) return;
+  if (!ctx.permissions.includes(permission)) {
+    throw new Error("You are not authorized to perform this action.");
+  }
+}
+
 export function tenantScoped<T extends { tenant_id: string }>(
   where: T,
   ctx: TenantContext,
@@ -50,8 +57,9 @@ type SessionCtxResult = {
 };
 
 export async function getServerTenantContext(): Promise<SessionCtxResult> {
+  let session: Awaited<ReturnType<typeof authAdapter.getCurrentSession>> = null;
   try {
-    const session = await authAdapter.getCurrentSession();
+    session = await authAdapter.getCurrentSession();
     if (!session || !session.user?.id) {
       return {
         ok: true,
@@ -76,19 +84,11 @@ export async function getServerTenantContext(): Promise<SessionCtxResult> {
       },
     });
     if (!user || !user.memberships.length) {
-      return {
-        ok: true,
-        ctx: getDemoTenantContext(),
-        demoFallback: true,
-      };
+      throw new Error("Authenticated user has no active tenant membership.");
     }
     const m = user.memberships[0];
     if (!m) {
-      return {
-        ok: true,
-        ctx: getDemoTenantContext(),
-        demoFallback: true,
-      };
+      throw new Error("Authenticated user has no active tenant membership.");
     }
 
     try {
@@ -114,7 +114,10 @@ export async function getServerTenantContext(): Promise<SessionCtxResult> {
       },
       demoFallback: false,
     };
-  } catch (_err) {
+  } catch (err) {
+    if (session?.user?.id) {
+      return { ok: false, error: err instanceof Error ? err.message : "Tenant context lookup failed." };
+    }
     return {
       ok: true,
       ctx: getDemoTenantContext(),

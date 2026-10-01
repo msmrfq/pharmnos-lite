@@ -28,7 +28,7 @@ export class ProductRepository extends BaseRepository<
   async create(input: Prisma.productsCreateInput, ctx: TenantContext): Promise<products> {
     const t = this.withTenant(ctx);
     return this.prisma.products.create({
-      data: { ...input, tenant_id: (input as any).tenant_id ?? t.tenantId, created_by: t.userId },
+      data: { ...input, tenant_id: t.tenantId, created_by: t.userId } as any,
     });
   }
 
@@ -53,14 +53,14 @@ export class ProductRepository extends BaseRepository<
       tenant_id: t.tenantId,
       ...(search
         ? {
-            OR: [
-              { name: { contains: search, mode: "insensitive" } },
-              { generic_name: { contains: search, mode: "insensitive" } },
-              { sku: { contains: search, mode: "insensitive" } },
-              { hsn_code: { contains: search, mode: "insensitive" } },
-              { manufacturer: { contains: search, mode: "insensitive" } },
-            ],
-          }
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { generic_name: { contains: search, mode: "insensitive" } },
+            { sku: { contains: search, mode: "insensitive" } },
+            { hsn_code: { contains: search, mode: "insensitive" } },
+            { manufacturer: { contains: search, mode: "insensitive" } },
+          ],
+        }
         : {}),
     };
     const [items, total] = await Promise.all([

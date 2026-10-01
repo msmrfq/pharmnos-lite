@@ -26,9 +26,9 @@ export class PaymentRepository extends BaseRepository<
     return this.prisma.payments.create({
       data: {
         ...input,
-        tenant_id: (input as any).tenant_id ?? t.tenantId,
-        created_by: (input as any).created_by ?? t.userId,
-      },
+        tenant_id: t.tenantId,
+        created_by: t.userId,
+      } as any,
     });
   }
 
@@ -53,11 +53,11 @@ export class PaymentRepository extends BaseRepository<
       tenant_id: t.tenantId,
       ...(search
         ? {
-            OR: [
-              { reference_no: { contains: search, mode: "insensitive" } },
-              { notes: { contains: search, mode: "insensitive" } },
-            ],
-          }
+          OR: [
+            { reference_no: { contains: search, mode: "insensitive" } },
+            { notes: { contains: search, mode: "insensitive" } },
+          ],
+        }
         : {}),
     };
     const [rawItems, total] = await Promise.all([

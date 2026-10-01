@@ -28,7 +28,7 @@ export class RoleRepository extends BaseRepository<
   async create(input: Prisma.rolesCreateInput, ctx: TenantContext): Promise<roles> {
     const t = this.withTenant(ctx);
     return this.prisma.roles.create({
-      data: { ...input, tenant_id: input.tenant_id ?? t.tenantId } as any,
+      data: { ...input, tenant_id: t.tenantId } as any,
     });
   }
 
