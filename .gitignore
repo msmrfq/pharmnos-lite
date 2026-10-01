@@ -12,6 +12,7 @@ coverage
 .env
 .env*.local
 !.env.example
+.env.financial-e2e
 
 pnpm-debug.log*
 yarn-debug.log*

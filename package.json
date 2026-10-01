@@ -15,6 +15,8 @@
     "db:studio": "prisma studio",
     "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
     "financial:e2e:safe": "node scripts/financial-e2e.mjs",
+    "financial:e2e:up": "docker compose --env-file .env.financial-e2e -f docker-compose.financial-e2e.yml --profile financial-e2e up -d --wait",
+    "financial:e2e:down": "docker compose --env-file .env.financial-e2e -f docker-compose.financial-e2e.yml --profile financial-e2e down --volumes --remove-orphans",
     "shadcn:add": "npx shadcn-ui@latest add"
   },
   "dependencies": {

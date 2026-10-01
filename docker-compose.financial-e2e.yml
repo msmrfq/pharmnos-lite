@@ -1,0 +1,23 @@
+services:
+  financial-e2e-postgres:
+    image: postgres:17-alpine
+    profiles:
+      - financial-e2e
+    environment:
+      POSTGRES_USER: ${FINANCIAL_E2E_DB_USER:?FINANCIAL_E2E_DB_USER is required}
+      POSTGRES_PASSWORD: ${FINANCIAL_E2E_DB_PASSWORD:?FINANCIAL_E2E_DB_PASSWORD is required}
+      POSTGRES_DB: ${FINANCIAL_E2E_DB_NAME:?FINANCIAL_E2E_DB_NAME is required}
+    ports:
+      - "127.0.0.1:${FINANCIAL_E2E_DB_PORT:-55432}:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    restart: "no"
+    labels:
+      com.pharmnos.environment: financial-e2e-isolated
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 2s
+      timeout: 3s
+      retries: 20
