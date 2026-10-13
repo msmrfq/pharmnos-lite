@@ -11,7 +11,7 @@
 
 **Working phase numbering (PROJECT-WIDE MANDATORY):** We use 7 working phases P1…P7. The PRD `.obsidian-vault/prd-technical-architecture.md §29 Suggested Development Phases` originally proposed 6 phases (Phase 0…Phase 5). The crosswalk column below maps every working phase to its corresponding PRD coverage area so we never confuse the two. **Always use P1…P7 working phase numbers in all notes, bugs, specs, decisions, retro, TODO lists, and commit messages going forward.** Do NOT use PRD numbering in day-to-day work.
 
-**Last updated:** `Date: 2026-10-02  Time: 04-04-57 (IST)`
+**Last updated:** `Date: 2026-10-13  Time: 21-09-40 (IST)`
 
 N.B: ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. 
 
@@ -107,6 +107,28 @@ Backup/restore operational drill
 Operational go-live readiness
 	█████░░░░░░░░░░░░░░░  
 ```
+
+### GST/IGST Remediation Status
+
+The consolidated evidence-backed matrix is maintained in
+`.obsidian-vault/specs/gst-audit-validation-and-plan.md` under **GST/IGST
+Remediation Status Matrix**.
+
+Current matrix summary: 20 requirements tracked; 4 implemented and verified; 2
+partially implemented/limited; 7 outstanding; 5 blocked pending prerequisites;
+1 deferred by explicit decision; 1 unclear. Financial E2E readiness is blocked.
+
+Completed and verified work includes the canonical sales calculation,
+component-wise rounding, preview/server parity, discount normalization, state
+normalization behavior, fail-closed place-of-supply handling, and unit
+regression coverage. The matrix records the evidence and preserves the known
+limitations: aggregate-only persisted tax, absent historical snapshots, missing
+purchase parity, incomplete authoritative prefix verification, and deferred
+special-prefix workflow support.
+
+The broader POST-P7 validation remains active. Do not mark GST/IGST remediation
+or production readiness complete merely because the completed calculation work
+has passed unit/static validation.
 
 ---
 

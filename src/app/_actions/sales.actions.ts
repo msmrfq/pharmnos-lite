@@ -18,7 +18,9 @@ import {
 } from "@/lib/validation/sales.schemas";
 import {
   gstCalculator,
-  type LineItemTaxable,
+  requireResolvedPlaceOfSupply,
+  toTaxableGstLine,
+  type GstPlaceOfSupply,
   type GstTotals,
 } from "@/domain/services/gst-calculator.service";
 import { fefoBatchPicker } from "@/domain/services/fefo-batch.service";
@@ -88,25 +90,11 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-function isInterStateFromCustomer(businessProfileState: string | null | undefined, customerState: string | null | undefined): boolean {
-  if (!businessProfileState || !customerState) return false;
-  return businessProfileState.trim().toLowerCase() !== customerState.trim().toLowerCase();
-}
-
-function computeServerGstTotals(items: any[], isInterState: boolean): GstTotals {
-  const lines: LineItemTaxable[] = items.map((it: any) => {
-    const qty = Number(it.quantity ?? 0);
-    const rate = Number(it.sale_rate ?? 0);
-    const discPct = Number(it.trade_discount_pct ?? 0);
-    const gross = qty * rate;
-    const disc = gross * (discPct / 100);
-    const taxable = Math.max(0, round2(gross - disc));
-    return {
-      taxable_value: taxable,
-      gst_rate_pct: Number(it.gst_rate ?? 0),
-    };
-  });
-  return gstCalculator.computeTotals(lines, { placeOfSupply: isInterState ? "INTER" : "INTRA" });
+function computeServerGstTotals(items: any[], placeOfSupply: GstPlaceOfSupply): GstTotals {
+  return gstCalculator.computeTotals(
+    items.map((item: any) => toTaxableGstLine(item)),
+    { placeOfSupply },
+  );
 }
 
 function computeFefoAllocationForLine(productId: string, requiredQty: number, batches: any[]) {
@@ -165,9 +153,16 @@ export async function createSalesDraftAction(
       : null;
     const businessState = profile?.state ?? null;
     const customerBillingState = customer?.billing_state ?? null;
-    const isInterState = isInterStateFromCustomer(businessState, customerBillingState);
+    const placeResult = gstCalculator.detectPlace(businessState, customerBillingState);
+    if (placeResult.type === "UNKNOWN") {
+      return {
+        ok: false,
+        message: "Cannot save invoice draft until supplier and customer states are valid.",
+      };
+    }
+    const placeOfSupply = placeResult.type;
 
-    const gstTotals = computeServerGstTotals(linesParsed, isInterState);
+    const gstTotals = computeServerGstTotals(linesParsed, placeOfSupply);
 
     const invoice = await prisma.$transaction(async (tx) => {
       const created = await tx.sales_invoices.create({
@@ -193,15 +188,20 @@ export async function createSalesDraftAction(
         },
       });
 
-      const itemsData = linesParsed.map((line: any) => {
+      const itemsData = linesParsed.map((line: any, index: number) => {
         const qty = Number(line.quantity ?? 0);
         const rate = Number(line.sale_rate ?? 0);
         const discPct = Number(line.trade_discount_pct ?? 0);
         const lineGross = round2(qty * rate);
         const lineDiscAmt = round2(lineGross * (discPct / 100));
-        const lineTaxable = round2(lineGross - lineDiscAmt);
-        const lineGst = round2(lineTaxable * (Number(line.gst_rate ?? 0) / 100));
-        const lineTotal = round2(lineTaxable + lineGst);
+        const lineSplit = gstTotals.lines[index];
+        if (!lineSplit) throw new Error("GST line calculation missing.");
+        const lineGst = round2(
+          lineSplit.cgst_amount +
+          lineSplit.sgst_amount +
+          lineSplit.igst_amount +
+          (lineSplit.cess_amount ?? 0),
+        );
         return {
           tenant_id: ctx.tenantId,
           invoice_id: created.id,
@@ -216,7 +216,7 @@ export async function createSalesDraftAction(
           discount_amount: lineDiscAmt,
           gst_rate: Number(line.gst_rate ?? 0),
           gst_amount: lineGst,
-          line_total: lineTotal,
+          line_total: lineSplit.line_total,
           created_at: new Date(),
         };
       });
@@ -296,9 +296,11 @@ export async function finalizeSalesInvoiceAction(
       const profile = await tx.business_profiles.findUnique({ where: { tenant_id: ctx.tenantId } });
       const businessState = profile?.state ?? null;
       const customerBillingState = existing.customer.billing_state ?? null;
-      const isInterState = isInterStateFromCustomer(businessState, customerBillingState);
+      const placeOfSupply = requireResolvedPlaceOfSupply(
+        gstCalculator.detectPlace(businessState, customerBillingState),
+      );
 
-      const serverGst = computeServerGstTotals(items, isInterState);
+      const serverGst = computeServerGstTotals(items, placeOfSupply);
       const diffGross = Math.abs(Number(existing.gross_amount ?? 0) - serverGst.total_taxable);
       const diffTax = Math.abs(Number(existing.total_tax ?? 0) - serverGst.total_tax);
       const diffNet = Math.abs(Number(existing.net_amount ?? 0) - serverGst.grand_total);

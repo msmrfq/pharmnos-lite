@@ -1,3 +1,5 @@
+import { determinePlaceOfSupply, type PlaceOfSupplyResult } from "@/lib/constants/indian-states";
+
 export type GstPlaceOfSupply = "INTRA" | "INTER";
 
 export type GstRounding = "NONE" | "HALF_UP" | "DOWN";
@@ -9,6 +11,14 @@ export type LineItemTaxable = {
   taxable_value: number;
   gst_rate_pct: GstRate | number;
   is_non_taxable?: boolean;
+};
+
+export type SalesGstLineInput = {
+  quantity: number | string | null | undefined;
+  sale_rate: number | string | null | undefined;
+  gst_rate: number | string | null | undefined;
+  trade_discount_pct?: number | string | null;
+  discount_pct?: number | string | null;
 };
 
 export type GstLineSplit = {
@@ -43,10 +53,31 @@ export type GstConfig = {
   defaultState?: string;
 };
 
+// Re-export the PlaceOfSupplyResult type for callers that need to handle unresolved state
+export type { PlaceOfSupplyResult };
+
 function round(value: number, mode: GstRounding = "HALF_UP"): number {
   if (mode === "NONE") return value;
   if (mode === "DOWN") return Math.floor(value * 100) / 100;
   return Math.round(value * 100) / 100;
+}
+
+function round2(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.round(value * 100) / 100;
+}
+
+export function toTaxableGstLine(item: SalesGstLineInput): LineItemTaxable {
+  const quantity = Number(item.quantity ?? 0);
+  const saleRate = Number(item.sale_rate ?? 0);
+  const discountPct = Number(item.trade_discount_pct ?? item.discount_pct ?? 0);
+  const gross = quantity * saleRate;
+  const discount = gross * (discountPct / 100);
+
+  return {
+    taxable_value: Math.max(0, round2(gross - discount)),
+    gst_rate_pct: Number(item.gst_rate ?? 0),
+  };
 }
 
 export function splitLineGst(
@@ -135,9 +166,15 @@ export function calculateGstTotals(
 export function detectPlaceOfSupply(
   supplierStateCode?: string | null,
   placeOfDeliveryStateCode?: string | null,
-): GstPlaceOfSupply {
-  if (!supplierStateCode || !placeOfDeliveryStateCode) return "INTRA";
-  return supplierStateCode === placeOfDeliveryStateCode ? "INTRA" : "INTER";
+): PlaceOfSupplyResult {
+  return determinePlaceOfSupply(supplierStateCode, placeOfDeliveryStateCode);
+}
+
+export function requireResolvedPlaceOfSupply(result: PlaceOfSupplyResult): GstPlaceOfSupply {
+  if (result.type === "UNKNOWN") {
+    throw new Error("Cannot finalize invoice until supplier and customer states are valid.");
+  }
+  return result.type;
 }
 
 export function formatGstRate(rate: number): string {
@@ -147,7 +184,7 @@ export function formatGstRate(rate: number): string {
 }
 
 export class GstCalculatorService {
-  constructor(private readonly defaultConfig: Partial<GstConfig> = {}) {}
+  constructor(private readonly defaultConfig: Partial<GstConfig> = {}) { }
 
   computeLine(line: LineItemTaxable, override: Partial<GstConfig> = {}): GstLineSplit {
     return splitLineGst(line, {
@@ -173,7 +210,7 @@ export class GstCalculatorService {
   detectPlace(
     supplierStateCode?: string | null,
     buyerStateCode?: string | null,
-  ): GstPlaceOfSupply {
+  ): PlaceOfSupplyResult {
     return detectPlaceOfSupply(supplierStateCode, buyerStateCode);
   }
 }
@@ -181,5 +218,4 @@ export class GstCalculatorService {
 export const gstCalculator = new GstCalculatorService({
   placeOfSupply: "INTRA",
   rounding: "HALF_UP",
-  defaultState: "Maharashtra",
 });

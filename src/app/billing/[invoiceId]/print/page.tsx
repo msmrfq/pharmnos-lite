@@ -11,8 +11,6 @@ import { isPostgresConfigured } from "@/lib/db/prisma";
 import { requireServerTenantContext } from "@/lib/db/tenant-context";
 import { repos } from "@/repositories";
 import { cn } from "@/lib/utils";
-import { splitLineGst, detectPlaceOfSupply } from "@/domain/services/gst-calculator.service";
-import type { GstLineSplit } from "@/domain/services/gst-calculator.service";
 
 export const metadata: Metadata = {
   title: "Print invoice",
@@ -36,24 +34,6 @@ const formatDate = (d: Date | string | null | undefined) => {
     year: "numeric",
   });
 };
-
-function computeLineTaxSplit(
-  item: any,
-  supplierState: string | null | undefined,
-  buyerState: string | null | undefined,
-): GstLineSplit {
-  const place = detectPlaceOfSupply(supplierState ?? undefined, buyerState ?? undefined);
-  return splitLineGst(
-    {
-      line_id: item.id,
-      taxable_value:
-        Number(item.sale_rate ?? 0) * Number(item.quantity ?? 0) -
-        Number(item.discount_amount ?? 0),
-      gst_rate_pct: Number(item.gst_rate ?? 0),
-    },
-    { placeOfSupply: place },
-  );
-}
 
 export default async function BillingInvoicePrintPage({
   params,
@@ -123,11 +103,6 @@ export default async function BillingInvoicePrintPage({
   }
   const invoice: any = rawInvoice;
 
-  const businessName =
-    businessProfile?.gstin || businessProfile?.address_line_1
-      ? ""
-      : "Your Pharmacy";
-
   const displayBusinessName =
     businessProfile?.gstin !== undefined ? (businessProfile as any).tenant?.business_name : null;
 
@@ -149,17 +124,6 @@ export default async function BillingInvoicePrintPage({
   ].filter(Boolean);
 
   const items = invoice.items;
-  const supplierState = businessProfile?.state ?? null;
-  const buyerState = customer?.billing_state ?? null;
-  const place = detectPlaceOfSupply(supplierState ?? undefined, buyerState ?? undefined);
-
-  const lineSplits = items.map((it: any) =>
-    computeLineTaxSplit(it, supplierState, buyerState),
-  );
-
-  const totalCgst = lineSplits.reduce((s: number, l: GstLineSplit) => s + l.cgst_amount, 0);
-  const totalSgst = lineSplits.reduce((s: number, l: GstLineSplit) => s + l.sgst_amount, 0);
-  const totalIgst = lineSplits.reduce((s: number, l: GstLineSplit) => s + l.igst_amount, 0);
 
   const gross = Number(invoice.gross_amount ?? 0);
   const discount = Number(invoice.total_discount ?? 0);
@@ -227,7 +191,7 @@ export default async function BillingInvoicePrintPage({
               </div>
               <div>
                 <h1 className="text-display-sm font-bold tracking-brand text-ink">
-                  {displayBusinessName || "Your Pharmacy Pvt. Ltd."}
+                  {displayBusinessName || "Seller identity unavailable"}
                 </h1>
                 {businessAddressParts.length > 0 && (
                   <p className="mt-1 text-body-sm text-body whitespace-pre-line">
@@ -235,10 +199,8 @@ export default async function BillingInvoicePrintPage({
                   </p>
                 )}
                 {!businessAddressParts.length && (
-                  <p className="mt-1 text-body-sm text-body">
-                    123 Medical Square, Near Hospital Road
-                    <br />
-                    Pune, Maharashtra 411001
+                  <p className="mt-1 text-body-sm text-muted">
+                    Seller address was not snapshotted on this invoice.
                   </p>
                 )}
                 <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-caption text-muted">
@@ -248,20 +210,10 @@ export default async function BillingInvoicePrintPage({
                       {businessProfile.gstin}
                     </span>
                   )}
-                  {!businessProfile?.gstin && (
-                    <span>
-                      <span className="font-semibold text-body">GSTIN:</span> 27ABCDE1234F1Z5
-                    </span>
-                  )}
                   {businessProfile?.state && (
                     <span>
                       <span className="font-semibold text-body">State:</span>{" "}
                       {businessProfile.state}
-                    </span>
-                  )}
-                  {!businessProfile?.state && (
-                    <span>
-                      <span className="font-semibold text-body">State:</span> Maharashtra
                     </span>
                   )}
                   {businessProfile?.drug_license_no_1 && (
@@ -298,8 +250,8 @@ export default async function BillingInvoicePrintPage({
                       invoice.status === "FINALIZED"
                         ? "success"
                         : invoice.status === "CANCELLED"
-                        ? "destructive"
-                        : "warning"
+                          ? "destructive"
+                          : "warning"
                     }
                     className="text-[11px]"
                   >
@@ -383,7 +335,10 @@ export default async function BillingInvoicePrintPage({
               <div className="mt-4 rounded-md bg-surface-soft p-3">
                 <p className="text-caption text-muted">Place of Supply</p>
                 <p className="text-body-sm font-semibold text-ink mt-0.5">
-                  {place === "INTRA" ? "Intra-state (CGST + SGST)" : "Inter-state (IGST)"}
+                  Unavailable (not persisted)
+                </p>
+                <p className="mt-1 text-caption text-muted">
+                  Seller and customer details are current records; historical snapshots are not stored.
                 </p>
               </div>
             </div>
@@ -435,7 +390,6 @@ export default async function BillingInvoicePrintPage({
                   </tr>
                 ) : (
                   items.map((it: any, idx: number) => {
-                    const split = lineSplits[idx];
                     const qty = Number(it.quantity ?? 0);
                     const free = Number(it.free_qty ?? 0);
                     const rate = Number(it.sale_rate ?? 0);
@@ -486,29 +440,7 @@ export default async function BillingInvoicePrintPage({
                           {rupee(amt)}
                         </td>
                         <td className="border border-hairline px-2 py-2 text-caption text-right whitespace-nowrap">
-                          {place === "INTRA" ? (
-                            <>
-                              <div>
-                                CGST{" "}
-                                <span className="font-medium text-ink">
-                                  {rupee(split.cgst_amount)}
-                                </span>
-                              </div>
-                              <div>
-                                SGST{" "}
-                                <span className="font-medium text-ink">
-                                  {rupee(split.sgst_amount)}
-                                </span>
-                              </div>
-                            </>
-                          ) : (
-                            <div>
-                              IGST{" "}
-                              <span className="font-medium text-ink">
-                                {rupee(split.igst_amount)}
-                              </span>
-                            </div>
-                          )}
+                          <span className="text-muted">Tax split unavailable</span>
                         </td>
                       </tr>
                     );
@@ -535,17 +467,9 @@ export default async function BillingInvoicePrintPage({
                 <p className="text-caption text-muted mb-1">
                   Total items: {items.length}
                 </p>
-                {place === "INTRA" ? (
-                  <div className="space-y-0.5 text-caption text-muted">
-                    <div>
-                      Tax summary: CGST {rupee(totalCgst)} + SGST {rupee(totalSgst)}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-0.5 text-caption text-muted">
-                    <div>Tax summary: IGST {rupee(totalIgst)}</div>
-                  </div>
-                )}
+                <div className="space-y-0.5 text-caption text-muted">
+                  <div>Tax component breakdown unavailable; persisted aggregate tax: {rupee(tax)}</div>
+                </div>
               </div>
             </div>
 
@@ -565,7 +489,7 @@ export default async function BillingInvoicePrintPage({
                     </div>
                   )}
                   <div className="flex items-center justify-between px-4 py-2.5 text-body-sm">
-                    <span className="text-muted">Tax ({place})</span>
+                    <span className="text-muted">Tax (unresolved)</span>
                     <span className="font-medium text-ink">{rupee(tax)}</span>
                   </div>
                   {roundOff !== 0 && (

@@ -45,8 +45,8 @@ import { Plus, Trash2, Save, Package, Calendar } from "lucide-react";
 import { createSalesDraftAction } from "@/app/_actions/sales.actions";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
 import type { sales_invoices } from "@prisma/client";
-import { gstCalculator } from "@/domain/services/gst-calculator.service";
-import type { GstPlaceOfSupply } from "@/domain/services/gst-calculator.service";
+import { gstCalculator, toTaxableGstLine } from "@/domain/services/gst-calculator.service";
+import type { PlaceOfSupplyResult } from "@/domain/services/gst-calculator.service";
 
 type BatchLite = {
   id: string;
@@ -75,6 +75,7 @@ type Props = {
   customers: any[];
   products: any[];
   batches: BatchLite[];
+  businessProfileState: string | null;
 };
 
 function fieldError(
@@ -246,7 +247,12 @@ function FefoBatchPicker({
 
 const initialState: ActionResult<sales_invoices> = { ok: false };
 
-export default function BillingNewClientForm({ customers, products, batches }: Props) {
+export default function BillingNewClientForm({
+  customers,
+  products,
+  batches,
+  businessProfileState,
+}: Props) {
   const [state, action] = useFormState(createSalesDraftAction, initialState);
   const errors = state.errors ?? {};
   const { toast } = useToast();
@@ -272,15 +278,11 @@ export default function BillingNewClientForm({ customers, products, batches }: P
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.get("created")]);
 
-  const placeOfSupply: GstPlaceOfSupply = useMemo(() => {
+  const placeOfSupply: PlaceOfSupplyResult = useMemo(() => {
     const cust = customers.find((c: any) => c.id === customerId);
-    const profileState = gstCalculator.detectPlace("", "") === "INTRA" ? "MAHARASHTRA" : "";
-    const custState = String(cust?.billing_state ?? cust?.state ?? "").trim().toUpperCase();
-    if (!custState) return "INTRA";
-    const ownerState = (profileState || "MAHARASHTRA").toUpperCase();
-    if (custState && ownerState && custState !== ownerState) return "INTER";
-    return "INTRA";
-  }, [customerId, customers]);
+    const custState = String(cust?.billing_state ?? "").trim().toUpperCase();
+    return gstCalculator.detectPlace(businessProfileState, custState);
+  }, [businessProfileState, customerId, customers]);
 
   const totals = useMemo(() => {
     const taxableLines = lines.map((l, _idx) => {
@@ -295,7 +297,9 @@ export default function BillingNewClientForm({ customers, products, batches }: P
         gst_rate_pct: Number(l.gst_rate ?? 0),
       };
     });
-    const gstTotals = gstCalculator.computeTotals(taxableLines, { placeOfSupply });
+    const gstTotals = placeOfSupply.type === "UNKNOWN"
+      ? null
+      : gstCalculator.computeTotals(taxableLines, { placeOfSupply: placeOfSupply.type });
     const gross_amount = round2(
       lines.reduce((s, l) => s + round2(Number(l.quantity ?? 0) * Number(l.sale_rate ?? 0)), 0),
     );
@@ -305,15 +309,15 @@ export default function BillingNewClientForm({ customers, products, batches }: P
         return s + round2(g * (Number(l.trade_discount_pct ?? 0) / 100));
       }, 0),
     );
-    const net_amount = round2(gstTotals.grand_total);
+    const net_amount = gstTotals ? round2(gstTotals.grand_total) : null;
     return {
       gross_amount,
       total_discount,
-      total_tax: round2(gstTotals.total_tax),
-      total_cgst: round2(gstTotals.total_cgst),
-      total_sgst: round2(gstTotals.total_sgst),
-      total_igst: round2(gstTotals.total_igst),
-      round_off: round2(gstTotals.round_off_applied),
+      total_tax: gstTotals ? round2(gstTotals.total_tax) : null,
+      total_cgst: gstTotals ? round2(gstTotals.total_cgst) : null,
+      total_sgst: gstTotals ? round2(gstTotals.total_sgst) : null,
+      total_igst: gstTotals ? round2(gstTotals.total_igst) : null,
+      round_off: gstTotals ? round2(gstTotals.round_off_applied) : null,
       net_amount,
       gstTotals,
     };
@@ -369,15 +373,14 @@ export default function BillingNewClientForm({ customers, products, batches }: P
     `₹ ${Number(n ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
 
   const computeLineTotal = (row: LineRow) => {
-    const qty = Number(row.quantity ?? 0);
-    const rate = Number(row.sale_rate ?? 0);
-    const discPct = Number(row.trade_discount_pct ?? 0);
-    const gstPct = Number(row.gst_rate ?? 0);
-    const gross = round2(qty * rate);
-    const discount_amount = round2(gross * (discPct / 100));
-    const taxable = round2(gross - discount_amount);
-    const gst_amount = round2(taxable * (gstPct / 100));
-    return round2(taxable + gst_amount);
+    const taxableLine = toTaxableGstLine({
+      quantity: row.quantity,
+      sale_rate: row.sale_rate,
+      trade_discount_pct: row.trade_discount_pct,
+      gst_rate: row.gst_rate,
+    });
+    if (placeOfSupply.type === "UNKNOWN") return taxableLine.taxable_value;
+    return gstCalculator.computeLine(taxableLine, { placeOfSupply: placeOfSupply.type }).line_total;
   };
 
   return (
@@ -699,7 +702,7 @@ export default function BillingNewClientForm({ customers, products, batches }: P
             <CardHeader className="pb-3">
               <CardTitle className="text-title-md">Totals</CardTitle>
               <CardDescription>
-                Client-side preview — server recomputes on finalize. {String(placeOfSupply) === "INTER" ? "Inter-state (IGST)." : "Intra-state (CGST+SGST)."}
+                Client-side preview — server recomputes on finalize. {placeOfSupply.type === "UNKNOWN" ? `Tax classification unavailable (${placeOfSupply.reason}).` : placeOfSupply.type === "INTER" ? "Inter-state (IGST)." : "Intra-state (CGST+SGST)."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -711,31 +714,35 @@ export default function BillingNewClientForm({ customers, products, batches }: P
                 <span>Trade discount</span>
                 <span>- {rupee(totals.total_discount)}</span>
               </div>
-              {String(placeOfSupply) === "INTER" ? (
+              {placeOfSupply.type === "UNKNOWN" ? (
+                <div className="rounded-md border border-semantic-warning/40 bg-semantic-warning/10 px-3 py-2 text-body-sm text-semantic-warning">
+                  Tax split unavailable until both supplier and customer states are valid.
+                </div>
+              ) : placeOfSupply.type === "INTER" ? (
                 <div className="flex justify-between text-body-md text-body">
                   <span>IGST</span>
-                  <span>+ {rupee(totals.total_igst)}</span>
+                  <span>+ {rupee(totals.total_igst ?? 0)}</span>
                 </div>
               ) : (
                 <>
                   <div className="flex justify-between text-body-md text-body">
                     <span>CGST</span>
-                    <span>+ {rupee(totals.total_cgst)}</span>
+                    <span>+ {rupee(totals.total_cgst ?? 0)}</span>
                   </div>
                   <div className="flex justify-between text-body-md text-body">
                     <span>SGST</span>
-                    <span>+ {rupee(totals.total_sgst)}</span>
+                    <span>+ {rupee(totals.total_sgst ?? 0)}</span>
                   </div>
                 </>
               )}
               <div className="flex justify-between text-body-md text-body">
                 <span>Round off</span>
-                <span>{totals.round_off === 0 ? "—" : rupee(totals.round_off)}</span>
+                <span>{totals.round_off === null || totals.round_off === 0 ? "—" : rupee(totals.round_off)}</span>
               </div>
               <div className="mt-3 pt-3 border-t border-hairline flex justify-between items-baseline gap-4">
                 <span className="text-nav-link font-semibold text-ink">Grand total</span>
                 <span className="text-title-lg font-semibold text-ink whitespace-nowrap">
-                  {rupee(totals.net_amount)}
+                  {totals.net_amount === null ? "Unavailable" : rupee(totals.net_amount)}
                 </span>
               </div>
             </CardContent>

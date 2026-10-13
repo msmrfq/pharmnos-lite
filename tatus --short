@@ -1,0 +1,37 @@
+warning: in the working copy of 'src/domain/services/gst-calculator.service.ts', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/src/domain/services/gst-calculator.service.ts b/src/domain/services/gst-calculator.service.ts[m
+[1mindex 6ed49a9..5b601c3 100644[m
+[1m--- a/src/domain/services/gst-calculator.service.ts[m
+[1m+++ b/src/domain/services/gst-calculator.service.ts[m
+[36m@@ -1,3 +1,5 @@[m
+[32m+[m[32mimport { normalizeState, determinePlaceOfSupply as normalizePlaceOfSupply } from "@/lib/constants/indian-states";[m
+[32m+[m
+ export type GstPlaceOfSupply = "INTRA" | "INTER";[m
+ [m
+ export type GstRounding = "NONE" | "HALF_UP" | "DOWN";[m
+[36m@@ -136,8 +138,7 @@[m [mexport function detectPlaceOfSupply([m
+   supplierStateCode?: string | null,[m
+   placeOfDeliveryStateCode?: string | null,[m
+ ): GstPlaceOfSupply {[m
+[31m-  if (!supplierStateCode || !placeOfDeliveryStateCode) return "INTRA";[m
+[31m-  return supplierStateCode === placeOfDeliveryStateCode ? "INTRA" : "INTER";[m
+[32m+[m[32m  return normalizePlaceOfSupply(supplierStateCode, placeOfDeliveryStateCode);[m
+ }[m
+ [m
+ export function formatGstRate(rate: number): string {[m
+[36m@@ -147,7 +148,7 @@[m [mexport function formatGstRate(rate: number): string {[m
+ }[m
+ [m
+ export class GstCalculatorService {[m
+[31m-  constructor(private readonly defaultConfig: Partial<GstConfig> = {}) {}[m
+[32m+[m[32m  constructor(private readonly defaultConfig: Partial<GstConfig> = {}) { }[m
+ [m
+   computeLine(line: LineItemTaxable, override: Partial<GstConfig> = {}): GstLineSplit {[m
+     return splitLineGst(line, {[m
+[36m@@ -181,5 +182,5 @@[m [mexport class GstCalculatorService {[m
+ export const gstCalculator = new GstCalculatorService({[m
+   placeOfSupply: "INTRA",[m
+   rounding: "HALF_UP",[m
+[31m-  defaultState: "Maharashtra",[m
+[32m+[m[32m  defaultState: "MH",[m
+ });[m

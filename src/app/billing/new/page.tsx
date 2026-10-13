@@ -23,18 +23,21 @@ export default async function NewBillingPage() {
   let customers: any[] = [];
   let products: any[] = [];
   let batches: any[] = [];
+  let businessProfileState: string | null = null;
 
   if (dbOk) {
     try {
       const ctx = await requireServerTenantContext();
-      const [custRes, prodRes, batchRes] = await Promise.all([
+      const [custRes, prodRes, batchRes, businessProfile] = await Promise.all([
         repos.customers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx),
         repos.products.list({ skip: 0, take: 25000, orderBy: { name: "asc" } }, ctx),
         repos.productBatches.list({ skip: 0, take: 25000, orderBy: { expiry_date: "asc" } }, ctx),
+        repos.businessProfiles.getForTenant(ctx),
       ]);
       customers = (custRes.items as any[]) ?? [];
       products = (prodRes.items as any[]) ?? [];
       batches = (batchRes.items as any[]) ?? [];
+      businessProfileState = businessProfile?.state ?? null;
     } catch (_err) {
       dbOk = false;
     }
@@ -63,7 +66,12 @@ export default async function NewBillingPage() {
         </div>
       </CardHeader>
       <Suspense fallback={null}>
-        <BillingNewClientForm customers={customers} products={products} batches={batches} />
+        <BillingNewClientForm
+          customers={customers}
+          products={products}
+          batches={batches}
+          businessProfileState={businessProfileState}
+        />
       </Suspense>
     </DashboardLayout>
   );

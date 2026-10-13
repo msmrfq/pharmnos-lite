@@ -62,27 +62,28 @@ Additional layers:
 
 > **Update this section EVERY SESSION before you stop working. Thirty seconds here saves five minutes of re-orientation next time.**
 
-**Last updated:** `Date: 2026-10-02  Time: 04-14-16 (IST)` 
+**Last updated:** `Date: 2026-10-13  Time: 22-12-11 (IST)` 
 
 ### Verified working
-- **P1–P7 complete 100%;** current phase is POST-P7 — PRE-PRODUCTION VALIDATION. Final local gates pass: typecheck, lint with one existing warning, build, diff check, and 39 filesystem-derived routes.
-- **Supabase live verification passes:** 19/19 public tables have RLS enabled; `jwt_tenant_id()` uses fixed `search_path`; public and Storage tenant predicates are live; `pharmnos-documents` remains private.
-- **Storage hardening complete:** canonical tenant path builder, traversal checks, tenant-scoped smoke path, four live tenant-scoped Storage policies, and cleanup smoke all pass.
-- **Supabase MCP authenticated read-only and controlled SQL access verified.** No financial runtime mutations or deployment performed during final validation.
-- **Financial E2E harness implemented with hard safety guards.** Runtime execution remains blocked because no isolated test database is configured.
-- **Temporary `/api/health/db` endpoint removed after Preview connectivity validation.** Canonical phase tracker and operational guide workflow are current.
+- **P1–P7 complete 100%;** current phase remains POST-P7 — PRE-PRODUCTION VALIDATION.
+- **GST/IGST remediation is partially implemented:** canonical sales calculations, component-wise rounding, preview/server parity, discount normalization, fail-closed state handling, print disclosure, state normalization, and regression coverage are documented in the consolidated status matrix.
+- **GST validation evidence recorded:** 206 assertions passed, typecheck passed, and lint passed with one unrelated warning.
+- **Supabase security/storage validation remains complete:** 19/19 public tables have RLS; Storage tenant policies and cleanup smoke pass; `pharmnos-documents` remains private.
+- **Financial E2E harness exists with safety guards;** runtime execution remains blocked because no isolated test database is configured.
 
 ### Broken / blocked (deferred — acceptable workaround)
-- **Financial runtime verification remains unverified:** no executable test suite, disposable tenant fixture, reset harness, or staging environment exists. Demo data was not mutated for tests.
+- **Financial runtime verification remains unverified:** no disposable tenant fixture, reset harness, or isolated staging database exists; demo data was not mutated for tests.
 - **Production Prisma/Vercel connectivity remains unverified.** Local Supavisor/pg-wire failures are environment-dependent; HTTPS/MCP access works.
 - **Supabase Auth leaked-password protection remains disabled.** This is project-level hardening, not an application-code defect.
 - **Backup/restore operational drill remains unverified.** SOP is documented; no restore drill executed.
+- **GST/IGST limitations remain:** seller/customer snapshots and complete historical tax/place-of-supply details are not persisted; sales components and place of supply are not persisted; purchase parity is outstanding; full prefix mapping evidence and `99` workflow semantics remain unresolved.
 
 ### Focus right now (next immediate build step)
-- **POST-P7 — PRE-PRODUCTION VALIDATION.**
+- **POST-P7 — PRE-PRODUCTION VALIDATION remains active** for isolated financial E2E, rollback behavior, production Prisma connectivity, backup/restore, and operational go-live readiness.
+- **GST/IGST remediation remains tracked by the status matrix;** no formal GST stage number is established and no production approval is implied by completed unit/static validation.
+- **Outstanding/deferred GST work:** tax-component/place-of-supply persistence, purchase GST parity, historical snapshot support, complete prefix verification, and workflow-specific `97`/`99` support require separate evidence and approval.
 - **Before deployment:** validate financial mutations in disposable staging, verify production Prisma connectivity, and enable leaked-password protection.
-- **After checklist approval:** user-owned commit, push, and Vercel deployment gates remain separate and require explicit authorization.
-- **Future backlog:** financial E2E harness runtime execution, FK workload review, Sentry, role CRUD, batch import, returns, GST e-invoice, scheduled backups, and pooler retry/stability work.
+- **User-owned commit, push, and Vercel deployment gates remain separate** and require explicit authorization.
 
 ---
 
@@ -94,6 +95,23 @@ Record NEW decisions here ONLY after they are finalised AND have an ADR written 
 
 - **[Decision label / title]**: [1-sentence summary of what was chosen]. ← ADR: `decisions/NNN-slug.md`
 - **Supabase provisioning workflow**: First-time Supabase Free cloud provisioning (schema, RLS, indexes, GRANTs, seed, verify) uses Supabase SQL Editor HTTPS paste of 4 idempotent SQL files (01/04/02/03) instead of Prisma CLI over Supavisor pooler pg-wire path, to avoid opaque P1001 rate-limit diagnosis loops. Prisma CLI retained unchanged for local dev + runtime writes; workaround applied provisioning-only. ← ADR: `decisions/0001-supabase-sql-editor-paste-workaround.md` (Accepted 2026-09-30, implemented end-to-end on project lizyjqkckysgvffwcqvb 2026-09-29)
+
+---
+
+## GST/IGST Capability Findings (Read-Only Audit & Validation)
+
+The following findings are from the completed read-only GST/IGST capability audit (`.obsidian-vault/specs/gst-igst-capability-audit.md`) and its subsequent validation (`.obsidian-vault/specs/gst-audit-validation-and-plan.md`). They distinguish reported findings from implemented fixes — **no GST remediation code or schema migration has been implemented yet**.
+
+1. **Sales and purchase line items currently store aggregate GST amounts only** (`gst_amount`); separate persisted tax components (CGST, SGST, IGST, cess) are not yet established.
+2. **Purchase-side intra-state/inter-state tax handling requires remediation** — current purchase actions compute only aggregate GST with no place-of-supply logic, unlike sales which uses the GST calculator.
+3. **State name/code normalization is required** — sales actions compare state names (e.g., "Maharashtra") while the GST calculator expects 2-letter state codes (e.g., "MH"), causing silent place-of-supply misclassification.
+4. **Finalized invoices need a stable, recorded place of supply and immutable tax values** — currently `place_of_supply` is not persisted on invoice headers, and invoice printing recomputes tax from mutable current customer/business-profile state.
+5. **Draft, finalization, reporting and printing must use consistent tax calculations and rounding** — draft creation uses aggregate line-level rounding while finalization uses the GST calculator's component-level rounding, creating a mismatch masked by a 0.02 tolerance.
+6. **Invoice rendering must not recalculate historical tax from mutable current state** — the print page currently calls `splitLineGst()` at render time using live business-profile and customer states instead of reading finalized persisted values.
+7. **GSTIN format validation exists for customer/supplier records** (15-character alphanumeric regex), but **checksum verification is absent**; business-profile state validation is not enforced.
+8. **Complete GSTR-1/GSTR-3B filing, e-invoice, e-way bill, RCM, credit/debit notes, ITC reconciliation, multi-GSTIN, composition and export/SEZ capabilities are not part of the immediate core GST remediation scope** — these remain in the advanced statutory automation backlog.
+
+> **Note:** The audit's 65/100 score is a subjective assessment, not an objective compliance measurement. Do not present it as such.
 
 ---
 
@@ -116,7 +134,7 @@ project/
 │
 ├── .obsidian-vault/                  # 🧠 OBSIDIAN VAULT — open this folder in Obsidian (CANONICAL for ALL formal reference/planning docs)
 │   ├── CLAUDE.md                     # ✅ CANONICAL AI AGENT BRIEFING SOURCE OF TRUTH (you are here)
-│   ├── PHASE_TRACKER.md              # 🎯 CANONICAL CENTRAL PHASE TRACKER: working phases P1…P7 (read first before planning). Current phase: P4 Purchases
+│   ├── PHASE_TRACKER.md              # 🎯 CANONICAL CENTRAL PHASE TRACKER: working phases P1…P7 (read first before planning). Current phase: POST-P7 PRE-PRODUCTION VALIDATION
 │   ├── prd-technical-architecture.md # 📚 CANONICAL Reference architecture + product planning draft (PRD)
 │   ├── ui-screen-concept.md          # 🎨 CANONICAL Reference screen-by-screen UI concept draft
 │   ├── OPERATIONAL_GUIDE.md          # 🛠️ CANONICAL Operational how-to / SOPs for vault + CI + deployment
@@ -170,3 +188,8 @@ Add rules BELOW the two permanent meta-rules as you lock in decisions. Format ea
 - Do not rely on Next.js dev server HMR incremental compile cache to propagate low-level `HTMLAttributes<>` type changes correctly. After any shadcn/ui or base component HTMLAttributes base-type interface change (div→span, label→button, etc.), ALWAYS run full dev cache reset: kill the port-3000 server → delete recursively the entire `.next/` folder with `Remove-Item -Recurse -Force .next` → cold start `pnpm dev`. The Badge div→span HTMLAttributes change 2026-09-30 broke UI twice in same session: first produced unstyled browser-default nav (CSS emit pipeline staleness) and second caused print route HTTP 500 "Cannot find module './vendor-chunks/tailwind-merge@2.6.1.js'" in webpack-runtime.js vendor chunk resolution — wasting 40+ minutes of fake "is this a code bug?" diagnosis. `pnpm build` production compile will pass correctly but dev server must be purged.
 - Do not hand-write HTTP smoke route test lists from memory. ALWAYS derive the route list from the filesystem first by globbing `src/app/**/page.tsx` (Next.js App Router convention) so you get the real param slugs `/billing/[invoiceId]/print`, `/customers/[customerId]/statement/print` etc., then substitute demo tenant actual IDs manually. First 35-URL handwritten crawl 2026-09-30 returned 8× 404 wrong paths (`/inventory/products` → actual `/inventory`; `/audit-log` → actual `/audit`; `/reports/customers-dues` → actual `/reports/customer-dues`). Glob-derived 37-URL list 2nd run ALL HTTP 200 zero failures.
 - Do not auto-promote ANY operational finding directly to a decisions/ ADR without human review first. TLS proxy workarounds, `.next` cache purge SOPs, phase-count ceiling conventions, HTTP crawl derivation rules — these are local process rules or agent-behavior conventions NOT settled architectural commitments. Promote them to ADR ONLY when: (a) they are expensive/time-consuming enough to warrant a permanent cross-session record AND (b) human says yes explicitly in chat. Otherwise add to THIS Do Not section HERE in `.obsidian-vault/CLAUDE.md` (as we are doing now) so all future agents read them on load — 90% of agent-discipline rules belong here, not in standalone ADR files.
+- Do not execute production database migration or historical-data backfill without prior review and explicit approval.
+- Never guess historical place of supply where the available evidence is insufficient.
+- Do not claim financial runtime verification without actually executing the tests against an isolated database.
+- Do not claim complete GST filing compliance merely because core tax calculation and invoice persistence are corrected.
+- Do not deploy or commit/push as part of GST remediation without the applicable explicit authorization.
