@@ -15,6 +15,7 @@ import {
   type ForgotPasswordInput,
 } from "@/lib/validation/auth.schemas";
 import { slugify } from "@/lib/utils";
+import { businessProfileStateSchema } from "@/lib/validation/tenant.schemas";
 
 export type ActionResult<T = unknown> = {
   ok: boolean;
@@ -112,6 +113,7 @@ export type OnboardingTenantParams = {
 };
 
 export async function onboardNewTenant(params: OnboardingTenantParams) {
+  const normalizedBusinessProfileState = businessProfileStateSchema.parse(params.business_profile?.state);
   const slug = params.slug ?? slugify(params.business_name).slice(0, 40);
   const existing = await prisma.tenants.findUnique({ where: { slug } });
   if (existing) {
@@ -128,7 +130,7 @@ export async function onboardNewTenant(params: OnboardingTenantParams) {
             address_line_1: params.business_profile?.address_line_1 ?? null,
             address_line_2: params.business_profile?.address_line_2 ?? null,
             city: params.business_profile?.city ?? null,
-            state: params.business_profile?.state ?? null,
+            state: normalizedBusinessProfileState,
             pincode: params.business_profile?.pincode ?? null,
             gstin: params.business_profile?.gstin ?? null,
             pan: params.business_profile?.pan ?? null,

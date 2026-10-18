@@ -27,7 +27,11 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Building2, Users, Settings2, Upload, ShieldCheck, Save, Link2, Pill } from "lucide-react";
+import { Building2, Users, Settings2, Upload, ShieldCheck, Link2, Pill } from "lucide-react";
+import { isPostgresConfigured } from "@/lib/db/prisma";
+import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { repos } from "@/repositories";
+import BusinessProfileForm from "./_business-profile-form";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -40,7 +44,23 @@ const staff = [
   { name: "Priya", email: "priya@maharashtrapharma.in", role: "Manager", variant: "badge-orange" as const, status: "Active" },
 ];
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  let profile: any = null;
+  let businessName = "";
+  if (isPostgresConfigured()) {
+    try {
+      const ctx = await requireServerTenantContext();
+      const [profileResult, tenant] = await Promise.all([
+        repos.businessProfiles.getForTenant(ctx),
+        repos.tenants.getById(ctx.tenantId, ctx),
+      ]);
+      profile = profileResult;
+      businessName = tenant?.business_name ?? "";
+    } catch (_error) {
+      // Keep the settings page usable when the configured database is unavailable.
+    }
+  }
+
   return (
     <DashboardLayout>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 px-0 pb-5">
@@ -50,16 +70,18 @@ export default function SettingsPage() {
             Business profile, team members and workspace configuration.
           </p>
         </div>
-        <Button>
-          <Save className="h-4 w-4" /> Save changes
-        </Button>
       </CardHeader>
 
-      <Tabs defaultValue="business">
+      <BusinessProfileForm
+        businessName={businessName}
+        profile={profile ? {
+          ...profile,
+          default_gst_rate: profile.default_gst_rate === null ? null : Number(profile.default_gst_rate),
+        } : null}
+      />
+
+      <Tabs defaultValue="team">
         <TabsList className="mb-5">
-          <TabsTrigger value="business">
-            <Building2 className="h-4 w-4 mr-2" /> Business
-          </TabsTrigger>
           <TabsTrigger value="team">
             <Users className="h-4 w-4 mr-2" /> Team
           </TabsTrigger>
@@ -71,7 +93,7 @@ export default function SettingsPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="business" className="mt-0 grid gap-6 lg:grid-cols-3">
+        <TabsContent value="business" className="hidden">
           <div className="space-y-6 lg:col-span-2">
             <CardCanvas>
               <CardHeader className="pb-3">

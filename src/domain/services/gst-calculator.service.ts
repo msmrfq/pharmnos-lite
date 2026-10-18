@@ -32,6 +32,84 @@ export type GstLineSplit = {
   line_total: number;
 };
 
+export type PersistedSalesTaxFacts = {
+  taxable_amount: number;
+  gst_amount: number;
+  cgst_amount: number;
+  sgst_amount: number;
+  igst_amount: number;
+  cess_amount: number;
+  line_total: number;
+};
+
+export type SalesSnapshotReadiness = {
+  sellerName?: string | null;
+  sellerState?: string | null;
+  customerName?: string | null;
+  customerState?: string | null;
+  productNames: Array<string | null | undefined>;
+};
+
+export type SalesFinalizationFacts = SalesSnapshotReadiness & {
+  placeOfSupplyCode?: string | null;
+  lines: Array<{
+    taxable_amount?: number | null;
+    cgst_amount?: number | null;
+    sgst_amount?: number | null;
+    igst_amount?: number | null;
+    cess_amount?: number | null;
+  }>;
+};
+
+export function toPersistedSalesTaxFacts(line: GstLineSplit): PersistedSalesTaxFacts {
+  const cess = line.cess_amount ?? 0;
+  return {
+    taxable_amount: line.taxable_value,
+    gst_amount: round2(line.cgst_amount + line.sgst_amount + line.igst_amount + cess),
+    cgst_amount: line.cgst_amount,
+    sgst_amount: line.sgst_amount,
+    igst_amount: line.igst_amount,
+    cess_amount: cess,
+    line_total: line.line_total,
+  };
+}
+
+export function hasCompleteSalesSnapshotFacts(input: SalesSnapshotReadiness): boolean {
+  return Boolean(
+    input.sellerName?.trim() &&
+    input.sellerState?.trim() &&
+    input.customerName?.trim() &&
+    input.customerState?.trim() &&
+    input.productNames.length > 0 &&
+    input.productNames.every((name) => Boolean(name?.trim())),
+  );
+}
+
+export function canMarkSalesInvoiceComplete(input: SalesFinalizationFacts): boolean {
+  return Boolean(
+    hasCompleteSalesSnapshotFacts(input) &&
+    input.placeOfSupplyCode?.trim() &&
+    input.lines.length > 0 &&
+    input.lines.every((line) => [
+      line.taxable_amount,
+      line.cgst_amount,
+      line.sgst_amount,
+      line.igst_amount,
+      line.cess_amount,
+    ].every((value) => typeof value === "number" && Number.isFinite(value))),
+  );
+}
+
+export function selectFinalizedInvoiceValue<T>(
+  isComplete: boolean,
+  snapshotValue: T | null | undefined,
+  currentValue: T | null | undefined,
+): T | null | undefined {
+  return isComplete && snapshotValue !== null && snapshotValue !== undefined
+    ? snapshotValue
+    : currentValue;
+}
+
 export type GstTotals = {
   lines: GstLineSplit[];
   total_taxable: number;

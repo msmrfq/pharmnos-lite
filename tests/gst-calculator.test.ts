@@ -19,15 +19,27 @@ import {
 
 import {
   gstCalculator,
+  canMarkSalesInvoiceComplete,
   splitLineGst,
   calculateGstTotals,
   detectPlaceOfSupply,
   requireResolvedPlaceOfSupply,
+  selectFinalizedInvoiceValue,
+  hasCompleteSalesSnapshotFacts,
+  toPersistedSalesTaxFacts,
   toTaxableGstLine,
   type LineItemTaxable,
   type GstConfig,
   type PlaceOfSupplyResult as GstPlaceOfSupplyResult
 } from "../src/domain/services/gst-calculator.service";
+import { businessProfileStateSchema } from "../src/lib/validation/tenant.schemas";
+import { businessProfileSchema } from "../src/lib/validation/tenant.schemas";
+import { toBusinessProfileUpdate } from "../src/app/_actions/settings.actions";
+import {
+  calculatePurchaseInvoiceTotals,
+  calculatePurchaseLineTotals,
+} from "../src/domain/services/purchase-calculator.service";
+import { PurchaseInvoiceLineCreateSchema } from "../src/lib/validation/purchases.schemas";
 
 let passed = 0;
 let failed = 0;
@@ -151,6 +163,133 @@ assertEqual(normalizeState("Dadra and Nagar Haveli and Daman and Diu"), "DD", "n
 assertEqual(normalizeState("97"), null, "normalizeState: Numeric GSTIN prefix is not a state input");
 assertEqual(normalizeState("99"), null, "normalizeState: OIDAR prefix is not a state input");
 
+// Test business-profile state validation uses the canonical state contract.
+assertEqual(
+  businessProfileStateSchema.parse(" Maharashtra "),
+  "MH",
+  "businessProfileStateSchema: State name normalized to canonical code",
+);
+assertEqual(
+  businessProfileStateSchema.parse("mh"),
+  "MH",
+  "businessProfileStateSchema: State code normalized to uppercase",
+);
+assertEqual(
+  businessProfileStateSchema.parse(""),
+  null,
+  "businessProfileStateSchema: Blank state remains optional",
+);
+assert(
+  (() => {
+    try {
+      businessProfileStateSchema.parse("NotAState");
+      return false;
+    } catch {
+      return true;
+    }
+  })(),
+  "businessProfileStateSchema: Unsupported state rejected",
+);
+const parsedBusinessProfile = businessProfileSchema.parse({
+  businessName: "Pharmnos Lite",
+  state: "Maharashtra",
+  invoicePrefix: "INV",
+  purchasePrefix: "PUR",
+  nearExpiryDays: "60",
+});
+const businessProfileUpdate = toBusinessProfileUpdate(parsedBusinessProfile);
+assertEqual(
+  businessProfileUpdate.state,
+  "MH",
+  "Business profile action mapping: normalized state persisted",
+);
+assertEqual(
+  businessProfileUpdate.address_line_1,
+  null,
+  "Business profile action mapping: blank address persists as null",
+);
+
+const purchaseLineFacts = calculatePurchaseLineTotals({
+  quantity: 2,
+  purchase_rate: 100,
+  discount_pct: 10,
+  gst_rate: 18,
+});
+assertEqual(purchaseLineFacts.gross, 200, "Purchase facts: pre-discount gross");
+assertEqual(purchaseLineFacts.discount_amount, 20, "Purchase facts: discount");
+assertEqual(purchaseLineFacts.gst_amount, 32.40, "Purchase facts: aggregate GST");
+assertEqual(purchaseLineFacts.line_total, 212.40, "Purchase facts: line total");
+const purchaseInvoiceFacts = calculatePurchaseInvoiceTotals([purchaseLineFacts]);
+assertEqual(purchaseInvoiceFacts.total_tax, 32.40, "Purchase facts: invoice tax");
+assertEqual(purchaseInvoiceFacts.round_off, -0.40, "Purchase facts: existing whole-unit round-off");
+assertEqual(purchaseInvoiceFacts.net_amount, 212, "Purchase facts: invoice net amount");
+
+const zeroPurchaseFacts = calculatePurchaseLineTotals({
+  quantity: 0,
+  purchase_rate: 0,
+  discount_pct: 0,
+  gst_rate: 18,
+});
+assertEqual(zeroPurchaseFacts.gross, 0, "Purchase facts: zero gross remains zero");
+assertEqual(zeroPurchaseFacts.gst_amount, 0, "Purchase facts: zero tax remains zero");
+assertEqual(zeroPurchaseFacts.line_total, 0, "Purchase facts: zero line remains zero");
+
+const invalidPurchaseFacts = calculatePurchaseLineTotals({
+  quantity: "not-a-number",
+  purchase_rate: undefined,
+  discount_pct: "invalid",
+  gst_rate: "invalid",
+});
+assertEqual(invalidPurchaseFacts.gross, 0, "Purchase facts: non-finite gross input is neutralized");
+assertEqual(invalidPurchaseFacts.gst_amount, 0, "Purchase facts: non-finite tax input is neutralized");
+
+const multiLinePurchaseFacts = calculatePurchaseInvoiceTotals([
+  calculatePurchaseLineTotals({ quantity: 1, purchase_rate: 100.25, discount_pct: 0, gst_rate: 0 }),
+  calculatePurchaseLineTotals({ quantity: 1, purchase_rate: 100.25, discount_pct: 0, gst_rate: 0 }),
+]);
+assertEqual(multiLinePurchaseFacts.gross_amount, 200.50, "Purchase facts: multi-line gross total");
+assertEqual(multiLinePurchaseFacts.round_off, 0.50, "Purchase facts: positive whole-unit round-off");
+assertEqual(multiLinePurchaseFacts.net_amount, 201, "Purchase facts: rounded multi-line net amount");
+
+assert(
+  PurchaseInvoiceLineCreateSchema.safeParse({
+    product_id: "product-1",
+    batch_no: "BATCH-1",
+    quantity: "2",
+    free_qty: "0",
+    purchase_rate: "100.25",
+    discount_pct: "5",
+    gst_rate: "18",
+    mrp: "120",
+    sale_rate: "110",
+  }).success,
+  "Purchase schema: valid line accepted",
+);
+assert(
+  !PurchaseInvoiceLineCreateSchema.safeParse({
+    product_id: "product-1",
+    batch_no: "BATCH-1",
+    quantity: "0",
+    free_qty: "0",
+    purchase_rate: "100",
+    discount_pct: "0",
+    gst_rate: "18",
+  }).success,
+  "Purchase schema: zero quantity rejected",
+);
+assert(
+  !PurchaseInvoiceLineCreateSchema.safeParse({
+    product_id: "product-1",
+    batch_no: "BATCH-1",
+    quantity: "1",
+    free_qty: "0",
+    purchase_rate: "-1",
+    discount_pct: "0",
+    gst_rate: "18",
+  }).success,
+  "Purchase schema: negative purchase rate rejected",
+);
+
 // Test determinePlaceOfSupply
 assertEqual(determinePlaceOfSupply("Maharashtra", "Maharashtra").type, "INTRA", "determinePlaceOfSupply: Same state names");
 assertEqual(determinePlaceOfSupply("MH", "MH").type, "INTRA", "determinePlaceOfSupply: Same state codes");
@@ -268,6 +407,15 @@ const intraRoundingLine = splitLineGst(
 assertEqual(intraRoundingLine.cgst_amount, 0.25, "splitLineGst 5% INTRA on ₹10.10: CGST");
 assertEqual(intraRoundingLine.sgst_amount, 0.25, "splitLineGst 5% INTRA on ₹10.10: SGST");
 assertEqual(intraRoundingLine.line_total, 10.60, "splitLineGst 5% INTRA on ₹10.10: line total");
+const persistedIntraFacts = toPersistedSalesTaxFacts(intraRoundingLine);
+assertEqual(persistedIntraFacts.taxable_amount, 10.10, "Persisted sales facts INTRA: taxable amount");
+assertEqual(persistedIntraFacts.gst_amount, 0.50, "Persisted sales facts INTRA: aggregate GST");
+assertEqual(
+  persistedIntraFacts.gst_amount,
+  persistedIntraFacts.cgst_amount + persistedIntraFacts.sgst_amount + persistedIntraFacts.igst_amount + persistedIntraFacts.cess_amount,
+  "Persisted sales facts INTRA: components reconcile to aggregate GST",
+);
+assertEqual(persistedIntraFacts.line_total, 10.60, "Persisted sales facts INTRA: line total");
 assertEqual(
   gstCalculator.computeLine(
     toTaxableGstLine({ quantity: 1, sale_rate: 10.10, trade_discount_pct: 0, gst_rate: 5 }),
@@ -314,6 +462,10 @@ const interRoundingLine = splitLineGst(
 );
 assertEqual(interRoundingLine.igst_amount, 0.51, "splitLineGst 5% INTER on ₹10.10: IGST");
 assertEqual(interRoundingLine.line_total, 10.61, "splitLineGst 5% INTER on ₹10.10: line total");
+const persistedInterFacts = toPersistedSalesTaxFacts(interRoundingLine);
+assertEqual(persistedInterFacts.gst_amount, 0.51, "Persisted sales facts INTER: aggregate GST");
+assertEqual(persistedInterFacts.igst_amount, 0.51, "Persisted sales facts INTER: IGST");
+assertEqual(persistedInterFacts.line_total, 10.61, "Persisted sales facts INTER: line total");
 assertEqual(
   gstCalculator.computeLine(
     toTaxableGstLine({ quantity: 1, sale_rate: 10.10, trade_discount_pct: 0, gst_rate: 5 }),
@@ -321,6 +473,61 @@ assertEqual(
   ).line_total,
   interRoundingLine.line_total,
   "Billing preview parity: canonical INTER line total",
+);
+
+assert(
+  hasCompleteSalesSnapshotFacts({
+    sellerName: "Pharmnos Lite",
+    sellerState: "MH",
+    customerName: "Customer",
+    customerState: "MH",
+    productNames: ["Product"],
+  }),
+  "Sales snapshot readiness: complete facts accepted",
+);
+assert(
+  !hasCompleteSalesSnapshotFacts({
+    sellerName: "Pharmnos Lite",
+    sellerState: "MH",
+    customerName: "Customer",
+    customerState: "MH",
+    productNames: [null],
+  }),
+  "Sales snapshot readiness: missing product snapshot rejected",
+);
+assert(
+  canMarkSalesInvoiceComplete({
+    sellerName: "Pharmnos Lite",
+    sellerState: "MH",
+    customerName: "Customer",
+    customerState: "MH",
+    productNames: ["Product"],
+    placeOfSupplyCode: "MH",
+    lines: [persistedIntraFacts],
+  }),
+  "Sales completeness: complete tax and snapshot facts accepted",
+);
+assert(
+  !canMarkSalesInvoiceComplete({
+    sellerName: "Pharmnos Lite",
+    sellerState: "MH",
+    customerName: "Customer",
+    customerState: "MH",
+    productNames: ["Product"],
+    placeOfSupplyCode: null,
+    lines: [persistedIntraFacts],
+  }),
+  "Sales completeness: unresolved place of supply rejected",
+);
+assertEqual(
+  selectFinalizedInvoiceValue(true, "Snapshot name", "Current name"),
+  "Snapshot name",
+  "Invoice printing: complete record prefers persisted snapshot",
+);
+assertEqual(
+  selectFinalizedInvoiceValue(false, "Snapshot name", "Current name"),
+  "Current name",
+  "Invoice printing: legacy record falls back to current display data",
 );
 
 const line2: LineItemTaxable = { taxable_value: 1000, gst_rate_pct: 18 };

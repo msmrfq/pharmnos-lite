@@ -18,11 +18,14 @@ import {
 } from "@/lib/validation/sales.schemas";
 import {
   gstCalculator,
+  canMarkSalesInvoiceComplete,
   requireResolvedPlaceOfSupply,
+  toPersistedSalesTaxFacts,
   toTaxableGstLine,
   type GstPlaceOfSupply,
   type GstTotals,
 } from "@/domain/services/gst-calculator.service";
+import { normalizeState } from "@/lib/constants/indian-states";
 import { fefoBatchPicker } from "@/domain/services/fefo-batch.service";
 
 const __SalesStatusDRAFT: InvoiceStatus = "DRAFT";
@@ -173,6 +176,7 @@ export async function createSalesDraftAction(
           invoice_no: "",
           invoice_date: data.invoice_date instanceof Date ? data.invoice_date : new Date(data.invoice_date as any),
           status: __SalesStatusDRAFT,
+          tax_data_status: "UNVERIFIED_DRAFT",
           is_cash_sale: !!data.is_cash_sale,
           gross_amount: round2(gstTotals.total_taxable),
           total_discount: Number(data.total_discount ?? 0),
@@ -196,12 +200,7 @@ export async function createSalesDraftAction(
         const lineDiscAmt = round2(lineGross * (discPct / 100));
         const lineSplit = gstTotals.lines[index];
         if (!lineSplit) throw new Error("GST line calculation missing.");
-        const lineGst = round2(
-          lineSplit.cgst_amount +
-          lineSplit.sgst_amount +
-          lineSplit.igst_amount +
-          (lineSplit.cess_amount ?? 0),
-        );
+        const persistedTax = toPersistedSalesTaxFacts(lineSplit);
         return {
           tenant_id: ctx.tenantId,
           invoice_id: created.id,
@@ -214,9 +213,14 @@ export async function createSalesDraftAction(
           mrp: line.mrp ? Number(line.mrp) : null,
           discount_pct: Number(line.trade_discount_pct ?? 0),
           discount_amount: lineDiscAmt,
+          taxable_amount: persistedTax.taxable_amount,
           gst_rate: Number(line.gst_rate ?? 0),
-          gst_amount: lineGst,
-          line_total: lineSplit.line_total,
+          gst_amount: persistedTax.gst_amount,
+          cgst_amount: persistedTax.cgst_amount,
+          sgst_amount: persistedTax.sgst_amount,
+          igst_amount: persistedTax.igst_amount,
+          cess_amount: persistedTax.cess_amount,
+          line_total: persistedTax.line_total,
           created_at: new Date(),
         };
       });
@@ -283,7 +287,7 @@ export async function finalizeSalesInvoiceAction(
     const invoice = await prisma.$transaction(async (tx) => {
       const existing = await tx.sales_invoices.findUnique({
         where: { id: saleId, tenant_id: ctx.tenantId },
-        include: { customer: true, items: true },
+        include: { customer: true, items: { include: { product: true, batch: true } } },
       });
       if (!existing) throw new Error("Invoice not found.");
       if (existing.status === __SalesStatusFINALIZED) throw new Error("Invoice already finalized.");
@@ -294,6 +298,10 @@ export async function finalizeSalesInvoiceAction(
       if (items.length === 0) throw new Error("No line items found.");
 
       const profile = await tx.business_profiles.findUnique({ where: { tenant_id: ctx.tenantId } });
+      const tenant = await tx.tenants.findUnique({
+        where: { id: ctx.tenantId },
+        select: { business_name: true },
+      });
       const businessState = profile?.state ?? null;
       const customerBillingState = existing.customer.billing_state ?? null;
       const placeOfSupply = requireResolvedPlaceOfSupply(
@@ -301,6 +309,23 @@ export async function finalizeSalesInvoiceAction(
       );
 
       const serverGst = computeServerGstTotals(items, placeOfSupply);
+      const persistedPlaceOfSupplyCode = normalizeState(customerBillingState);
+      if (!persistedPlaceOfSupplyCode) {
+        throw new Error("Cannot finalize invoice until customer place-of-supply state is valid.");
+      }
+      const cust = existing.customer;
+      const snapshotsReady = canMarkSalesInvoiceComplete({
+        sellerName: tenant?.business_name,
+        sellerState: profile?.state,
+        customerName: cust.business_name,
+        customerState: cust.billing_state,
+        productNames: items.map((line) => line.product?.name),
+        placeOfSupplyCode: persistedPlaceOfSupplyCode,
+        lines: serverGst.lines,
+      });
+      if (!snapshotsReady) {
+        throw new Error("Cannot finalize invoice until required historical snapshot facts are available.");
+      }
       const diffGross = Math.abs(Number(existing.gross_amount ?? 0) - serverGst.total_taxable);
       const diffTax = Math.abs(Number(existing.total_tax ?? 0) - serverGst.total_tax);
       const diffNet = Math.abs(Number(existing.net_amount ?? 0) - serverGst.grand_total);
@@ -310,6 +335,27 @@ export async function finalizeSalesInvoiceAction(
         diffNet > __MAX_SALES_TOTALS_MISMATCH_PAISE
       ) {
         throw new Error("Totals mismatch vs calculated; please review lines, rates or GST.");
+      }
+
+      for (let index = 0; index < items.length; index += 1) {
+        const line = items[index];
+        const calculated = serverGst.lines[index];
+        if (!calculated) throw new Error("GST line calculation missing.");
+        const persistedTax = toPersistedSalesTaxFacts(calculated);
+        await tx.sales_invoice_items.update({
+          where: { id: line.id },
+          data: {
+            taxable_amount: persistedTax.taxable_amount,
+            cgst_amount: persistedTax.cgst_amount,
+            sgst_amount: persistedTax.sgst_amount,
+            igst_amount: persistedTax.igst_amount,
+            cess_amount: persistedTax.cess_amount,
+            product_name_snapshot: line.product?.name ?? null,
+            generic_name_snapshot: line.product?.generic_name ?? null,
+            hsn_code_snapshot: line.product?.hsn_code ?? null,
+            batch_expiry_snapshot: line.batch?.expiry_date ?? null,
+          },
+        });
       }
 
       const distinctProductIds = Array.from(new Set(items.map((it) => it.product_id)));
@@ -391,6 +437,22 @@ export async function finalizeSalesInvoiceAction(
         data: {
           invoice_no: finalInvoiceNo,
           status: __SalesStatusFINALIZED,
+          tax_data_status: "COMPLETE",
+          place_of_supply_code: persistedPlaceOfSupplyCode,
+          seller_name_snapshot: tenant?.business_name ?? null,
+          seller_address_line_1_snapshot: profile?.address_line_1 ?? null,
+          seller_address_line_2_snapshot: profile?.address_line_2 ?? null,
+          seller_city_snapshot: profile?.city ?? null,
+          seller_state_snapshot: normalizeState(profile?.state) ?? profile?.state ?? null,
+          seller_pincode_snapshot: profile?.pincode ?? null,
+          seller_gstin_snapshot: profile?.gstin ?? null,
+          customer_name_snapshot: cust.business_name,
+          customer_address_line_1_snapshot: cust.billing_address_1 ?? null,
+          customer_address_line_2_snapshot: cust.billing_address_2 ?? null,
+          customer_city_snapshot: cust.billing_city ?? null,
+          customer_state_snapshot: normalizeState(cust.billing_state) ?? cust.billing_state ?? null,
+          customer_pincode_snapshot: cust.billing_pincode ?? null,
+          customer_gstin_snapshot: cust.gstin ?? null,
           finalized_at: new Date(),
           gross_amount: serverGst.total_taxable,
           total_discount: Number(existing.total_discount ?? 0),
@@ -402,7 +464,6 @@ export async function finalizeSalesInvoiceAction(
         },
       });
 
-      const cust = existing.customer;
       const balanceBefore = Number(cust.receivable_balance ?? 0);
       const debit = serverGst.grand_total;
       const balanceAfter = round2(balanceBefore + debit);

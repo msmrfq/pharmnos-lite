@@ -2,6 +2,17 @@ import { Prisma } from "@prisma/client";
 import type { business_profiles } from "@prisma/client";
 import { BaseRepository, ListParams, type PagedResult } from "@/lib/db/base-repository";
 import type { TenantContext } from "@/lib/db/tenant-context";
+import { businessProfileStateSchema } from "@/lib/validation/tenant.schemas";
+
+function normalizeBusinessProfileState(input: Record<string, any>): Record<string, any> {
+  if (!Object.prototype.hasOwnProperty.call(input, "state") || input.state === null) {
+    return input;
+  }
+  if (typeof input.state !== "string") {
+    throw new Error("Business profile state must be a supported Indian state or union-territory name/code.");
+  }
+  return { ...input, state: businessProfileStateSchema.parse(input.state) };
+}
 
 export class BusinessProfileRepository extends BaseRepository<
   business_profiles,
@@ -31,7 +42,7 @@ export class BusinessProfileRepository extends BaseRepository<
   ): Promise<business_profiles> {
     const t = this.withTenant(ctx);
     return this.prisma.business_profiles.create({
-      data: { ...input, tenant_id: t.tenantId } as any,
+      data: { ...normalizeBusinessProfileState(input as any), tenant_id: t.tenantId } as any,
     });
   }
 
@@ -43,7 +54,7 @@ export class BusinessProfileRepository extends BaseRepository<
     const t = this.withTenant(ctx);
     return this.prisma.business_profiles.update({
       where: { id, tenant_id: t.tenantId },
-      data: input,
+      data: normalizeBusinessProfileState(input as any) as any,
     });
   }
 
@@ -52,10 +63,11 @@ export class BusinessProfileRepository extends BaseRepository<
     ctx: TenantContext,
   ): Promise<business_profiles> {
     const t = this.withTenant(ctx);
+    const normalizedInput = normalizeBusinessProfileState(input as any);
     return this.prisma.business_profiles.upsert({
       where: { tenant_id: t.tenantId },
-      create: { ...input, tenant_id: t.tenantId } as any,
-      update: input,
+      create: { ...normalizedInput, tenant_id: t.tenantId } as any,
+      update: normalizedInput as any,
     });
   }
 

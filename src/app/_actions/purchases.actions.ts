@@ -6,6 +6,7 @@ import { prisma, assertPostgresConfigured } from "@/lib/db/prisma";
 import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
 import type { purchase_invoices, InvoiceStatus, StockMovementType, LedgerEntryType, PermissionAction } from "@prisma/client";
+import { calculatePurchaseInvoiceTotals, calculatePurchaseLineTotals } from "@/domain/services/purchase-calculator.service";
 import {
   PurchaseInvoiceCreateSchema,
   PurchaseInvoiceLineCreateSchema,
@@ -22,6 +23,11 @@ const __MovementPURCHASE_IN: StockMovementType = "PURCHASE_IN";
 const __MovementADJUSTMENT_IN: StockMovementType = "ADJUSTMENT_IN";
 const __MovementADJUSTMENT_OUT: StockMovementType = "ADJUSTMENT_OUT";
 const __LedgerEntryPURCHASE: LedgerEntryType = "PURCHASE";
+
+function round2(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.round(value * 100) / 100;
+}
 
 function flattenFieldErrors(zodFieldErrors: Record<string, any>): Record<string, string[] | undefined> {
   const out: Record<string, string[] | undefined> = {};
@@ -68,35 +74,6 @@ function formDataToPurchaseObject(formData: FormData): Record<string, any> {
     out[key] = value === null ? "" : String(value);
   }
   return out;
-}
-
-function round2(n: number): number {
-  if (!Number.isFinite(n)) return 0;
-  return Math.round(n * 100) / 100;
-}
-
-function computeLineTotals(line: any) {
-  const qty = Number(line.quantity ?? 0);
-  const rate = Number(line.purchase_rate ?? 0);
-  const discPct = Number(line.discount_pct ?? 0);
-  const gstPct = Number(line.gst_rate ?? 0);
-  const gross = round2(qty * rate);
-  const discount_amount = round2(gross * (discPct / 100));
-  const taxable = round2(gross - discount_amount);
-  const gst_amount = round2(taxable * (gstPct / 100));
-  const line_total = round2(taxable + gst_amount);
-  return { gross, discount_amount, gst_amount, line_total };
-}
-
-function computeInvoiceTotals(linesTotals: Array<{ gross: number; discount_amount: number; gst_amount: number; line_total: number }>) {
-  const gross_amount = round2(linesTotals.reduce((s, l) => s + l.gross, 0));
-  const total_discount = round2(linesTotals.reduce((s, l) => s + l.discount_amount, 0));
-  const total_tax = round2(linesTotals.reduce((s, l) => s + l.gst_amount, 0));
-  const subtotal = round2(gross_amount - total_discount + total_tax);
-  const rounded = Math.round(subtotal);
-  const round_off = round2(rounded - subtotal);
-  const net_amount = round2(subtotal + round_off);
-  return { gross_amount, total_discount, total_tax, round_off, net_amount };
 }
 
 export async function createPurchaseDraftAction(
@@ -162,7 +139,7 @@ export async function createPurchaseDraftAction(
       });
 
       const itemsData = linesParsed.map((line: any, idx: number) => {
-        const totals = computeLineTotals(line);
+        const totals = calculatePurchaseLineTotals(line);
         return {
           tenant_id: ctx.tenantId,
           purchase_id: created.id,
@@ -270,13 +247,13 @@ export async function finalizePurchaseAction(
         throw new Error("No line items found.");
       }
 
-      const lineComputed = items.map((it: any) => computeLineTotals({
+      const lineComputed = items.map((it: any) => calculatePurchaseLineTotals({
         quantity: Number(it.quantity ?? 0),
         purchase_rate: Number(it.purchase_rate ?? 0),
         discount_pct: Number(it.discount_pct ?? 0),
         gst_rate: Number(it.gst_rate ?? 0),
       }));
-      const serverTotals = computeInvoiceTotals(lineComputed);
+      const serverTotals = calculatePurchaseInvoiceTotals(lineComputed);
 
       const diffGross = Math.abs(Number(existing.gross_amount ?? 0) - serverTotals.gross_amount);
       const diffDisc = Math.abs(Number(existing.total_discount ?? 0) - serverTotals.total_discount);
@@ -395,7 +372,7 @@ export async function finalizePurchaseAction(
       });
       const balanceBefore = Number(supplierRow?.payable_balance ?? 0);
       const credit = serverTotals.net_amount;
-      const balanceAfter = round2(balanceBefore + credit);
+      const balanceAfter = Math.round((balanceBefore + credit) * 100) / 100;
 
       await tx.supplier_ledgers.create({
         data: {

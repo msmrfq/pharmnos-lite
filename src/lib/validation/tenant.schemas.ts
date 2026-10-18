@@ -1,11 +1,30 @@
 import { z } from "zod";
+import { normalizeState } from "@/lib/constants/indian-states";
+
+export const businessProfileStateSchema = z
+  .string()
+  .optional()
+  .or(z.literal(""))
+  .transform((value, ctx) => {
+    const raw = String(value ?? "").trim();
+    if (!raw) return null;
+    const normalized = normalizeState(raw);
+    if (!normalized) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Enter a supported Indian state or union-territory name/code.",
+      });
+      return z.NEVER;
+    }
+    return normalized;
+  });
 
 export const businessProfileSchema = z.object({
   businessName: z.string().min(2, "Business name is required"),
   addressLine1: z.string().optional(),
   addressLine2: z.string().optional(),
   city: z.string().optional(),
-  state: z.string().optional(),
+  state: businessProfileStateSchema,
   pincode: z
     .string()
     .regex(/^\d{0,6}$/, "Pincode must be 6 digits or less")
@@ -49,7 +68,7 @@ export const onboardingBusinessSchema = z.object({
     .regex(/^[0-9A-Z]{0,15}$/, "GSTIN must be 15 alphanumeric characters or less")
     .optional(),
   city: z.string().optional(),
-  state: z.string().optional(),
+  state: businessProfileStateSchema,
   contactPhone: z.string().max(20).optional(),
 });
 

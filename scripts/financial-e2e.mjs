@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
 import { Client } from "pg";
-
-const REQUIRED_MARKER = "pharmnos-financial-e2e";
+import { REQUIRED_MARKER, validateFinancialE2eTarget } from "./financial-e2e-safety.mjs";
 const BLOCKED_EXIT = 2;
 
 function fail(message) {
@@ -14,21 +13,6 @@ function readRequiredEnv(name) {
     const value = process.env[name]?.trim();
     if (!value) throw new Error(`${name} is required.`);
     return value;
-}
-
-function assertSafeTarget(testUrl, ordinaryUrl, testDatabaseName, marker) {
-    if (testUrl === ordinaryUrl) {
-        throw new Error("TEST_DATABASE_URL must differ from DATABASE_URL.");
-    }
-    if (!testDatabaseName.toLowerCase().includes("test") && !testDatabaseName.toLowerCase().includes("e2e")) {
-        throw new Error("TEST_DATABASE_NAME must identify an isolated test database.");
-    }
-    if (marker !== REQUIRED_MARKER) {
-        throw new Error(`TEST_DATABASE_MARKER must equal ${REQUIRED_MARKER}.`);
-    }
-    if (!testUrl.includes("application_name=" + REQUIRED_MARKER)) {
-        throw new Error("TEST_DATABASE_URL must include the financial E2E application marker.");
-    }
 }
 
 async function verifyDatabaseIdentity(testUrl, expectedDatabase, marker) {
@@ -60,10 +44,11 @@ async function main() {
     let marker;
     try {
         testUrl = readRequiredEnv("TEST_DATABASE_URL");
-        ordinaryUrl = process.env.DATABASE_URL?.trim() ?? "";
+        ordinaryUrl = readRequiredEnv("DATABASE_URL");
         testDatabaseName = readRequiredEnv("TEST_DATABASE_NAME");
         marker = readRequiredEnv("TEST_DATABASE_MARKER");
-        assertSafeTarget(testUrl, ordinaryUrl, testDatabaseName, marker);
+        const safety = validateFinancialE2eTarget({ testUrl, ordinaryUrl, testDatabaseName, marker });
+        if (!safety.ok) throw new Error(safety.errors.join(" "));
     } catch (error) {
         fail(error instanceof Error ? error.message : "safety preflight failed");
         return;

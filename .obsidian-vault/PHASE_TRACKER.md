@@ -75,7 +75,7 @@ Preview deployment
 	████████████████████            100% ✅ DONE 2026-10-01
 
 Preview → Prisma → Supabase connectivity
-	████████████████████            100% ✅ DONE 2026-10-01
+	░░░░░░░░░░░░░░░░░░░░            NOT VERIFIED — prior fake/test response is not database evidence
 
 Financial E2E infrastructure
 	████████████░░░░░░░░  
@@ -114,15 +114,16 @@ The consolidated evidence-backed matrix is maintained in
 `.obsidian-vault/specs/gst-audit-validation-and-plan.md` under **GST/IGST
 Remediation Status Matrix**.
 
-Current matrix summary: 20 requirements tracked; 4 implemented and verified; 2
-partially implemented/limited; 7 outstanding; 5 blocked pending prerequisites;
+Current matrix summary: 20 requirements tracked; 4 implemented and verified; 6
+partially implemented/limited; 3 outstanding; 5 blocked pending prerequisites;
 1 deferred by explicit decision; 1 unclear. Financial E2E readiness is blocked.
 
 Completed and verified work includes the canonical sales calculation,
 component-wise rounding, preview/server parity, discount normalization, state
 normalization behavior, fail-closed place-of-supply handling, and unit
-regression coverage. The matrix records the evidence and preserves the known
-limitations: aggregate-only persisted tax, absent historical snapshots, missing
+regression coverage. Sales tax-component and place-of-supply persistence are
+now partially implemented locally but remain unverified against a database.
+The matrix preserves the known limitations: absent historical snapshots, missing
 purchase parity, incomplete authoritative prefix verification, and deferred
 special-prefix workflow support.
 

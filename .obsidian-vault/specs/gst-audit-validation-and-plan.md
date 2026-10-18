@@ -1,7 +1,7 @@
 # GST/IGST Audit Validation & Minimum Scope Implementation Plan
 
-**Date:** 2026-10-13  
-**Time:** 22-12-11 (IST)  
+**Date:** 2026-10-18
+**Time:** 06-03-20 (IST)
 **Phase:** POST-P7 — PRE-PRODUCTION VALIDATION  
 **Task:** GST/IGST remediation documentation reconciliation
 
@@ -9,44 +9,44 @@
 
 ## Step 1 — Validation of Original Audit Findings
 
-## GST/IGST Remediation Status Matrix — 2026-10-13
+## GST/IGST Remediation Status Matrix — 2026-10-18
 
 **Scope note:** This matrix replaces the prior standalone closure label. It
 records the actual repository state and does not create a formal GST stage.
 P0-P3 remain audit priorities, not implementation-stage numbers.
 
-**Summary:** 20 requirements tracked; 4 implemented and verified; 2 partially
-implemented/limited; 7 outstanding; 5 blocked pending prerequisites; 1 deferred
+**Summary:** 20 requirements tracked; 4 implemented and verified; 6 partially
+implemented/limited; 3 outstanding; 5 blocked pending prerequisites; 1 deferred
 by explicit decision; 1 unclear. Financial E2E readiness: **blocked**. Last
-reviewed: `2026-10-13 22-12-11 (IST)`.
+reviewed: `2026-10-18 06-03-20 (IST)`.
 
 | ID | Requirement | Priority | Current status | Implementation evidence | Test evidence | Dependencies / blockers | Next action |
 |---|---|---|---|---|---|---|---|
-| GST-001 | Canonical sales GST calculation | P0 | Implemented and verified | `gst-calculator.service.ts`: `splitLineGst()`, `calculateGstTotals()`; `sales.actions.ts`: `computeServerGstTotals()` | `tests/gst-calculator.test.ts`; 206 assertions passed | None for current sales path | Preserve as shared sales calculation path |
-| GST-002 | Component-wise rounding and preview/server parity | P0 | Implemented and verified | `splitLineGst()`; billing `_form.tsx` calls `gstCalculator.computeLine()` | ₹10.10 at 5% INTRA/INTER parity assertions; 206 assertions passed | No database-backed parity test | Add integration coverage when isolated DB exists |
-| GST-003 | Discount normalization | P0 | Implemented and verified | `toTaxableGstLine()` accepts `trade_discount_pct` and `discount_pct` | Equivalent discount-shape assertions in `tests/gst-calculator.test.ts` | None for current sales path | Preserve; cover purchase semantics separately |
-| GST-004 | State name/code normalization | P0 | Partially implemented / limited | `indian-states.ts`: `normalizeState()`, `determinePlaceOfSupply()` | State normalization and supported-prefix tests; 206 assertions passed | Complete authoritative prefix table unavailable | Obtain authoritative mapping evidence before claiming full verification |
+| GST-001 | Canonical sales GST calculation | P0 | Implemented and verified | `gst-calculator.service.ts`: `splitLineGst()`, `calculateGstTotals()`; `sales.actions.ts`: `computeServerGstTotals()` | `tests/gst-calculator.test.ts`; 243 assertions passed | None for current sales path | Preserve as shared sales calculation path |
+| GST-002 | Component-wise rounding and preview/server parity | P0 | Implemented and verified | `splitLineGst()`; billing `_form.tsx` calls `gstCalculator.computeLine()` | ₹10.10 at 5% INTRA/INTER parity assertions; 243 assertions passed | No database-backed parity test | Add integration coverage when isolated DB exists |
+| GST-003 | Discount normalization | P0 | Implemented and verified | `toTaxableGstLine()` accepts `trade_discount_pct` and `discount_pct` | Equivalent discount-shape, persisted-fact, state, and purchase-contract assertions; 243 assertions passed | None for current sales path | Preserve; cover purchase semantics separately |
+| GST-004 | State name/code normalization | P0 | Partially implemented / limited | `indian-states.ts`: `normalizeState()`, `determinePlaceOfSupply()` | State normalization and supported-prefix tests; 243 assertions passed | Complete authoritative prefix table unavailable | Obtain authoritative mapping evidence before claiming full verification |
 | GST-005 | Fail-closed place-of-supply handling | P0 | Implemented and verified | `determinePlaceOfSupply()` returns `UNKNOWN`; `requireResolvedPlaceOfSupply()` rejects unresolved finalization | Missing, invalid, whitespace, `97`, and `99` cases covered | Special-prefix workflow support remains deferred | Preserve fail-closed behavior |
-| GST-006 | Sales tax-component persistence | P0 | Outstanding | Prisma `sales_invoice_items` stores aggregate `gst_amount` only | No database-backed persistence test | Schema change and approval required | Review schema/migration design before implementation |
-| GST-007 | Sales place-of-supply persistence | P0 | Outstanding | Prisma `sales_invoices` has no `place_of_supply` field | No persistence test | Schema change and historical strategy required | Define immutable persisted field and migration plan |
+| GST-006 | Sales tax-component persistence | P0 | Partially implemented / limited | Local Prisma schema, SQL asset, draft persistence, and finalization updates add nullable components and taxable amount | No database-backed persistence test | SQL provisioning review/execution required | Verify persistence against an isolated database |
+| GST-007 | Sales place-of-supply persistence | P0 | Partially implemented / limited | Local Prisma schema, SQL asset, and finalization update add `place_of_supply_code` | No database-backed persistence test; current value uses customer billing-state proxy | POS policy and SQL provisioning review required | Verify persisted value and approve POS semantics |
 | GST-008 | Purchase intra/inter-state GST calculation | P0 | Outstanding | `purchases.actions.ts` still computes aggregate GST without place-of-supply logic | No purchase GST parity suite | Purchase semantics and state inputs must be defined | Implement purchase calculation after approval |
 | GST-009 | Purchase tax-component persistence | P0 | Outstanding | Purchase line schema stores aggregate `gst_amount` only | No persistence test | Schema change and purchase calculation required | Design purchase component fields with GST-006 |
-| GST-010 | Business-profile state validation | P0 | Outstanding | Business profile state validation is weaker than customer/supplier state validation | No dedicated profile-state test | State normalization policy and validation contract required | Add validation after contract approval |
-| GST-011 | Historical invoice tax integrity and printing | P0 | Partially implemented / limited | Print page reads persisted aggregate totals and discloses unavailable split; no current-state tax recomputation | Static review only; no historical immutability integration test | Historical snapshots/components are absent from schema | Persist required snapshots before claiming full integrity |
+| GST-010 | Business-profile state validation | P0 | Partially implemented / limited | `tenant.schemas.ts`, `onboardNewTenant()`, `BusinessProfileRepository`, and `updateBusinessProfileAction` normalize/reject state values at server boundaries | `businessProfileStateSchema` and settings payload-mapping tests cover names, codes, blank, invalid values, and repository-shaped mapping; pure test evidence only | Database runtime rejection and RLS behavior unverified | Verify the save action against an isolated database |
+| GST-011 | Historical invoice tax integrity and printing | P0 | Partially implemented / limited | Print page uses persisted snapshot/component helpers for complete records and explicit legacy fallbacks | Pure completeness and snapshot-preference assertions; no historical immutability integration test | Historical snapshots/components are absent from legacy schema/data | Verify persisted output against an isolated database |
 | GST-012 | Schema and historical-data strategy | P0 | Outstanding | Audit/spec documents identify missing fields and backfill questions | Review documented; no approval or migration executed | Explicit human approval required; ambiguous history cannot be guessed | Prepare reviewable schema/backfill proposal |
-| GST-013 | Purchase GST regression coverage | P0 | Outstanding | No purchase equivalent to the sales GST regression suite | No purchase GST execution evidence | Depends on GST-008 and GST-009 | Add tests after purchase implementation |
+| GST-013 | Purchase GST regression coverage | P0 | Partially implemented / limited | `purchase-calculator.service.ts` covers the existing aggregate purchase contract; `purchases.actions.ts` uses it | Pure purchase calculation and schema-validation assertions; zero/invalid/multi-line/whole-unit rounding covered; 243 assertions passed | Purchase component/POS parity remains unimplemented | Extend tests after approved purchase tax model |
 | GST-014 | Rollback and ledger consistency | P0 | Blocked pending prerequisites | Sales/purchase transactions use outer Prisma transactions in actions | No isolated database execution | Disposable database, fixtures, and reset lifecycle missing | Provision isolated E2E environment |
 | GST-015 | Invoice-sequence rollback | P0 | Blocked pending prerequisites | Sequence update occurs inside finalization transaction | No rollback execution evidence | Same isolated database and failure injection requirements as GST-014 | Add rollback scenario to guarded E2E harness |
-| GST-016 | Historical invoice immutability | P0 | Blocked pending prerequisites | Current schema does not snapshot seller/customer/tax components | No historical fixture test | Requires persisted snapshots and isolated fixture | Define persistence model, then test mutation isolation |
+| GST-016 | Historical invoice immutability | P0 | Blocked pending prerequisites | Current local schema includes additive seller/customer snapshots, place-of-supply, and sales tax-component fields, but legacy records and database rollout remain unverified | No historical fixture test | Requires applied persistence, representative historical fixtures, and isolated fixture execution | Verify mutation isolation against an isolated database and preserve legacy disclosures |
 | GST-017 | Authoritative GSTIN prefix verification | P0 | Unclear — further evidence required | `indian-states.ts` preserves mappings and documents source gap | Unit tests verify application mapping only | Comprehensive authoritative source not established | Obtain and archive authoritative mapping evidence |
 | GST-018 | Special-prefix handling for `97`/`99` | P0 | Deferred by explicit decision | `UNSUPPORTED_GSTIN_STATE_PREFIXES`; parser returns `null`; ordinary normalization excludes both | `tests/gst-calculator.test.ts` covers both and fail-closed POS | Broader support requires a concrete workflow and evidence | Revisit only under authorized business requirement |
-| GST-019 | Financial E2E infrastructure | P0 | Blocked pending prerequisites | Guarded `scripts/financial-e2e.mjs` / `financial:e2e:safe` exists | Harness preflight exists; runtime not executed | Isolated DB, tenant fixture, and safe reset lifecycle missing | Provision disposable test environment |
+| GST-019 | Financial E2E infrastructure | P0 | Blocked pending prerequisites | Guarded `scripts/financial-e2e.mjs`, target/readiness guards, and pure fixture manifest/cleanup ownership contract exist | Safety, readiness, ownership, ordering, and failure-gating unit tests pass; no database connection or fixture lifecycle executed | Isolated DB identity verification, tenant fixture, and safe reset lifecycle missing | Provision disposable test environment |
 | GST-020 | Financial E2E execution | P0 | Blocked pending prerequisites | No production code claim made | No financial runtime execution | GST correctness gates plus GST-019 infrastructure | Execute only after GST-006-016 prerequisites are resolved |
 
 ### Completed evidence and limitations
 
 The completed sales calculation, rounding, discount, normalization, fail-closed,
-and special-prefix work is preserved in the matrix above. The 206 assertions,
+and special-prefix work is preserved in the matrix above. The 243 assertions,
 typecheck, and lint evidence were recorded previously; they are not claimed as a
 fresh execution in this reconciliation. Historical seller/customer snapshots,
 complete historical tax components/place of supply, comprehensive prefix
@@ -57,6 +57,113 @@ verification, and database-backed finalization/rollback testing remain limited.
 Neither is mapped to a physical state or UT, and unresolved place of supply
 continues to fail closed. Tests verify application policy, not legal validity,
 registration authenticity, checksum validity, or universal applicability.
+
+## Purchase GST Policy Decision Record — Awaiting Approval
+
+This record documents the unresolved purchase-tax contract without changing the
+current purchase behavior.
+
+### Current observed behavior
+
+**VERIFIED:** `src/domain/services/purchase-calculator.service.ts` and
+`src/app/_actions/purchases.actions.ts` calculate aggregate GST from purchase
+taxable value and rate. Line values are rounded to two decimals; the invoice
+subtotal is then rounded to the nearest whole currency unit and the signed
+residual is stored as `round_off`. Purchase lines and headers persist aggregate
+tax only. No purchase place-of-supply or component-tax calculation exists.
+
+The current pure regression contract is covered by
+`tests/gst-calculator.test.ts`; it does not prove database persistence,
+transaction rollback, or accounting correctness.
+
+### Decision 1 — Purchase tax source
+
+**BUSINESS DECISION REQUIRED — Accounting/product owner.**
+
+Options:
+
+- **Supplier-declared:** capture supplier taxable value, CGST, SGST, IGST,
+  cess, and declared aggregate tax. Validate that components sum to aggregate;
+  do not treat the result as proof of input-tax-credit eligibility.
+- **System-calculated:** calculate purchase tax only after approved transaction
+  facts and legal/accounting rules are established.
+- **Both:** retain supplier-declared facts and a separately named internal
+  calculation for comparison. This is more auditable but increases schema and
+  workflow complexity.
+
+**Recommendation:** supplier-declared values as the primary purchase facts.
+This is a recommendation, not an approval. Until selected, GST-008 and GST-009
+remain outstanding and purchase behavior must not be reinterpreted.
+
+### Decision 2 — Purchase rounding
+
+**BUSINESS DECISION REQUIRED — Accountant.**
+
+The current purchase contract uses aggregate tax and whole-unit invoice
+rounding. Sales uses component-wise two-decimal rounding. Options are to retain
+the purchase behavior, align it with sales, or define a separate approved
+purchase policy. No option is silently selected by this record.
+
+Any selected policy must define taxable subtotal, aggregate tax, pre-round
+invoice total, signed round-off, final payable amount, and line/header
+reconciliation equations. GST-013 covers the existing aggregate contract only;
+it does not establish purchase component or POS parity.
+
+### Decision 6 — Sales place-of-supply proxy and historical facts
+
+**BUSINESS DECISION REQUIRED — Product owner/accountant; legal confirmation may
+be required for statutory use.**
+
+The current sales path uses normalized `business_profiles.state` and
+`customers.billing_state` as the place-of-supply proxy. Finalization persists a
+normalized customer billing-state code locally, together with seller/customer
+and line tax snapshots. This is an implemented application policy, not an
+approved universal legal place-of-supply rule, and its database persistence is
+not verified in the disconnected environment.
+
+Options are to approve the current billing-state proxy for the intended MVP
+scope, capture a separately approved place-of-supply fact, or expand the sales
+workflow with delivery and supply-type facts. The decision must also define
+which finalized snapshot fields are mandatory and how legacy aggregate-only
+invoices disclose unavailable historical tax facts. Until approved and
+database-verified, GST-007, GST-011, and GST-016 remain limited or blocked as
+shown in the matrix.
+
+### Decision 3 — Purchase place of supply
+
+**BUSINESS DECISION REQUIRED — Accountant/product owner; legal confirmation may
+be required.**
+
+The current workflow has supplier state, business profile state, supplier invoice
+fields, purchase lines, and stock receipt, but it does not establish sufficient
+facts for a universal place-of-supply determination. A supplier GSTIN prefix is
+not independently authoritative proof of place of supply. Do not derive purchase
+POS by reversing the sales comparison.
+
+Options are to capture an approved purchase POS fact, preserve supplier-declared
+tax without system POS derivation, or expand the workflow with delivery facts.
+Until approved, purchase POS remains unresolved and GST-008 remains outstanding.
+
+### Decision 4 — Component persistence and completeness
+
+**BUSINESS DECISION REQUIRED — Product owner/accountant.**
+
+Future purchase components should be nullable until a declared/calculated tax
+contract is approved. Missing components must remain distinguishable from
+verified zero. A purchase record cannot be complete when tax components,
+declared aggregate reconciliation, or required classification facts are absent.
+
+### Decision 5 — Historical purchases and financial consistency
+
+**BUSINESS DECISION REQUIRED — Accountant/product owner.**
+
+Existing aggregate-only purchases must retain their aggregate totals and remain
+printable/reportable with an unavailable component disclosure. Components and
+place of supply must not be reconstructed from current supplier or business
+master data. Any future component persistence must remain inside the existing
+purchase finalization transaction with stock, numbering, supplier ledger,
+payable balance, and audit writes. Database-backed rollback and consistency
+remain unverified.
 
 ## GSTIN State-Prefix Evidence Review — 2026-10-13
 

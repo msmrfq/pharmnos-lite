@@ -11,6 +11,7 @@ import { isPostgresConfigured } from "@/lib/db/prisma";
 import { requireServerTenantContext } from "@/lib/db/tenant-context";
 import { repos } from "@/repositories";
 import { cn } from "@/lib/utils";
+import { selectFinalizedInvoiceValue } from "@/domain/services/gst-calculator.service";
 
 export const metadata: Metadata = {
   title: "Print invoice",
@@ -102,23 +103,26 @@ export default async function BillingInvoicePrintPage({
     );
   }
   const invoice: any = rawInvoice;
+  const hasCompleteTaxData = invoice.tax_data_status === "COMPLETE";
+  const snapshot = <T,>(value: T | null | undefined, current: T | null | undefined) =>
+    selectFinalizedInvoiceValue(hasCompleteTaxData, value, current);
 
   const displayBusinessName =
-    businessProfile?.gstin !== undefined ? (businessProfile as any).tenant?.business_name : null;
+    snapshot(invoice.seller_name_snapshot, businessProfile?.gstin !== undefined ? (businessProfile as any).tenant?.business_name : null);
 
   const businessAddressParts = [
-    businessProfile?.address_line_1,
-    businessProfile?.address_line_2,
-    [businessProfile?.city, businessProfile?.state, businessProfile?.pincode]
+    snapshot(invoice.seller_address_line_1_snapshot, businessProfile?.address_line_1),
+    snapshot(invoice.seller_address_line_2_snapshot, businessProfile?.address_line_2),
+    [snapshot(invoice.seller_city_snapshot, businessProfile?.city), snapshot(invoice.seller_state_snapshot, businessProfile?.state), snapshot(invoice.seller_pincode_snapshot, businessProfile?.pincode)]
       .filter(Boolean)
       .join(", "),
   ].filter(Boolean);
 
   const customer = invoice.customer;
   const customerAddressParts = [
-    customer?.billing_address_1,
-    customer?.billing_address_2,
-    [customer?.billing_city, customer?.billing_state, customer?.billing_pincode]
+    snapshot(invoice.customer_address_line_1_snapshot, customer?.billing_address_1),
+    snapshot(invoice.customer_address_line_2_snapshot, customer?.billing_address_2),
+    [snapshot(invoice.customer_city_snapshot, customer?.billing_city), snapshot(invoice.customer_state_snapshot, customer?.billing_state), snapshot(invoice.customer_pincode_snapshot, customer?.billing_pincode)]
       .filter(Boolean)
       .join(", "),
   ].filter(Boolean);
@@ -204,16 +208,16 @@ export default async function BillingInvoicePrintPage({
                   </p>
                 )}
                 <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-caption text-muted">
-                  {businessProfile?.gstin && (
+                  {snapshot(invoice.seller_gstin_snapshot, businessProfile?.gstin) && (
                     <span>
                       <span className="font-semibold text-body">GSTIN:</span>{" "}
-                      {businessProfile.gstin}
+                      {snapshot(invoice.seller_gstin_snapshot, businessProfile?.gstin)}
                     </span>
                   )}
-                  {businessProfile?.state && (
+                  {snapshot(invoice.seller_state_snapshot, businessProfile?.state) && (
                     <span>
                       <span className="font-semibold text-body">State:</span>{" "}
-                      {businessProfile.state}
+                      {snapshot(invoice.seller_state_snapshot, businessProfile?.state)}
                     </span>
                   )}
                   {businessProfile?.drug_license_no_1 && (
@@ -277,7 +281,7 @@ export default async function BillingInvoicePrintPage({
               </p>
               <div className="mt-2">
                 <p className="text-title-sm font-semibold text-ink">
-                  {customer?.business_name ??
+                  {snapshot(invoice.customer_name_snapshot, customer?.business_name) ??
                     (invoice.is_cash_sale ? "Cash Customer" : "Walk-in Customer")}
                 </p>
                 {customer?.contact_person && (
@@ -291,10 +295,10 @@ export default async function BillingInvoicePrintPage({
                   </p>
                 )}
                 <div className="mt-2 space-y-0.5 text-caption text-muted">
-                  {customer?.gstin && (
+                  {snapshot(invoice.customer_gstin_snapshot, customer?.gstin) && (
                     <div>
                       <span className="font-semibold text-body">GSTIN:</span>{" "}
-                      {customer.gstin}
+                      {snapshot(invoice.customer_gstin_snapshot, customer?.gstin)}
                     </div>
                   )}
                   {customer?.mobile && (
@@ -318,7 +322,7 @@ export default async function BillingInvoicePrintPage({
               </p>
               <div className="mt-2">
                 <p className="text-title-sm font-semibold text-ink">
-                  {customer?.business_name ??
+                  {snapshot(invoice.customer_name_snapshot, customer?.business_name) ??
                     (invoice.is_cash_sale ? "Cash Customer" : "Walk-in Customer")}
                 </p>
                 {customerAddressParts.length > 0 && (
@@ -335,10 +339,12 @@ export default async function BillingInvoicePrintPage({
               <div className="mt-4 rounded-md bg-surface-soft p-3">
                 <p className="text-caption text-muted">Place of Supply</p>
                 <p className="text-body-sm font-semibold text-ink mt-0.5">
-                  Unavailable (not persisted)
+                  {invoice.place_of_supply_code ?? "Unavailable (not persisted)"}
                 </p>
                 <p className="mt-1 text-caption text-muted">
-                  Seller and customer details are current records; historical snapshots are not stored.
+                  {hasCompleteTaxData
+                    ? "Finalized tax and snapshot facts are persisted."
+                    : "Seller and customer details are current records; historical snapshots are not stored."}
                 </p>
               </div>
             </div>
@@ -394,7 +400,7 @@ export default async function BillingInvoicePrintPage({
                     const free = Number(it.free_qty ?? 0);
                     const rate = Number(it.sale_rate ?? 0);
                     const amt = Number(it.line_total ?? 0);
-                    const exp = it.batch?.expiry_date ?? (it as any).expiry_date;
+                    const exp = snapshot(it.batch_expiry_snapshot, it.batch?.expiry_date ?? (it as any).expiry_date);
                     return (
                       <tr key={it.id} className="align-top">
                         <td className="border border-hairline px-2 py-2 text-body">
@@ -402,11 +408,11 @@ export default async function BillingInvoicePrintPage({
                         </td>
                         <td className="border border-hairline px-2 py-2 text-body">
                           <p className="font-medium text-ink">
-                            {it.product?.name ?? "—"}
+                            {snapshot(it.product_name_snapshot, it.product?.name) ?? "—"}
                           </p>
-                          {it.product?.generic_name && (
+                          {snapshot(it.generic_name_snapshot, it.product?.generic_name) && (
                             <p className="text-caption text-muted">
-                              {it.product.generic_name}
+                              {snapshot(it.generic_name_snapshot, it.product?.generic_name)}
                             </p>
                           )}
                           {Number(it.gst_rate ?? 0) > 0 && (
@@ -416,7 +422,7 @@ export default async function BillingInvoicePrintPage({
                           )}
                         </td>
                         <td className="border border-hairline px-2 py-2 text-body text-muted">
-                          {it.product?.hsn_code ?? "—"}
+                          {snapshot(it.hsn_code_snapshot, it.product?.hsn_code) ?? "—"}
                         </td>
                         <td className="border border-hairline px-2 py-2 text-body font-medium text-ink">
                           {it.batch_no ?? "—"}
@@ -440,7 +446,16 @@ export default async function BillingInvoicePrintPage({
                           {rupee(amt)}
                         </td>
                         <td className="border border-hairline px-2 py-2 text-caption text-right whitespace-nowrap">
-                          <span className="text-muted">Tax split unavailable</span>
+                          {hasCompleteTaxData ? (
+                            <span className="text-muted">
+                              {Number(it.cgst_amount ?? 0) > 0 && `CGST ${rupee(it.cgst_amount)} `}
+                              {Number(it.sgst_amount ?? 0) > 0 && `SGST ${rupee(it.sgst_amount)} `}
+                              {Number(it.igst_amount ?? 0) > 0 && `IGST ${rupee(it.igst_amount)} `}
+                              {Number(it.cess_amount ?? 0) > 0 && `Cess ${rupee(it.cess_amount)}`}
+                            </span>
+                          ) : (
+                            <span className="text-muted">Tax split unavailable</span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -468,7 +483,11 @@ export default async function BillingInvoicePrintPage({
                   Total items: {items.length}
                 </p>
                 <div className="space-y-0.5 text-caption text-muted">
-                  <div>Tax component breakdown unavailable; persisted aggregate tax: {rupee(tax)}</div>
+                  <div>
+                    {hasCompleteTaxData
+                      ? `Persisted tax components; aggregate tax: ${rupee(tax)}`
+                      : `Tax component breakdown unavailable; persisted aggregate tax: ${rupee(tax)}`}
+                  </div>
                 </div>
               </div>
             </div>
@@ -489,7 +508,7 @@ export default async function BillingInvoicePrintPage({
                     </div>
                   )}
                   <div className="flex items-center justify-between px-4 py-2.5 text-body-sm">
-                    <span className="text-muted">Tax (unresolved)</span>
+                    <span className="text-muted">Tax{hasCompleteTaxData ? "" : " (unresolved)"}</span>
                     <span className="font-medium text-ink">{rupee(tax)}</span>
                   </div>
                   {roundOff !== 0 && (
@@ -572,7 +591,7 @@ export default async function BillingInvoicePrintPage({
             </div>
             <div className="md:text-right">
               <p className="text-caption font-semibold uppercase tracking-wide text-muted">
-                For {displayBusinessName || "Your Pharmacy Pvt. Ltd."}
+                For {displayBusinessName || "Seller identity unavailable"}
               </p>
               <div className="mt-10 inline-flex flex-col items-end md:items-end">
                 <div className="border-b border-ink/60 w-48 h-6" />
