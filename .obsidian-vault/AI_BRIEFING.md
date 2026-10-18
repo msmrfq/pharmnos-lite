@@ -41,28 +41,26 @@ Additional layers:
 
 > **Update this section EVERY SESSION before you stop working. Thirty seconds here saves five minutes of re-orientation next time.**
 
-**Last updated:** `Date: 2026-10-13  Time: 22-12-11 (IST)` 
+**Last updated:** `Date: 2026-10-18  Time: 06-14-17 (IST)`
 
 ### Verified working
 - **P1–P7 complete 100%;** current phase remains POST-P7 — PRE-PRODUCTION VALIDATION.
-- **GST/IGST remediation is partially implemented:** canonical sales calculations, component-wise rounding, preview/server parity, discount normalization, fail-closed state handling, print disclosure, state normalization, and regression coverage are documented in the consolidated status matrix.
-- **GST validation evidence recorded:** 206 assertions passed, typecheck passed, and lint passed with one unrelated warning.
-- **Supabase security/storage validation remains complete:** 19/19 public tables have RLS; Storage tenant policies and cleanup smoke pass; `pharmnos-documents` remains private.
-- **Financial E2E harness exists with safety guards;** runtime execution remains blocked because no isolated test database is configured.
+- **GST pure validation is current:** 243 GST assertions and 21 financial lifecycle safety tests pass; typecheck passes, and lint has one unrelated warning. These are not database-backed results.
+- **Canonical GST and financial verification matrices are consolidated** in `.obsidian-vault/specs/gst-audit-validation-and-plan.md` and `.obsidian-vault/specs/financial-e2e-validation-harness.md`.
+- **Financial E2E lifecycle guards are complete as a pure layer:** resource ownership, immutable cleanup plans, explicit completion evidence, and fail-closed scenario gating are covered by local tests.
 
 ### Broken / blocked (deferred — acceptable workaround)
-- **Financial runtime verification remains unverified:** no disposable tenant fixture, reset harness, or isolated staging database exists; demo data was not mutated for tests.
-- **Production Prisma/Vercel connectivity remains unverified.** Local Supavisor/pg-wire failures are environment-dependent; HTTPS/MCP access works.
-- **Supabase Auth leaked-password protection remains disabled.** This is project-level hardening, not an application-code defect.
-- **Backup/restore operational drill remains unverified.** SOP is documented; no restore drill executed.
-- **GST/IGST limitations remain:** seller/customer snapshots and complete historical tax/place-of-supply details are not persisted; sales components and place of supply are not persisted; purchase parity is outstanding; full prefix mapping evidence and `99` workflow semantics remain unresolved.
+- **Database-backed financial verification is blocked:** no independently verified disposable database, applied schema, tenant fixture lifecycle, or authorized execution exists; demo data remains untouched.
+- **RLS, tenant isolation, persistence, rollback, invoice sequencing, stock/ledger consistency, and historical immutability remain unverified.** Prior preview or storage evidence is not fresh database evidence in the disconnected environment.
+- **Purchase GST policy remains approval-gated:** tax source, rounding, POS, component persistence, and legacy treatment are unresolved; the sales billing-state POS proxy also lacks approval for statutory use.
+- **Backup/restore drill, operational monitoring, production Prisma connectivity, leaked-password protection, and explicit production approval remain incomplete or unverified.**
 
 ### Focus right now (next immediate build step)
-- **POST-P7 — PRE-PRODUCTION VALIDATION remains active** for isolated financial E2E, rollback behavior, production Prisma connectivity, backup/restore, and operational go-live readiness.
-- **GST/IGST remediation remains tracked by the status matrix;** no formal GST stage number is established and no production approval is implied by completed unit/static validation.
-- **Outstanding/deferred GST work:** tax-component/place-of-supply persistence, purchase GST parity, historical snapshot support, complete prefix verification, and workflow-specific `97`/`99` support require separate evidence and approval.
-- **Before deployment:** validate financial mutations in disposable staging, verify production Prisma connectivity, and enable leaked-password protection.
-- **User-owned commit, push, and Vercel deployment gates remain separate** and require explicit authorization.
+- **POST-P7 — PRE-PRODUCTION VALIDATION remains active.** The next activity is approval and preparation for a separately authorized isolated financial verification run.
+- **First clear accounting/product decisions:** approve purchase tax policy and the sales place-of-supply proxy/historical snapshot policy; do not change accounting behavior before approval.
+- **Then establish evidence:** provision or identify a disposable database, verify positive production separation and schema rollout, create owned fixtures, execute the guarded scenarios, and prove cleanup.
+- **Keep GST-019/GST-020 blocked** until database identity, fixture/reset lifecycle, cleanup authorization, execution approval, and runtime assertions are all available.
+- **Release remains gated** by backup/restore, monitoring, production connectivity, leaked-password protection, and explicit production approval; no deployment is implied by local tests.
 
 ---
 
@@ -79,15 +77,15 @@ Record NEW decisions here ONLY after they are finalised AND have an ADR written 
 
 ## GST/IGST Capability Findings (Read-Only Audit & Validation)
 
-The following findings are from the completed read-only GST/IGST capability audit (`.obsidian-vault/specs/gst-igst-capability-audit.md`) and its subsequent validation (`.obsidian-vault/specs/gst-audit-validation-and-plan.md`). They distinguish reported findings from implemented fixes — **no GST remediation code or schema migration has been implemented yet**.
+The following findings are historical observations from the completed read-only GST/IGST capability audit (`.obsidian-vault/specs/gst-igst-capability-audit.md`) and its subsequent validation (`.obsidian-vault/specs/gst-audit-validation-and-plan.md`). They distinguish the original audit findings from later local fixes; the consolidated matrix is the current status source.
 
-1. **Sales and purchase line items currently store aggregate GST amounts only** (`gst_amount`); separate persisted tax components (CGST, SGST, IGST, cess) are not yet established.
+1. **The original audit found aggregate-only GST facts** (`gst_amount`) on sales and purchase lines. Current local sales remediation adds nullable CGST, SGST, IGST, cess, and taxable fields; purchase lines remain aggregate-only and database rollout is unverified.
 2. **Purchase-side intra-state/inter-state tax handling requires remediation** — current purchase actions compute only aggregate GST with no place-of-supply logic, unlike sales which uses the GST calculator.
-3. **State name/code normalization is required** — sales actions compare state names (e.g., "Maharashtra") while the GST calculator expects 2-letter state codes (e.g., "MH"), causing silent place-of-supply misclassification.
-4. **Finalized invoices need a stable, recorded place of supply and immutable tax values** — currently `place_of_supply` is not persisted on invoice headers, and invoice printing recomputes tax from mutable current customer/business-profile state.
+3. **The original audit identified state name/code normalization as required.** Current local normalization accepts supported names and codes, while sales place of supply still uses the customer billing-state proxy; policy approval and database verification remain outstanding.
+4. **Finalized invoices need a stable, recorded place of supply and immutable tax values.** Current local sales remediation adds `place_of_supply_code`, tax components, and snapshots, while legacy records use explicit fallback disclosure and database-backed historical immutability remains unverified.
 5. **Draft, finalization, reporting and printing must use consistent tax calculations and rounding** — draft creation uses aggregate line-level rounding while finalization uses the GST calculator's component-level rounding, creating a mismatch masked by a 0.02 tolerance.
-6. **Invoice rendering must not recalculate historical tax from mutable current state** — the print page currently calls `splitLineGst()` at render time using live business-profile and customer states instead of reading finalized persisted values.
-7. **GSTIN format validation exists for customer/supplier records** (15-character alphanumeric regex), but **checksum verification is absent**; business-profile state validation is not enforced.
+6. **Invoice rendering must not recalculate historical tax from mutable current state.** Complete local records prefer persisted tax and snapshot facts; legacy records use current values only as an explicitly disclosed fallback. Historical immutability remains unverified against a database.
+7. **GSTIN format validation exists for customer/supplier records** (15-character alphanumeric regex), but **checksum verification is absent**; current business-profile state validation normalizes supported names/codes, while database enforcement remains unverified.
 8. **Complete GSTR-1/GSTR-3B filing, e-invoice, e-way bill, RCM, credit/debit notes, ITC reconciliation, multi-GSTIN, composition and export/SEZ capabilities are not part of the immediate core GST remediation scope** — these remain in the advanced statutory automation backlog.
 
 > **Note:** The audit's 65/100 score is a subjective assessment, not an objective compliance measurement. Do not present it as such.

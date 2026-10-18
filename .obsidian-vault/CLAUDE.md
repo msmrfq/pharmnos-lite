@@ -62,28 +62,26 @@ Additional layers:
 
 > **Update this section EVERY SESSION before you stop working. Thirty seconds here saves five minutes of re-orientation next time.**
 
-**Last updated:** `Date: 2026-10-18  Time: 06-03-20 (IST)`
+**Last updated:** `Date: 2026-10-18  Time: 06-14-17 (IST)`
 
 ### Verified working
 - **P1–P7 complete 100%;** current phase remains POST-P7 — PRE-PRODUCTION VALIDATION.
-- **GST/IGST remediation is partially implemented:** canonical sales calculations, component-wise rounding, preview/server parity, discount normalization, fail-closed state handling, print disclosure, state normalization, and regression coverage are documented in the consolidated status matrix.
-- **GST pure-test evidence recorded:** 243 assertions passed in the latest local pure regression run; typecheck passed, and lint passed with one unrelated warning. This does not verify database persistence or runtime accounting behavior.
-- **Supabase security/storage validation was previously recorded:** 19/19 public tables have RLS and Storage checks were recorded, but no fresh database-backed verification is available while Supabase is intentionally disconnected.
-- **Financial E2E harness exists with safety guards;** runtime execution remains blocked because no isolated test database is configured.
+- **GST pure validation is current:** 243 GST assertions and 21 financial lifecycle safety tests pass; typecheck passes, and lint has one unrelated warning. These are not database-backed results.
+- **Canonical GST and financial verification matrices are consolidated** in `.obsidian-vault/specs/gst-audit-validation-and-plan.md` and `.obsidian-vault/specs/financial-e2e-validation-harness.md`.
+- **Financial E2E lifecycle guards are complete as a pure layer:** resource ownership, immutable cleanup plans, explicit completion evidence, and fail-closed scenario gating are covered by local tests.
 
 ### Broken / blocked (deferred — acceptable workaround)
-- **Financial runtime verification remains unverified:** no disposable tenant fixture, reset harness, or isolated staging database exists; demo data was not mutated for tests.
-- **Production Prisma/Vercel connectivity remains unverified.** Local Supavisor/pg-wire failures are environment-dependent; HTTPS/MCP access works.
-- **Supabase Auth leaked-password protection remains disabled.** This is project-level hardening, not an application-code defect.
-- **Backup/restore operational drill remains unverified.** SOP is documented; no restore drill executed.
-- **GST/IGST limitations remain:** additive sales snapshots, tax components, and place-of-supply fields exist locally but database rollout and historical completeness remain unverified; legacy records lack those facts; purchase parity is outstanding; full prefix mapping evidence and `99` workflow semantics remain unresolved.
+- **Database-backed financial verification is blocked:** no independently verified disposable database, applied schema, tenant fixture lifecycle, or authorized execution exists; demo data remains untouched.
+- **RLS, tenant isolation, persistence, rollback, invoice sequencing, stock/ledger consistency, and historical immutability remain unverified.** Prior preview or storage evidence is not fresh database evidence in the disconnected environment.
+- **Purchase GST policy remains approval-gated:** tax source, rounding, POS, component persistence, and legacy treatment are unresolved; the sales billing-state POS proxy also lacks approval for statutory use.
+- **Backup/restore drill, operational monitoring, production Prisma connectivity, leaked-password protection, and explicit production approval remain incomplete or unverified.**
 
 ### Focus right now (next immediate build step)
-- **POST-P7 — PRE-PRODUCTION VALIDATION remains active** for isolated financial E2E, rollback behavior, production Prisma connectivity, backup/restore, and operational go-live readiness.
-- **GST/IGST remediation remains tracked by the status matrix;** no formal GST stage number is established and no production approval is implied by completed unit/static validation.
-- **Outstanding/deferred GST work:** database verification of additive sales tax-component/place-of-supply persistence, purchase GST parity, historical snapshot support, complete prefix verification, and workflow-specific `97`/`99` support require separate evidence and approval.
-- **Before deployment:** validate financial mutations in disposable staging, verify production Prisma connectivity, and enable leaked-password protection.
-- **User-owned commit, push, and Vercel deployment gates remain separate** and require explicit authorization.
+- **POST-P7 — PRE-PRODUCTION VALIDATION remains active.** The next activity is approval and preparation for a separately authorized isolated financial verification run.
+- **First clear accounting/product decisions:** approve purchase tax policy and the sales place-of-supply proxy/historical snapshot policy; do not change accounting behavior before approval.
+- **Then establish evidence:** provision or identify a disposable database, verify positive production separation and schema rollout, create owned fixtures, execute the guarded scenarios, and prove cleanup.
+- **Keep GST-019/GST-020 blocked** until database identity, fixture/reset lifecycle, cleanup authorization, execution approval, and runtime assertions are all available.
+- **Release remains gated** by backup/restore, monitoring, production connectivity, leaked-password protection, and explicit production approval; no deployment is implied by local tests.
 
 ---
 
