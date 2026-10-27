@@ -8,14 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { CardCanvas, CardContent } from "@/components/ui/card";
 import { PrintToolbar } from "@/components/print/print-toolbar";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
 import { cn } from "@/lib/utils";
-import { selectFinalizedInvoiceValue } from "@/domain/services/gst-calculator.service";
+import { buildInvoicePrintSnapshot, selectFinalizedInvoiceValue } from "@/domain/services/gst-calculator.service";
+import { loadBillingInvoicePrintData } from "./data";
 
 export const metadata: Metadata = {
   title: "Print invoice",
 };
+
+export { loadBillingInvoicePrintData };
 
 const rupee = (n: number | null | undefined | string) => {
   const num = typeof n === "string" ? Number(n) : Number(n ?? 0);
@@ -49,12 +50,12 @@ export default async function BillingInvoicePrintPage({
 
   if (dbOk) {
     try {
-      ctx = await requireServerTenantContext();
-      rawInvoice = await repos.salesInvoices.getById(params.invoiceId, ctx);
+      const loaded = await loadBillingInvoicePrintData(params.invoiceId);
+      ctx = loaded.ctx;
+      rawInvoice = loaded.rawInvoice;
+      businessProfile = loaded.businessProfile;
       if (!rawInvoice) {
         notFoundFlag = true;
-      } else {
-        businessProfile = await repos.businessProfiles.getForTenant(ctx).catch(() => null);
       }
     } catch (_err) {
       dbOk = false;
@@ -104,11 +105,14 @@ export default async function BillingInvoicePrintPage({
   }
   const invoice: any = rawInvoice;
   const hasCompleteTaxData = invoice.tax_data_status === "COMPLETE";
+  const printSnapshot = buildInvoicePrintSnapshot(
+    invoice,
+    businessProfile?.gstin !== undefined ? (businessProfile as any).tenant?.business_name : null,
+  );
   const snapshot = <T,>(value: T | null | undefined, current: T | null | undefined) =>
     selectFinalizedInvoiceValue(hasCompleteTaxData, value, current);
 
-  const displayBusinessName =
-    snapshot(invoice.seller_name_snapshot, businessProfile?.gstin !== undefined ? (businessProfile as any).tenant?.business_name : null);
+  const displayBusinessName = printSnapshot.sellerName;
 
   const businessAddressParts = [
     snapshot(invoice.seller_address_line_1_snapshot, businessProfile?.address_line_1),
@@ -281,7 +285,7 @@ export default async function BillingInvoicePrintPage({
               </p>
               <div className="mt-2">
                 <p className="text-title-sm font-semibold text-ink">
-                  {snapshot(invoice.customer_name_snapshot, customer?.business_name) ??
+                  {printSnapshot.customerName ??
                     (invoice.is_cash_sale ? "Cash Customer" : "Walk-in Customer")}
                 </p>
                 {customer?.contact_person && (
@@ -408,7 +412,7 @@ export default async function BillingInvoicePrintPage({
                         </td>
                         <td className="border border-hairline px-2 py-2 text-body">
                           <p className="font-medium text-ink">
-                            {snapshot(it.product_name_snapshot, it.product?.name) ?? "—"}
+                            {printSnapshot.items[idx]?.productName ?? "—"}
                           </p>
                           {snapshot(it.generic_name_snapshot, it.product?.generic_name) && (
                             <p className="text-caption text-muted">
@@ -422,7 +426,7 @@ export default async function BillingInvoicePrintPage({
                           )}
                         </td>
                         <td className="border border-hairline px-2 py-2 text-body text-muted">
-                          {snapshot(it.hsn_code_snapshot, it.product?.hsn_code) ?? "—"}
+                          {printSnapshot.items[idx]?.hsnCode ?? "—"}
                         </td>
                         <td className="border border-hairline px-2 py-2 text-body font-medium text-ink">
                           {it.batch_no ?? "—"}

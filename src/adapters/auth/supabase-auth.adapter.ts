@@ -14,6 +14,52 @@ import type {
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
+let financialE2eTestExternalId: string | null = null;
+
+function isApprovedFinancialE2eTarget(): boolean {
+  const rawUrl = process.env.DATABASE_URL;
+  if (!rawUrl) return false;
+  try {
+    const url = new URL(rawUrl);
+    return (
+      (url.protocol === "postgres:" || url.protocol === "postgresql:") &&
+      url.hostname === "127.0.0.1" &&
+      url.port === "55432" &&
+      url.pathname === "/pharmnos_financial_e2e"
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getFinancialE2eTestExternalId(): string | null {
+  if (process.env.NODE_ENV === "production" ||
+      process.env.FINANCIAL_E2E_TEST_MODE !== "true" ||
+      process.env.ALLOW_FINANCIAL_E2E !== "true" ||
+      process.env.TEST_DATABASE_NAME !== "pharmnos_financial_e2e" ||
+      process.env.TEST_DATABASE_MARKER !== "pharmnos-financial-e2e" ||
+      !isApprovedFinancialE2eTarget()) {
+    return null;
+  }
+  return financialE2eTestExternalId;
+}
+
+export function installFinancialE2eTestSession(externalId: string): void {
+  if (process.env.NODE_ENV === "production" ||
+      process.env.FINANCIAL_E2E_TEST_MODE !== "true" ||
+      process.env.ALLOW_FINANCIAL_E2E !== "true" ||
+      process.env.TEST_DATABASE_NAME !== "pharmnos_financial_e2e" ||
+      process.env.TEST_DATABASE_MARKER !== "pharmnos-financial-e2e" ||
+      !isApprovedFinancialE2eTarget() ||
+      !externalId.trim()) {
+    throw new Error("Financial E2E test authentication is not permitted for this target.");
+  }
+  financialE2eTestExternalId = externalId.trim();
+}
+
+export function clearFinancialE2eTestSession(): void {
+  financialE2eTestExternalId = null;
+}
 
 function assertEnvConfigured(): void {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -86,6 +132,17 @@ function createServiceClient() {
 
 export class SupabaseAuthAdapter implements IAuthAdapter {
   async getCurrentSession(): Promise<AuthSession | null> {
+    const testExternalId = getFinancialE2eTestExternalId();
+    if (testExternalId) {
+      return {
+        user: {
+          id: testExternalId,
+          externalId: testExternalId,
+          email: `${testExternalId}@financial-e2e.invalid`,
+          emailVerified: true,
+        },
+      };
+    }
     const sb = createAnonClient();
     const {
       data: { session },

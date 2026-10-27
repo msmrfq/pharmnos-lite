@@ -155,8 +155,8 @@ export async function createSalesDraftAction(
       ? await prisma.customers.findUnique({ where: { id: data.customer_id, tenant_id: ctx.tenantId } })
       : null;
     const businessState = profile?.state ?? null;
-    const customerBillingState = customer?.billing_state ?? null;
-    const placeResult = gstCalculator.detectPlace(businessState, customerBillingState);
+    const capturedPlaceOfSupplyState = normalizeState(data.place_of_supply_state);
+    const placeResult = gstCalculator.detectPlace(businessState, capturedPlaceOfSupplyState);
     if (placeResult.type === "UNKNOWN") {
       return {
         ok: false,
@@ -183,6 +183,7 @@ export async function createSalesDraftAction(
           total_tax: gstTotals.total_tax,
           round_off: gstTotals.round_off_applied,
           net_amount: gstTotals.grand_total,
+          place_of_supply_code: capturedPlaceOfSupplyState,
           paid_amount: 0,
           balance_due: gstTotals.grand_total,
           payment_mode: data.is_cash_sale ? paymentMethodToPrismaMode("Cash") : null,
@@ -303,13 +304,12 @@ export async function finalizeSalesInvoiceAction(
         select: { business_name: true },
       });
       const businessState = profile?.state ?? null;
-      const customerBillingState = existing.customer.billing_state ?? null;
+      const capturedPlaceOfSupplyState = normalizeState(existing.place_of_supply_code);
       const placeOfSupply = requireResolvedPlaceOfSupply(
-        gstCalculator.detectPlace(businessState, customerBillingState),
+        gstCalculator.detectPlace(businessState, capturedPlaceOfSupplyState),
       );
-
       const serverGst = computeServerGstTotals(items, placeOfSupply);
-      const persistedPlaceOfSupplyCode = normalizeState(customerBillingState);
+      const persistedPlaceOfSupplyCode = capturedPlaceOfSupplyState;
       if (!persistedPlaceOfSupplyCode) {
         throw new Error("Cannot finalize invoice until customer place-of-supply state is valid.");
       }
@@ -321,7 +321,10 @@ export async function finalizeSalesInvoiceAction(
         customerState: cust.billing_state,
         productNames: items.map((line) => line.product?.name),
         placeOfSupplyCode: persistedPlaceOfSupplyCode,
-        lines: serverGst.lines,
+        lines: serverGst.lines.map((line) => ({
+          ...line,
+          taxable_amount: line.taxable_value,
+        })),
       });
       if (!snapshotsReady) {
         throw new Error("Cannot finalize invoice until required historical snapshot facts are available.");

@@ -12,8 +12,9 @@ import {
   supplierEditSchema,
   __LedgerEntryType_OPENING_BALANCE,
 } from "@/lib/validation/masters.schemas";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
+import { PermissionAction } from "@prisma/client";
 import type { products, customers, suppliers } from "@prisma/client";
 
 function flattenFieldErrors(zodFieldErrors: Record<string, any>): Record<string, string[] | undefined> {
@@ -212,20 +213,74 @@ export async function deleteProductAction(id: string): Promise<ActionResult<{ id
   try {
     assertPostgresConfigured("deleteProductAction");
     const ctx = await requireServerTenantContext();
-    const existing = await prisma.products.findUnique({
-      where: { id, tenant_id: ctx.tenantId },
-    });
-    if (!existing) {
-      return { ok: false, message: "Product not found." };
-    }
-    await prisma.products.update({
-      where: { id, tenant_id: ctx.tenantId },
-      data: { is_active: false, updated_at: new Date() },
+    requirePermission(ctx, PermissionAction.edit_product);
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.products.findUnique({
+        where: { id, tenant_id: ctx.tenantId },
+      });
+      if (!existing) {
+        throw new Error("Product not found.");
+      }
+      if (!existing.is_active) {
+        await tx.audit_logs.create({
+          data: {
+            tenant_id: ctx.tenantId,
+            actor_id: ctx.userId,
+            event_type: "PRODUCT_UPDATED",
+            target_type: "product",
+            target_id: id,
+            metadata: {
+              action: "deactivation_idempotent",
+              previous_is_active: false,
+            },
+          },
+        });
+        return;
+      }
+
+      const operationalBatch = await tx.product_batches.findFirst({
+        where: {
+          tenant_id: ctx.tenantId,
+          product_id: id,
+          OR: [
+            { is_blocked: false },
+            { available_qty: { gt: 0 } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (operationalBatch) {
+        throw new Error("Product has active operational batches or available stock.");
+      }
+
+      await tx.products.update({
+        where: { id, tenant_id: ctx.tenantId },
+        data: { is_active: false, updated_at: new Date() },
+      });
+      await tx.audit_logs.create({
+        data: {
+          tenant_id: ctx.tenantId,
+          actor_id: ctx.userId,
+          event_type: "PRODUCT_UPDATED",
+          target_type: "product",
+          target_id: id,
+          metadata: {
+            action: "deactivated",
+            previous_is_active: true,
+          },
+        },
+      });
     });
     revalidatePath("/inventory");
     revalidatePath("/dashboard");
     return { ok: true, data: { id } };
   } catch (e: any) {
+    if (e?.message === "Product not found.") {
+      return { ok: false, message: e.message };
+    }
+    if (e?.message === "Product has active operational batches or available stock.") {
+      return { ok: false, message: e.message };
+    }
     return {
       ok: false,
       message: "Product could not be deleted. Please try again.",
@@ -391,20 +446,67 @@ export async function deleteCustomerAction(id: string): Promise<ActionResult<{ i
   try {
     assertPostgresConfigured("deleteCustomerAction");
     const ctx = await requireServerTenantContext();
-    const existing = await prisma.customers.findUnique({
-      where: { id, tenant_id: ctx.tenantId },
-    });
-    if (!existing) {
-      return { ok: false, message: "Customer not found." };
-    }
-    await prisma.customers.update({
-      where: { id, tenant_id: ctx.tenantId },
-      data: { is_active: false, updated_at: new Date() },
+    requirePermission(ctx, PermissionAction.edit_customer);
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.customers.findUnique({
+        where: { id, tenant_id: ctx.tenantId },
+      });
+      if (!existing) {
+        throw new Error("Customer not found.");
+      }
+      if (!existing.is_active) {
+        await tx.audit_logs.create({
+          data: {
+            tenant_id: ctx.tenantId,
+            actor_id: ctx.userId,
+            event_type: "CUSTOMER_DEACTIVATED",
+            target_type: "customer",
+            target_id: id,
+            metadata: { action: "deactivation_idempotent", previous_is_active: false },
+          },
+        });
+        return;
+      }
+      const [invoice, ledger, payment] = await Promise.all([
+        tx.sales_invoices.findFirst({
+          where: { tenant_id: ctx.tenantId, customer_id: id },
+          select: { id: true },
+        }),
+        tx.customer_ledgers.findFirst({
+          where: { tenant_id: ctx.tenantId, customer_id: id },
+          select: { id: true },
+        }),
+        tx.payments.findFirst({
+          where: { tenant_id: ctx.tenantId, customer_id: id },
+          select: { id: true },
+        }),
+      ]);
+      if (Number(existing.receivable_balance) !== 0 || invoice || ledger || payment) {
+        throw new Error("Customer has dependencies that block deactivation.");
+      }
+      await tx.customers.update({
+        where: { id, tenant_id: ctx.tenantId },
+        data: { is_active: false, updated_at: new Date() },
+      });
+      await tx.audit_logs.create({
+        data: {
+          tenant_id: ctx.tenantId,
+          actor_id: ctx.userId,
+          event_type: "CUSTOMER_DEACTIVATED",
+          target_type: "customer",
+          target_id: id,
+          metadata: { action: "deactivated", previous_is_active: true },
+        },
+      });
     });
     revalidatePath("/customers");
     revalidatePath("/dashboard");
     return { ok: true, data: { id } };
   } catch (e: any) {
+    if (e?.message === "Customer not found." ||
+        e?.message === "Customer has dependencies that block deactivation.") {
+      return { ok: false, message: e.message };
+    }
     return {
       ok: false,
       message: "Customer could not be deleted. Please try again.",
@@ -566,20 +668,67 @@ export async function deleteSupplierAction(id: string): Promise<ActionResult<{ i
   try {
     assertPostgresConfigured("deleteSupplierAction");
     const ctx = await requireServerTenantContext();
-    const existing = await prisma.suppliers.findUnique({
-      where: { id, tenant_id: ctx.tenantId },
-    });
-    if (!existing) {
-      return { ok: false, message: "Supplier not found." };
-    }
-    await prisma.suppliers.update({
-      where: { id, tenant_id: ctx.tenantId },
-      data: { is_active: false, updated_at: new Date() },
+    requirePermission(ctx, PermissionAction.edit_supplier);
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.suppliers.findUnique({
+        where: { id, tenant_id: ctx.tenantId },
+      });
+      if (!existing) {
+        throw new Error("Supplier not found.");
+      }
+      if (!existing.is_active) {
+        await tx.audit_logs.create({
+          data: {
+            tenant_id: ctx.tenantId,
+            actor_id: ctx.userId,
+            event_type: "SUPPLIER_DEACTIVATED",
+            target_type: "supplier",
+            target_id: id,
+            metadata: { action: "deactivation_idempotent", previous_is_active: false },
+          },
+        });
+        return;
+      }
+      const [purchase, ledger, batch] = await Promise.all([
+        tx.purchase_invoices.findFirst({
+          where: { tenant_id: ctx.tenantId, supplier_id: id },
+          select: { id: true },
+        }),
+        tx.supplier_ledgers.findFirst({
+          where: { tenant_id: ctx.tenantId, supplier_id: id },
+          select: { id: true },
+        }),
+        tx.product_batches.findFirst({
+          where: { tenant_id: ctx.tenantId, supplier_id: id },
+          select: { id: true },
+        }),
+      ]);
+      if (Number(existing.payable_balance) !== 0 || purchase || ledger || batch) {
+        throw new Error("Supplier has dependencies that block deactivation.");
+      }
+      await tx.suppliers.update({
+        where: { id, tenant_id: ctx.tenantId },
+        data: { is_active: false, updated_at: new Date() },
+      });
+      await tx.audit_logs.create({
+        data: {
+          tenant_id: ctx.tenantId,
+          actor_id: ctx.userId,
+          event_type: "SUPPLIER_DEACTIVATED",
+          target_type: "supplier",
+          target_id: id,
+          metadata: { action: "deactivated", previous_is_active: true },
+        },
+      });
     });
     revalidatePath("/suppliers");
     revalidatePath("/dashboard");
     return { ok: true, data: { id } };
   } catch (e: any) {
+    if (e?.message === "Supplier not found." ||
+        e?.message === "Supplier has dependencies that block deactivation.") {
+      return { ok: false, message: e.message };
+    }
     return {
       ok: false,
       message: "Supplier could not be deleted. Please try again.",

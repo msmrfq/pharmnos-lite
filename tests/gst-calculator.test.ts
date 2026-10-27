@@ -25,6 +25,7 @@ import {
   detectPlaceOfSupply,
   requireResolvedPlaceOfSupply,
   selectFinalizedInvoiceValue,
+  buildInvoicePrintSnapshot,
   hasCompleteSalesSnapshotFacts,
   toPersistedSalesTaxFacts,
   toTaxableGstLine,
@@ -43,6 +44,44 @@ import { PurchaseInvoiceLineCreateSchema } from "../src/lib/validation/purchases
 
 let passed = 0;
 let failed = 0;
+
+{
+  const finalized = buildInvoicePrintSnapshot(
+    {
+      tax_data_status: "COMPLETE",
+      seller_name_snapshot: "Historical seller",
+      customer_name_snapshot: "Historical customer",
+      customer: { business_name: "Current customer" },
+      items: [{
+        product_name_snapshot: "Historical product",
+        hsn_code_snapshot: "3004",
+        product: { name: "Current product", hsn_code: "9999" },
+      }],
+    },
+    "Current seller",
+  );
+  assert(finalized.sellerName === "Historical seller", "Print loader prefers seller snapshot");
+  assert(finalized.customerName === "Historical customer", "Print loader prefers customer snapshot");
+  assert(finalized.items[0]?.productName === "Historical product", "Print loader prefers product snapshot");
+  assert(finalized.items[0]?.hsnCode === "3004", "Print loader prefers HSN snapshot");
+
+  const legacy = buildInvoicePrintSnapshot(
+    {
+      tax_data_status: "LEGACY_AGGREGATE_ONLY",
+      seller_name_snapshot: null,
+      customer_name_snapshot: null,
+      customer: { business_name: "Current customer" },
+      items: [{
+        product_name_snapshot: null,
+        product: { name: "Current product" },
+      }],
+    },
+    "Current seller",
+  );
+  assert(legacy.sellerName === "Current seller", "Legacy print loader uses disclosed current fallback");
+  assert(legacy.customerName === "Current customer", "Legacy print loader uses current customer fallback");
+  assert(legacy.items[0]?.productName === "Current product", "Legacy print loader uses current product fallback");
+}
 
 function assert(condition: boolean, message: string) {
   if (condition) {
@@ -523,6 +562,11 @@ assertEqual(
   selectFinalizedInvoiceValue(true, "Snapshot name", "Current name"),
   "Snapshot name",
   "Invoice printing: complete record prefers persisted snapshot",
+);
+assertEqual(
+  selectFinalizedInvoiceValue(true, null, "Current name"),
+  null,
+  "Invoice printing: complete record does not substitute current data for a missing snapshot",
 );
 assertEqual(
   selectFinalizedInvoiceValue(false, "Snapshot name", "Current name"),

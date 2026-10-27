@@ -47,6 +47,7 @@ import type { ActionResult } from "@/app/auth/_actions/auth.actions";
 import type { sales_invoices } from "@prisma/client";
 import { gstCalculator, toTaxableGstLine } from "@/domain/services/gst-calculator.service";
 import type { PlaceOfSupplyResult } from "@/domain/services/gst-calculator.service";
+import { STATE_CODE_TO_NAME, normalizeState } from "@/lib/constants/indian-states";
 
 type BatchLite = {
   id: string;
@@ -259,6 +260,7 @@ export default function BillingNewClientForm({
   const params = useSearchParams();
   const [lines, setLines] = useState<LineRow[]>(() => [emptyLine()]);
   const [customerId, setCustomerId] = useState<string>("");
+  const [placeOfSupplyState, setPlaceOfSupplyState] = useState<string>("");
 
   useEffect(() => {
     const first = document.querySelector<HTMLElement>('[data-field-error="true"]');
@@ -279,10 +281,8 @@ export default function BillingNewClientForm({
   }, [params.get("created")]);
 
   const placeOfSupply: PlaceOfSupplyResult = useMemo(() => {
-    const cust = customers.find((c: any) => c.id === customerId);
-    const custState = String(cust?.billing_state ?? "").trim().toUpperCase();
-    return gstCalculator.detectPlace(businessProfileState, custState);
-  }, [businessProfileState, customerId, customers]);
+    return gstCalculator.detectPlace(businessProfileState, normalizeState(placeOfSupplyState));
+  }, [businessProfileState, placeOfSupplyState]);
 
   const totals = useMemo(() => {
     const taxableLines = lines.map((l, _idx) => {
@@ -387,6 +387,7 @@ export default function BillingNewClientForm({
     <form action={action} className="w-full">
       <input type="hidden" name="invoice_date" value={today} />
       <input type="hidden" name="payment_terms_days" defaultValue={0} />
+      <input type="hidden" name="place_of_supply_state" value={placeOfSupplyState} />
       <input type="hidden" name="gross_amount" value={String(totals.gross_amount)} />
       <input type="hidden" name="total_discount" value={String(totals.total_discount)} />
       <input type="hidden" name="total_tax" value={String(totals.total_tax)} />
@@ -431,6 +432,25 @@ export default function BillingNewClientForm({
                 <input type="hidden" id="customer_id" name="customer_id" defaultValue="" />
                 {fieldError(errors, "customer_id") && (
                   <p className="text-caption text-destructive">{fieldError(errors, "customer_id")}</p>
+                )}
+              </div>
+              <div className="space-y-2 sm:col-span-2" data-field-error={!!fieldError(errors, "place_of_supply_state")}>
+                <Label htmlFor="place_of_supply_state_select">Place of supply *</Label>
+                <Select value={placeOfSupplyState || undefined} onValueChange={setPlaceOfSupplyState}>
+                  <SelectTrigger id="place_of_supply_state_select">
+                    <SelectValue placeholder="Select the actual supply state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(STATE_CODE_TO_NAME).map(([code, name]) => (
+                      <SelectItem key={code} value={code}>{name} ({code})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-caption text-muted">
+                  Capture the transaction&apos;s actual supply state; customer billing state is not used as a fallback.
+                </p>
+                {fieldError(errors, "place_of_supply_state") && (
+                  <p className="text-caption text-destructive">{fieldError(errors, "place_of_supply_state")}</p>
                 )}
               </div>
               <div className="space-y-2" data-field-error={!!fieldError(errors, "invoice_date")}>

@@ -1,7 +1,8 @@
 ---
 title: Trae Agent Auto-commit Vault Backup
 date: 2026-09-30
-status: Open
+status: Closed
+"Comment:": It was not Trae Agent. It was happening because of Git Plugin in the Obsidian Vault.
 ---
 
 ## Steps to Reproduce

@@ -34,6 +34,7 @@ export type SalesInvoiceLineCreateInput = z.infer<typeof SalesInvoiceLineCreateS
 export const SalesInvoiceCreateSchema = z
   .object({
     customer_id: z.string().min(1, "Customer is required"),
+    place_of_supply_state: z.string().trim().min(1, "Place of supply is required"),
     invoice_date: dateRequired,
     payment_terms_days: integerFromStringGteZero,
     reference_no: z.string().max(100).optional().or(z.literal("")).transform((v) => (v || null)),

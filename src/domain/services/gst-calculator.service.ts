@@ -105,9 +105,52 @@ export function selectFinalizedInvoiceValue<T>(
   snapshotValue: T | null | undefined,
   currentValue: T | null | undefined,
 ): T | null | undefined {
-  return isComplete && snapshotValue !== null && snapshotValue !== undefined
-    ? snapshotValue
-    : currentValue;
+  return isComplete ? snapshotValue : currentValue;
+}
+
+export type InvoicePrintSnapshotInput = {
+  tax_data_status?: string | null;
+  seller_name_snapshot?: string | null;
+  customer_name_snapshot?: string | null;
+  place_of_supply_code?: string | null;
+  customer?: { business_name?: string | null } | null;
+  items?: Array<{
+    product_name_snapshot?: string | null;
+    generic_name_snapshot?: string | null;
+    hsn_code_snapshot?: string | null;
+    batch_expiry_snapshot?: Date | string | null;
+    product?: {
+      name?: string | null;
+      generic_name?: string | null;
+      hsn_code?: string | null;
+    } | null;
+    batch?: { expiry_date?: Date | string | null } | null;
+  }>;
+};
+
+export function buildInvoicePrintSnapshot(
+  invoice: InvoicePrintSnapshotInput,
+  currentSellerName: string | null | undefined,
+) {
+  const isComplete = invoice.tax_data_status === "COMPLETE";
+  const snapshot = <T,>(value: T | null | undefined, current: T | null | undefined) =>
+    selectFinalizedInvoiceValue(isComplete, value, current);
+
+  return {
+    isComplete,
+    sellerName: snapshot(invoice.seller_name_snapshot, currentSellerName),
+    customerName: snapshot(invoice.customer_name_snapshot, invoice.customer?.business_name),
+    placeOfSupply: invoice.place_of_supply_code ?? null,
+    items: (invoice.items ?? []).map((item) => ({
+      productName: snapshot(item.product_name_snapshot, item.product?.name),
+      genericName: snapshot(item.generic_name_snapshot, item.product?.generic_name),
+      hsnCode: snapshot(item.hsn_code_snapshot, item.product?.hsn_code),
+      batchExpiry: snapshot(
+        item.batch_expiry_snapshot,
+        item.batch?.expiry_date ?? null,
+      ),
+    })),
+  };
 }
 
 export type GstTotals = {
@@ -262,7 +305,11 @@ export function formatGstRate(rate: number): string {
 }
 
 export class GstCalculatorService {
-  constructor(private readonly defaultConfig: Partial<GstConfig> = {}) { }
+  private readonly defaultConfig: Partial<GstConfig>;
+
+  constructor(defaultConfig: Partial<GstConfig> = {}) {
+    this.defaultConfig = defaultConfig;
+  }
 
   computeLine(line: LineItemTaxable, override: Partial<GstConfig> = {}): GstLineSplit {
     return splitLineGst(line, {

@@ -62,25 +62,27 @@ Additional layers:
 
 > **Update this section EVERY SESSION before you stop working. Thirty seconds here saves five minutes of re-orientation next time.**
 
-**Last updated:** `Date: 2026-10-18  Time: 06-14-17 (IST)`
+**Last updated:** `Date: 2026-10-24  Time: 15-56-51 (IST)`
 
 ### Verified working
 - **P1–P7 complete 100%;** current phase remains POST-P7 — PRE-PRODUCTION VALIDATION.
 - **GST pure validation is current:** 243 GST assertions and 21 financial lifecycle safety tests pass; typecheck passes, and lint has one unrelated warning. These are not database-backed results.
+- **Authorized purchase GST increment is locally type-safe:** purchase GST persistence models exist in the Prisma schema, the pure reconciliation suite passes 37 assertions, and purchase finalization now fails closed without evidence, reconciliation, and explicit accounting acceptance. No migration or database execution has occurred.
 - **Canonical GST and financial verification matrices are consolidated** in `.obsidian-vault/specs/gst-audit-validation-and-plan.md` and `.obsidian-vault/specs/financial-e2e-validation-harness.md`.
 - **Financial E2E lifecycle guards are complete as a pure layer:** resource ownership, immutable cleanup plans, explicit completion evidence, and fail-closed scenario gating are covered by local tests.
 
 ### Broken / blocked (deferred — acceptable workaround)
 - **Database-backed financial verification is blocked:** no independently verified disposable database, applied schema, tenant fixture lifecycle, or authorized execution exists; demo data remains untouched.
 - **RLS, tenant isolation, persistence, rollback, invoice sequencing, stock/ledger consistency, and historical immutability remain unverified.** Prior preview or storage evidence is not fresh database evidence in the disconnected environment.
-- **Purchase GST policy remains approval-gated:** tax source, rounding, POS, component persistence, and legacy treatment are unresolved; the sales billing-state POS proxy also lacks approval for statutory use.
+- **Accepted GST product policy is now documented:** purchases preserve supplier evidence and separately reconcile calculated and accounting-accepted values; sales uses captured supply facts; finalized invoices require immutable snapshots. Purchase schema support is locally present, but component-fact capture, accounting acceptance, migration rollout, runtime evidence, and sales captured-fact alignment remain pending.
 - **Backup/restore drill, operational monitoring, production Prisma connectivity, leaked-password protection, and explicit production approval remain incomplete or unverified.**
 
 ### Focus right now (next immediate build step)
 - **POST-P7 — PRE-PRODUCTION VALIDATION remains active.** The next activity is approval and preparation for a separately authorized isolated financial verification run.
-- **First clear accounting/product decisions:** approve purchase tax policy and the sales place-of-supply proxy/historical snapshot policy; do not change accounting behavior before approval.
+- **Next clear approvals:** approve discrepancy materiality/tolerance, workflow/status authority, captured supply facts and supported rule scenarios, and controlled test-data rebuild scope; the active directive authorizes the approved implementation scope, but formal PGST-01 remains pending and no production/accounting behavior should be treated as complete.
 - **Then establish evidence:** provision or identify a disposable database, verify positive production separation and schema rollout, create owned fixtures, execute the guarded scenarios, and prove cleanup.
 - **Keep GST-019/GST-020 blocked** until database identity, fixture/reset lifecycle, cleanup authorization, execution approval, and runtime assertions are all available.
+- **Do not treat existing purchase totals as supplier-declared GST evidence.** The current form does not capture component source facts; drafts remain saveable, while finalization remains fail-closed until an explicit evidence and accounting-acceptance path exists.
 - **Release remains gated** by backup/restore, monitoring, production connectivity, leaked-password protection, and explicit production approval; no deployment is implied by local tests.
 
 ---
@@ -102,7 +104,7 @@ The following findings are historical observations from the completed read-only 
 
 1. **The original audit found aggregate-only GST facts** (`gst_amount`) on sales and purchase lines. Current local sales remediation adds nullable CGST, SGST, IGST, cess, and taxable fields; purchase lines remain aggregate-only and database rollout is unverified.
 2. **Purchase-side intra-state/inter-state tax handling requires remediation** — current purchase actions compute only aggregate GST with no place-of-supply logic, unlike sales which uses the GST calculator.
-3. **The original audit identified state name/code normalization as required.** Current local normalization accepts supported names and codes, while sales place of supply still uses the customer billing-state proxy; policy approval and database verification remain outstanding.
+3. **The original audit identified state name/code normalization as required.** Current local normalization accepts supported names and codes, while the current sales path still uses the customer billing-state proxy; the accepted policy requires captured supply facts, qualified GST review, implementation approval, and database verification.
 4. **Finalized invoices need a stable, recorded place of supply and immutable tax values.** Current local sales remediation adds `place_of_supply_code`, tax components, and snapshots, while legacy records use explicit fallback disclosure and database-backed historical immutability remains unverified.
 5. **Draft, finalization, reporting and printing must use consistent tax calculations and rounding** — draft creation uses aggregate line-level rounding while finalization uses the GST calculator's component-level rounding, creating a mismatch masked by a 0.02 tolerance.
 6. **Invoice rendering must not recalculate historical tax from mutable current state.** Complete local records prefer persisted tax and snapshot facts; legacy records use current values only as an explicitly disclosed fallback. Historical immutability remains unverified against a database.
@@ -191,3 +193,69 @@ Add rules BELOW the two permanent meta-rules as you lock in decisions. Format ea
 - Do not claim financial runtime verification without actually executing the tests against an isolated database.
 - Do not claim complete GST filing compliance merely because core tax calculation and invoice persistence are corrected.
 - Do not deploy or commit/push as part of GST remediation without the applicable explicit authorization.
+---
+## Developer's Guidelines
+
+<!--
+Description: Behavioral guidelines to reduce common LLM coding mistakes. Use when writing, reviewing, or refactoring code to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria.
+-->
+
+Behavioral guidelines to reduce common LLM coding mistakes, derived from observations on LLM coding pitfalls.
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+### 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them — don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+### 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+### 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it — don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+### 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```text
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.

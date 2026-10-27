@@ -15,10 +15,81 @@
 records the actual repository state and does not create a formal GST stage.
 P0-P3 remain audit priorities, not implementation-stage numbers.
 
-**Summary:** 20 requirements tracked; 4 implemented and verified; 6 partially
-implemented/limited; 3 outstanding; 5 blocked pending prerequisites; 1 deferred
-by explicit decision; 1 unclear. Financial E2E readiness: **blocked**. Last
-reviewed: `2026-10-18 06-03-20 (IST)`.
+**Summary:** 20 requirements tracked; 7 implemented and verified; 6 partially
+implemented/limited; 3 outstanding; 3 blocked pending prerequisites; 1 deferred
+by explicit decision; 1 unclear. Financial E2E readiness: **blocked**. The
+accepted GST product policy is recorded below, but documentation is not
+implementation, migration, runtime, or statutory verification evidence.
+Last reviewed: `2026-10-28 00-26-27 (IST)`.
+
+### Batch 3G RLS verifier and privilege review
+
+The local RLS rollout verifier in `scripts/rls-rollout-verifier.mjs` now
+requires an explicitly approved target identity and grant set. It rejects
+missing or duplicate table metadata, malformed policy/grant metadata, missing
+tables, disabled RLS, missing or duplicated tenant policies, wrong policy
+roles, wrong `USING`/`WITH CHECK` predicates, missing grants, and unexpected
+grants. Its tests are pure snapshot-contract tests; they do not prove that a
+snapshot came from a database or that runtime RLS is enforced.
+
+The seven affected tables are:
+
+- `purchase_posting_operations`
+- `purchase_gst_evidence_revisions`
+- `purchase_gst_line_evidence`
+- `purchase_gst_calculations`
+- `purchase_gst_accounting_decisions`
+- `purchase_gst_reconciliation_events`
+- `purchase_gst_reconciliation_event_lines`
+
+The current SQL asset still grants `SELECT, INSERT, UPDATE, DELETE` to the
+`authenticated` role for these tables and grants no additive table access to
+`anon`. This grant model is **not approved as a final security decision**.
+Direct Supabase Data API CRUD remains unapproved pending Security/Architecture
+and database-owner review. No grant was revoked and no runtime role model was
+changed in Batch 3G.
+
+Decision-ready options:
+
+1. **Revoke direct client `UPDATE`/`DELETE` (recommended default):** keep
+   tenant RLS, remove direct client mutation of financial history, and route
+   authorized writes through the server-side Prisma action boundary. This
+   requires confirmation of the actual Prisma role and its effective grants,
+   plus isolated verification of every permitted operation.
+2. **Restricted roles or controlled write functions:** separate read access
+   from narrowly authorized writes and enforce membership/permission checks in
+   the controlled boundary. This requires role ownership, function security
+   review, and runtime privilege/RLS tests.
+3. **Database immutability controls:** add reviewed triggers or equivalent
+   controls for append-only and immutable records. This requires trigger
+   lifecycle, bypass-role, migration, and rollback review.
+
+Integrity classification:
+
+- Evidence revisions, calculations, accounting decisions, and reconciliation
+  events are intended to be immutable or append-only after creation.
+- Reconciliation event lines are historical associations and should not be
+  edited or deleted independently.
+- Posting operations require controlled state transitions (`PROCESSING` to
+  `COMPLETED`) and are not strictly immutable during processing, but completed
+  results require protection from unauthorized mutation/deletion.
+- Current purchase projection fields and posting-operation processing state are
+  legitimate mutable workflow state, subject to authorization and transaction
+  rules.
+
+The current RLS policy is tenant isolation only. It does not enforce
+application permissions, active membership, segregation of duties, immutable
+history, or posting workflow rules. The risk remains open until the privilege
+decision is approved and database-backed grants, role behavior, immutability,
+and cross-tenant tests pass.
+
+Migration readiness remains blocked: no approved Prisma migration baseline,
+live target-schema evidence, or database identity evidence exists in the
+repository. A future additive migration requires an approved baseline,
+read-only identity/schema/grant preflight, uniqueness and foreign-key conflict
+checks, lock review, expand-first compatibility review, and explicit approval
+before execution. Destructive bootstrap SQL and unknown historical backfills
+remain excluded.
 
 | ID | Requirement | Priority | Current status | Implementation evidence | Test evidence | Dependencies / blockers | Next action |
 |---|---|---|---|---|---|---|---|
@@ -28,20 +99,20 @@ reviewed: `2026-10-18 06-03-20 (IST)`.
 | GST-004 | State name/code normalization | P0 | Partially implemented / limited | `indian-states.ts`: `normalizeState()`, `determinePlaceOfSupply()` | State normalization and supported-prefix tests; 243 assertions passed | Complete authoritative prefix table unavailable | Obtain authoritative mapping evidence before claiming full verification |
 | GST-005 | Fail-closed place-of-supply handling | P0 | Implemented and verified | `determinePlaceOfSupply()` returns `UNKNOWN`; `requireResolvedPlaceOfSupply()` rejects unresolved finalization | Missing, invalid, whitespace, `97`, and `99` cases covered | Special-prefix workflow support remains deferred | Preserve fail-closed behavior |
 | GST-006 | Sales tax-component persistence | P0 | Partially implemented / limited | Local Prisma schema, SQL asset, draft persistence, and finalization updates add nullable components and taxable amount | No database-backed persistence test | SQL provisioning review/execution required | Verify persistence against an isolated database |
-| GST-007 | Sales place-of-supply persistence | P0 | Partially implemented / limited | Local Prisma schema, SQL asset, and finalization update add `place_of_supply_code` | No database-backed persistence test; current value uses customer billing-state proxy | POS policy and SQL provisioning review required | Verify persisted value and approve POS semantics |
-| GST-008 | Purchase intra/inter-state GST calculation | P0 | Outstanding | `purchases.actions.ts` still computes aggregate GST without place-of-supply logic | No purchase GST parity suite | Purchase semantics and state inputs must be defined | Implement purchase calculation after approval |
-| GST-009 | Purchase tax-component persistence | P0 | Outstanding | Purchase line schema stores aggregate `gst_amount` only | No persistence test | Schema change and purchase calculation required | Design purchase component fields with GST-006 |
+| GST-007 | Sales place-of-supply persistence | P0 | Partially implemented / limited | Local Prisma schema, SQL asset, and finalization update add `place_of_supply_code` | No database-backed persistence test; current value uses customer billing-state proxy | Accepted policy requires captured supply facts; implementation and SQL rollout are not authorized or verified | Implement approved fact capture and verify persistence in an isolated database |
+| GST-008 | Purchase intra/inter-state GST calculation | P0 | Outstanding | `purchases.actions.ts` still computes aggregate GST without place-of-supply logic | No purchase GST parity suite | Accepted supplier-evidence/reconciliation policy requires approved rule version and captured transaction facts | Implement after policy model, legal review, and implementation authorization |
+| GST-009 | Purchase tax-component persistence | P0 | Partially implemented / limited | Local Prisma schema and purchase form/action capture separate supplier-declared taxable, CGST, SGST, IGST, cess, invoice-total, round-off, provenance, and supply-fact fields; versioned calculations, decisions, reconciliation events, line evidence, correction revisions, and posting-operation projections are represented locally; additive guarded RLS coverage is prepared for all seven new tenant-owned tables | `pnpm prisma generate`, typecheck, pure reconciliation/calculation tests, and static RLS policy coverage pass; no persistence or database test | No migration or database rollout; correction, duplicate, idempotency, concurrency, rollback, and RLS behavior remain database-unverified | Review the local implementation, provision the isolated schema, then verify against an isolated database |
 | GST-010 | Business-profile state validation | P0 | Partially implemented / limited | `tenant.schemas.ts`, `onboardNewTenant()`, `BusinessProfileRepository`, and `updateBusinessProfileAction` normalize/reject state values at server boundaries | `businessProfileStateSchema` and settings payload-mapping tests cover names, codes, blank, invalid values, and repository-shaped mapping; pure test evidence only | Database runtime rejection and RLS behavior unverified | Verify the save action against an isolated database |
-| GST-011 | Historical invoice tax integrity and printing | P0 | Partially implemented / limited | Print page uses persisted snapshot/component helpers for complete records and explicit legacy fallbacks | Pure completeness and snapshot-preference assertions; no historical immutability integration test | Historical snapshots/components are absent from legacy schema/data | Verify persisted output against an isolated database |
+| GST-011 | Historical invoice tax integrity and printing | P0 | Partially implemented / limited | Print page has snapshot-selection helpers and explicit legacy fallback paths; current print behavior still has legacy recomputation paths | Pure completeness and snapshot-preference assertions; no historical immutability integration test | Finalized snapshot persistence and print parity are not database-verified | Implement snapshot-first printing and verify against an isolated database |
 | GST-012 | Schema and historical-data strategy | P0 | Outstanding | Audit/spec documents identify missing fields and backfill questions | Review documented; no approval or migration executed | Explicit human approval required; ambiguous history cannot be guessed | Prepare reviewable schema/backfill proposal |
-| GST-013 | Purchase GST regression coverage | P0 | Partially implemented / limited | `purchase-calculator.service.ts` covers the existing aggregate purchase contract; `purchases.actions.ts` uses it | Pure purchase calculation and schema-validation assertions; zero/invalid/multi-line/whole-unit rounding covered; 243 assertions passed | Purchase component/POS parity remains unimplemented | Extend tests after approved purchase tax model |
-| GST-014 | Rollback and ledger consistency | P0 | Blocked pending prerequisites | Sales/purchase transactions use outer Prisma transactions in actions | No isolated database execution | Disposable database, fixtures, and reset lifecycle missing | Provision isolated E2E environment |
-| GST-015 | Invoice-sequence rollback | P0 | Blocked pending prerequisites | Sequence update occurs inside finalization transaction | No rollback execution evidence | Same isolated database and failure injection requirements as GST-014 | Add rollback scenario to guarded E2E harness |
-| GST-016 | Historical invoice immutability | P0 | Blocked pending prerequisites | Current local schema includes additive seller/customer snapshots, place-of-supply, and sales tax-component fields, but legacy records and database rollout remain unverified | No historical fixture test | Requires applied persistence, representative historical fixtures, and isolated fixture execution | Verify mutation isolation against an isolated database and preserve legacy disclosures |
+| GST-013 | Purchase GST regression coverage | P0 | Partially implemented / limited | `purchase-calculator.service.ts` preserves the existing aggregate purchase contract; purchase actions capture evidence, persist versioned calculations, expose accounting acceptance and discrepancy-resolution/correction actions, add stable posting idempotency, duplicate guards, optimistic claiming, and locked invoice-sequence allocation, and fail closed on stale/incomplete acceptance; unauthenticated requests no longer receive a demo-tenant context | `pnpm prisma generate`, `pnpm typecheck`, `git diff --check`, and `tests/purchase-gst-reconciliation.test.ts` passed; the focused suite has 43 assertions including intra/inter-state calculation, resolution, stale/incomplete acceptance, and rounding guards | Action/persistence, duplicate-match classification, concurrent finalization, sequence races, rollback, RLS, and database-backed correction tests remain unverified | Add guarded isolated-database coverage before claiming financial integrity or stage completion |
+| GST-014 | Rollback and ledger consistency | P0 | Implemented and verified for application-path database E2E | `finalizeSalesInvoiceAction` performs meaningful first-line stock work before an insufficient-FEFO failure inside the production transaction | GST application runner: invoice status/number/tax/snapshots, sequence, batches, stock movements, customer ledger/balance, and audit state remained unchanged; `GST-014=PASS_APPLICATION_PATH_DATABASE_E2E` | Broader success/payment/cleanup scenarios remain outside this scenario | Preserve transaction boundary and extend only through separately authorized financial E2E |
+| GST-015 | Invoice-sequence rollback | P0 | Implemented and verified for application-path database E2E | `finalizePurchaseAction` reaches the same-tenant invoice-number conflict after entering the production transaction | GST application runner: purchase status/sequence, posting operation, stock/batches, stock movements, supplier ledger/balance, and audit state rolled back; `GST-015=PASS_APPLICATION_PATH_DATABASE_E2E` | Broader purchase-success/concurrency/cleanup scenarios remain outside this scenario | Preserve sequence lock/transaction behavior |
+| GST-016 | Historical invoice immutability | P0 | Implemented and verified for application-path database E2E | Authenticated print data loader used by the real print page, persisted complete snapshots, explicit missing-snapshot behavior, tenant-qualified retrieval, and finalized-record triggers were exercised | GST application runner retained separate complete and missing-snapshot fixtures; master-data changes did not alter printed snapshot values, missing COMPLETE values remained null, cross-tenant retrieval returned no invoice, and header/line mutations were rejected; `GST-016=PASS_APPLICATION_PATH_DATABASE_E2E` | Legacy backfill strategy remains GST-012; fixtures are retained because cleanup is separately unauthorized | Preserve snapshot-first printing and legacy disclosure rules |
 | GST-017 | Authoritative GSTIN prefix verification | P0 | Unclear — further evidence required | `indian-states.ts` preserves mappings and documents source gap | Unit tests verify application mapping only | Comprehensive authoritative source not established | Obtain and archive authoritative mapping evidence |
 | GST-018 | Special-prefix handling for `97`/`99` | P0 | Deferred by explicit decision | `UNSUPPORTED_GSTIN_STATE_PREFIXES`; parser returns `null`; ordinary normalization excludes both | `tests/gst-calculator.test.ts` covers both and fail-closed POS | Broader support requires a concrete workflow and evidence | Revisit only under authorized business requirement |
-| GST-019 | Financial E2E infrastructure | P0 | Blocked pending prerequisites | Guarded `scripts/financial-e2e.mjs`, target/readiness guards, and pure fixture manifest/cleanup ownership contract exist | Safety, readiness, ownership, ordering, and failure-gating unit tests pass; no database connection or fixture lifecycle executed | Isolated DB identity verification, tenant fixture, and safe reset lifecycle missing | Provision disposable test environment |
-| GST-020 | Financial E2E execution | P0 | Blocked pending prerequisites | No production code claim made | No financial runtime execution | GST correctness gates plus GST-019 infrastructure | Execute only after GST-006-016 prerequisites are resolved |
+| GST-019 | Financial E2E infrastructure | P0 | Blocked pending prerequisites | Guarded `scripts/financial-e2e.mjs`, target/readiness guards, pure fixture manifest/cleanup ownership contract, and dependency-aware cleanup ordering including the seven GST/posting tables exist | Safety, readiness, ownership, ordering, failure-gating, and static RLS policy coverage tests pass; no database connection or fixture lifecycle executed | Isolated DB identity verification, tenant fixture, schema/RLS rollout, and safe reset lifecycle missing | Provision disposable test environment and apply only after authorization |
+| GST-020 | Financial E2E execution | P0 | Partially verified — remains blocked | Guarded application-path runner now covers retained sales/purchase success, rollback, payment, purchase-GST review guard, authenticated historical printing, and tenant A/B RLS/effective-privilege checks on the approved disposable target | Fresh authorized local run passed `TENANT-RLS-PRIVILEGES`, `GST-014`, `GST-015`, `SALES-SUCCESS`, `PURCHASE-SUCCESS`, `PURCHASE-GST-REVIEW-GUARD`, `PAYMENT`, and `GST-016`; fixtures retained; this is database-backed application evidence, not cleanup completion | Cleanup authorization/completion evidence, full legacy/schema compatibility acceptance, GST-012 historical-data decisions, GST-018 `97`/`99` support, and remaining canonical financial acceptance criteria are unresolved | Preserve retained evidence; obtain the remaining owner decisions and separately authorize/execute the missing acceptance stages before changing status to PASS |
 
 ### Completed evidence and limitations
 
@@ -58,112 +129,153 @@ Neither is mapped to a physical state or UT, and unresolved place of supply
 continues to fail closed. Tests verify application policy, not legal validity,
 registration authenticity, checksum validity, or universal applicability.
 
-## Purchase GST Policy Decision Record — Awaiting Approval
+## Accepted GST Product Policy — 2026-10-22
 
-This record documents the unresolved purchase-tax contract without changing the
-current purchase behavior.
+This section is the canonical product-policy record for the next
+implementation step. It does not authorize code, schema, migration, database,
+deployment, or production changes. The policy requires qualified GST
+professional review before production use wherever legal interpretation is
+involved.
 
-### Current observed behavior
+### Accepted purchase GST policy
 
-**VERIFIED:** `src/domain/services/purchase-calculator.service.ts` and
-`src/app/_actions/purchases.actions.ts` calculate aggregate GST from purchase
-taxable value and rate. Line values are rounded to two decimals; the invoice
-subtotal is then rounded to the nearest whole currency unit and the signed
-residual is stored as `round_off`. Purchase lines and headers persist aggregate
-tax only. No purchase place-of-supply or component-tax calculation exists.
+#### Supplier evidence, calculation, and accounting acceptance
 
-The current pure regression contract is covered by
-`tests/gst-calculator.test.ts`; it does not prove database persistence,
-transaction rollback, or accounting correctness.
+Purchase processing must preserve supplier-document evidence separately from
+application calculations and accounting decisions. At minimum, the design must
+represent:
 
-### Decision 1 — Purchase tax source
+1. **Supplier-declared values:** taxable values, tax rates, CGST, SGST, IGST,
+   applicable cess, invoice totals, and every other available source fact.
+2. **Application-calculated expected values:** independently calculated from
+   the captured transaction facts and an explicit, versioned application rule
+   set.
+3. **Accounting-accepted values:** the values authorized for posting, with
+   their source and decision recorded.
 
-**BUSINESS DECISION REQUIRED — Accounting/product owner.**
+The application must reconcile supplier-declared values against calculated
+expected values. It must never overwrite supplier evidence, silently substitute
+calculated values, or display calculated values as supplier-declared facts.
+Original supplier evidence remains immutable when a discrepancy is reviewed or
+resolved. Reconciliation status, discrepancy details, resolution, approver
+where applicable, and audit events are separate records from the source
+evidence. A disagreement does not make either side automatically correct.
 
-Options:
+Purchase tax components require separate representations for taxable value,
+CGST, SGST, IGST, and applicable cess, with declared and calculated values
+distinguishable and missing values distinguishable from verified zero.
 
-- **Supplier-declared:** capture supplier taxable value, CGST, SGST, IGST,
-  cess, and declared aggregate tax. Validate that components sum to aggregate;
-  do not treat the result as proof of input-tax-credit eligibility.
-- **System-calculated:** calculate purchase tax only after approved transaction
-  facts and legal/accounting rules are established.
-- **Both:** retain supplier-declared facts and a separately named internal
-  calculation for comparison. This is more auditable but increases schema and
-  workflow complexity.
+#### Discrepancies and posting
 
-**Recommendation:** supplier-declared values as the primary purchase facts.
-This is a recommendation, not an approval. Until selected, GST-008 and GST-009
-remain outstanding and purchase behavior must not be reinterpreted.
+- An incomplete or discrepant invoice may be saved as `DRAFT` or
+  `REVIEW_PENDING`.
+- An unresolved material GST discrepancy must block accounting completion and
+  posting.
+- Resolution requires an explicit, auditable decision under a documented
+  policy; it cannot be an implicit save or recalculation side effect.
+- Rounding differences must be classified separately from substantive tax
+  discrepancies. No discrepancy tolerance is invented here; the tolerance
+  policy remains pending accountant approval.
+- Rejected invoices, supplier corrections, credit/debit notes, and later
+  reconciliation require separate workflow decisions before implementation.
+  No automatic reversal, overwrite, or re-posting behavior is implied by this
+  policy.
 
-### Decision 2 — Purchase rounding
+#### Purchase rounding and place of supply
 
-**BUSINESS DECISION REQUIRED — Accountant.**
+Existing purchase behavior is preserved: two-decimal line values, whole-unit
+invoice rounding, and signed `round_off`. Supplier-stated totals and existing
+purchase amount behavior must not be silently changed. Any change requires
+explicit approval and regression coverage.
 
-The current purchase contract uses aggregate tax and whole-unit invoice
-rounding. Sales uses component-wise two-decimal rounding. Options are to retain
-the purchase behavior, align it with sales, or define a separate approved
-purchase policy. No option is silently selected by this record.
+Purchase place of supply must be determined from applicable Indian GST rules
+and captured transaction facts. It must not be inferred solely from supplier
+state, customer billing state, or a GSTIN prefix. The component model must
+support reconciliation and auditability without changing current purchase
+behavior until separately authorized.
 
-Any selected policy must define taxable subtotal, aggregate tax, pre-round
-invoice total, signed round-off, final payable amount, and line/header
-reconciliation equations. GST-013 covers the existing aggregate contract only;
-it does not establish purchase component or POS parity.
+### Accepted sales GST policy
 
-### Decision 6 — Sales place-of-supply proxy and historical facts
+Sales adopts **Option B: capture actual supply facts**. The workflow must
+capture the transaction facts required for the supported supply scenario and
+determine place of supply and CGST/SGST versus IGST using applicable Indian GST
+rules, seller location, captured transaction facts, and applicable exceptions.
+GSTIN-prefix lookup alone is insufficient. Missing required facts or an
+unsupported scenario must fail closed; no universal `customer.billing_state`
+shortcut or silent fallback is permitted.
 
-**BUSINESS DECISION REQUIRED — Product owner/accountant; legal confirmation may
-be required for statutory use.**
+Rules must be explicit, versioned, testable, and auditable. The implementation
+specification must enumerate supported scenarios and explicitly reject
+unsupported scenarios. A qualified GST professional must review the legal
+interpretation of each covered scenario before production use.
 
-The current sales path uses normalized `business_profiles.state` and
-`customers.billing_state` as the place-of-supply proxy. Finalization persists a
-normalized customer billing-state code locally, together with seller/customer
-and line tax snapshots. This is an implemented application policy, not an
-approved universal legal place-of-supply rule, and its database persistence is
-not verified in the disconnected environment.
+Current implementation facts are narrower: sales code uses normalized business
+profile state and customer billing state for its current proxy path,
+`gstCalculator` performs component calculation and fail-closed unresolved POS
+handling, and local sales persistence/snapshot helpers exist. This is not
+evidence that the accepted transaction-fact policy is implemented or that
+database persistence has been rolled out.
 
-Options are to approve the current billing-state proxy for the intended MVP
-scope, capture a separately approved place-of-supply fact, or expand the sales
-workflow with delivery and supply-type facts. The decision must also define
-which finalized snapshot fields are mandatory and how legacy aggregate-only
-invoices disclose unavailable historical tax facts. Until approved and
-database-verified, GST-007, GST-011, and GST-016 remain limited or blocked as
-shown in the matrix.
+### Accepted historical invoice policy
 
-### Decision 3 — Purchase place of supply
+Finalized invoices must preserve immutable transaction-time facts sufficient for
+recalculation-independent printing and audit: seller, customer, product/HSN,
+taxable value, tax components, and place-of-supply facts, plus the applicable
+rule/version metadata required by the implementation design. Reprints must
+prefer persisted invoice snapshots over mutable master data.
 
-**BUSINESS DECISION REQUIRED — Accountant/product owner; legal confirmation may
-be required.**
+Missing historical facts must not be fabricated, treated as zero, or rebuilt
+from current masters. Aggregate totals remain preserved when detailed facts are
+unavailable. Legacy fallback output must disclose unavailable historical detail
+and must not present current master data as verified historical data.
 
-The current workflow has supplier state, business profile state, supplier invoice
-fields, purchase lines, and stock receipt, but it does not establish sufficient
-facts for a universal place-of-supply determination. A supplier GSTIN prefix is
-not independently authoritative proof of place of supply. Do not derive purchase
-POS by reversing the sales comparison.
+Because the application is not deployed to production and current invoices are
+test data, a controlled migration/rebuild of test data may be proposed for
+review. No data is deleted, reset, or rewritten by this documentation task.
+Schema support, migration status, runtime persistence, and immutability
+verification remain separate evidence claims.
 
-Options are to capture an approved purchase POS fact, preserve supplier-declared
-tax without system POS derivation, or expand the workflow with delivery facts.
-Until approved, purchase POS remains unresolved and GST-008 remains outstanding.
+### Implementation-ready acceptance criteria
 
-### Decision 4 — Component persistence and completeness
+The next implementation and validation work must demonstrate, with separate
+evidence, that:
 
-**BUSINESS DECISION REQUIRED — Product owner/accountant.**
+1. Supplier-declared purchase values remain unchanged after calculation and
+   reconciliation.
+2. Calculated expected tax is stored and identified separately.
+3. Unresolved material discrepancies allow draft/review-pending saves but block
+   accounting completion/posting.
+4. Reconciliation resolutions are explicit and auditable.
+5. Existing purchase rounding is preserved.
+6. Purchase tax components are independently represented.
+7. Sales POS comes from required transaction facts and applicable rules, not a
+   universal billing-state shortcut.
+8. Missing sales facts and unsupported scenarios fail closed.
+9. Finalized invoice reprints use persisted transaction snapshots.
+10. Missing legacy facts are disclosed, never fabricated.
+11. No database, migration, production, or runtime claim is made without
+    corresponding evidence.
 
-Future purchase components should be nullable until a declared/calculated tax
-contract is approved. Missing components must remain distinguishable from
-verified zero. A purchase record cannot be complete when tax components,
-declared aggregate reconciliation, or required classification facts are absent.
+### Decisions still requiring approval
 
-### Decision 5 — Historical purchases and financial consistency
+- Exact purchase discrepancy tolerance and the accounting definition of
+  materiality.
+- Exact workflow/status names and authority for `REVIEW_PENDING`, resolution,
+  rejection, supplier correction, credit/debit notes, and later reconciliation.
+- Exact captured facts and supported rule scenarios for each sales and purchase
+  supply type.
+- Component completeness rules, accounting acceptance precedence, and posting
+  behavior when declared and calculated values disagree.
+- Controlled test-data migration/rebuild scope and rollback evidence.
 
-**BUSINESS DECISION REQUIRED — Accountant/product owner.**
+### Review and evidence gates
 
-Existing aggregate-only purchases must retain their aggregate totals and remain
-printable/reportable with an unavailable component disclosure. Components and
-place of supply must not be reconstructed from current supplier or business
-master data. Any future component persistence must remain inside the existing
-purchase finalization transaction with stock, numbering, supplier ledger,
-payable balance, and audit writes. Database-backed rollback and consistency
-remain unverified.
+Product/accounting owners must approve the workflow and posting decisions.
+Qualified GST/legal review is required for the covered place-of-supply rules,
+exceptions, rounding interpretation, and any statutory representation. No
+database-backed persistence, migration rollout, production readiness,
+historical immutability, or runtime financial verification is established by
+this policy record or by the pure test results.
 
 ## GSTIN State-Prefix Evidence Review — 2026-10-13
 
@@ -397,6 +509,11 @@ and therefore cannot silently drive place-of-supply classification.
 
 ## Step 3 — Minimum Safe Data Model Recommendation
 
+> This older recommendation is retained as implementation history. The
+> accepted policy above supersedes any universal billing-state or
+> supplier-state shortcut and any automatic historical backfill. The fields
+> below are proposed only; no schema or migration is authorized by this file.
+
 ### Core Principle
 **The tax calculator must be the single authoritative implementation** used by:
 - Sales draft creation
@@ -434,7 +551,11 @@ model purchase_invoice_items {
 }
 ```
 
-**Backward Compatibility:** Keep `gst_amount` as aggregate (CGST+SGST+IGST+Cess) for existing code paths. New code writes all four split fields + aggregate. Migration backfills split fields from `gst_amount` using place_of_supply on parent invoice.
+**Backward Compatibility:** Keep `gst_amount` as aggregate for existing code
+paths. New eligible records may write split fields plus aggregate only after the
+declared/calculated/accepted contract is approved. Legacy aggregate-only rows
+must retain their aggregate values; no component or POS backfill may fabricate
+missing historical facts.
 
 #### 2. Add Place of Supply to Invoice Headers
 
@@ -452,7 +573,9 @@ model purchase_invoices {
 }
 ```
 
-**Backward Compatibility:** Nullable fields. Migration backfills from business profile state vs customer/supplier state at finalization time.
+**Backward Compatibility:** Nullable fields are a design option. Finalized
+records must capture approved transaction facts at finalization; legacy records
+must remain distinguishable when those facts are unavailable.
 
 #### 3. State Code Normalization Utility
 
@@ -521,29 +644,29 @@ function computeInvoiceGst(
 
 ## Step 4 — Implementation Plan
 
-### Priority 0: Confirmed Defects Blocking Financial Correctness
+### Priority 0: Confirmed defects and policy-aligned proposed fixes
 
 | # | Defect | Evidence | Fix |
 |---|--------|----------|-----|
-| 1 | Purchase side has no intra/inter logic | `purchases.actions.ts:73-92` — `computeLineTotals()` only aggregate | Add `computePurchaseGstTotals()` using `gstCalculator` with supplier vs business profile state |
-| 2 | State name vs code mismatch | `isInterStateFromCustomer()` passes names; `detectPlaceOfSupply()` expects codes | Add `normalizeState()` utility; use in all POS determinations |
+| 1 | Purchase side has no evidence/reconciliation model | `purchases.actions.ts:73-92` — `computeLineTotals()` only aggregate | Capture supplier evidence, calculate expected values from approved facts/rules, reconcile, and block unresolved material posting |
+| 2 | Sales path uses a billing-state proxy | Current actions use business profile and customer billing state | Capture required supply facts, apply versioned supported rules, and fail closed when unresolved |
 | 3 | Sales line items store only aggregate GST | `sales_invoice_items.gst_amount` only | Add `cgst_amount`, `sgst_amount`, `igst_amount`, `cess_amount` columns |
 | 4 | Purchase line items store only aggregate GST | `purchase_invoice_items.gst_amount` only | Add same split columns + `is_rcm` |
 | 5 | No place_of_supply on finalized invoices | Schema lacks field | Add `place_of_supply` to `sales_invoices` and `purchase_invoices` |
-| 6 | Print page recomputes instead of reading persisted splits | `print/page.tsx:156-170` recomputes | Read persisted split fields; fallback to recompute only for legacy drafts |
+| 6 | Print page has legacy recomputation paths | `print/page.tsx:156-170` recomputes | Prefer persisted finalized snapshots; disclose legacy gaps without reconstruction |
 | 7 | Rounding mismatch draft vs finalize | Draft: aggregate line-rounded; Finalize: split component-rounded | Use `gstCalculator.computeTotals()` for BOTH draft and finalize; persist split fields |
 
 ### Priority 1: Minimum Fixes Before Financial Runtime E2E
 
 **Order of Implementation:**
 
-1. **Create `src/lib/constants/indian-states.ts`** — State name↔code mapping, `normalizeState()`, `getStateCodeFromGstin()`
-2. **Update `gst-calculator.service.ts`** — Ensure `detectPlaceOfSupply` documented to expect codes; add `normalizeState` import
-3. **Update `sales.actions.ts`** — Use `normalizeState()` for business/customer state before POS detection; use `gstCalculator.computeTotals()` for draft creation too (not just finalize); persist split fields
-4. **Update `purchases.actions.ts`** — Add `computePurchaseGstTotals()` mirroring sales logic with supplier vs business profile state; persist split fields
+1. **Define captured supply facts and versioned rules** for each supported sales and purchase scenario; do not rely on GSTIN prefix alone.
+2. **Update `gst-calculator.service.ts`** — expose explicit rule/version and unresolved-scenario outcomes while preserving pure calculation behavior.
+3. **Update `sales.actions.ts`** — validate required transaction facts, fail closed for unsupported scenarios, and persist approved facts/splits/snapshots.
+4. **Update `purchases.actions.ts`** — preserve supplier evidence, calculate separately, reconcile, and block unresolved material posting.
 5. **Prisma Migration** — Add split columns + `place_of_supply` to both invoice models
-6. **Backfill Migration** — For existing finalized invoices, compute splits from `gst_amount` using stored header states
-7. **Update `print/page.tsx`** — Read persisted split fields; use `invoice.place_of_supply` for display
+6. **Controlled test-data rebuild option** — only after explicit approval; never infer missing facts from mutable masters
+7. **Update `print/page.tsx`** — Read persisted finalized facts; disclose unavailable legacy detail
 8. **Update validation schemas** — Add state code validation to business profile; add GSTIN checksum validation (optional for MVP)
 
 ### Priority 2: Schema & Migration Implications
@@ -566,25 +689,17 @@ ALTER TABLE sales_invoices ADD COLUMN place_of_supply CHAR(2);
 ALTER TABLE purchase_invoices ADD COLUMN place_of_supply CHAR(2);
 ALTER TABLE purchase_invoices ADD COLUMN is_rcm BOOLEAN DEFAULT FALSE;
 
--- 2. Backfill for finalized invoices
-UPDATE sales_invoice_items sii
-SET cgst_amount = CASE 
-  WHEN si.place_of_supply = bp.state_code THEN sii.gst_amount / 2 ELSE 0 END,
-    sgst_amount = CASE 
-  WHEN si.place_of_supply = bp.state_code THEN sii.gst_amount / 2 ELSE 0 END,
-    igst_amount = CASE 
-  WHEN si.place_of_supply != bp.state_code THEN sii.gst_amount ELSE 0 END
-FROM sales_invoices si
-JOIN business_profiles bp ON bp.tenant_id = si.tenant_id
-WHERE si.status = 'FINALIZED' AND sii.cgst_amount = 0;
-
--- Similar for purchase_invoice_items using supplier.state
+-- Do not backfill finalized records from mutable current masters.
+-- A separately approved test-data rebuild must preserve aggregate totals and
+-- label unavailable historical components/POS as unavailable.
 ```
 
 **Backward Compatibility:**
 - Existing code reading `gst_amount` continues to work
-- New code writes both aggregate and split
-- Print page prefers split fields, falls back to recompute for NULL splits (drafts/legacy)
+- New eligible code writes both aggregate and split values only when their
+  source/evidence status is recorded
+- Print page prefers persisted finalized values and discloses legacy gaps; it
+  does not present current master data as verified historical data
 
 ### Priority 3: Required Regression Tests
 
@@ -622,50 +737,34 @@ WHERE si.status = 'FINALIZED' AND sii.cgst_amount = 0;
 | Composition scheme | Not applicable to pharma wholesale typically |
 | Export/SEZ zero-rated | Not in initial customer base |
 
-### Priority 5: Dependencies & Suggested Order
+### Proposed implementation order — authorization required
 
-```
-1. indian-states.ts (utility)                    ← No deps
-       ↓
-2. gst-calculator.service.ts (ensure POS uses codes)  ← Uses 1
-       ↓
-3. sales.actions.ts (draft + finalize use calculator) ← Uses 2
-       ↓
-4. purchases.actions.ts (add intra/inter logic)      ← Uses 2
-       ↓
-5. Prisma schema + migration (split fields + POS)    ← Uses 3,4
-       ↓
-6. Backfill migration script                         ← Uses 5
-       ↓
-7. print/page.tsx (read persisted splits)            ← Uses 5
-       ↓
-8. Validation schema updates (business profile)      ← Independent
-       ↓
-9. Financial E2E tests (all scenarios above)         ← Uses 1-7
-```
+The following sequence is implementation-ready but is not authorization to
+execute code, schema, migration, database, or production changes:
 
----
+1. Define versioned purchase evidence, calculation, reconciliation, and
+   accounting-acceptance contracts, including explicit status transitions and
+   audit events.
+2. Define captured sales and purchase supply facts and supported versioned rule
+   scenarios; obtain qualified GST review.
+3. Add provider-independent domain and persistence support for declared,
+   calculated, accepted, component, POS, discrepancy, and snapshot facts
+   without changing existing purchase rounding.
+4. Add fail-closed actions, review/posting guards, and snapshot-first printing
+   with disclosed legacy fallback.
+5. Add focused pure tests for the acceptance criteria, then an authorized
+   isolated-database run for persistence, rollback, RLS, ledger, sequence,
+   cleanup, and historical immutability.
+6. Consider a separately approved controlled test-data migration/rebuild only
+   after schema review, backup/rollback evidence, and explicit authorization.
 
-## Summary: Minimum Safe Scope for MVP
+## Validation gate
 
-**Must Implement Before Financial E2E:**
-1. ✅ State code normalization utility
-2. ✅ Purchase intra/inter GST logic (parity with sales)
-3. ✅ Persisted CGST/SGST/IGST/Cess split on ALL line items (sales + purchases)
-4. ✅ `place_of_supply` on finalized invoice headers
-5. ✅ Single authoritative `gstCalculator.computeTotals()` for draft + finalize + print
-6. ✅ Print page reads persisted splits (not recompute)
-7. ✅ Rounding: line-level component rounding per GST law (calculator already does this)
-8. ✅ Migration + backfill for existing finalized invoices
+The financial E2E harness must run the approved purchase reconciliation,
+sales-fact/POS, snapshot-print, ledger, rollback, sequence, tenant-isolation,
+and cleanup scenarios against a separately verified disposable database. All
+required scenarios must pass before production-readiness consideration.
+Until then, GST-019 and GST-020 remain blocked.
 
-**Can Defer:**
-- All GSTR-1/3B report generation
-- E-Invoice, E-Way Bill, RCM, Credit/Debit notes, ITC reconciliation
-- GSTIN checksum validation (format only for MVP)
-- Multi-GSTIN, Composition, Export/SEZ
-
-**Validation Gate:** Financial E2E harness runs all 12 regression test scenarios above against disposable test database. All must pass before production deployment consideration.
-
----
-
-*This validation and plan is based on read-only code inspection. No files modified. Awaiting approval to proceed with implementation.*
+*This document records accepted policy and an implementation-ready proposal.
+Application implementation remains separately authorized work.*

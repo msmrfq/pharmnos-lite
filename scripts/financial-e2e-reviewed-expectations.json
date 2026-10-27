@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "status": "REVIEW_ONLY_PENDING_OWNER_APPROVAL",
+  "approved": false,
+  "catalog": {
+    "requiredSchemas": ["public"],
+    "requiredObjects": [],
+    "requiredConstraints": [],
+    "requiredIndexes": [],
+    "requiredTriggers": [],
+    "requiredFunctions": [],
+    "requiredGrants": []
+  },
+  "rls": {
+    "requiredTables": [],
+    "requiredPolicies": [],
+    "requiredRoles": ["pharmnos_e2e_runtime"]
+  }
+}

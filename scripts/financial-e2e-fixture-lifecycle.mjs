@@ -1,8 +1,17 @@
+import { validateDatabaseIdentityEvidence } from "./financial-e2e-safety.mjs";
+
 const RESOURCE_CLEANUP_ORDER = Object.freeze([
     "payments",
     "customer_ledgers",
     "supplier_ledgers",
     "stock_movements",
+    "purchase_gst_reconciliation_event_lines",
+    "purchase_gst_accounting_decisions",
+    "purchase_gst_calculations",
+    "purchase_gst_line_evidence",
+    "purchase_gst_reconciliation_events",
+    "purchase_posting_operations",
+    "purchase_gst_evidence_revisions",
     "sales_invoice_items",
     "purchase_invoice_items",
     "sales_invoices",
@@ -237,13 +246,29 @@ export function recordFixtureCreationFailure(manifest, errorMessage, confirmedId
     });
 }
 
-export function authorizeFixtureCleanup(manifest, { databaseIdentityVerified, cleanupAuthorized }) {
+export function authorizeFixtureCleanup(manifest, {
+    identityEvidence,
+    targetUrl,
+    databaseName,
+    databaseRole,
+    runId,
+    cleanupAuthorized,
+    now = Date.now(),
+}) {
     validateManifest(manifest);
     if (manifest.status !== FIXTURE_READY_STATUS && manifest.status !== CLEANUP_READY_FAILURE_STATUS) {
         throw new Error("Cleanup requires a FIXTURE_READY or ownership-confirmed partial-failure manifest.");
     }
-    if (databaseIdentityVerified !== true) {
-        throw new Error("Cleanup requires independent database identity verification.");
+    const identityResult = validateDatabaseIdentityEvidence({
+        evidence: identityEvidence,
+        targetUrl,
+        expectedDatabase: databaseName,
+        expectedRole: databaseRole,
+        runId,
+        now,
+    });
+    if (!identityResult?.ok) {
+        throw new Error(identityResult?.error || "Cleanup requires valid database identity evidence.");
     }
     if (cleanupAuthorized !== true) {
         throw new Error("Cleanup requires explicit authorization.");
@@ -304,12 +329,31 @@ export function recordCleanupSuccess(manifest, result) {
     });
 }
 
-export function canStartFinancialScenario({ manifest, databaseIdentityVerified, executionAuthorized, scenarioRunnerEnabled }) {
+export function canStartFinancialScenario({
+    manifest,
+    identityEvidence,
+    targetUrl,
+    databaseName,
+    databaseRole,
+    runId,
+    now = Date.now(),
+    executionAuthorized,
+    scenarioRunnerEnabled,
+}) {
     try {
         validateManifest(manifest);
+        const identityResult = validateDatabaseIdentityEvidence({
+            evidence: identityEvidence,
+            expectedDatabase: databaseName,
+            expectedRole: databaseRole,
+            targetUrl,
+            runId,
+            now,
+        });
         return Boolean(
             manifest.status === FIXTURE_READY_STATUS &&
-            databaseIdentityVerified === true &&
+            identityResult.ok &&
+            manifest.runId === runId &&
             executionAuthorized === true &&
             scenarioRunnerEnabled === false,
         );

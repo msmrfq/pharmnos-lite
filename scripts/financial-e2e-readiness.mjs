@@ -1,4 +1,7 @@
-import { validateFinancialE2eTarget } from "./financial-e2e-safety.mjs";
+import {
+    validateDatabaseIdentityEvidence,
+    validateFinancialE2eTarget,
+} from "./financial-e2e-safety.mjs";
 
 export function validateFixtureCleanup({ runId, ownedIds, requestedIds }) {
     const errors = [];
@@ -16,16 +19,19 @@ export function validateFixtureCleanup({ runId, ownedIds, requestedIds }) {
     return { ok: errors.length === 0, errors };
 }
 
-export function validateFinancialE2eReadiness({
+export async function validateFinancialE2eReadiness({
     target,
     fixtureStrategy,
     cleanupStrategy,
-    databaseIdentityVerified = false,
+    identityEvidence,
+    databaseRole,
+    runId,
+    now = Date.now(),
     executionAuthorized = false,
     scenarioRunnerEnabled = false,
 }) {
     const errors = [];
-    const targetResult = validateFinancialE2eTarget(target ?? {});
+    const targetResult = await validateFinancialE2eTarget(target ?? {});
 
     if (!targetResult.ok) errors.push(...targetResult.errors);
     if (!fixtureStrategy?.name || !fixtureStrategy?.tenantOwnershipKey) {
@@ -40,8 +46,16 @@ export function validateFinancialE2eReadiness({
     if (cleanupStrategy?.explicitlyGated !== true) {
         errors.push("Cleanup must have an explicit authorization gate.");
     }
-    if (databaseIdentityVerified !== true) {
-        errors.push("Database identity requires independent authorized verification.");
+    const identityResult = validateDatabaseIdentityEvidence({
+        evidence: identityEvidence,
+        expectedDatabase: target?.testDatabaseName,
+        expectedRole: databaseRole,
+        targetUrl: target?.testUrl,
+        runId,
+        now,
+    });
+    if (!identityResult.ok) {
+        errors.push(identityResult.error);
     }
     if (executionAuthorized !== true) {
         errors.push("Financial E2E execution requires explicit authorization.");

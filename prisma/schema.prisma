@@ -46,6 +46,7 @@ enum PermissionAction {
   create_purchase
   edit_purchase
   view_purchase
+  accept_purchase_gst
   finalize_purchase
 
   // billing
@@ -79,6 +80,33 @@ enum TaxDataStatus {
   LEGACY_AGGREGATE_ONLY
   PARTIAL
   UNRESOLVED
+}
+
+enum PurchaseGstReconciliationStatus {
+  NOT_RECONCILED
+  MATCHED
+  DISCREPANCY_REQUIRES_REVIEW
+  RESOLVED
+}
+
+enum PurchaseGstAccountingAcceptanceStatus {
+  NOT_ACCEPTED
+  ACCEPTED
+}
+
+enum PurchaseGstEvidenceRevisionKind {
+  INITIAL
+  CORRECTION
+}
+
+enum PurchaseGstReconciliationEventKind {
+  EVIDENCE_CAPTURED
+  CALCULATION_RECORDED
+  MATCHED
+  DISCREPANCY_REQUIRES_REVIEW
+  RESOLVED
+  ACCOUNTING_ACCEPTED
+  CORRECTED
 }
 
 enum PaymentMode {
@@ -125,6 +153,8 @@ enum AuditEventType {
   PRICE_UPDATED
   PRODUCT_CREATED
   PRODUCT_UPDATED
+  CUSTOMER_DEACTIVATED
+  SUPPLIER_DEACTIVATED
 }
 
 enum LedgerEntryType {
@@ -163,6 +193,9 @@ model tenants {
   payments              payments[]
   purchase_invoice_items purchase_invoice_items[]
   sales_invoice_items    sales_invoice_items[]
+  purchase_gst_line_evidence purchase_gst_line_evidence[]
+  purchase_gst_reconciliation_events purchase_gst_reconciliation_events[]
+  posting_operations purchase_posting_operations[]
 
   @@index([slug])
 }
@@ -196,8 +229,12 @@ model memberships {
   tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   user   users   @relation(fields: [user_id], references: [id], onDelete: Cascade)
   role   roles   @relation(fields: [role_id], references: [id], onDelete: Restrict)
+  captured_gst_evidence_revisions purchase_gst_evidence_revisions[] @relation("purchase_gst_evidence_capture_actor")
+  accounting_decisions purchase_gst_accounting_decisions[] @relation("purchase_gst_accounting_decision_actor")
+  gst_reconciliation_events purchase_gst_reconciliation_events[] @relation("purchase_gst_event_actor")
 
   @@unique([tenant_id, user_id])
+  @@unique([tenant_id, id])
   @@index([tenant_id])
   @@index([user_id])
 }
@@ -402,6 +439,12 @@ model purchase_invoices {
   supplier_invoice_no String?
   invoice_date    DateTime
   status          InvoiceStatus @default(DRAFT)
+  gst_reconciliation_status PurchaseGstReconciliationStatus @default(NOT_RECONCILED)
+  gst_accounting_acceptance_status PurchaseGstAccountingAcceptanceStatus @default(NOT_ACCEPTED)
+  current_gst_evidence_revision_id String?
+  current_gst_calculation_id String?
+  current_gst_accounting_decision_id String?
+  gst_record_version Int @default(0)
   gross_amount    Decimal       @db.Decimal(14, 2)
   total_discount  Decimal       @default(0) @db.Decimal(14, 2)
   total_tax       Decimal       @default(0) @db.Decimal(14, 2)
@@ -417,15 +460,47 @@ model purchase_invoices {
 
   tenant   tenants                @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   supplier suppliers              @relation(fields: [supplier_id], references: [id], onDelete: Restrict)
-  items    purchase_invoice_items[]
+  items    purchase_invoice_items[] @relation("purchase_invoice_items")
   batches  product_batches[]
   ledger   supplier_ledgers[]
+  gst_evidence_revisions purchase_gst_evidence_revisions[] @relation("purchase_invoice_gst_revisions")
+  current_gst_evidence_revision purchase_gst_evidence_revisions? @relation("purchase_current_gst_evidence_revision", fields: [tenant_id, id, current_gst_evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_invoices_current_gst_evidence_fkey")
+  gst_calculations purchase_gst_calculations[] @relation("purchase_gst_calculation_purchase")
+  current_gst_calculation purchase_gst_calculations? @relation("purchase_current_gst_calculation", fields: [tenant_id, id, current_gst_calculation_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_invoices_current_gst_calculation_fkey")
+  gst_accounting_decisions purchase_gst_accounting_decisions[] @relation("purchase_gst_decision_purchase")
+  current_gst_accounting_decision purchase_gst_accounting_decisions? @relation("purchase_current_gst_accounting_decision", fields: [tenant_id, id, current_gst_accounting_decision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_invoices_current_gst_accounting_decision_fkey")
+  gst_reconciliation_events purchase_gst_reconciliation_events[] @relation("purchase_gst_event_purchase")
+  posting_operations purchase_posting_operations[]
 
   @@unique([tenant_id, invoice_no])
+  @@unique([tenant_id, id])
+  @@unique([tenant_id, id, current_gst_evidence_revision_id])
+  @@unique([tenant_id, id, current_gst_calculation_id])
+  @@unique([tenant_id, id, current_gst_accounting_decision_id])
   @@index([tenant_id])
   @@index([tenant_id, status])
   @@index([tenant_id, supplier_id])
   @@index([tenant_id, invoice_date])
+}
+
+model purchase_posting_operations {
+  id                String   @id @default(cuid())
+  tenant_id         String
+  purchase_invoice_id String
+  idempotency_key   String
+  request_payload_hash String
+  status            String   @default("PROCESSING")
+  result_invoice_no String?
+  result_purchase_id String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  tenant   tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  purchase purchase_invoices @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict)
+
+  @@unique([tenant_id, idempotency_key], map: "purchase_posting_idempotency_key")
+  @@unique([tenant_id, purchase_invoice_id], map: "purchase_posting_purchase_key")
+  @@index([tenant_id, purchase_invoice_id, status])
 }
 
 model purchase_invoice_items {
@@ -448,12 +523,204 @@ model purchase_invoice_items {
   created_at       DateTime @default(now())
 
   tenant   tenants           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  purchase purchase_invoices @relation(fields: [purchase_id], references: [id], onDelete: Cascade)
+  purchase purchase_invoices @relation("purchase_invoice_items", fields: [tenant_id, purchase_id], references: [tenant_id, id], onDelete: Cascade, map: "purchase_invoice_items_purchase_fkey")
   product  products          @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  gst_line_evidence purchase_gst_line_evidence[] @relation("purchase_gst_line_evidence_item")
 
   @@index([tenant_id])
   @@index([purchase_id])
   @@index([product_id])
+  @@unique([tenant_id, purchase_id, id])
+}
+
+model purchase_gst_evidence_revisions {
+  id                    String @id @default(cuid())
+  tenant_id             String
+  purchase_invoice_id   String
+  revision_number       Int
+  revision_kind         PurchaseGstEvidenceRevisionKind
+  supersedes_revision_id String?
+  source_document_reference String?
+  capture_channel       String
+  capture_provenance    Json?
+  correction_reason     String?
+  captured_at           DateTime @default(now())
+  captured_by_membership_id String
+  declared_taxable_value_raw String?
+  declared_cgst_raw String?
+  declared_sgst_raw String?
+  declared_igst_raw String?
+  declared_cess_raw String?
+  declared_invoice_total_raw String?
+  declared_round_off_raw String?
+  declared_taxable_value Decimal? @db.Decimal(20, 4)
+  declared_cgst Decimal? @db.Decimal(20, 4)
+  declared_sgst Decimal? @db.Decimal(20, 4)
+  declared_igst Decimal? @db.Decimal(20, 4)
+  declared_cess Decimal? @db.Decimal(20, 4)
+  declared_invoice_total Decimal? @db.Decimal(20, 4)
+  declared_round_off Decimal? @db.Decimal(20, 4)
+  supplier_state_at_transaction String?
+  recipient_state_at_transaction String?
+  delivery_state_at_transaction String?
+  supply_scenario String?
+  supply_facts Json?
+  source_fingerprint String?
+
+  purchase purchase_invoices @relation("purchase_invoice_gst_revisions", fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_evidence_purchase_fkey")
+  current_for_purchase purchase_invoices? @relation("purchase_current_gst_evidence_revision")
+  superseded_revision purchase_gst_evidence_revisions? @relation("purchase_gst_revision_chain", fields: [tenant_id, purchase_invoice_id, supersedes_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_evidence_supersedes_fkey")
+  correcting_revisions purchase_gst_evidence_revisions[] @relation("purchase_gst_revision_chain")
+  captured_by memberships @relation("purchase_gst_evidence_capture_actor", fields: [tenant_id, captured_by_membership_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_evidence_capture_actor_fkey")
+  line_evidence purchase_gst_line_evidence[]
+  calculations purchase_gst_calculations[]
+  decisions purchase_gst_accounting_decisions[]
+  reconciliation_events purchase_gst_reconciliation_events[]
+
+  @@unique([tenant_id, purchase_invoice_id, id], map: "purchase_gst_evidence_revision_identity_key")
+  @@unique([tenant_id, purchase_invoice_id, revision_number], map: "purchase_gst_evidence_revision_number_key")
+  @@index([tenant_id, purchase_invoice_id, captured_at], map: "purchase_gst_evidence_captured_at_idx")
+  @@index([tenant_id, purchase_invoice_id, revision_kind], map: "purchase_gst_evidence_revision_kind_idx")
+  @@index([tenant_id, purchase_invoice_id, supersedes_revision_id], map: "purchase_gst_evidence_supersedes_idx")
+  @@index([tenant_id, source_fingerprint])
+}
+
+model purchase_gst_line_evidence {
+  id String @id @default(cuid())
+  tenant_id String
+  purchase_invoice_id String
+  evidence_revision_id String
+  purchase_invoice_item_id String
+  declared_taxable_value_raw String?
+  declared_cgst_raw String?
+  declared_sgst_raw String?
+  declared_igst_raw String?
+  declared_cess_raw String?
+  declared_line_total_raw String?
+  declared_taxable_value Decimal? @db.Decimal(20, 4)
+  declared_cgst Decimal? @db.Decimal(20, 4)
+  declared_sgst Decimal? @db.Decimal(20, 4)
+  declared_igst Decimal? @db.Decimal(20, 4)
+  declared_cess Decimal? @db.Decimal(20, 4)
+  declared_line_total Decimal? @db.Decimal(20, 4)
+
+  tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  evidence_revision purchase_gst_evidence_revisions @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_line_evidence_revision_fkey")
+  purchase_item purchase_invoice_items @relation("purchase_gst_line_evidence_item", fields: [tenant_id, purchase_invoice_id, purchase_invoice_item_id], references: [tenant_id, purchase_id, id], onDelete: Restrict, map: "purchase_gst_line_evidence_item_fkey")
+  event_links purchase_gst_reconciliation_event_lines[]
+
+  @@unique([tenant_id, purchase_invoice_id, evidence_revision_id, id])
+  @@unique([tenant_id, evidence_revision_id, purchase_invoice_item_id])
+  @@index([tenant_id, purchase_invoice_id, purchase_invoice_item_id])
+  @@index([tenant_id, purchase_invoice_id, evidence_revision_id])
+}
+
+model purchase_gst_calculations {
+  id String @id @default(cuid())
+  tenant_id String
+  purchase_invoice_id String
+  evidence_revision_id String
+  rule_version String
+  calculated_at DateTime @default(now())
+  calculation_provenance Json?
+  input_fingerprint String?
+  calculated_taxable_value Decimal? @db.Decimal(20, 4)
+  calculated_cgst Decimal? @db.Decimal(20, 4)
+  calculated_sgst Decimal? @db.Decimal(20, 4)
+  calculated_igst Decimal? @db.Decimal(20, 4)
+  calculated_cess Decimal? @db.Decimal(20, 4)
+  calculated_invoice_total Decimal? @db.Decimal(20, 4)
+  calculated_round_off Decimal? @db.Decimal(20, 4)
+
+  purchase purchase_invoices @relation("purchase_gst_calculation_purchase", fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_calculation_purchase_fkey")
+  current_for_purchase purchase_invoices? @relation("purchase_current_gst_calculation")
+  evidence_revision purchase_gst_evidence_revisions @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_calculation_revision_fkey")
+  accounting_decisions purchase_gst_accounting_decisions[] @relation("purchase_gst_decision_calculation")
+
+  @@unique([tenant_id, purchase_invoice_id, id])
+  @@index([tenant_id, purchase_invoice_id, evidence_revision_id])
+  @@index([tenant_id, rule_version])
+}
+
+model purchase_gst_accounting_decisions {
+  id String @id @default(cuid())
+  tenant_id String
+  purchase_invoice_id String
+  evidence_revision_id String
+  calculation_id String
+  accepted_taxable_value Decimal? @db.Decimal(20, 4)
+  accepted_cgst Decimal? @db.Decimal(20, 4)
+  accepted_sgst Decimal? @db.Decimal(20, 4)
+  accepted_igst Decimal? @db.Decimal(20, 4)
+  accepted_cess Decimal? @db.Decimal(20, 4)
+  accepted_invoice_total Decimal? @db.Decimal(20, 4)
+  accepted_round_off Decimal? @db.Decimal(20, 4)
+  accepted_value_source String
+  decision_reference String
+  decision_outcome String
+  rationale String
+  decided_at DateTime @default(now())
+  decided_by_membership_id String
+
+  purchase purchase_invoices @relation("purchase_gst_decision_purchase", fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_decision_purchase_fkey")
+  current_for_purchase purchase_invoices? @relation("purchase_current_gst_accounting_decision")
+  evidence_revision purchase_gst_evidence_revisions @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_decision_revision_fkey")
+  decided_by memberships @relation("purchase_gst_accounting_decision_actor", fields: [tenant_id, decided_by_membership_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_decision_actor_fkey")
+  calculation purchase_gst_calculations @relation("purchase_gst_decision_calculation", fields: [tenant_id, purchase_invoice_id, calculation_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_decision_calculation_fkey")
+
+  @@unique([tenant_id, purchase_invoice_id, id], map: "purchase_gst_decision_identity_key")
+  @@unique([tenant_id, purchase_invoice_id, evidence_revision_id, decision_reference], map: "purchase_gst_decision_reference_key")
+  @@index([tenant_id, purchase_invoice_id, evidence_revision_id])
+}
+
+model purchase_gst_reconciliation_events {
+  id String @id @default(cuid())
+  tenant_id String
+  purchase_invoice_id String
+  evidence_revision_id String
+  event_kind PurchaseGstReconciliationEventKind
+  from_status PurchaseGstReconciliationStatus?
+  to_status PurchaseGstReconciliationStatus?
+  operation String
+  idempotency_key String
+  request_payload_hash String?
+  decision_reference String?
+  rule_version String?
+  actor_membership_id String?
+  declared_snapshot Json?
+  calculated_snapshot Json?
+  accepted_snapshot Json?
+  discrepancy_details Json?
+  metadata Json?
+  created_at DateTime @default(now())
+
+  tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  purchase purchase_invoices @relation("purchase_gst_event_purchase", fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_event_purchase_fkey")
+  evidence_revision purchase_gst_evidence_revisions @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_event_revision_fkey")
+  actor memberships? @relation("purchase_gst_event_actor", fields: [tenant_id, actor_membership_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_event_actor_fkey")
+  line_links purchase_gst_reconciliation_event_lines[]
+
+  @@unique([tenant_id, purchase_invoice_id, evidence_revision_id, id])
+  @@unique([tenant_id, operation, idempotency_key])
+  @@index([tenant_id, purchase_invoice_id, created_at])
+  @@index([tenant_id, evidence_revision_id, created_at])
+  @@index([tenant_id, event_kind, created_at])
+  @@index([tenant_id, actor_membership_id])
+}
+
+model purchase_gst_reconciliation_event_lines {
+  id String @id @default(cuid())
+  tenant_id String
+  purchase_invoice_id String
+  evidence_revision_id String
+  event_id String
+  line_evidence_id String
+
+  event purchase_gst_reconciliation_events @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id, event_id], references: [tenant_id, purchase_invoice_id, evidence_revision_id, id], onDelete: Restrict, map: "purchase_gst_event_line_event_fkey")
+  line_evidence purchase_gst_line_evidence @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id, line_evidence_id], references: [tenant_id, purchase_invoice_id, evidence_revision_id, id], onDelete: Restrict, map: "purchase_gst_event_line_evidence_fkey")
+
+  @@unique([tenant_id, purchase_invoice_id, evidence_revision_id, id], map: "purchase_gst_event_line_identity_key")
+  @@unique([tenant_id, purchase_invoice_id, evidence_revision_id, event_id, line_evidence_id], map: "purchase_gst_event_line_pair_key")
 }
 
 // ═══════════════════════════════════════════════════════════

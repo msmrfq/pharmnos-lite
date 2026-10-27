@@ -47,6 +47,12 @@ type LineRow = {
   sale_rate: number;
   discount_pct: number;
   gst_rate: number;
+  declared_taxable_value: string;
+  declared_cgst: string;
+  declared_sgst: string;
+  declared_igst: string;
+  declared_cess: string;
+  declared_line_total: string;
 };
 
 type Props = {
@@ -89,6 +95,12 @@ function emptyLine(): LineRow {
     sale_rate: 0,
     discount_pct: 0,
     gst_rate: 0,
+    declared_taxable_value: "",
+    declared_cgst: "",
+    declared_sgst: "",
+    declared_igst: "",
+    declared_cess: "",
+    declared_line_total: "",
   };
 }
 
@@ -217,6 +229,59 @@ export default function PurchasesNewClientForm({ suppliers, products }: Props) {
                 <Label htmlFor="supplier_invoice_no">Supplier invoice no.</Label>
                 <Input id="supplier_invoice_no" name="supplier_invoice_no" placeholder="e.g. INV/CIP/00219" />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="declared_taxable_value">Supplier taxable value</Label>
+                <Input id="declared_taxable_value" name="declared_taxable_value" type="number" step="0.01" min={0} placeholder="From supplier invoice" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="declared_cgst">Supplier CGST</Label>
+                <Input id="declared_cgst" name="declared_cgst" type="number" step="0.01" min={0} placeholder="0.00 if not applicable" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="declared_sgst">Supplier SGST</Label>
+                <Input id="declared_sgst" name="declared_sgst" type="number" step="0.01" min={0} placeholder="0.00 if not applicable" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="declared_igst">Supplier IGST</Label>
+                <Input id="declared_igst" name="declared_igst" type="number" step="0.01" min={0} placeholder="0.00 if not applicable" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="declared_cess">Supplier cess</Label>
+                <Input id="declared_cess" name="declared_cess" type="number" step="0.01" min={0} placeholder="0.00 if not applicable" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="declared_invoice_total">Supplier invoice total</Label>
+                <Input id="declared_invoice_total" name="declared_invoice_total" type="number" step="0.01" min={0} placeholder="From supplier invoice" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="declared_round_off">Supplier round-off</Label>
+                <Input id="declared_round_off" name="declared_round_off" type="number" step="0.01" placeholder="Signed amount" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="supplier_state_at_transaction">Supplier state at transaction</Label>
+                <Input id="supplier_state_at_transaction" name="supplier_state_at_transaction" placeholder="As shown on invoice" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="recipient_state_at_transaction">Recipient state at transaction</Label>
+                <Input id="recipient_state_at_transaction" name="recipient_state_at_transaction" placeholder="Your registered state" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="delivery_state_at_transaction">Delivery state at transaction</Label>
+                <Input id="delivery_state_at_transaction" name="delivery_state_at_transaction" placeholder="Where goods were delivered" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="supply_scenario">Supply scenario</Label>
+                <select
+                  id="supply_scenario"
+                  name="supply_scenario"
+                  defaultValue=""
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="" disabled>Select scenario when capturing GST evidence</option>
+                  <option value="INTRA_STATE">Intra-state</option>
+                  <option value="INTER_STATE">Inter-state</option>
+                </select>
+              </div>
               <div className="space-y-2" data-field-error={!!fieldError(errors, "invoice_date")}>
                 <Label htmlFor="invoice_date_visible">Purchase date</Label>
                 <Input id="invoice_date_visible" type="date" defaultValue={today} onChange={(e) => {
@@ -266,6 +331,7 @@ export default function PurchasesNewClientForm({ suppliers, products }: Props) {
                   {lines.map((row, idx) => {
                     const lineTotal = totals.lineTotals[idx]?.line_total ?? 0;
                     return (
+                      <>
                       <TableRow key={idx}>
                         <TableCell data-field-error={!!fieldError(errors, `lines[${idx}].product_id`)}>
                           <div className="flex items-center gap-2">
@@ -400,6 +466,37 @@ export default function PurchasesNewClientForm({ suppliers, products }: Props) {
                           </div>
                         </TableCell>
                       </TableRow>
+                      <TableRow key={`${idx}-gst-evidence`}>
+                        <TableCell colSpan={10} className="bg-surface-muted">
+                          <div className="grid gap-2 sm:grid-cols-6">
+                            <span className="text-caption text-muted sm:col-span-6">
+                              Optional supplier line evidence — leave blank when the invoice does not provide line-level values.
+                            </span>
+                            {([
+                              ["declared_taxable_value", "Taxable"],
+                              ["declared_cgst", "CGST"],
+                              ["declared_sgst", "SGST"],
+                              ["declared_igst", "IGST"],
+                              ["declared_cess", "Cess"],
+                              ["declared_line_total", "Line total"],
+                            ] as Array<[string, string]>).map(([field, label]) => (
+                              <div key={field}>
+                                <Label className="text-caption" htmlFor={`lines-${idx}-${field}`}>{label}</Label>
+                                <Input
+                                  id={`lines-${idx}-${field}`}
+                                  name={`lines[${idx}].${field}`}
+                                  type="number"
+                                  step="0.01"
+                                  min={0}
+                                  defaultValue={(row as any)[field] ?? ""}
+                                  className="h-8"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      </>
                     );
                   })}
                 </TableBody>

@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 
 import { Client } from "pg";
-import { REQUIRED_MARKER, validateFinancialE2eTarget } from "./financial-e2e-safety.mjs";
+import {
+    REQUIRED_MARKER,
+    validateFinancialE2eTarget,
+    verifyDatabaseIdentity,
+} from "./financial-e2e-safety.mjs";
 const BLOCKED_EXIT = 2;
 
 function fail(message) {
@@ -15,24 +19,26 @@ function readRequiredEnv(name) {
     return value;
 }
 
-async function verifyDatabaseIdentity(testUrl, expectedDatabase, marker) {
-    const client = new Client({ connectionString: testUrl, application_name: marker });
+async function verifyConnectedIdentity(runtimeUrl, expectedDatabase, expectedRole, marker, runId) {
+    const client = new Client({ connectionString: runtimeUrl, application_name: marker });
     await client.connect();
     try {
-        const result = await client.query("SELECT current_database() AS database_name, current_setting('application_name', true) AS application_name");
-        const row = result.rows[0];
-        if (row?.database_name !== expectedDatabase) {
-            throw new Error("Connected database identity does not match TEST_DATABASE_NAME.");
-        }
-        if (row?.application_name !== marker) {
-            throw new Error("Connected database application marker does not match the required test marker.");
-        }
+        return await verifyDatabaseIdentity({
+            client,
+            expectedDatabase,
+            expectedRole,
+            targetUrl: runtimeUrl,
+            runId,
+            expectedEnvironmentMarker: REQUIRED_MARKER,
+        });
     } finally {
         await client.end();
     }
 }
 
 async function main() {
+    fail("connected execution is disabled until the initialization adapter and approved executable package are available");
+    return;
     if (process.env.ALLOW_FINANCIAL_E2E !== "true") {
         fail("set ALLOW_FINANCIAL_E2E=true explicitly before any financial test run");
         return;
@@ -42,20 +48,33 @@ async function main() {
     let ordinaryUrl;
     let testDatabaseName;
     let marker;
+    let runtimeUrl;
+    let runtimeDatabaseRole;
+    const runId = `financial-e2e-${Date.now()}`;
     try {
         testUrl = readRequiredEnv("TEST_DATABASE_URL");
         ordinaryUrl = readRequiredEnv("DATABASE_URL");
         testDatabaseName = readRequiredEnv("TEST_DATABASE_NAME");
         marker = readRequiredEnv("TEST_DATABASE_MARKER");
-        const safety = validateFinancialE2eTarget({ testUrl, ordinaryUrl, testDatabaseName, marker });
+        runtimeUrl = readRequiredEnv("FINANCIAL_E2E_RUNTIME_DATABASE_URL");
+        runtimeDatabaseRole = readRequiredEnv("FINANCIAL_E2E_RUNTIME_DB_USER");
+        const safety = await validateFinancialE2eTarget({ testUrl, ordinaryUrl, testDatabaseName, marker });
         if (!safety.ok) throw new Error(safety.errors.join(" "));
+        const runtimeSafety = await validateFinancialE2eTarget({
+            testUrl: runtimeUrl,
+            ordinaryUrl,
+            testDatabaseName,
+            marker,
+        });
+        if (!runtimeSafety.ok) throw new Error(runtimeSafety.errors.join(" "));
     } catch (error) {
         fail(error instanceof Error ? error.message : "safety preflight failed");
         return;
     }
 
     try {
-        await verifyDatabaseIdentity(testUrl, testDatabaseName, marker);
+        const identity = await verifyConnectedIdentity(runtimeUrl, testDatabaseName, runtimeDatabaseRole, marker, runId);
+        if (!identity.ok) throw new Error(identity.error);
     } catch {
         fail("isolated test database identity could not be verified");
         return;

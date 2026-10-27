@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import type { audit_logs, AuditEventType } from "@prisma/client";
-import { BaseRepository, ListParams, type PagedResult } from "@/lib/db/base-repository";
+import { BaseRepository, type ListParams, type PagedResult } from "@/lib/db/base-repository";
 import type { TenantContext } from "@/lib/db/tenant-context";
 
 export type AuditLogListParams = ListParams & {

@@ -19,6 +19,8 @@ export const AUDIT_BADGE_MAP: Record<AuditEventType, BadgeVariant> = {
   PRICE_UPDATED: "success",
   PRODUCT_CREATED: "success",
   PRODUCT_UPDATED: "success",
+  CUSTOMER_DEACTIVATED: "warning",
+  SUPPLIER_DEACTIVATED: "warning",
 };
 
 export const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
@@ -36,4 +38,6 @@ export const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
   PRICE_UPDATED: "Price updated",
   PRODUCT_CREATED: "Product created",
   PRODUCT_UPDATED: "Product updated",
+  CUSTOMER_DEACTIVATED: "Customer deactivated",
+  SUPPLIER_DEACTIVATED: "Supplier deactivated",
 };

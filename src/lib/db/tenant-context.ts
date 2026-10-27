@@ -9,9 +9,6 @@ export type TenantContext = {
   permissions: string[];
 };
 
-const DEMO_TENANT_ID = "tn_maharashtra_pharma_0000000000001";
-const DEMO_USER_ID = "usr_rajesh_kumar_0000000000001";
-
 export function requireTenant(ctx: Partial<TenantContext> | null | undefined): TenantContext {
   if (!ctx || !ctx.tenantId) {
     throw new Error("Tenant context is required for this operation.");
@@ -23,7 +20,6 @@ export function requireTenant(ctx: Partial<TenantContext> | null | undefined): T
 }
 
 export function requirePermission(ctx: TenantContext, permission: PermissionAction): void {
-  if (ctx.tenantId === DEMO_TENANT_ID) return;
   if (!ctx.permissions.includes(permission)) {
     throw new Error("You are not authorized to perform this action.");
   }
@@ -36,21 +32,9 @@ export function tenantScoped<T extends { tenant_id: string }>(
   return { ...where, tenant_id: ctx.tenantId };
 }
 
-const demoContext: TenantContext = {
-  tenantId: DEMO_TENANT_ID,
-  userId: DEMO_USER_ID,
-  roles: [],
-  permissions: [],
-};
-
-export function getDemoTenantContext(): TenantContext {
-  return demoContext;
-}
-
 type SessionCtxResult = {
   ok: true;
   ctx: TenantContext;
-  demoFallback: boolean;
 } | {
   ok: false;
   error: string;
@@ -61,11 +45,7 @@ export async function getServerTenantContext(): Promise<SessionCtxResult> {
   try {
     session = await authAdapter.getCurrentSession();
     if (!session || !session.user?.id) {
-      return {
-        ok: true,
-        ctx: getDemoTenantContext(),
-        demoFallback: true,
-      };
+      return { ok: false, error: "Authentication is required." };
     }
     const externalId = session.user.id;
     const user = await prisma.users.findUnique({
@@ -112,17 +92,12 @@ export async function getServerTenantContext(): Promise<SessionCtxResult> {
         roles,
         permissions,
       },
-      demoFallback: false,
     };
   } catch (err) {
     if (session?.user?.id) {
       return { ok: false, error: err instanceof Error ? err.message : "Tenant context lookup failed." };
     }
-    return {
-      ok: true,
-      ctx: getDemoTenantContext(),
-      demoFallback: true,
-    };
+    return { ok: false, error: "Authentication is required." };
   }
 }
 

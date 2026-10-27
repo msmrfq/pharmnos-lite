@@ -12,10 +12,16 @@ export type ListParams<TOrderBy extends Record<string, SortDirection> = Record<s
 };
 
 export abstract class BaseRepository<TEntity, TCreateInput, TUpdateInput, TId = string> {
+  protected readonly prisma: PrismaClient;
+  protected readonly tableName: string;
+
   constructor(
-    protected readonly prisma: PrismaClient,
-    protected readonly tableName: string,
-  ) {}
+    prisma: PrismaClient,
+    tableName: string,
+  ) {
+    this.prisma = prisma;
+    this.tableName = tableName;
+  }
 
   protected withTenant(ctx: Partial<TenantContext> | null | undefined): TenantContext {
     return requireTenant(ctx);

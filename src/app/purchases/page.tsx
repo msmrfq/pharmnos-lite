@@ -196,6 +196,8 @@ export default async function PurchasesPage({
                                 purchaseId={p.id}
                                 status={p.status ?? "DRAFT"}
                                 invoiceNo={p.invoice_no || ""}
+                                gstReconciliationStatus={p.gst_reconciliation_status ?? "NOT_RECONCILED"}
+                                gstAcceptanceStatus={p.gst_accounting_acceptance_status ?? "NOT_ACCEPTED"}
                               />
                             )}
                           </TableCell>

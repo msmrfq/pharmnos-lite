@@ -1,0 +1,50 @@
+{
+  "manifestVersion": 1,
+  "packageVersion": "0.1.0",
+  "approved": true,
+  "status": "APPROVED_EXECUTABLE_LOCAL_ONLY",
+  "sourceSchema": {
+    "path": "prisma/schema.prisma",
+    "generation": "prisma migrate diff --from-empty",
+    "sha256": "fc7d74dfd439f7dec908bc6ef6db8ecfcbf1b4ba00d1158b38e7402bdb2321e6"
+  },
+  "artifacts": [
+    {
+      "order": 1,
+      "path": "prisma/financial-e2e-schema-provisioning.generated.sql",
+      "sha256": "9aabb03fc9a3f9f0ae9b729377900ddb49226a643628a25932d82821d40b0ae2",
+      "classification": "executable"
+    },
+    {
+      "order": 2,
+      "path": "prisma/financial-e2e-security-controls.review.sql",
+      "sha256": "c93ccf34d6d2f63766cb3c6e7c58fb03a878bec2584315522ceabef83d9d2193",
+      "classification": "executable"
+    },
+    {
+      "order": 3,
+      "path": "prisma/financial-e2e-rls-policies.review.sql",
+      "sha256": "0e7e47f673ebdfd187dd920822ffd3be93af0f8e2ef3f652ce31bb48127c4761",
+      "classification": "executable"
+    },
+    {
+      "order": 4,
+      "path": "prisma/financial-e2e-additive-provisioning.review.sql",
+      "sha256": "a4637c0a28670cbe0f53195942f2dabb75c3f04918e9e91e58aa763ed7cef90a",
+      "classification": "executable"
+    },
+    {
+      "order": 5,
+      "path": "scripts/financial-e2e-provisioning-static-guard.mjs",
+      "sha256": "ad32aa1a4b7f54dcb00563ebe7e3889c1101df68e56ae6acd441541d58dd06f6",
+      "classification": "executable"
+    }
+  ],
+  "verificationSteps": [
+    "Run the provisioning static guard.",
+    "Verify the source schema and every artifact hash before any future authorized execution.",
+    "Verify database identity, marker provenance, role attributes, privileges, schema, constraints, indexes, RLS, policies, triggers, and functions after connected initialization.",
+    "Reconnect with the restricted runtime role and verify tenant isolation and required RLS behavior.",
+    "Emit sanitized evidence bound to the target, run, attempt, and manifest."
+  ]
+}

@@ -128,15 +128,16 @@ below has been executed in the current disconnected environment.
 
 | Scenario | Preconditions | Action and assertions | Fixture / cleanup requirements | Current evidence | Blocker |
 |---|---|---|---|---|---|
-| Sales GST persistence and finalization | Applied sales schema; approved sales POS proxy; verified test database identity | Create draft, finalize, assert persisted taxable value, CGST/SGST/IGST/cess, `place_of_supply_code`, snapshots, totals, and `COMPLETE` status | Owned tenant, user, customer, product, batch, invoice, and lines; cleanup in dependency order | Pure calculator, action inspection, and schema inspection only | Database rollout and execution authorization |
+| Sales GST persistence and finalization | Applied sales schema; approved captured-fact scenarios and versioned rules; qualified GST review; verified test database identity | Create draft, finalize, assert required facts drive POS and CGST/SGST/IGST/cess, missing/unsupported facts fail closed, and persisted snapshots, totals, rule version, and `COMPLETE` status are used | Owned tenant, user, customer, product, batch, invoice, and lines; cleanup in dependency order | Pure calculator, action inspection, and schema inspection only | Policy/legal review, database rollout, and execution authorization |
 | Business-profile validation and persistence | Applied schema; authorized tenant context | Save valid name/code/blank states, reject invalid state, verify persisted canonical value and tenant boundary | Owned tenant and profile; cleanup profile before tenant | Pure schema and action-mapping tests | Database persistence and RLS verification |
-| Purchase GST persistence after policy approval | Approved tax source, rounding, POS, component, and legacy policy | Create/finalize purchase, assert approved tax facts, round-off, stock, supplier ledger, payable balance, and audit row | Owned supplier, products, invoice, lines, batches, movements, ledger; cleanup all owned rows | Pure aggregate purchase contract only | Accounting/product approval and schema/action implementation |
+| Purchase GST reconciliation and posting guard | Approved versioned tax rules, captured transaction facts, discrepancy materiality/tolerance policy, and workflow authority | Save supplier-declared evidence intact; calculate expected taxable value, CGST, SGST, IGST, cess, and totals separately; reconcile; allow draft/review-pending discrepancy; block accounting completion/posting while material discrepancy is unresolved; assert explicit resolution, approver, audit event, accepted accounting values, preserved rounding, stock, supplier ledger, payable balance, and audit row | Owned supplier, products, invoice, lines, batches, movements, reconciliation records, ledger; cleanup all owned rows | Pure aggregate purchase contract and policy documentation only; no persistence or runtime evidence | Accounting/product approval, qualified GST review, schema/action implementation, isolated DB |
+| Purchase GST persistence after policy approval | Approved supplier-evidence model, versioned rules, component/POS policy, rounding policy, and legacy policy | Create/finalize an eligible purchase and assert declared, calculated, accepted, component, discrepancy, POS, round-off, stock, supplier ledger, payable balance, and audit facts remain distinct and consistent | Owned supplier, products, invoice, lines, batches, movements, reconciliation records, ledger; cleanup all owned rows | No database-backed evidence | Policy approval and schema/action implementation |
 | Tenant isolation and database RLS | Applied RLS; independently verified tenant/database identity | Create tenants A/B; assert cross-tenant reads and writes fail at application and database policy boundaries | Separate owned tenants/users; cleanup each run-owned tenant only | Application tenant scoping inspected; no DB evidence | Disposable DB and RLS execution |
 | Sales and purchase rollback | Applied schema; failure injection point; verified transaction behavior | Force failure after partial writes; assert no invoice, stock, ledger, balance, audit, or sequence residue remains | Owned records and resettable isolated DB; cleanup after both success/failure | Outer Prisma transactions inspected only | Runtime transaction execution |
 | Invoice-number and sequence rollback | Applied business profile and sequence fields | Fail finalization after sequence read/update boundary; assert sequence and invoice numbering remain correct | Owned profile/invoice fixture; serialized run or isolated database | Transaction code inspected only | Runtime failure-injection evidence |
 | Stock movement and batch consistency | Applied inventory schema; deterministic FEFO data | Finalize purchase/sale; assert batch quantities, movement rows, references, and rollback consistency | Owned products, batches, invoices, movements; dependent-first cleanup | FEFO and action logic inspected; pure tests only | Runtime inventory execution |
 | Customer and supplier ledger consistency | Applied ledger schema; approved tax/totals policy | Assert finalized invoice totals equal ledger debit/credit, balance updates, and audit metadata | Owned customers/suppliers, invoices, ledgers, payments; cleanup all references | Ledger write paths inspected; no DB execution | Runtime accounting verification |
-| Historical invoice immutability and print behavior | Applied snapshot fields; finalized complete and legacy invoices | Mutate current masters after finalization; assert complete print uses persisted facts and legacy print discloses unavailable facts without reconstruction | One complete and one legacy invoice with owned masters; cleanup after print assertions | Pure snapshot-selection/completeness tests only | Applied schema and historical fixture execution |
+| Historical invoice immutability and print behavior | Applied snapshot fields; finalized complete and legacy invoices | Mutate current masters after finalization; assert complete print uses persisted seller/customer/product/HSN/tax/POS/rule facts; assert legacy print preserves aggregate totals and discloses unavailable details without reconstruction or treating missing values as zero | One complete and one legacy invoice with owned masters; cleanup after print assertions | Pure snapshot-selection/completeness tests only | Applied schema and historical fixture execution |
 | Schema rollout and legacy compatibility | Reviewed additive SQL; backup/rollback plan; representative legacy records | Apply schema in disposable DB, verify columns/indexes, read legacy rows, verify null-safe fallback, and test rollback plan | Disposable database backup and reset; no production backfill | Prisma/SQL assets inspected; SQL not executed | Human approval, disposable DB, backup/restore drill |
 
 ### Evidence and authorization rules
@@ -149,11 +150,68 @@ below has been executed in the current disconnected environment.
 	separation before fixture creation, record all returned owned identifiers in
 	one batch, and retain cleanup-success evidence tied to the authorized plan.
 - Purchase scenarios cannot be scheduled until the purchase policy record in
-	`gst-audit-validation-and-plan.md` is approved by the responsible accounting
-	and product decision-makers.
+	`gst-audit-validation-and-plan.md` is approved by the responsible
+	accounting and product decision-makers and the covered legal interpretation
+	has qualified GST review.
+- A purchase discrepancy must be tested as a state machine: supplier evidence
+	remains unchanged; calculated expected values remain separate; unresolved
+	material discrepancy permits draft/review-pending save but prevents
+	accounting completion/posting; resolution records decision, authority, and
+	audit evidence.
+- Sales scenarios must prove required transaction facts drive POS and tax
+	classification, and that absent facts or unsupported scenarios fail closed.
 - GST-019 and GST-020 remain blocked until the disposable database, identity
 	verification, fixture/reset lifecycle, cleanup authorization, and explicit
 	execution approval are all present.
+
+### Connected identity evidence contract
+
+Before fixture creation, scenario execution, or destructive cleanup, the
+executor must query the connected PostgreSQL session and validate all of the
+following: `current_database()`, `current_user`, `session_user`,
+`inet_server_addr()`, `inet_server_port()`, `application_name`, an
+independently provisioned `pharmnos.financial_e2e_marker` setting, and the
+connected role's `rolsuper` and `rolbypassrls` attributes. The expected
+database, role, application marker, and environment marker are supplied by
+the approved disposable configuration; caller-supplied booleans are not
+identity evidence.
+
+The resulting evidence is versioned, bound to the sanitized target identity
+and the current run identifier, frozen, and subject to a freshness limit.
+Cleanup validates that evidence again and also requires explicit cleanup
+authorization and run-owned resources. Missing, stale, future, mismatched,
+incomplete, malformed, superuser, or `BYPASSRLS` evidence fails closed. The
+readiness and scenario gates validate this same evidence contract; they do not
+accept a caller-supplied identity boolean. The scenario runner remains
+disabled until every independent gate succeeds.
+
+The marker is not currently provisioned by the documented Compose definition.
+It must be established and verified in the isolated database through a
+separately authorized setup; an environment variable or caller assertion is
+not sufficient. These JavaScript evidence objects are an in-process contract,
+not a cryptographic security boundary, so the disposable database, role,
+network binding, and operator authorization remain required controls. DNS,
+hostname, and address comparisons are only preliminary separation checks and
+cannot prove PostgreSQL server or database identity.
+
+### Bootstrap and runtime credential separation
+
+Compose initialization uses `FINANCIAL_E2E_DB_USER` and
+`FINANCIAL_E2E_DB_PASSWORD` only for the ephemeral PostgreSQL bootstrap
+account. The guarded runner must use the separately supplied local-only
+`FINANCIAL_E2E_RUNTIME_DATABASE_URL` and
+`FINANCIAL_E2E_RUNTIME_DB_USER` values for identity verification and future
+runtime operations. The runtime role must be independently provisioned as
+`LOGIN`, `NOSUPERUSER`, and `NOBYPASSRLS`; its password must remain only in
+the ignored local environment configuration or an equivalent secret store.
+The Compose/bootstrap credentials must not be reused as proof of restricted
+runtime privileges.
+
+PostgreSQL may return `inet_server_addr()` with a CIDR suffix such as
+`172.18.0.2/32`. The verifier strictly accepts valid IPv4/IPv6 addresses
+with an optional valid prefix, normalizes the address component, and rejects
+malformed or missing values. This normalization does not establish database
+identity by itself.
 
 ## Test Cases
 1. Purchase success: create draft purchase → finalize → verify stock, ledger, audit

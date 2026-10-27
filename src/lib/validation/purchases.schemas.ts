@@ -119,6 +119,12 @@ export const PurchaseInvoiceLineCreateSchema = z.object({
   sale_rate: decimalFromStringOptional,
   discount_pct: decimalFromStringOptional,
   gst_rate: decimalFromStringOptional,
+  declared_taxable_value: decimalFromStringOptional,
+  declared_cgst: decimalFromStringOptional,
+  declared_sgst: decimalFromStringOptional,
+  declared_igst: decimalFromStringOptional,
+  declared_cess: decimalFromStringOptional,
+  declared_line_total: decimalFromStringOptional,
 });
 
 export type PurchaseInvoiceLineCreateInput = z.infer<typeof PurchaseInvoiceLineCreateSchema>;
@@ -135,6 +141,17 @@ export const PurchaseInvoiceCreateSchema = z
     total_tax: decimalFromStringOptional,
     round_off: decimalFromStringOptional,
     net_amount: decimalFromStringOptional,
+    declared_taxable_value: decimalFromStringOptional,
+    declared_cgst: decimalFromStringOptional,
+    declared_sgst: decimalFromStringOptional,
+    declared_igst: decimalFromStringOptional,
+    declared_cess: decimalFromStringOptional,
+    declared_invoice_total: decimalFromStringOptional,
+    declared_round_off: decimalFromStringOptional,
+    supplier_state_at_transaction: z.string().trim().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
+    recipient_state_at_transaction: z.string().trim().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
+    delivery_state_at_transaction: z.string().trim().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
+    supply_scenario: z.enum(["INTRA_STATE", "INTER_STATE"]).optional(),
   })
   .superRefine((_val, ctx) => {
     const linesRaw = (ctx as any).lines as any[] | undefined;
@@ -150,6 +167,26 @@ export const PurchaseInvoiceCreateSchema = z
 export type PurchaseInvoiceCreateInput = z.infer<typeof PurchaseInvoiceCreateSchema> & {
   lines: PurchaseInvoiceLineCreateInput[];
 };
+
+export const PurchaseGstAcceptanceSchema = z.object({
+  decision_reference: z.string().trim().min(1).max(100),
+  rationale: z.string().trim().min(1).max(1000),
+  accepted_value_source: z.enum(["SUPPLIER_DECLARED", "APPLICATION_CALCULATED", "EXPLICIT_DECISION"]),
+});
+
+export const PurchaseGstResolutionSchema = z.object({
+  decision_reference: z.string().trim().min(1).max(100),
+  decision: z.string().trim().min(1).max(500),
+  rationale: z.string().trim().min(1).max(1000),
+  accepted_value_source: z.enum(["SUPPLIER_DECLARED", "APPLICATION_CALCULATED", "EXPLICIT_DECISION"]),
+  accepted_taxable_value: decimalFromStringOptional,
+  accepted_cgst: decimalFromStringOptional,
+  accepted_sgst: decimalFromStringOptional,
+  accepted_igst: decimalFromStringOptional,
+  accepted_cess: decimalFromStringOptional,
+  accepted_invoice_total: decimalFromStringOptional,
+  accepted_round_off: decimalFromStringOptional,
+});
 
 export const StockAdjustmentSchema = z.object({
   product_id: z.string().min(1, "Product is required"),
