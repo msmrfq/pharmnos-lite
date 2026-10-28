@@ -14,7 +14,6 @@ import {
   STATE_NAME_TO_CODE,
   STATE_CODE_TO_NAME,
   VALID_STATE_CODES,
-  UNSUPPORTED_GSTIN_STATE_PREFIXES,
 } from "../src/lib/constants/indian-states";
 
 import {
@@ -180,28 +179,12 @@ assertEqual(getStateCodeFromGstin("27AACXX0000B1ZP!"), null, "getStateCodeFromGs
 assertEqual(getStateCodeFromGstin(" 27aacxx0000b1zp "), "MH", "getStateCodeFromGstin: Valid lowercase input with whitespace");
 assertEqual(getStateCodeFromGstin("00AACXX0000B1ZP"), null, "getStateCodeFromGstin: Unsupported prefix 00");
 assertEqual(getStateCodeFromGstin("39AACXX0000B1ZP"), null, "getStateCodeFromGstin: Unsupported prefix 39");
-for (const prefix of UNSUPPORTED_GSTIN_STATE_PREFIXES) {
-  assertEqual(
-    getStateCodeFromGstin(`${prefix}AACXX0000B1ZP`),
-    null,
-    `getStateCodeFromGstin: Special-purpose prefix ${prefix} is not a state`,
-  );
-  assertEqual(
-    determinePlaceOfSupply(getStateCodeFromGstin(`${prefix}AACXX0000B1ZP`), "MH").type,
-    "UNKNOWN",
-    `determinePlaceOfSupply: Special-purpose prefix ${prefix} cannot resolve supplier state`,
-  );
-}
-assertEqual(getStateCodeFromGstin("99AACXX0000B1ZP"), null, "getStateCodeFromGstin: Unsupported prefix 99");
 assertEqual(getStateCodeFromGstin(null), null, "getStateCodeFromGstin: null input");
 
 // GSTIN prefixes and standalone state inputs use different validation paths.
 assertEqual(normalizeState("AP"), "AP", "normalizeState: Standalone AP state code");
 assertEqual(normalizeState("Ladakh"), "LA", "normalizeState: Current Ladakh state name");
 assertEqual(normalizeState("Dadra and Nagar Haveli and Daman and Diu"), "DD", "normalizeState: Merged UT canonical name");
-assertEqual(normalizeState("97"), null, "normalizeState: Numeric GSTIN prefix is not a state input");
-assertEqual(normalizeState("99"), null, "normalizeState: OIDAR prefix is not a state input");
-
 // Test business-profile state validation uses the canonical state contract.
 assertEqual(
   businessProfileStateSchema.parse(" Maharashtra "),

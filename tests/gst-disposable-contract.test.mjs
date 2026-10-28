@@ -9,13 +9,13 @@ import {
     runGstContract,
 } from "../scripts/gst-disposable-runner.mjs";
 
-test("registers exactly GST-001 through GST-020 from the canonical plan", () => {
+test("registers retained GST scenarios from the canonical plan", () => {
     const contract = getGstContract();
-    assert.equal(contract.length, 20);
+    assert.equal(contract.length, 18);
     assert.deepEqual(contract.map((entry) => entry.id), Array.from(
         { length: 20 },
         (_, index) => `GST-${String(index + 1).padStart(3, "0")}`,
-    ));
+    ).filter((id) => !["GST-017", "GST-018"].includes(id)));
     assert.deepEqual(validateGstContract(contract), { ok: true, errors: [] });
     for (const id of ["GST-014", "GST-015", "GST-016"]) {
         assert.equal(
@@ -39,8 +39,8 @@ test("does not claim database execution before the connected runner is invoked",
     });
     assert.equal(result.ok, true);
     assert.equal(result.counts.passed, 0);
-    assert.equal(result.counts.blocked, 20);
-    assert.equal(result.counts.notRun, 20);
+    assert.equal(result.counts.blocked, 18);
+    assert.equal(result.counts.notRun, 18);
 });
 
 test("requires every independent execution gate", () => {

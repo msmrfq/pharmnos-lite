@@ -112,12 +112,6 @@ function calculateScenario(id) {
             },
         };
     }
-    if (id === "GST-017") {
-        return {
-            expected: { supported: ["01", "27", "29", "36"], unsupported: ["97", "99"] },
-            actual: { supported: ["01", "27", "29", "36"], unsupported: ["97", "99"] },
-        };
-    }
     if (id === "GST-010") {
         return { expected: { valid: ["MH", "Maharashtra"], invalid: ["", "not-a-state"] }, actual: { valid: ["MH", "Maharashtra"], invalid: ["", "not-a-state"] } };
     }

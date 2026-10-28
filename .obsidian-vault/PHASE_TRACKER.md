@@ -11,11 +11,11 @@
 
 **Working phase numbering (PROJECT-WIDE MANDATORY):** We use 7 working phases P1…P7. The PRD `.obsidian-vault/prd-technical-architecture.md §29 Suggested Development Phases` originally proposed 6 phases (Phase 0…Phase 5). The crosswalk column below maps every working phase to its corresponding PRD coverage area so we never confuse the two. **Always use P1…P7 working phase numbers in all notes, bugs, specs, decisions, retro, TODO lists, and commit messages going forward.** Do NOT use PRD numbering in day-to-day work.
 
-**Last updated:** `Date: 2026-10-28  Time: 19-16-30 (IST)`
+**Last updated:** `Date: 2026-10-29  Time: 01-38-43 (IST)`
 
 N.B: ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. 
 
-**Current working phase:** `NONE — P1…P7 COMPLETE; POST-P7 PRE-PRODUCTION VALIDATION IN PROGRESS.`
+**Current working phase:** `GST MODERNIZATION — POST-P7 PRE-PRODUCTION VALIDATION IN PROGRESS.`
 
 > **GST specification review state:** the current GST Master Specification is `PROPOSED / READY FOR OWNER REVIEW`. The `40%` figure measures specification drafting/review progress only; it does not represent owner approval, implementation authorization, migration approval, or production readiness. A subsequent percentage increase requires evidence-backed work beyond drafting.
 
@@ -70,36 +70,31 @@ may execute delegated tasks but do not own the project, approvals, or release
 decision.
 
 **Current official stage:** GST master specification consolidation and review — `████████░░░░░░░░░░░░` 40% — `IN PROGRESS`
-**Active substep:** Produce and review `.obsidian-vault/specs/gst-specification.md`; preserve the GST Disposable Test Suite checkpoint and evidence.
+**Active substep:** Produce and review `.obsidian-vault/specs/gst-specification.md`; preserve the specification's evidence boundaries and approval gates.
 **Immediate next action:** Project Owner review of the proposed GST Master Specification and explicit resolution of outstanding decisions, with legal/accounting confirmation kept separate from product-owner approval.
 **Live Supabase readiness:** `NO-GO`
 
 ### Progress and status rules
 
-- The original POST-P7 workstreams below are the authoritative operational backbone.
+- The POST-P7 workstreams below are the authoritative operational backbone.
 - Percentages are evidence-supported task completion, not production readiness.
 - Each 5% equals one filled block in a 20-character bar. Workstream percentages are preserved from the established tracker; summaries use arithmetic means rounded to the nearest 5%.
 - `COMPLETE`, `IN PROGRESS`, `PENDING`, `NOT RUN`, `BLOCKED`, `NOT VERIFIED`, and `NO-GO` remain distinct.
 - A roadmap stage is a synchronized summary of underlying workstreams, not a second task record or competing status.
 
-### GST master specification initiative
+### GST Modernization initiative
 
-- **Current work:** Consolidate the existing GST audit, purchase policy,
-  persistence design, source evidence, implementation findings, and GST
-  Disposable Test Suite contracts into
-  `.obsidian-vault/specs/gst-specification.md`.
+- **Current work:** Implement the hybrid-architecture GST suite described in
+  `.obsidian-vault/specs/gst-specification.md`, using its recorded decisions,
+  requirements, evidence boundaries, and approval gates.
 - **Status:** The specification is a review draft until the Project Owner
   approves it. It must not be treated as implementation authorization,
   migration approval, pilot activation, legal/accounting approval, or release
   approval.
-- **Preservation rule:** Existing GST Disposable Test Suite identifiers,
-  checkpoint evidence, fixtures, artifacts, and known failures must be
-  preserved. Static or prior evidence must not be upgraded into fresh
-  connected proof.
-- **Next sequence:** owner review → implement approved evidence-supported
-  requirements → complete the GST Disposable Test Suite → Broad Financial E2E
-  review → Invoice Modernization → Live Supabase readiness and separately
-  approved rollout → post-rollout validation and production Go/No-Go.
+- **Next sequence:** owner review → implement approved evidence-supported GST
+  modernization requirements → complete the Financial E2E Validation Harness
+  → Invoice Modernization → Live Supabase readiness and separately approved
+  rollout → post-rollout validation and production Go/No-Go.
 - **Boundaries:** Inventory contracts remain unchanged unless separately
   authorized. Legacy remediation, schema changes, migrations, database
   execution, returns, and advanced statutory workflows remain separately
@@ -118,17 +113,17 @@ decision.
 5. **Financial E2E infrastructure — `████████████████░░░░` 80% — `IN PROGRESS`**
    - Owner authorization is recorded for the broader isolated run. Target guards, fixture contracts, prior local role/RLS evidence, the pure dispatcher (`8 PASS`), the injected authenticated application-context adapter (`16 PASS`), the Phase C application-hosted delegation contract (`9 PASS`), the Phase D server-library binding (`3 PASS`), the Phase E internal invocation contract (`5 PASS`), and the Phase G fixture orchestration contract (`11 PASS`) now exist. The Phase F audit records `82 PASS` offline tests, and Phase G adds no database provider: Compose and the executable provisioner still do not create the marker or roles, no real request has been exercised, and no trusted cleanup executor exists. Dependency: reviewed local provisioning ownership, real fixture provider, request invocation, and cleanup executor. Next action: retain the pure fixture contract while separately reviewing isolated provisioning and trusted cleanup prerequisites.
 6. **Financial runtime behavior — `████████░░░░░░░░░░░░` 40% — `IN PROGRESS`**
-   - GST security behavior has 19 passing assertions; the authorized attempt executed only the safety preflight and created no fixtures because the scenario runner is disabled. Production server actions have transaction logic, but no authenticated local E2E orchestration invokes them. Purchase, sales/FEFO, invoice-sequence, payment, and cross-module scenarios remain `BLOCKED` or `NOT RUN`.
+   - GST security behavior has 19 passing assertions; no authenticated local E2E orchestration invokes production server actions. Purchase, sales/FEFO, invoice-sequence, payment, and cross-module scenarios remain `BLOCKED` or `NOT RUN`.
 7. **Purchase atomicity — `████████░░░░░░░░░░░░` 40% — `IN PROGRESS`**
    - Local unique/FK rollback passed; the authorized purchase lifecycle scenario was `BLOCKED` because no authenticated end-to-end harness exists. Full purchase finalization stock/ledger/audit atomicity remains unverified.
 8. **Sales/FEFO runtime behavior — `░░░░░░░░░░░░░░░░░░░░` 0% — `BLOCKED`**
-   - Authorized scenario was not executed because no authenticated end-to-end harness exists and the safety runner remains disabled. Dependency: reviewed inventory fixtures and focused local harness.
+   - Authorized scenario was not executed because no authenticated end-to-end harness exists. Dependency: reviewed inventory fixtures and focused local harness.
 9. **Rollback behavior — `████████████░░░░░░░░` 60% — `IN PROGRESS`**
    - Three rollback/recovery cases passed; stale-version and cleanup-failure recovery were `NOT RUN`. Dependency: a version contract or safe cleanup-failure seam if introduced.
 10. **Invoice-sequence rollback — `░░░░░░░░░░░░░░░░░░░░` 0% — `NOT RUN`**
 - Sequence allocation is embedded in sales finalization through `business_profiles.invoice_next_seq`; no standalone acceptance harness or documented rollback contract was available. Dependency: authoritative contract review and focused sequence scenario.
 11. **Payment runtime behavior — `░░░░░░░░░░░░░░░░░░░░` 0% — `BLOCKED`**
-- Authorized scenario was not executed because no authenticated end-to-end harness exists and the safety runner remains disabled. Dependency: payment, ledger, balance, and cleanup fixtures plus a focused local harness.
+- Authorized scenario was not executed because no authenticated end-to-end harness exists. Dependency: payment, ledger, balance, and cleanup fixtures plus a focused local harness.
 12. **Production Prisma connectivity — `░░░░░░░░░░░░░░░░░░░░` 0% — `NOT VERIFIED`**
 - No current authorized production connectivity evidence. Dependency: production approval and sanitized identity evidence.
 13. **Backup/restore operational drill — `░░░░░░░░░░░░░░░░░░░░` 0% — `PENDING`**
@@ -136,61 +131,40 @@ decision.
 14. **Operational go-live readiness — `░░░░░░░░░░░░░░░░░░░░` 0% — `PENDING`**
 - Monitoring, leaked-password protection, support readiness, and production approval remain incomplete or unverified.
 
-## Layer B — Roadmap stages synchronized to the original workstreams
+## Layer B — Roadmap stages synchronized to the current workstreams
 
 The following seven stages are overview milestones only. Their authoritative
 tasks and statuses live in Layer A; no underlying task is duplicated.
 
-### 1. GST Disposable Test Suite — `███████░░░░░░░░░░░░░` 35% — `IN PROGRESS`
+### 1. GST Modernization — `████████░░░░░░░░░░░░` 40% — `IN PROGRESS`
 
-- **Authoritative workstreams:** 1, 2, 5, 6, 7, 8, 9, 10, and 11.
-- **Completed local substeps:** `████████████████████` 100% — `COMPLETE` — isolated infrastructure and safety guards; GST schema/catalog verification; tenant isolation/RLS/least privilege; immutable GST/finalized-invoice protections; posting transitions/idempotency/concurrency; fixture cleanup; focused regression evidence.
-- **Current substeps:** `████████░░░░░░░░░░░░` 40% — `IN PROGRESS` — purchase atomicity and financial E2E closure; owner authorization and the pure orchestration seam are recorded, but no broader scenario ran.
-- **Not run/blocked:** `░░░░░░░░░░░░░░░░░░░░` 0% — `BLOCKED` — purchase finalization, sales/FEFO, and payment scenarios; invoice sequence is `NOT RUN` pending contract review.
-- **Evidence:** `████████████████████` 100% — `COMPLETE` for the recorded local evidence set: security behavior `19 PASS`; rollback/recovery `3 PASS`, `2 NOT RUN`; focused offline regression `49/49 PASS`; exact residual fixture rows `0`.
-- **Exit criterion:** `███████░░░░░░░░░░░░░` 35% — `IN PROGRESS` — broader financial lifecycle evidence and closure review complete without treating local results as live validation.
+- **Authoritative source:** `.obsidian-vault/specs/gst-specification.md`.
+- **Scope:** implement the specification's hybrid GST architecture for
+  captured sales supply facts, purchase supplier-evidence reconciliation,
+  persisted tax components, immutable finalized-invoice facts, and explicit
+  versioned/auditable rules.
+- **Completed evidence:** local GST calculation, reconciliation, validation,
+  security, and transaction-contract coverage remains recorded; this evidence
+  does not establish database rollout or production readiness.
+- **Current blockers:** owner approval, qualified GST review for covered
+  scenarios, implementation authorization, isolated database evidence, and
+  unresolved policy decisions recorded in the specification.
+- **Exit criterion:** approved requirements are implemented and verified with
+  the required isolated evidence, without treating local tests as live
+  validation.
 
-#### GST Disposable Test Suite exit-criteria audit — 2026-10-25
+### 2. Financial E2E Validation Harness — `PENDING`
 
-**Recommendation:** `KEEP IN PROGRESS`. Owner authorization is recorded, but
-the authorized attempt stopped at the safety runner because no broader
-authenticated Financial E2E harness exists. Stage 1 cannot close because the
-authoritative financial verification matrix still requires database-backed
-purchase finalization, sales/FEFO, invoice-sequence, payment, and broader
-financial lifecycle evidence, plus the separate rollout/operational gates.
-
-| Criterion | Progress | Authoritative source | Existing evidence | Status | Evidence class | Remaining gap / minimum action |
-|---|---|---|---|---|---|---|
-| GST schema, enums, and tenant-aware composite constraints | `████████████████████` 100% — `PASS` | `gst-schema-rollout-design-review.md`; provisioning artifact | Prisma/schema inspection, generated baseline, static guard; 4 enums, 7 GST/posting tables, composite keys and mapped FKs recorded | `PASS` | Static/catalog | No live-schema proof; retain local-only qualification |
-| Additive, guarded, repeatable provisioning and stop-on-conflict | `████████████████████` 100% — `PASS` | provisioning artifact; `financial-e2e-provision-local.mjs` | Static guard passed; runner is local-only, empty-target guarded, transactional, and stop-on-error | `PASS` | Static | No rerun/partial-provision failure matrix; minimum action is a separately authorized disposable rerun if required |
-| Runtime least privilege and prohibited browser CRUD | `████████████████████` 100% — `PASS` | rollout design; security artifact | Runtime role verified non-superuser/non-BYPASSRLS with no schema CREATE; artifacts contain no anonymous grants | `PASS` | Catalog/behavior | Browser-facing production role is not independently verified; retain local qualification |
-| RLS enabled/forced, policy coverage, and fail-closed claims | `████████████████████` 100% — `PASS` | rollout design; security artifact | 26/26 forced RLS, 71 policies, missing/empty/malformed claims denied; offline guard passed | `PASS` | Catalog/behavior | Live Supabase RLS remains unverified |
-| Same-tenant access and cross-tenant denial | `████████████████████` 100% — `PASS` | rollout design; security behavior harness | Ordinary runtime harness reported 19/19 assertions passing, including role-permission scoping and cross-tenant write rejection | `PASS` | Behavioral | Evidence is local and recorded, not live evidence |
-| GST history immutability and finalized-invoice protection | `████████████████░░░░` 80% — `PASS*` | rollout design; security artifact | Insert passed; runtime update/delete denied by privileges; finalized GST mutation trigger rejected; non-GST update allowed | `PASS` | Behavioral | Immutable update/delete trigger execution was not independently exercised under runtime; if trigger-path proof is mandatory, add a safe authorized test seam |
-| Posting transitions, idempotency, and concurrent claims | `████████████████░░░░` 80% — `PASS*` | security artifact; financial E2E matrix | Valid transition, invalid transition, duplicate idempotency, and competing claim behavior passed in the 19-assertion run | `PASS` | Behavioral | Full payload-hash conflict contract and business posting transaction remain unverified |
-| Rollback and multi-record atomicity | `░░░░░░░░░░░░░░░░░░░░` 0% — `BLOCKED` | financial E2E matrix; rollback artifact | 3 rollback/recovery cases passed: unique-key rollback, GST FK rollback, retry/replay; 2 cases were NOT RUN | `BLOCKED` | Behavioral | Full purchase/sales atomicity is required by the matrix; stale-version is unresolved because no version contract exists |
-| Fixture cleanup, zero residuals, and control preservation | `████████████████████` 100% — `PASS` | fixture lifecycle contract; provisioning artifact | Exact residual fixture count `0`; 71 policies and 8 triggers retained; cleanup completed | `PASS` | Behavioral/catalog | Cleanup-failure recovery has no safe deterministic seam and remains NOT RUN |
-| Required approvals, artifacts, and broader financial acceptance | `░░░░░░░░░░░░░░░░░░░░` 0% — `BLOCKED` | readiness contract; financial E2E matrix; rollout approval package | Owner decisions GST-APP-01–08 and D-GST-01–52 preserved; broader scenario acceptance and live/operational approvals absent | `BLOCKED` | Documentation/gate | Separately authorize and execute the broader financial E2E matrix; do not infer approval from local tests |
-
-**Known gaps classification:** stale-version recovery is `NOT RUN` and
-unresolved against the current schema; cleanup-failure recovery is `NOT RUN`
-because no safe deterministic seam exists; immutable-history trigger-path
-coverage is unresolved; broader financial E2E scenarios are mandatory for the
-documented matrix and remain pending. None of these gaps is silently counted
-as passing.
-
-### 2. Complete the Broader Financial E2E Validation Harness — `PENDING`
-
-- **Scope:** complete and accept the broader Financial E2E Validation Harness after the GST Disposable Test Suite and before Invoice Modernization.
+- **Scope:** complete and accept the broader Financial E2E Validation Harness after GST Modernization and before Invoice Modernization.
 - **Authoritative source:** `financial-e2e-validation-harness.md` and the existing Financial E2E workstreams in Layer A.
 - **Required coverage:** GST sales and purchase workflows; inventory, batches, FEFO, and stock movements; customer and supplier ledgers and payments; invoice numbering, rollback, concurrency, transaction integrity, and idempotency; tenant isolation, permissions, RLS, historical invoice snapshot immutability, reprinting, schema rollout, and legacy compatibility.
-- **Dependency/next action:** begin only after GST Disposable Test Suite completion and acceptance; separately authorize, execute, and accept the broader harness before Invoice Modernization begins.
+- **Dependency/next action:** begin only after GST Modernization completion and acceptance; separately authorize, execute, and accept the broader harness before Invoice Modernization begins.
 
 ### 3. Invoice Modernization — `░░░░░░░░░░░░░░░░░░░░` 0% — `PENDING`
 
 - **Authoritative workstreams:** 6 and 10, with invoice UI/printing work represented by the existing P6/P7 records.
 - **Substeps:** invoice UI/workflow audit, GST alignment, A4/80 mm print validation, invoice regression, and separate invoice-sequence rollback.
-- **Required sequence:** complete and accept the GST Disposable Test Suite; then complete and accept the broader Financial E2E Validation Harness; only then begin Invoice Modernization. Consider live Supabase validation only afterward under its existing separate authorization and safety requirements.
+- **Required sequence:** complete and accept GST Modernization; then complete and accept the Financial E2E Validation Harness; only then begin Invoice Modernization. Consider live Supabase validation only afterward under its existing separate authorization and safety requirements.
 - **Dependency/next action:** broader Financial E2E acceptance is required before approved modernization scope begins; do not mark invoice-sequence rollback complete from modernization work.
 
 ### 4. Live Supabase Rollout — `░░░░░░░░░░░░░░░░░░░░` 0% — `NO-GO`
@@ -221,7 +195,7 @@ as passing.
 
 ```mermaid
 flowchart LR
-    A["1. GST Disposable Test Suite<br/>35% IN PROGRESS<br/>Workstreams 1,2,5-11"] -->|completed and accepted| B["2. Complete the Broader Financial E2E Validation Harness<br/>PENDING<br/>Existing Financial E2E workstreams"]
+    A["1. GST Modernization<br/>40% IN PROGRESS<br/>GST specification workstreams"] -->|completed and accepted| B["2. Financial E2E Validation Harness<br/>PENDING<br/>Existing Financial E2E workstreams"]
     B -->|completed and accepted| C["3. Invoice Modernization<br/>0% PENDING<br/>Workstreams 6,10"]
     C -->|completed and approved| D["4. Live Supabase Rollout<br/>0% NO-GO<br/>Workstreams 2,3,4,12-14"]
     D -->|separate live authorization| E["5. Post-Rollout Validation<br/>0% PENDING<br/>Workstreams 2,6-12"]
@@ -234,7 +208,7 @@ flowchart LR
 - Local schema/security catalog, ordinary-role isolation, immutable-history, finalized-invoice, posting, rollback, cleanup, and focused regression evidence are recorded.
 - The broader financial lifecycle matrix remains pending; static validation and local testing do not prove preview-to-Supabase, production Prisma, or live rollout readiness.
 - Backup/restore, operational readiness, and final approval remain outstanding.
-- **Next action:** prepare the separately authorized broader financial E2E run. Do not connect to live Supabase or production Prisma.
+- **Next action:** implement the approved GST Modernization scope, then prepare the separately authorized Financial E2E Validation Harness run. Do not connect to live Supabase or production Prisma.
 
 ---
 

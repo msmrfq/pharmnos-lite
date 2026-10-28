@@ -2,10 +2,17 @@
 
 **Status:** `PROPOSED MASTER REFERENCE — READY FOR OWNER REVIEW`
 **Working stage:** POST-P7 — PRE-PRODUCTION VALIDATION
-**Last revised:** 2026-10-28 21-20-00 (IST)
+**Last revised:** 2026-10-29 00-25-00 (IST)
 **Authority:** Project owner approval remains required. This document consolidates
 the current evidence and recorded product decisions; it does not itself grant
 implementation, migration, testing, pilot, or production authorization.
+
+**Test-cleanup status (2026-10-29):** Broad GST, purchase-reconciliation,
+financial-integrity, and disposable contract suites remain retained. Only the
+clearly prefix-philosophy-specific special-prefix assertions were removed from
+the mixed GST calculator test. This document remains historical/planning
+evidence; GST application behavior, state/prefix helpers, schema history, and
+other GST documentation remain intentionally retained.
 
 > **Status labels**
 >
@@ -17,6 +24,56 @@ implementation, migration, testing, pilot, or production authorization.
 > - `UNRESOLVED`: evidence or decision is insufficient.
 > - `LEGAL/ACCOUNTING-CONFIRMATION`: requires qualified professional or
 >   authoritative source confirmation.
+
+## Canonical status ledger
+
+This file is the single canonical GST requirements and decision reference for
+the repository. Supporting specifications, source comments, tests, and audit
+notes are evidence or traceability inputs; they do not silently override this
+file. A contradiction is retained and recorded as unresolved until an
+authorized decision or stronger repository evidence updates this document.
+
+| Status | Meaning in this specification |
+|---|---|
+| `VERIFIED-CURRENT` | Directly observed in the current repository source or an executed test identified in this document. It describes behavior, not legal correctness. |
+| `APPROVED-REQUIREMENT` | Explicitly authorized product requirement within its stated scope. It is not automatically legal, accounting, security, or production approval. |
+| `PROPOSED` | Target behavior recommended for later approval; it is not implementation authorization. |
+| `UNRESOLVED` | Evidence, interpretation, or owner decision is insufficient. No implementation may assume the missing answer. |
+| `BLOCKED` | Work cannot proceed because a named decision, evidence, approval, schema, or runtime gate is missing. |
+| `HISTORICAL-EVIDENCE` | A prior result retained for traceability and limited to its exact test, commit, or environment; it is not current production proof. |
+
+### Stable requirement and gate identifiers
+
+The existing identifiers remain authoritative and are not renumbered:
+
+- `GST-001` through `GST-020`: GST validation and evidence checkpoint.
+- `D-GST-01` through `D-GST-52`: decision-register records.
+- `PGST-01`: purchase GST workflow policy approval.
+- `PUR-POS-01` through `PUR-POS-05` and `SAL-POS-01` through `SAL-POS-05`:
+  place-of-supply scenarios.
+- `CAT-01` through `CAT-07`, `CASE-96`, `CASE-97`, `CASE-99`, `CLASS-01`,
+  `HIST-01`, `PUR-01`, `ROUND-01`, `INV-01`, and `TEN-01`: proposed
+  category, edge-case, and integrity acceptance tests.
+- `REL-01` through `REL-08`: release and approval gates.
+- `OPEN-01` through `OPEN-20`: unresolved or blocked work items.
+
+New material requirements in this cleaned document use the following stable
+IDs:
+
+| ID | Requirement |
+|---|---|
+| `GST-REQ-01` | Keep party registration/verification facts separate from transaction classification. |
+| `GST-REQ-02` | Resolve POS and components from validated server-side transaction facts; never trust a client classification or GSTIN prefix alone. |
+| `GST-REQ-03` | Fail closed for missing, invalid, contradictory, or unsupported facts. |
+| `GST-REQ-04` | Persist finalized transaction facts, tax components, rule/effective-date provenance, source revisions, snapshots, and audit links. |
+| `GST-REQ-05` | Keep supplier-declared, calculated, and accounting-accepted purchase values distinct and bind acceptance to the reviewed revision. |
+| `GST-REQ-06` | Preserve tenant isolation, atomic financial effects, idempotency, rollback, stock/ledger integrity, and existing Inventory boundaries. |
+| `GST-REQ-07` | Keep e-Invoice, e-Way Bill, returns, notes, imports/exports, SEZ, UIN, reverse charge, and other special workflows blocked unless separately approved and specified. |
+| `GST-REQ-08` | Preserve unknown `96`, unsupported `97`, and unsupported `99` evidence without normalization or invented treatment. |
+
+All `GST-REQ-*` items are `APPROVED-REQUIREMENT` only where they restate
+existing accepted policy; their implementation and runtime evidence remain
+separately tracked in sections 15, 17, 18, and 19.
 
 ## 1. Purpose, authority, and scope
 
@@ -72,13 +129,53 @@ is authorized by this document. This specification is not implementation
 completion, statutory correctness, security verification, release approval, or
 production authorization.
 
+## 1.2 Verified current baseline
+
+The following statements are `VERIFIED-CURRENT` from source inspection, with
+test status qualified separately:
+
+- `business_profiles` is tenant-owned and stores workspace state, country,
+  address, GSTIN, PAN, and default GST rate. Its current schema has no
+  registration-type or verification-status contract.
+- `customers` and `suppliers` are tenant-owned masters with GSTIN and
+  address/state fields. Their current schemas have no registration-type,
+  UIN/SEZ/composition, checksum-result, lookup-provenance, or verification
+  status fields.
+- Customer and supplier validation checks GSTIN shape, but not checksum or
+  government verification. Business-profile validation permits an empty or
+  partial alphanumeric value and therefore is not equivalent to strict GSTIN
+  validation.
+- Sales resolves the narrow ordinary state-comparison path from the workspace
+  state and captured `place_of_supply_state`; the calculator persists CGST,
+  SGST, IGST, cess, taxable, and line-total values. This does not establish
+  support for special statutory scenarios.
+- Purchases preserve supplier evidence, calculated values, accounting decisions,
+  revisions, and reconciliation events. The purchase action still accepts
+  caller-supplied `supply_scenario`; server-derived purchase POS is not
+  verified.
+- Sales invoices contain transaction-time identity, POS, and tax snapshots,
+  while purchase invoice items remain aggregate-tax oriented. Historical
+  completeness and database immutability remain unverified.
+- No e-Invoice or e-Way Bill implementation was found in the inspected source
+  tree. Their schemas, payloads, and rules remain out of the supported core.
+- HSN reporting currently derives interstate status from mutable business and
+  customer state and reconstructs components from aggregate tax. This is a
+  known implementation gap, not an authoritative statutory output.
+- Existing sales and purchase actions preserve the inspected transaction
+  boundaries for FEFO/batch, stock movement, ledger, sequence, and audit work.
+  Static tests cover selected boundaries; live database, concurrency, and
+  cross-tenant evidence remain unverified.
+
+Source references for this baseline are listed in section 2.1 and the
+requirement/evidence tables in sections 15 and 18.
+
 ## 2. Source inventory and conflict resolution
 
 ### 2.1 Canonical and supporting sources
 
 | Source | Role | Status |
 |---|---|---|
-| [`gst-audit-validation-and-plan.md`](./gst-audit-validation-and-plan.md) | Existing GST matrix, findings, accepted policy, test IDs | `EXISTING-REQUIREMENT`; current status source until this document is owner-reviewed |
+| [`gst-audit-validation-and-plan.md`](./gst-audit-validation-and-plan.md) | Existing GST matrix, findings, accepted policy, test IDs | Supporting evidence and historical status input; this document is the canonical consolidated reference |
 | [`pgst-01-purchase-gst-workflow-policy.md`](./pgst-01-purchase-gst-workflow-policy.md) | Purchase policy and product-owner decision register | Product decisions recorded; formal PGST-01 pending |
 | [`pgst-01-decision-traceability-register.md`](./pgst-01-decision-traceability-register.md) | Original canonical D-GST-01–D-GST-52 decision register and evidence traceability matrix | `PENDING — NOT APPROVED`; authoritative decision source for the decision IDs but not implementation authorization |
 | [`purchase-gst-persistence-design.md`](./purchase-gst-persistence-design.md) | Purchase evidence, calculation, acceptance, revision, and persistence design | Design only; implementation not authorized |
@@ -88,7 +185,7 @@ production authorization.
 | [`gst-schema-rollout-design-review.md`](./gst-schema-rollout-design-review.md) | Schema rollout and compatibility review | Design/review evidence |
 | [`gst-rollout-approval-and-disposable-readiness-2026-10-24.md`](./gst-rollout-approval-and-disposable-readiness-2026-10-24.md) | Rollout and disposable-readiness gates | Review-only approval contract |
 | [`PHASE_TRACKER.md`](../PHASE_TRACKER.md) | Current project stage and sequence | Project workflow authority |
-| [`CLAUDE.md`](../CLAUDE.md) | Agent operating context | Context, not a substitute for this specification |
+| [`CLAUDE.md`](../../CLAUDE.md) | Repository agent operating context | Concise pointer and guardrails; this specification remains the GST source of truth |
 | [`src/domain/services/gst-calculator.service.ts`](../../src/domain/services/gst-calculator.service.ts) | Current sales calculator | Current implementation evidence |
 | [`src/domain/services/purchase-calculator.service.ts`](../../src/domain/services/purchase-calculator.service.ts) | Current purchase aggregate calculator | Current implementation evidence |
 | [`src/domain/services/purchase-gst-reconciliation.service.ts`](../../src/domain/services/purchase-gst-reconciliation.service.ts) | Purchase evidence/reconciliation model | Current implementation evidence |
@@ -597,12 +694,16 @@ Legacy aggregate-only purchases remain a special case. The application must pres
 
 ### 8.9 Purchase place-of-supply decision matrix
 
-The repository supports the ordinary domestic decision flow only where the required state and supply facts are captured and resolved. The current source evidence includes `PurchaseGstSupplyFacts` and `determinePlaceOfSupply()`.
+The target specification requires ordinary domestic purchase states and supply
+facts to be captured and resolved server-side. Current source evidence includes
+`PurchaseGstSupplyFacts`, but the purchase action passes the caller's
+`supply_scenario` to the calculator; this is not proof of server-derived POS
+and remains a direct implementation blocker.
 
 | Scenario ID | Transaction category | Required inputs | Decision rule | Expected output | Persisted transaction facts | Outcome |
 |---|---|---|---|---|---|---|
-| `PUR-POS-01` | Same-state domestic purchase | Supplier state, recipient state, delivery state, and transaction facts | Resolve states; if equal and valid, treat as intra-state | `INTRA` and intra-state component treatment | Supplier state, recipient state, delivery state, supply scenario, rule version | `CURRENT-IMPLEMENTATION` for ordinary domestic rules |
-| `PUR-POS-02` | Different-state domestic purchase | Supplier state, recipient state, delivery state, and transaction facts | Resolve states; if different and valid, treat as inter-state | `INTER` and IGST treatment | Same as above | `CURRENT-IMPLEMENTATION` for ordinary domestic rules |
+| `PUR-POS-01` | Same-state domestic purchase | Supplier state, recipient state, delivery state, and transaction facts | Target rule: resolve states; if equal and valid, treat as intra-state | `INTRA` and intra-state component treatment | Supplier state, recipient state, delivery state, derived scenario, rule version | `PROPOSED / BLOCKED`: current action accepts caller-supplied `supply_scenario` |
+| `PUR-POS-02` | Different-state domestic purchase | Supplier state, recipient state, delivery state, and transaction facts | Target rule: resolve states; if different and valid, treat as inter-state | `INTER` and IGST treatment | Same as above | `PROPOSED / BLOCKED`: current action accepts caller-supplied `supply_scenario` |
 | `PUR-POS-03` | Missing/invalid state facts | Missing supplier or buyer state, malformed code, or unsupported special code | Fail closed; return `UNKNOWN` | No tax treatment may be inferred | Preserve original facts and capture block reason | `CURRENT-IMPLEMENTATION` with fail-closed guard |
 | `PUR-POS-04` | Other territory / special purpose / unsupported state code | `96`, `97`, `99`, or other unsupported category | Do not infer from prefix or location label alone | `BLOCKED` | Persist original facts and unresolved status | `BLOCKED` pending legal/accounting decision |
 | `PUR-POS-05` | Import/export/SEZ/UIN/reverse-charge | Country, import/export, statutory context, or approved special scenario | Explicit scenario approval required | `BLOCKED` | No enabled output without approved rule and evidence | `UNRESOLVED` |
@@ -863,9 +964,10 @@ The expectation package remains review-only and not owner-approved for
 connected execution. Connected database evidence must not be inferred from
 static artifacts.
 
-The current canonical matrix records:
+The supporting validation matrix records:
 
-- GST-001 through GST-005: pure sales/state behavior substantially verified.
+- GST-001 through GST-005: historical pure sales/state evidence, limited to
+  the exact assertions and runtime-independent behavior tested.
 - GST-006 through GST-013: locally represented or partially verified, with
   database rollout and/or policy blockers.
 - GST-014 and GST-015: prior application-path rollback database evidence.
@@ -876,6 +978,21 @@ The current canonical matrix records:
 
 The exact historical run artifacts remain the evidence source; this document
 does not upgrade their scope.
+
+The current audit session executed only the following static/application
+contracts, not the TypeScript GST suites or a database run:
+
+```text
+node --test tests/gst-application-transaction-contract.test.mjs \
+  tests/financial-e2e-auth-context.test.mjs \
+  tests/rls-policy-coverage.test.mjs
+```
+
+Observed result: 18 tests passed, 0 failed. This verifies only the source and
+static policy contracts covered by those tests; it does not verify tax legality,
+database persistence, live RLS, special-category behavior, or production
+readiness. The TypeScript GST test command remains unverified where `tsx` is
+unavailable.
 
 ### 15.2 Acceptance matrix
 
@@ -1133,8 +1250,8 @@ The release gate hierarchy is intentionally separate from implementation status.
 |---|---|---|---|
 | Purchase three-value rule | D-GST-01, D-GST-02, D-GST-41, D-GST-44 | `PARTIALLY DOCUMENTED` | Purchase reconciliation design and source contracts |
 | Purchase component contract | D-GST-22, D-GST-23, D-GST-24, D-GST-41 | `BLOCKED` | Approved component policy and accounting acceptance are absent |
-| Sales POS rule | GST-005, D-GST-23, `SAL-POS-01` to `SAL-POS-05` | `CURRENT-IMPLEMENTATION` for ordinary domestic case | Sales calculation and POS source logic |
-| Purchase POS rule | D-GST-23, `PUR-POS-01` to `PUR-POS-05` | `CURRENT-IMPLEMENTATION` for ordinary domestic case; unresolved beyond that | Purchase supply-fact and POS source contracts |
+| Sales POS rule | GST-005, D-GST-23, `SAL-POS-01` to `SAL-POS-05` | `VERIFIED-CURRENT` for the narrow state-comparison path; special rules remain blocked | Sales calculation and POS source logic |
+| Purchase POS rule | D-GST-23, `PUR-POS-01` to `PUR-POS-05` | `VERIFIED-CURRENT` only for caller-supplied scenario capture; server-derived POS is `BLOCKED` | Purchase action and reconciliation service |
 | Report/export contracts | GST-011, GST-012, GST-013, D-GST-49 | `BLOCKED` unless approved rule exists | Report/export sources and mutable-state gap |
 | D-GST-30 security gate | D-GST-30 | `NOT VERIFIED` | Source inspection of permission helper does not confirm the alleged bypass |
 | Release gates | D-GST-39, D-GST-40, D-GST-52 | `PENDING` | No runtime evidence or approval record |
