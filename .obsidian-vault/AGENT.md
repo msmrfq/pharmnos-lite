@@ -41,27 +41,30 @@ Additional layers:
 
 > **Update this section EVERY SESSION before you stop working. Thirty seconds here saves five minutes of re-orientation next time.**
 
-**Last updated:** `Date: 2026-10-28  Time: 02-10-46 (IST)`
+**Last updated:** `Date: 2026-10-28  Time: 19-16-30 (IST)`
 
 ### Verified working
 - **P1–P7 complete 100%;** current phase remains POST-P7 — PRE-PRODUCTION VALIDATION.
-- **GST pure validation is current:** the GST calculator and purchase reconciliation suites pass; typecheck passes, and lint has one unrelated warning. Pure tests remain distinct from database-backed evidence.
-- **Authorized local disposable application-path E2E is current:** tenant/RLS/effective-privilege checks, GST-014 rollback, GST-015 rollback, sales success, purchase success, payment success/failure, purchase GST review guard, and GST-016 authenticated snapshot/print behavior passed on the approved isolated target. Fixtures were retained; cleanup was not executed.
-- **Authorized purchase GST increment is locally type-safe and runtime-exercised:** purchase GST evidence, versioned calculations, reconciliation, explicit accounting acceptance, and fail-closed posting guards are covered by pure tests and the purchase-success/review-guard application-path run. Production rollout remains unverified.
+- **GST pure validation is current:** 243 GST assertions and 21 financial lifecycle safety tests pass; typecheck passes, and lint has one unrelated warning. These are not database-backed results.
+- **Authorized purchase GST increment is locally type-safe:** purchase GST persistence models exist in the Prisma schema, the pure reconciliation suite passes 37 assertions, and purchase finalization now fails closed without evidence, reconciliation, and explicit accounting acceptance. No migration or database execution has occurred.
 - **Canonical GST and financial verification matrices are consolidated** in `.obsidian-vault/specs/gst-audit-validation-and-plan.md` and `.obsidian-vault/specs/financial-e2e-validation-harness.md`.
-- **Financial E2E lifecycle guards remain complete as a pure layer:** resource ownership, immutable cleanup plans, explicit completion evidence, and fail-closed scenario gating are covered by local tests; cleanup completion itself remains unverified.
+- **Financial E2E lifecycle guards are complete as a pure layer:** resource ownership, immutable cleanup plans, explicit completion evidence, and fail-closed scenario gating are covered by local tests.
 
 ### Broken / blocked (deferred — acceptable workaround)
-- **Broader GST-020 acceptance remains blocked:** application-path evidence exists for the authorized local scenarios, but cleanup authorization/completion, full legacy/schema compatibility, GST-012 historical-data decisions, GST-018 special-jurisdiction requirements, qualified GST/legal review, and remaining financial acceptance criteria are unresolved.
-- **Production and live-rollout evidence remain unverified:** production Prisma connectivity, live Supabase rollout, backup/restore, operational monitoring, and production approval remain outside the authorized local run. No production or demo data was changed.
-- **Accepted GST product policy is documented and partially exercised:** purchases preserve supplier evidence and separately reconcile calculated and accounting-accepted values; sales use captured supply facts; finalized invoices use immutable snapshots. Special jurisdiction codes `96`, `97`, and `99` now have standalone normalization coverage, but unsupported tax treatments remain fail-closed and GST-018 is not complete.
+- **Database-backed financial verification is blocked:** no independently verified disposable database, applied schema, tenant fixture lifecycle, or authorized execution exists; demo data remains untouched.
+- **RLS, tenant isolation, persistence, rollback, invoice sequencing, stock/ledger consistency, and historical immutability remain unverified.** Prior preview or storage evidence is not fresh database evidence in the disconnected environment.
+- **Accepted GST product policy is now documented:** purchases preserve supplier evidence and separately reconcile calculated and accounting-accepted values; sales uses captured supply facts; finalized invoices require immutable snapshots. `96` has no active standalone normalization, while `97` and `99` remain unsupported special-purpose GSTIN prefixes. Purchase schema support is locally present, but component-fact capture, accounting acceptance, migration rollout, runtime evidence, and sales captured-fact alignment remain pending.
 - **Backup/restore drill, operational monitoring, production Prisma connectivity, leaked-password protection, and explicit production approval remain incomplete or unverified.**
 
 ### Focus right now (next immediate build step)
-- **POST-P7 — PRE-PRODUCTION VALIDATION remains active.** The next activity is closure review of the remaining GST-020 acceptance gaps, not another initialization attempt.
-- **Next clear approvals:** approve discrepancy materiality/tolerance, workflow/status authority, captured supply facts and supported rule scenarios, GST-018 special-jurisdiction treatment, GST-012 historical-data policy, and controlled cleanup scope; no production/accounting behavior should be treated as complete.
-- **Then establish remaining evidence:** obtain cleanup authorization and trusted cleanup evidence, resolve legacy/schema compatibility and legal-review gates, and separately verify production/live operational gates when authorized.
-- **Keep GST-019/GST-020 blocked** until all mandatory acceptance criteria, cleanup evidence, prerequisite decisions, and required runtime assertions are complete.
+- **POST-P7 — PRE-PRODUCTION VALIDATION remains active.** The current activity is owner review of the consolidated GST master specification at `.obsidian-vault/specs/gst-specification.md` before GST implementation resumes.
+- **GST master specification status:** the document is a consolidated review draft. It becomes the authoritative GST requirements reference only after owner review; it does not grant implementation, migration, testing, pilot, legal/accounting, or production authorization.
+- **Agents must consult `.obsidian-vault/specs/gst-specification.md` before proposing or implementing GST, purchase, sales, jurisdiction, tax, invoice, reporting, or GST test changes. Preserve its status labels and do not promote current implementation into statutory correctness.
+- **Required sequence:** review/approve the GST specification; implement only approved evidence-supported requirements; complete the preserved GST Disposable Test Suite checkpoint; conduct Broad Financial E2E review; complete Invoice Modernization; complete Live Supabase readiness and separately approved rollout; then perform post-rollout validation and production Go/No-Go.
+- **Scope boundary:** Inventory integration contracts remain unchanged unless separately authorized. Legacy-data remediation, schema changes, migrations, returns, advanced statutory workflows, and production rollout remain separately gated.
+- **Next clear approvals:** approve discrepancy materiality/tolerance, workflow/status authority, captured supply facts and supported rule scenarios, and controlled test-data rebuild scope; the active directive authorizes the approved implementation scope, but formal PGST-01 remains pending and no production/accounting behavior should be treated as complete.
+- **Then establish evidence:** provision or identify a disposable database, verify positive production separation and schema rollout, create owned fixtures, execute the guarded scenarios, and prove cleanup.
+- **Keep GST-019/GST-020 blocked** until database identity, fixture/reset lifecycle, cleanup authorization, execution approval, and runtime assertions are all available.
 - **Do not treat existing purchase totals as supplier-declared GST evidence.** The current form does not capture component source facts; drafts remain saveable, while finalization remains fail-closed until an explicit evidence and accounting-acceptance path exists.
 - **Release remains gated** by backup/restore, monitoring, production connectivity, leaked-password protection, and explicit production approval; no deployment is implied by local tests.
 
@@ -136,7 +139,7 @@ project/
 **IMPORTANT — Working Phase Numbering Locked (day-to-day use P1…P7 ONLY. After P7 mention by PRE-PRODUCTION VALIDATION with respective stages.**  
 - We use **7 working phases P1 through P7** and after  P7 mention by "PRE-PRODUCTION VALIDATION" with respective stages for all planning, status updates, commit messages, and day-to-day conversation. (Defined fully in `.obsidian-vault/PHASE_TRACKER.md`.)
 - The 6 phases (Phase 0…Phase 5) in `.obsidian-vault/prd-technical-architecture.md §29 Suggested Development Phases` are for **historical-reference / PRD coverage mapping only** — they are NOT our day-to-day working numbering. The crosswalk in PHASE_TRACKER.md maps them 1:1 so nobody gets confused.
-- Current working phase today = `PHASE 4 — PURCHASES + INVENTORY TRANSACTIONS` (Purchase entry → Stock adjustments → Batch FEFO). If you ever open a vault/bug/spec/retro/decision file or TODO list that mentions PRD phase numbers, convert silently via PHASE_TRACKER.md crosswalk.
+- Historical context only: `PHASE 4 — PURCHASES + INVENTORY TRANSACTIONS` was an earlier implementation/tracking phase. The active project state is **POST-P7 — PRE-PRODUCTION VALIDATION**, with GST specification review and approval as the current gate.
 - ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. AND IF ANY FILE NAMING EXPLICITELY NEEDED BOTH DATE AND TIME THEN USE `YYYY-MM-DDTHH-MM-SS` THIS FORMAT.
 
 **IMPORTANT**: Next.js App Router + Prisma application code scaffold is complete (P1 + P2 + P3 shipped). Reference docs live only inside vault `.obsidian-vault/` (project root `reference docs/` folder no longer exists — see Do Not section below).

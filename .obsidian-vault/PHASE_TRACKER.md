@@ -11,11 +11,13 @@
 
 **Working phase numbering (PROJECT-WIDE MANDATORY):** We use 7 working phases P1…P7. The PRD `.obsidian-vault/prd-technical-architecture.md §29 Suggested Development Phases` originally proposed 6 phases (Phase 0…Phase 5). The crosswalk column below maps every working phase to its corresponding PRD coverage area so we never confuse the two. **Always use P1…P7 working phase numbers in all notes, bugs, specs, decisions, retro, TODO lists, and commit messages going forward.** Do NOT use PRD numbering in day-to-day work.
 
-**Last updated:** `Date: 2026-10-25  Time: 16-02-06 (IST)`
+**Last updated:** `Date: 2026-10-28  Time: 19-16-30 (IST)`
 
 N.B: ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. 
 
 **Current working phase:** `NONE — P1…P7 COMPLETE; POST-P7 PRE-PRODUCTION VALIDATION IN PROGRESS.`
+
+> **GST specification review state:** the current GST Master Specification is `PROPOSED / READY FOR OWNER REVIEW`. The `40%` figure measures specification drafting/review progress only; it does not represent owner approval, implementation authorization, migration approval, or production readiness. A subsequent percentage increase requires evidence-backed work beyond drafting.
 
 ## Canonical Phase Scope Labels
 
@@ -67,8 +69,9 @@ Overall project progress: 100% (P1-P7 complete. Post-P7 pre-production validatio
 may execute delegated tasks but do not own the project, approvals, or release
 decision.
 
-**Current official stage:** GST Disposable Test Suite — `███████████████░░░░░` 35% — `IN PROGRESS`
-**Active substep:** Financial E2E exit-criteria review and closure — `████████░░░░░░░░░░░░` 40% — `IN PROGRESS`
+**Current official stage:** GST master specification consolidation and review — `████████░░░░░░░░░░░░` 40% — `IN PROGRESS`
+**Active substep:** Produce and review `.obsidian-vault/specs/gst-specification.md`; preserve the GST Disposable Test Suite checkpoint and evidence.
+**Immediate next action:** Project Owner review of the proposed GST Master Specification and explicit resolution of outstanding decisions, with legal/accounting confirmation kept separate from product-owner approval.
 **Live Supabase readiness:** `NO-GO`
 
 ### Progress and status rules
@@ -78,6 +81,29 @@ decision.
 - Each 5% equals one filled block in a 20-character bar. Workstream percentages are preserved from the established tracker; summaries use arithmetic means rounded to the nearest 5%.
 - `COMPLETE`, `IN PROGRESS`, `PENDING`, `NOT RUN`, `BLOCKED`, `NOT VERIFIED`, and `NO-GO` remain distinct.
 - A roadmap stage is a synchronized summary of underlying workstreams, not a second task record or competing status.
+
+### GST master specification initiative
+
+- **Current work:** Consolidate the existing GST audit, purchase policy,
+  persistence design, source evidence, implementation findings, and GST
+  Disposable Test Suite contracts into
+  `.obsidian-vault/specs/gst-specification.md`.
+- **Status:** The specification is a review draft until the Project Owner
+  approves it. It must not be treated as implementation authorization,
+  migration approval, pilot activation, legal/accounting approval, or release
+  approval.
+- **Preservation rule:** Existing GST Disposable Test Suite identifiers,
+  checkpoint evidence, fixtures, artifacts, and known failures must be
+  preserved. Static or prior evidence must not be upgraded into fresh
+  connected proof.
+- **Next sequence:** owner review → implement approved evidence-supported
+  requirements → complete the GST Disposable Test Suite → Broad Financial E2E
+  review → Invoice Modernization → Live Supabase readiness and separately
+  approved rollout → post-rollout validation and production Go/No-Go.
+- **Boundaries:** Inventory contracts remain unchanged unless separately
+  authorized. Legacy remediation, schema changes, migrations, database
+  execution, returns, and advanced statutory workflows remain separately
+  gated.
 
 ## Layer A — Original POST-P7 main workstreams
 

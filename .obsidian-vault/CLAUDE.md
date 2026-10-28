@@ -62,7 +62,7 @@ Additional layers:
 
 > **Update this section EVERY SESSION before you stop working. Thirty seconds here saves five minutes of re-orientation next time.**
 
-**Last updated:** `Date: 2026-10-24  Time: 15-56-51 (IST)`
+**Last updated:** `Date: 2026-10-28  Time: 19-16-30 (IST)`
 
 ### Verified working
 - **P1–P7 complete 100%;** current phase remains POST-P7 — PRE-PRODUCTION VALIDATION.
@@ -74,11 +74,15 @@ Additional layers:
 ### Broken / blocked (deferred — acceptable workaround)
 - **Database-backed financial verification is blocked:** no independently verified disposable database, applied schema, tenant fixture lifecycle, or authorized execution exists; demo data remains untouched.
 - **RLS, tenant isolation, persistence, rollback, invoice sequencing, stock/ledger consistency, and historical immutability remain unverified.** Prior preview or storage evidence is not fresh database evidence in the disconnected environment.
-- **Accepted GST product policy is now documented:** purchases preserve supplier evidence and separately reconcile calculated and accounting-accepted values; sales uses captured supply facts; finalized invoices require immutable snapshots. Purchase schema support is locally present, but component-fact capture, accounting acceptance, migration rollout, runtime evidence, and sales captured-fact alignment remain pending.
+- **Accepted GST product policy is now documented:** purchases preserve supplier evidence and separately reconcile calculated and accounting-accepted values; sales uses captured supply facts; finalized invoices require immutable snapshots. `96` has no active standalone normalization, while `97` and `99` remain unsupported special-purpose GSTIN prefixes. Purchase schema support is locally present, but component-fact capture, accounting acceptance, migration rollout, runtime evidence, and sales captured-fact alignment remain pending.
 - **Backup/restore drill, operational monitoring, production Prisma connectivity, leaked-password protection, and explicit production approval remain incomplete or unverified.**
 
 ### Focus right now (next immediate build step)
-- **POST-P7 — PRE-PRODUCTION VALIDATION remains active.** The next activity is approval and preparation for a separately authorized isolated financial verification run.
+- **POST-P7 — PRE-PRODUCTION VALIDATION remains active.** The current activity is owner review of the consolidated GST master specification at `.obsidian-vault/specs/gst-specification.md` before GST implementation resumes.
+- **GST master specification status:** the document is a consolidated review draft. It becomes the authoritative GST requirements reference only after owner review; it does not grant implementation, migration, testing, pilot, legal/accounting, or production authorization.
+- **Agents must consult `.obsidian-vault/specs/gst-specification.md` before proposing or implementing GST, purchase, sales, jurisdiction, tax, invoice, reporting, or GST test changes. Preserve its status labels and do not promote current implementation into statutory correctness.
+- **Required sequence:** review/approve the GST specification; implement only approved evidence-supported requirements; complete the preserved GST Disposable Test Suite checkpoint; conduct Broad Financial E2E review; complete Invoice Modernization; complete Live Supabase readiness and separately approved rollout; then perform post-rollout validation and production Go/No-Go.
+- **Scope boundary:** Inventory integration contracts remain unchanged unless separately authorized. Legacy-data remediation, schema changes, migrations, returns, advanced statutory workflows, and production rollout remain separately gated.
 - **Next clear approvals:** approve discrepancy materiality/tolerance, workflow/status authority, captured supply facts and supported rule scenarios, and controlled test-data rebuild scope; the active directive authorizes the approved implementation scope, but formal PGST-01 remains pending and no production/accounting behavior should be treated as complete.
 - **Then establish evidence:** provision or identify a disposable database, verify positive production separation and schema rollout, create owned fixtures, execute the guarded scenarios, and prove cleanup.
 - **Keep GST-019/GST-020 blocked** until database identity, fixture/reset lifecycle, cleanup authorization, execution approval, and runtime assertions are all available.
@@ -156,7 +160,7 @@ project/
 **IMPORTANT — Working Phase Numbering Locked (day-to-day use P1…P7 ONLY. After P7 mention by PRE-PRODUCTION VALIDATION with respective stages.**  
 - We use **7 working phases P1 through P7** and after  P7 mention by "PRE-PRODUCTION VALIDATION" with respective stages for all planning, status updates, commit messages, and day-to-day conversation. (Defined fully in `.obsidian-vault/PHASE_TRACKER.md`.)
 - The 6 phases (Phase 0…Phase 5) in `.obsidian-vault/prd-technical-architecture.md §29 Suggested Development Phases` are for **historical-reference / PRD coverage mapping only** — they are NOT our day-to-day working numbering. The crosswalk in PHASE_TRACKER.md maps them 1:1 so nobody gets confused.
-- Current working phase today = `PHASE 4 — PURCHASES + INVENTORY TRANSACTIONS` (Purchase entry → Stock adjustments → Batch FEFO). If you ever open a vault/bug/spec/retro/decision file or TODO list that mentions PRD phase numbers, convert silently via PHASE_TRACKER.md crosswalk.
+- Historical context only: `PHASE 4 — PURCHASES + INVENTORY TRANSACTIONS` was an earlier implementation/tracking phase. The active project state is **POST-P7 — PRE-PRODUCTION VALIDATION**, with GST specification review and approval as the current gate.
 - ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. AND IF ANY FILE NAMING EXPLICITELY NEEDED BOTH DATE AND TIME THEN USE `YYYY-MM-DDTHH-MM-SS` THIS FORMAT.
 
 **IMPORTANT**: Next.js App Router + Prisma application code scaffold is complete (P1 + P2 + P3 shipped). Reference docs live only inside vault `.obsidian-vault/` (project root `reference docs/` folder no longer exists — see Do Not section below).
