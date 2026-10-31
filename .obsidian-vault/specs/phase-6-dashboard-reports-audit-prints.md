@@ -1,3 +1,17 @@
+---
+title: Phase 6 - Dashboard Reports + Audit Views + Print Templates
+date: 2026-09-30
+status: Draft
+---
+
+## Goal
+
+## Acceptance Criteria
+
+
+
+## Out of Scope
+
 # Phase 6 — Dashboard Reports + Audit Views + Print Templates (SPEC)
 
 ## Problem

@@ -1,3 +1,15 @@
+---
+title: Phase 6 - Tasks / Implementation Queue
+date: 2026-09-30
+status: Draft
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Phase 6 — Tasks / Implementation Queue
 
 Map every rule/rubric AC to one or more implementation tasks with atomic vertical slices. Dependency order: P6a → P6b → P6c → P6d → P6e. DO NOT reorder across subphases.

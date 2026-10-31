@@ -1,7 +1,7 @@
 ---
 title: Local VLESS proxy drops Postgres pg-wire SASL auth packets
 date: 2026-09-30
-status: Open
+status: Closed
 ---
 
 ## Steps to Reproduce

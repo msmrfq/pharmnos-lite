@@ -1,0 +1,775 @@
+{
+  "evidenceVersion": 1,
+  "run": "hsn_app_1793470848347_4ef41c",
+  "target": "approved local disposable PostgreSQL database only",
+  "applicationConnection": "verified disposable bootstrap connection; no Supabase or production",
+  "sourceHashes": {
+    "src/app/_actions/gst-catalog.actions.ts": "1246ea7cf147e443c68787d0881d1665d72723d9c379293c9e64f97938a82180",
+    "src/lib/db/tenant-context.ts": "3f653e0e14953b45d3349b6fc641e21d1b155316ebc37c7235d2d248f95538cb",
+    "src/lib/db/prisma.ts": "a59488220d55dbf151fa8ec2335ed68f1c294c384cff6c6cbf5861b2c7a0a689",
+    "src/adapters/auth/supabase-auth.adapter.ts": "8d5f1f65d0fdba4754ff2b997f4571a0c51ff46cb6f0f50394f67dc50514376c"
+  },
+  "tests": [
+    {
+      "id": "update_authorized_success",
+      "function": "updateHsnSacCatalogRecord",
+      "authentication": "hsn_app_1793470848347_4ef41c_user_a",
+      "expected": "Catalog is reset to pending and final state is audited",
+      "actual": {
+        "id": "hsn_app_1793470848347_4ef41c_catalog_pending"
+      },
+      "before": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "PENDING",
+        "rule_active": false,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 0,
+        "pending_rule_history_count": 0,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "after": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "PENDING",
+        "rule_active": false,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 0,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "update_unauthorized_rejected",
+      "function": "updateHsnSacCatalogRecord",
+      "authentication": "hsn_app_1793470848347_4ef41c_user_b",
+      "expected": "Permission rejection with no state change",
+      "actual": {
+        "error": "You are not authorized to perform this action."
+      },
+      "before": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "PENDING",
+        "rule_active": false,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 0,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "after": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "PENDING",
+        "rule_active": false,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 0,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "status": "PASS",
+      "outcome": "REJECTED_AS_EXPECTED"
+    },
+    {
+      "id": "update_cross_tenant_rejected",
+      "function": "updateHsnSacCatalogRecord",
+      "authentication": "hsn_app_1793470848347_4ef41c_user_a",
+      "expected": "Cross-tenant catalog is not found",
+      "actual": {
+        "error": "Catalog record not found."
+      },
+      "before": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "PENDING",
+        "rule_active": false,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 0,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "after": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "PENDING",
+        "rule_active": false,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 0,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "status": "PASS",
+      "outcome": "REJECTED_AS_EXPECTED"
+    },
+    {
+      "id": "approve_rate_pending_classification_rejected",
+      "function": "approveGstRateRule",
+      "authentication": "hsn_app_1793470848347_4ef41c_user_a",
+      "expected": "Rate approval blocks until classification is approved and active",
+      "actual": {
+        "error": "GST rate approval is blocked until its classification is approved and active."
+      },
+      "before": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "PENDING",
+        "rule_active": false,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 0,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "after": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "PENDING",
+        "rule_active": false,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 0,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "status": "PASS",
+      "outcome": "REJECTED_AS_EXPECTED"
+    },
+    {
+      "id": "approve_rate_unauthorized_rejected",
+      "function": "approveGstRateRule",
+      "authentication": "hsn_app_1793470848347_4ef41c_user_b",
+      "expected": "Permission rejection with no state change",
+      "actual": {
+        "error": "You are not authorized to perform this action."
+      },
+      "before": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "PENDING",
+        "rule_active": false,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 0,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "after": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "PENDING",
+        "rule_active": false,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 0,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "status": "PASS",
+      "outcome": "REJECTED_AS_EXPECTED"
+    },
+    {
+      "id": "approve_rate_authorized_success",
+      "function": "approveGstRateRule",
+      "authentication": "hsn_app_1793470848347_4ef41c_user_a",
+      "expected": "Pending unclassified rule becomes approved and history is written",
+      "actual": {
+        "id": "hsn_app_1793470848347_4ef41c_rule_pending"
+      },
+      "before": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "PENDING",
+        "rule_active": false,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 0,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "after": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "APPROVED",
+        "rule_active": true,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 1,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "approve_rate_duplicate_rejected",
+      "function": "approveGstRateRule",
+      "authentication": "hsn_app_1793470848347_4ef41c_user_a",
+      "expected": "Second approval is rejected and does not add history",
+      "actual": {
+        "error": "Rate rule is missing, cross-tenant, or already approved."
+      },
+      "before": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "APPROVED",
+        "rule_active": true,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 1,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "after": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "APPROVED",
+        "rule_active": true,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 1,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "status": "PASS",
+      "outcome": "REJECTED_AS_EXPECTED"
+    },
+    {
+      "id": "approve_rate_concurrent_duplicate",
+      "function": "approveGstRateRule",
+      "authentication": "hsn_app_1793470848347_4ef41c_user_a",
+      "expected": "Concurrent duplicate approvals produce one success and one rejection",
+      "actual": {
+        "outcomes": [
+          "REJECTED:Rate rule is missing, cross-tenant, or already approved.",
+          "COMMITTED"
+        ]
+      },
+      "before": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "APPROVED",
+        "rule_active": true,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 1,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "after": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "APPROVED",
+        "rule_active": true,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 1,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "revision_authorized_success",
+      "function": "createGstRateRuleRevision",
+      "authentication": "hsn_app_1793470848347_4ef41c_user_a",
+      "expected": "Approved predecessor remains unchanged; pending successor and history are created",
+      "actual": {
+        "id": "cmvwq8jsw000byoudpwxzhm9f"
+      },
+      "before": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "APPROVED",
+        "rule_active": true,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 1,
+        "approved_rule_history_count": 1,
+        "revision_count": 0,
+        "revision_history_count": 0
+      },
+      "after": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "APPROVED",
+        "rule_active": true,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 1,
+        "approved_rule_history_count": 1,
+        "revision_count": 1,
+        "revision_history_count": 1
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "revision_unapproved_rejected",
+      "function": "createGstRateRuleRevision",
+      "authentication": "hsn_app_1793470848347_4ef41c_user_a",
+      "expected": "Unapproved predecessor cannot be revised",
+      "actual": {
+        "error": "Only an approved active GST rate can be revised."
+      },
+      "before": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "APPROVED",
+        "rule_active": true,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 1,
+        "approved_rule_history_count": 1,
+        "revision_count": 1,
+        "revision_history_count": 1
+      },
+      "after": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "APPROVED",
+        "rule_active": true,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 1,
+        "approved_rule_history_count": 1,
+        "revision_count": 1,
+        "revision_history_count": 1
+      },
+      "status": "PASS",
+      "outcome": "REJECTED_AS_EXPECTED"
+    },
+    {
+      "id": "revision_forced_rollback",
+      "function": "createGstRateRuleRevision",
+      "authentication": "hsn_app_1793470848347_4ef41c_user_a",
+      "expected": "Duplicate rule version fails inside the transaction without successor or history",
+      "actual": {
+        "error": "\nInvalid `tx.gst_rate_rules.create()` invocation in\nE:\\PharmnosLite\\src\\app\\_actions\\gst-catalog.actions.ts:337:46\n\n  334   },\n  335 });\n  336 if (!prior) throw new Error(\"Only an approved active GST rate can be revised.\");\n→ 337 const revision = await tx.gst_rate_rules.create(\nUnique constraint failed on the fields: (`tenant_id`,`rule_version`)"
+      },
+      "before": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "APPROVED",
+        "rule_active": true,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 1,
+        "approved_rule_history_count": 1,
+        "revision_count": 1,
+        "revision_history_count": 1
+      },
+      "after": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "APPROVED",
+        "rule_active": true,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 1,
+        "approved_rule_history_count": 1,
+        "revision_count": 1,
+        "revision_history_count": 1
+      },
+      "status": "PASS",
+      "outcome": "REJECTED_AS_EXPECTED"
+    },
+    {
+      "id": "revision_concurrent_same_version",
+      "function": "createGstRateRuleRevision",
+      "authentication": "hsn_app_1793470848347_4ef41c_user_a",
+      "expected": "Concurrent revisions with the same version yield one successor and one rejected transaction",
+      "actual": {
+        "outcomes": [
+          "REJECTED:\nInvalid `tx.gst_rate_rules.create()` invocation in\nE:\\PharmnosLite\\src\\app\\_actions\\gst-catalog.actions.ts:337:46\n\n  334   },\n  335 });\n  336 if (!prior) throw new Error(\"Only an approved active GST rate can be revised.\");\n→ 337 const revision = await tx.gst_rate_rules.create(\nUnique constraint failed on the fields: (`tenant_id`,`rule_version`)",
+          "COMMITTED"
+        ]
+      },
+      "before": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "APPROVED",
+        "rule_active": true,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 1,
+        "approved_rule_history_count": 1,
+        "revision_count": 1,
+        "revision_history_count": 1
+      },
+      "after": {
+        "catalog_status": "PENDING",
+        "catalog_active": false,
+        "rule_status": "APPROVED",
+        "rule_active": true,
+        "approved_tax_rate": "18.0000",
+        "approved_status": "APPROVED",
+        "catalog_history_count": 1,
+        "pending_rule_history_count": 1,
+        "approved_rule_history_count": 1,
+        "revision_count": 2,
+        "revision_history_count": 2
+      },
+      "status": "PASS"
+    }
+  ],
+  "cleanup": {
+    "databaseDropped": true,
+    "databaseVerifiedAbsent": true,
+    "verifiedAbsent": true
+  },
+  "databaseIdentity": {
+    "database_name": "pharmnos_financial_e2e_hsn_app_1793470848347_4ef41c",
+    "current_user_name": "pharmnos_e2e",
+    "server_address": "172.18.0.2/32",
+    "server_port": 5432
+  },
+  "databaseRoleAssessment": {
+    "current_user_name": "pharmnos_e2e",
+    "session_user_name": "pharmnos_e2e",
+    "is_superuser": true,
+    "bypasses_rls": true,
+    "restrictedRuntimeRoleDemonstrated": false,
+    "rlsAcceptance": "NOT_ESTABLISHED",
+    "reason": "Application probe used the approved bootstrap role to provision and exercise the disposable database; no restricted runtime-role session with tenant-context RLS enforcement was used."
+  },
+  "disposableSchemaPreparation": {
+    "appliedGeneratedBaseline": true,
+    "governanceControlsSource": "prisma/financial-e2e-schema-provisioning.generated.sql",
+    "targetDatabase": "pharmnos_financial_e2e_hsn_app_1793470848347_4ef41c"
+  },
+  "applicationContexts": {
+    "authorizedUser": {
+      "externalId": "hsn_app_1793470848347_4ef41c_user_a",
+      "tenantId": "hsn_app_1793470848347_4ef41c_tenant_a",
+      "membershipId": "hsn_app_1793470848347_4ef41c_membership_a",
+      "permissions": [
+        "manage_hsn_catalog",
+        "approve_gst_rates"
+      ]
+    },
+    "unauthorizedCrossTenantUser": {
+      "externalId": "hsn_app_1793470848347_4ef41c_user_b",
+      "tenantId": "hsn_app_1793470848347_4ef41c_tenant_b",
+      "membershipId": "hsn_app_1793470848347_4ef41c_membership_b",
+      "permissions": []
+    },
+    "crossTenantAttempt": {
+      "callerExternalId": "hsn_app_1793470848347_4ef41c_user_a",
+      "callerTenantId": "hsn_app_1793470848347_4ef41c_tenant_a",
+      "targetTenantId": "hsn_app_1793470848347_4ef41c_tenant_b"
+    }
+  },
+  "revisionInvariant": {
+    "predecessorBefore": {
+      "predecessor_id": "hsn_app_1793470848347_4ef41c_rule_approved",
+      "predecessor_version": "APPROVED-1",
+      "predecessor_status": "APPROVED",
+      "predecessor_active": true,
+      "predecessor_tax_rate": "18.0000",
+      "successor_count": 0,
+      "revision_history_count": 0,
+      "successors": [],
+      "revision_history": []
+    },
+    "predecessorAfter": {
+      "predecessor_id": "hsn_app_1793470848347_4ef41c_rule_approved",
+      "predecessor_version": "APPROVED-1",
+      "predecessor_status": "APPROVED",
+      "predecessor_active": true,
+      "predecessor_tax_rate": "18.0000",
+      "successor_count": 1,
+      "revision_history_count": 1,
+      "successors": [
+        {
+          "id": "cmvwq8jsw000byoudpwxzhm9f",
+          "rule_version": "hsn_app_1793470848347_4ef41c-REVISION-1",
+          "approval_status": "PENDING",
+          "is_active": false,
+          "tax_rate": "20.0000"
+        }
+      ],
+      "revision_history": [
+        {
+          "rule_id": "cmvwq8jsw000byoudpwxzhm9f",
+          "action": "REVISION_CREATED",
+          "snapshot": {
+            "id": "cmvwq8jsw000byoudpwxzhm9f",
+            "tax_rate": "20",
+            "is_active": false,
+            "tenant_id": "hsn_app_1793470848347_4ef41c_tenant_a",
+            "created_at": "2026-10-31T18:20:49.088Z",
+            "updated_at": "2026-10-31T18:20:49.088Z",
+            "approved_at": null,
+            "effective_to": null,
+            "rule_version": "hsn_app_1793470848347_4ef41c-REVISION-1",
+            "effective_from": "2027-04-01T00:00:00.000Z",
+            "approval_status": "PENDING",
+            "component_policy": "IGST",
+            "source_reference": "APP-REVISION",
+            "hsn_sac_catalog_id": "hsn_app_1793470848347_4ef41c_catalog_approved",
+            "supersedes_rule_id": "hsn_app_1793470848347_4ef41c_rule_approved",
+            "created_by_membership_id": "hsn_app_1793470848347_4ef41c_membership_a",
+            "approved_by_membership_id": null
+          }
+        }
+      ]
+    },
+    "unchanged": true,
+    "auditHistoryMatchesPersistedSuccessor": true
+  },
+  "revisionRollback": {
+    "before": {
+      "predecessor_id": "hsn_app_1793470848347_4ef41c_rule_approved",
+      "predecessor_version": "APPROVED-1",
+      "predecessor_status": "APPROVED",
+      "predecessor_active": true,
+      "predecessor_tax_rate": "18.0000",
+      "successor_count": 1,
+      "revision_history_count": 1,
+      "successors": [
+        {
+          "id": "cmvwq8jsw000byoudpwxzhm9f",
+          "rule_version": "hsn_app_1793470848347_4ef41c-REVISION-1",
+          "approval_status": "PENDING",
+          "is_active": false,
+          "tax_rate": "20.0000"
+        }
+      ],
+      "revision_history": [
+        {
+          "rule_id": "cmvwq8jsw000byoudpwxzhm9f",
+          "action": "REVISION_CREATED",
+          "snapshot": {
+            "id": "cmvwq8jsw000byoudpwxzhm9f",
+            "tax_rate": "20",
+            "is_active": false,
+            "tenant_id": "hsn_app_1793470848347_4ef41c_tenant_a",
+            "created_at": "2026-10-31T18:20:49.088Z",
+            "updated_at": "2026-10-31T18:20:49.088Z",
+            "approved_at": null,
+            "effective_to": null,
+            "rule_version": "hsn_app_1793470848347_4ef41c-REVISION-1",
+            "effective_from": "2027-04-01T00:00:00.000Z",
+            "approval_status": "PENDING",
+            "component_policy": "IGST",
+            "source_reference": "APP-REVISION",
+            "hsn_sac_catalog_id": "hsn_app_1793470848347_4ef41c_catalog_approved",
+            "supersedes_rule_id": "hsn_app_1793470848347_4ef41c_rule_approved",
+            "created_by_membership_id": "hsn_app_1793470848347_4ef41c_membership_a",
+            "approved_by_membership_id": null
+          }
+        }
+      ]
+    },
+    "after": {
+      "predecessor_id": "hsn_app_1793470848347_4ef41c_rule_approved",
+      "predecessor_version": "APPROVED-1",
+      "predecessor_status": "APPROVED",
+      "predecessor_active": true,
+      "predecessor_tax_rate": "18.0000",
+      "successor_count": 1,
+      "revision_history_count": 1,
+      "successors": [
+        {
+          "id": "cmvwq8jsw000byoudpwxzhm9f",
+          "rule_version": "hsn_app_1793470848347_4ef41c-REVISION-1",
+          "approval_status": "PENDING",
+          "is_active": false,
+          "tax_rate": "20.0000"
+        }
+      ],
+      "revision_history": [
+        {
+          "rule_id": "cmvwq8jsw000byoudpwxzhm9f",
+          "action": "REVISION_CREATED",
+          "snapshot": {
+            "id": "cmvwq8jsw000byoudpwxzhm9f",
+            "tax_rate": "20",
+            "is_active": false,
+            "tenant_id": "hsn_app_1793470848347_4ef41c_tenant_a",
+            "created_at": "2026-10-31T18:20:49.088Z",
+            "updated_at": "2026-10-31T18:20:49.088Z",
+            "approved_at": null,
+            "effective_to": null,
+            "rule_version": "hsn_app_1793470848347_4ef41c-REVISION-1",
+            "effective_from": "2027-04-01T00:00:00.000Z",
+            "approval_status": "PENDING",
+            "component_policy": "IGST",
+            "source_reference": "APP-REVISION",
+            "hsn_sac_catalog_id": "hsn_app_1793470848347_4ef41c_catalog_approved",
+            "supersedes_rule_id": "hsn_app_1793470848347_4ef41c_rule_approved",
+            "created_by_membership_id": "hsn_app_1793470848347_4ef41c_membership_a",
+            "approved_by_membership_id": null
+          }
+        }
+      ]
+    },
+    "predecessorUnchanged": true,
+    "noPartialSuccessor": true,
+    "noPartialHistory": true
+  },
+  "revisionConcurrency": {
+    "before": {
+      "predecessor_id": "hsn_app_1793470848347_4ef41c_rule_approved",
+      "predecessor_version": "APPROVED-1",
+      "predecessor_status": "APPROVED",
+      "predecessor_active": true,
+      "predecessor_tax_rate": "18.0000",
+      "successor_count": 1,
+      "revision_history_count": 1,
+      "successors": [
+        {
+          "id": "cmvwq8jsw000byoudpwxzhm9f",
+          "rule_version": "hsn_app_1793470848347_4ef41c-REVISION-1",
+          "approval_status": "PENDING",
+          "is_active": false,
+          "tax_rate": "20.0000"
+        }
+      ],
+      "revision_history": [
+        {
+          "rule_id": "cmvwq8jsw000byoudpwxzhm9f",
+          "action": "REVISION_CREATED",
+          "snapshot": {
+            "id": "cmvwq8jsw000byoudpwxzhm9f",
+            "tax_rate": "20",
+            "is_active": false,
+            "tenant_id": "hsn_app_1793470848347_4ef41c_tenant_a",
+            "created_at": "2026-10-31T18:20:49.088Z",
+            "updated_at": "2026-10-31T18:20:49.088Z",
+            "approved_at": null,
+            "effective_to": null,
+            "rule_version": "hsn_app_1793470848347_4ef41c-REVISION-1",
+            "effective_from": "2027-04-01T00:00:00.000Z",
+            "approval_status": "PENDING",
+            "component_policy": "IGST",
+            "source_reference": "APP-REVISION",
+            "hsn_sac_catalog_id": "hsn_app_1793470848347_4ef41c_catalog_approved",
+            "supersedes_rule_id": "hsn_app_1793470848347_4ef41c_rule_approved",
+            "created_by_membership_id": "hsn_app_1793470848347_4ef41c_membership_a",
+            "approved_by_membership_id": null
+          }
+        }
+      ]
+    },
+    "after": {
+      "predecessor_id": "hsn_app_1793470848347_4ef41c_rule_approved",
+      "predecessor_version": "APPROVED-1",
+      "predecessor_status": "APPROVED",
+      "predecessor_active": true,
+      "predecessor_tax_rate": "18.0000",
+      "successor_count": 2,
+      "revision_history_count": 2,
+      "successors": [
+        {
+          "id": "cmvwq8jsw000byoudpwxzhm9f",
+          "rule_version": "hsn_app_1793470848347_4ef41c-REVISION-1",
+          "approval_status": "PENDING",
+          "is_active": false,
+          "tax_rate": "20.0000"
+        },
+        {
+          "id": "cmvwq8juj000lyoud2ug3hs4q",
+          "rule_version": "hsn_app_1793470848347_4ef41c-REVISION-CONCURRENT",
+          "approval_status": "PENDING",
+          "is_active": false,
+          "tax_rate": "22.0000"
+        }
+      ],
+      "revision_history": [
+        {
+          "rule_id": "cmvwq8jsw000byoudpwxzhm9f",
+          "action": "REVISION_CREATED",
+          "snapshot": {
+            "id": "cmvwq8jsw000byoudpwxzhm9f",
+            "tax_rate": "20",
+            "is_active": false,
+            "tenant_id": "hsn_app_1793470848347_4ef41c_tenant_a",
+            "created_at": "2026-10-31T18:20:49.088Z",
+            "updated_at": "2026-10-31T18:20:49.088Z",
+            "approved_at": null,
+            "effective_to": null,
+            "rule_version": "hsn_app_1793470848347_4ef41c-REVISION-1",
+            "effective_from": "2027-04-01T00:00:00.000Z",
+            "approval_status": "PENDING",
+            "component_policy": "IGST",
+            "source_reference": "APP-REVISION",
+            "hsn_sac_catalog_id": "hsn_app_1793470848347_4ef41c_catalog_approved",
+            "supersedes_rule_id": "hsn_app_1793470848347_4ef41c_rule_approved",
+            "created_by_membership_id": "hsn_app_1793470848347_4ef41c_membership_a",
+            "approved_by_membership_id": null
+          }
+        },
+        {
+          "rule_id": "cmvwq8juj000lyoud2ug3hs4q",
+          "action": "REVISION_CREATED",
+          "snapshot": {
+            "id": "cmvwq8juj000lyoud2ug3hs4q",
+            "tax_rate": "22",
+            "is_active": false,
+            "tenant_id": "hsn_app_1793470848347_4ef41c_tenant_a",
+            "created_at": "2026-10-31T18:20:49.147Z",
+            "updated_at": "2026-10-31T18:20:49.147Z",
+            "approved_at": null,
+            "effective_to": null,
+            "rule_version": "hsn_app_1793470848347_4ef41c-REVISION-CONCURRENT",
+            "effective_from": "2027-07-01T00:00:00.000Z",
+            "approval_status": "PENDING",
+            "component_policy": "IGST",
+            "source_reference": null,
+            "hsn_sac_catalog_id": "hsn_app_1793470848347_4ef41c_catalog_approved",
+            "supersedes_rule_id": "hsn_app_1793470848347_4ef41c_rule_approved",
+            "created_by_membership_id": "hsn_app_1793470848347_4ef41c_membership_a",
+            "approved_by_membership_id": null
+          }
+        }
+      ]
+    },
+    "exactlyOneSuccess": true,
+    "auditHistoryMatchesPersistedSuccessor": true
+  }
+}

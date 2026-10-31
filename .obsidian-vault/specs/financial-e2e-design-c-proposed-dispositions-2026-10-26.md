@@ -1,3 +1,15 @@
+---
+title: Pharmnos Lite Design C Proposed Dispositions
+date: 2026-10-26
+status: Proposed dispositions; approval pending
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Pharmnos Lite Design C Proposed Dispositions
 
 **Date:** 2026-10-26  

@@ -48,6 +48,7 @@ import type { sales_invoices } from "@prisma/client";
 import { gstCalculator, toTaxableGstLine } from "@/domain/services/gst-calculator.service";
 import type { PlaceOfSupplyResult } from "@/domain/services/gst-calculator.service";
 import { STATE_CODE_TO_NAME, normalizeState } from "@/lib/constants/indian-states";
+import { GstTreatmentSelect } from "@/components/gst/gst-treatment-select";
 
 type BatchLite = {
   id: string;
@@ -452,6 +453,17 @@ export default function BillingNewClientForm({
                 {fieldError(errors, "place_of_supply_state") && (
                   <p className="text-caption text-destructive">{fieldError(errors, "place_of_supply_state")}</p>
                 )}
+              </div>
+              <GstTreatmentSelect name="gst_treatment" error={fieldError(errors, "gst_treatment")} />
+              <div className="space-y-2">
+                <Label htmlFor="tax_mode">Tax mode *</Label>
+                <Select defaultValue="EXCLUSIVE" name="tax_mode">
+                  <SelectTrigger id="tax_mode"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EXCLUSIVE">Tax exclusive</SelectItem>
+                    <SelectItem value="INCLUSIVE" disabled>Tax inclusive (not enabled)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2" data-field-error={!!fieldError(errors, "invoice_date")}>
                 <Label htmlFor="invoice_date_visible">Invoice date</Label>

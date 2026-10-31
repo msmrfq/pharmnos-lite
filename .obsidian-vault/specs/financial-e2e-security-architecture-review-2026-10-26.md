@@ -1,3 +1,15 @@
+---
+title: Financial E2E Security / Architecture Review
+date: 2026-10-26
+status: Review completed; approval pending
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Financial E2E Security / Architecture Review
 
 **Assigned reviewer:** Masum Rafique  

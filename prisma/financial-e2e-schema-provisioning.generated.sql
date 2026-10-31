@@ -1,12 +1,9 @@
-﻿-- Generated offline from the current Prisma schema with `prisma migrate diff --from-empty`.
--- Review artifact only: it is a complete baseline, not an additive migration.
--- Do not apply to a populated or shared database without a separately approved
--- catalog-guarded additive wrapper and rollback plan.
+-- Generated offline from the current Prisma schema plus checked HSN/SAC governance controls; complete baseline.
 -- CreateEnum
 CREATE TYPE "SystemRole" AS ENUM ('ADMIN', 'BILLING', 'INVENTORY', 'MANAGER');
 
 -- CreateEnum
-CREATE TYPE "PermissionAction" AS ENUM ('manage_users', 'manage_roles', 'manage_business_profile', 'create_product', 'edit_product', 'view_product', 'create_customer', 'edit_customer', 'view_customer', 'create_supplier', 'edit_supplier', 'view_supplier', 'create_purchase', 'edit_purchase', 'view_purchase', 'accept_purchase_gst', 'finalize_purchase', 'create_invoice', 'edit_invoice', 'view_invoice', 'finalize_invoice', 'cancel_invoice', 'view_inventory', 'adjust_stock', 'manage_batches', 'view_customer_ledger', 'view_supplier_ledger', 'view_reports', 'view_audit_log');
+CREATE TYPE "PermissionAction" AS ENUM ('manage_users', 'manage_roles', 'manage_business_profile', 'create_product', 'edit_product', 'view_product', 'manage_hsn_catalog', 'approve_hsn_catalog', 'approve_gst_rates', 'create_customer', 'edit_customer', 'view_customer', 'create_supplier', 'edit_supplier', 'view_supplier', 'create_purchase', 'edit_purchase', 'view_purchase', 'accept_purchase_gst', 'finalize_purchase', 'create_invoice', 'edit_invoice', 'view_invoice', 'finalize_invoice', 'cancel_invoice', 'view_inventory', 'adjust_stock', 'manage_batches', 'view_customer_ledger', 'view_supplier_ledger', 'view_reports', 'view_audit_log');
 
 -- CreateEnum
 CREATE TYPE "InvoiceStatus" AS ENUM ('DRAFT', 'FINALIZED', 'CANCELLED');
@@ -25,6 +22,9 @@ CREATE TYPE "PurchaseGstEvidenceRevisionKind" AS ENUM ('INITIAL', 'CORRECTION');
 
 -- CreateEnum
 CREATE TYPE "PurchaseGstReconciliationEventKind" AS ENUM ('EVIDENCE_CAPTURED', 'CALCULATION_RECORDED', 'MATCHED', 'DISCREPANCY_REQUIRES_REVIEW', 'RESOLVED', 'ACCOUNTING_ACCEPTED', 'CORRECTED');
+
+-- CreateEnum
+CREATE TYPE "GstApprovalStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 
 -- CreateEnum
 CREATE TYPE "PaymentMode" AS ENUM ('CASH', 'CARD', 'UPI', 'CREDIT', 'MIXED');
@@ -244,6 +244,8 @@ CREATE TABLE "purchase_invoices" (
     "status" "InvoiceStatus" NOT NULL DEFAULT 'DRAFT',
     "gst_reconciliation_status" "PurchaseGstReconciliationStatus" NOT NULL DEFAULT 'NOT_RECONCILED',
     "gst_accounting_acceptance_status" "PurchaseGstAccountingAcceptanceStatus" NOT NULL DEFAULT 'NOT_ACCEPTED',
+    "gst_treatment" TEXT,
+    "tax_mode" TEXT DEFAULT 'EXCLUSIVE',
     "current_gst_evidence_revision_id" TEXT,
     "current_gst_calculation_id" TEXT,
     "current_gst_accounting_decision_id" TEXT,
@@ -281,6 +283,78 @@ CREATE TABLE "purchase_posting_operations" (
 );
 
 -- CreateTable
+CREATE TABLE "hsn_sac_catalog" (
+    "id" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "description" TEXT,
+    "classification_type" TEXT,
+    "classification_metadata" JSONB,
+    "classification_status" "GstApprovalStatus" NOT NULL DEFAULT 'PENDING',
+    "rate_approval_status" "GstApprovalStatus" NOT NULL DEFAULT 'PENDING',
+    "source_reference" TEXT,
+    "effective_from" TIMESTAMP(3),
+    "effective_to" TIMESTAMP(3),
+    "is_active" BOOLEAN NOT NULL DEFAULT false,
+    "created_by_membership_id" TEXT,
+    "updated_by_membership_id" TEXT,
+    "classification_approved_by_membership_id" TEXT,
+    "classification_approved_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "hsn_sac_catalog_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "hsn_sac_catalog_history" (
+    "id" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "catalog_id" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "snapshot" JSONB NOT NULL,
+    "actor_membership_id" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "hsn_sac_catalog_history_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "gst_rate_rules" (
+    "id" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "hsn_sac_catalog_id" TEXT,
+    "rule_version" TEXT NOT NULL,
+    "tax_rate" DECIMAL(7,4),
+    "component_policy" TEXT NOT NULL,
+    "approval_status" "GstApprovalStatus" NOT NULL DEFAULT 'PENDING',
+    "source_reference" TEXT,
+    "effective_from" TIMESTAMP(3) NOT NULL,
+    "effective_to" TIMESTAMP(3),
+    "is_active" BOOLEAN NOT NULL DEFAULT false,
+    "created_by_membership_id" TEXT,
+    "approved_by_membership_id" TEXT,
+    "approved_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "gst_rate_rules_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "gst_rate_rule_history" (
+    "id" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "rule_id" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "snapshot" JSONB NOT NULL,
+    "actor_membership_id" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "gst_rate_rule_history_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "purchase_invoice_items" (
     "id" TEXT NOT NULL,
     "tenant_id" TEXT NOT NULL,
@@ -295,6 +369,30 @@ CREATE TABLE "purchase_invoice_items" (
     "discount_amount" DECIMAL(12,2) NOT NULL DEFAULT 0,
     "gst_rate" DECIMAL(5,2) NOT NULL,
     "gst_amount" DECIMAL(12,2) NOT NULL DEFAULT 0,
+    "hsn_code_snapshot" TEXT,
+    "hsn_sac_catalog_id_snapshot" TEXT,
+    "gst_rule_version_snapshot" TEXT,
+    "gst_rule_source_reference_snapshot" TEXT,
+    "calculated_taxable_value" DECIMAL(20,4),
+    "calculated_cgst" DECIMAL(20,4),
+    "calculated_sgst" DECIMAL(20,4),
+    "calculated_igst" DECIMAL(20,4),
+    "calculated_cess" DECIMAL(20,4),
+    "accepted_taxable_value" DECIMAL(20,4),
+    "accepted_cgst" DECIMAL(20,4),
+    "accepted_sgst" DECIMAL(20,4),
+    "accepted_igst" DECIMAL(20,4),
+    "accepted_cess" DECIMAL(20,4),
+    "accepted_line_total" DECIMAL(20,4),
+    "accepted_value_source" TEXT,
+    "accepted_reason" TEXT,
+    "accepted_at" TIMESTAMP(3),
+    "accepted_by_membership_id" TEXT,
+    "accepted_decision_id" TEXT,
+    "gst_acceptance_status" TEXT NOT NULL DEFAULT 'NOT_ACCEPTED',
+    "gst_discrepancy_details" JSONB,
+    "gst_calculation_reference" TEXT,
+    "gst_acceptance_reference" TEXT,
     "mrp" DECIMAL(12,2),
     "sale_rate" DECIMAL(12,2),
     "line_total" DECIMAL(14,2) NOT NULL,
@@ -455,6 +553,8 @@ CREATE TABLE "sales_invoices" (
     "invoice_date" TIMESTAMP(3) NOT NULL,
     "status" "InvoiceStatus" NOT NULL DEFAULT 'DRAFT',
     "tax_data_status" "TaxDataStatus",
+    "gst_treatment" TEXT,
+    "tax_mode" TEXT DEFAULT 'EXCLUSIVE',
     "place_of_supply_code" TEXT,
     "is_cash_sale" BOOLEAN NOT NULL DEFAULT false,
     "gross_amount" DECIMAL(14,2) NOT NULL,
@@ -492,6 +592,22 @@ CREATE TABLE "sales_invoices" (
 );
 
 -- CreateTable
+CREATE TABLE "sales_posting_operations" (
+    "id" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "sales_invoice_id" TEXT NOT NULL,
+    "idempotency_key" TEXT NOT NULL,
+    "request_payload_hash" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'PROCESSING',
+    "result_invoice_no" TEXT,
+    "result_sales_id" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "sales_posting_operations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "sales_invoice_items" (
     "id" TEXT NOT NULL,
     "tenant_id" TEXT NOT NULL,
@@ -512,6 +628,9 @@ CREATE TABLE "sales_invoice_items" (
     "sgst_amount" DECIMAL(12,2),
     "igst_amount" DECIMAL(12,2),
     "cess_amount" DECIMAL(12,2),
+    "hsn_sac_catalog_id_snapshot" TEXT,
+    "gst_rule_version_snapshot" TEXT,
+    "gst_rule_source_reference_snapshot" TEXT,
     "product_name_snapshot" TEXT,
     "generic_name_snapshot" TEXT,
     "hsn_code_snapshot" TEXT,
@@ -730,6 +849,36 @@ CREATE UNIQUE INDEX "purchase_posting_idempotency_key" ON "purchase_posting_oper
 CREATE UNIQUE INDEX "purchase_posting_purchase_key" ON "purchase_posting_operations"("tenant_id", "purchase_invoice_id");
 
 -- CreateIndex
+CREATE INDEX "hsn_sac_catalog_tenant_id_is_active_idx" ON "hsn_sac_catalog"("tenant_id", "is_active");
+
+-- CreateIndex
+CREATE INDEX "hsn_sac_catalog_tenant_id_classification_status_rate_approv_idx" ON "hsn_sac_catalog"("tenant_id", "classification_status", "rate_approval_status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hsn_sac_catalog_tenant_id_code_key" ON "hsn_sac_catalog"("tenant_id", "code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "hsn_sac_catalog_tenant_id_id_key" ON "hsn_sac_catalog"("tenant_id", "id");
+
+-- CreateIndex
+CREATE INDEX "hsn_sac_catalog_history_tenant_id_catalog_id_created_at_idx" ON "hsn_sac_catalog_history"("tenant_id", "catalog_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "gst_rate_rules_tenant_id_hsn_sac_catalog_id_effective_from__idx" ON "gst_rate_rules"("tenant_id", "hsn_sac_catalog_id", "effective_from", "effective_to");
+
+-- CreateIndex
+CREATE INDEX "gst_rate_rules_tenant_id_approval_status_is_active_idx" ON "gst_rate_rules"("tenant_id", "approval_status", "is_active");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "gst_rate_rules_tenant_id_rule_version_key" ON "gst_rate_rules"("tenant_id", "rule_version");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "gst_rate_rules_tenant_id_id_key" ON "gst_rate_rules"("tenant_id", "id");
+
+-- CreateIndex
+CREATE INDEX "gst_rate_rule_history_tenant_id_rule_id_created_at_idx" ON "gst_rate_rule_history"("tenant_id", "rule_id", "created_at");
+
+-- CreateIndex
 CREATE INDEX "purchase_invoice_items_tenant_id_idx" ON "purchase_invoice_items"("tenant_id");
 
 -- CreateIndex
@@ -737,6 +886,9 @@ CREATE INDEX "purchase_invoice_items_purchase_id_idx" ON "purchase_invoice_items
 
 -- CreateIndex
 CREATE INDEX "purchase_invoice_items_product_id_idx" ON "purchase_invoice_items"("product_id");
+
+-- CreateIndex
+CREATE INDEX "purchase_invoice_items_accepted_decision_idx" ON "purchase_invoice_items"("tenant_id", "purchase_id", "accepted_decision_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "purchase_invoice_items_tenant_id_purchase_id_id_key" ON "purchase_invoice_items"("tenant_id", "purchase_id", "id");
@@ -827,6 +979,18 @@ CREATE INDEX "sales_invoices_tenant_id_invoice_date_idx" ON "sales_invoices"("te
 
 -- CreateIndex
 CREATE UNIQUE INDEX "sales_invoices_tenant_id_invoice_no_key" ON "sales_invoices"("tenant_id", "invoice_no");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "sales_invoices_tenant_id_id_key" ON "sales_invoices"("tenant_id", "id");
+
+-- CreateIndex
+CREATE INDEX "sales_posting_operations_tenant_id_sales_invoice_id_status_idx" ON "sales_posting_operations"("tenant_id", "sales_invoice_id", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "sales_posting_idempotency_key" ON "sales_posting_operations"("tenant_id", "idempotency_key");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "sales_posting_invoice_key" ON "sales_posting_operations"("tenant_id", "sales_invoice_id");
 
 -- CreateIndex
 CREATE INDEX "sales_invoice_items_tenant_id_idx" ON "sales_invoice_items"("tenant_id");
@@ -955,6 +1119,27 @@ ALTER TABLE "purchase_posting_operations" ADD CONSTRAINT "purchase_posting_opera
 ALTER TABLE "purchase_posting_operations" ADD CONSTRAINT "purchase_posting_operations_tenant_id_purchase_invoice_id_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id") REFERENCES "purchase_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "hsn_sac_catalog" ADD CONSTRAINT "hsn_sac_catalog_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hsn_sac_catalog" ADD CONSTRAINT "hsn_sac_catalog_tenant_id_classification_approved_by_membe_fkey" FOREIGN KEY ("tenant_id", "classification_approved_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "hsn_sac_catalog_history" ADD CONSTRAINT "hsn_sac_catalog_history_tenant_id_catalog_id_fkey" FOREIGN KEY ("tenant_id", "catalog_id") REFERENCES "hsn_sac_catalog"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "gst_rate_rules" ADD CONSTRAINT "gst_rate_rules_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "gst_rate_rules" ADD CONSTRAINT "gst_rate_rules_tenant_id_hsn_sac_catalog_id_fkey" FOREIGN KEY ("tenant_id", "hsn_sac_catalog_id") REFERENCES "hsn_sac_catalog"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "gst_rate_rules" ADD CONSTRAINT "gst_rate_rules_tenant_id_approved_by_membership_id_fkey" FOREIGN KEY ("tenant_id", "approved_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "gst_rate_rule_history" ADD CONSTRAINT "gst_rate_rule_history_tenant_id_rule_id_fkey" FOREIGN KEY ("tenant_id", "rule_id") REFERENCES "gst_rate_rules"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "purchase_invoice_items" ADD CONSTRAINT "purchase_invoice_items_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -962,6 +1147,12 @@ ALTER TABLE "purchase_invoice_items" ADD CONSTRAINT "purchase_invoice_items_purc
 
 -- AddForeignKey
 ALTER TABLE "purchase_invoice_items" ADD CONSTRAINT "purchase_invoice_items_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "purchase_invoice_items" ADD CONSTRAINT "purchase_line_acceptance_actor_fkey" FOREIGN KEY ("tenant_id", "accepted_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "purchase_invoice_items" ADD CONSTRAINT "purchase_line_acceptance_decision_fkey" FOREIGN KEY ("tenant_id", "purchase_id", "accepted_decision_id") REFERENCES "purchase_gst_accounting_decisions"("tenant_id", "purchase_invoice_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "purchase_gst_evidence_revisions" ADD CONSTRAINT "purchase_gst_evidence_purchase_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id") REFERENCES "purchase_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -1024,6 +1215,12 @@ ALTER TABLE "sales_invoices" ADD CONSTRAINT "sales_invoices_tenant_id_fkey" FORE
 ALTER TABLE "sales_invoices" ADD CONSTRAINT "sales_invoices_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "sales_posting_operations" ADD CONSTRAINT "sales_posting_operations_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sales_posting_operations" ADD CONSTRAINT "sales_posting_operations_tenant_id_sales_invoice_id_fkey" FOREIGN KEY ("tenant_id", "sales_invoice_id") REFERENCES "sales_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "sales_invoice_items" ADD CONSTRAINT "sales_invoice_items_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1076,3 +1273,99 @@ ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_tenant_id_fkey" FOREIGN KEY 
 
 -- AddForeignKey
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_actor_id_fkey" FOREIGN KEY ("actor_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- HSN/SAC governance integrity controls. These are part of the executable
+-- baseline so a fresh disposable database does not depend on a later migration.
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+ALTER TABLE "hsn_sac_catalog"
+  ADD CONSTRAINT "hsn_sac_catalog_effective_range_check"
+  CHECK ("effective_to" IS NULL OR "effective_from" IS NULL OR "effective_to" > "effective_from");
+
+ALTER TABLE "hsn_sac_catalog"
+  ADD CONSTRAINT "hsn_sac_catalog_approval_state_check"
+  CHECK (
+    "classification_status" <> 'APPROVED'::"GstApprovalStatus"
+    OR (
+      "is_active" = true
+      AND "classification_approved_by_membership_id" IS NOT NULL
+      AND "classification_approved_at" IS NOT NULL
+    )
+  );
+
+ALTER TABLE "gst_rate_rules"
+  ADD CONSTRAINT "gst_rate_rules_tax_rate_check"
+  CHECK ("tax_rate" IS NULL OR ("tax_rate" = "tax_rate" AND "tax_rate" >= 0));
+
+ALTER TABLE "gst_rate_rules"
+  ADD CONSTRAINT "gst_rate_rules_effective_range_check"
+  CHECK ("effective_to" IS NULL OR "effective_to" > "effective_from");
+
+ALTER TABLE "gst_rate_rules"
+  ADD CONSTRAINT "gst_rate_rules_approval_state_check"
+  CHECK (
+    "approval_status" <> 'APPROVED'::"GstApprovalStatus"
+    OR (
+      "is_active" = true
+      AND "approved_by_membership_id" IS NOT NULL
+      AND "approved_at" IS NOT NULL
+    )
+  );
+
+CREATE OR REPLACE FUNCTION "prevent_hsn_governance_history_mutation"()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public
+AS $function$
+BEGIN
+  RAISE EXCEPTION 'HSN/SAC governance history is immutable: %', TG_TABLE_NAME
+    USING ERRCODE = '42501';
+END;
+$function$;
+
+CREATE TRIGGER "prevent_hsn_sac_catalog_history_mutation"
+  BEFORE UPDATE OR DELETE ON "hsn_sac_catalog_history"
+  FOR EACH ROW EXECUTE FUNCTION "prevent_hsn_governance_history_mutation"();
+
+CREATE TRIGGER "prevent_gst_rate_rule_history_mutation"
+  BEFORE UPDATE OR DELETE ON "gst_rate_rule_history"
+  FOR EACH ROW EXECUTE FUNCTION "prevent_hsn_governance_history_mutation"();
+
+CREATE OR REPLACE FUNCTION "prevent_approved_gst_rule_mutation"()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public
+AS $function$
+BEGIN
+  IF OLD."approval_status" = 'APPROVED'::"GstApprovalStatus" THEN
+    RAISE EXCEPTION 'Approved GST rate rules are immutable; create a pending revision'
+      USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+CREATE TRIGGER "prevent_approved_gst_rule_mutation"
+  BEFORE UPDATE ON "gst_rate_rules"
+  FOR EACH ROW EXECUTE FUNCTION "prevent_approved_gst_rule_mutation"();
+
+ALTER TABLE "gst_rate_rules"
+  ADD CONSTRAINT "gst_rate_rules_approved_period_excl"
+  EXCLUDE USING gist (
+    "tenant_id" WITH =,
+    (COALESCE("hsn_sac_catalog_id", '')) WITH =,
+    "component_policy" WITH =,
+    tsrange("effective_from", COALESCE("effective_to", 'infinity'::timestamp), '[)') WITH &&
+  )
+  WHERE ("approval_status" = 'APPROVED'::"GstApprovalStatus" AND "is_active" = true);
+
+REVOKE UPDATE, DELETE ON TABLE "hsn_sac_catalog_history", "gst_rate_rule_history" FROM PUBLIC;
+
+DO $grant$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pharmnos_e2e_runtime') THEN
+    EXECUTE 'GRANT SELECT, INSERT ON TABLE "hsn_sac_catalog_history", "gst_rate_rule_history" TO "pharmnos_e2e_runtime"';
+    EXECUTE 'REVOKE UPDATE, DELETE ON TABLE "hsn_sac_catalog_history", "gst_rate_rule_history" FROM "pharmnos_e2e_runtime"';
+  END IF;
+END;
+$grant$;

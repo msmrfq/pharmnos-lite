@@ -17,14 +17,74 @@ export type SupplierDeclaredPurchaseGstEvidence = {
 
 export type CalculatedPurchaseGstExpected = {
   rule_version: string;
+  line_calculations?: PurchaseLineGstExpected[];
   amounts: PurchaseGstAmountFacts;
 };
+
+export type PurchaseLineGstExpected = {
+  hsn_sac_code: string | null;
+  hsn_sac_catalog_id: string | null;
+  rule_version: string;
+  rule_source_reference: string | null;
+  amounts: {
+    taxable_value: PurchaseSourceAmount;
+    cgst: PurchaseSourceAmount;
+    sgst: PurchaseSourceAmount;
+    igst: PurchaseSourceAmount;
+    cess: PurchaseSourceAmount;
+    line_total: PurchaseSourceAmount;
+  };
+};
+
+export type PurchaseLineGstEvidence = {
+    taxable_value: PurchaseSourceAmount | null;
+    cgst: PurchaseSourceAmount | null;
+    sgst: PurchaseSourceAmount | null;
+    igst: PurchaseSourceAmount | null;
+    cess: PurchaseSourceAmount | null;
+    line_total: PurchaseSourceAmount | null;
+};
+
+export function reconcilePurchaseGstLineEvidence(
+  declared: PurchaseLineGstEvidence,
+  calculated: PurchaseLineGstExpected["amounts"],
+) {
+  const fields: Array<keyof PurchaseLineGstEvidence> = [
+    "taxable_value",
+    "cgst",
+    "sgst",
+    "igst",
+    "cess",
+    "line_total",
+  ];
+  const differingFields = fields.filter((field) => {
+    const declaredValue = declared[field];
+    const calculatedValue = calculated[field];
+    if (declaredValue === null || calculatedValue === null) return true;
+    return amountsMatch(declaredValue, calculatedValue) !== "MATCHED";
+  });
+  return {
+    status: differingFields.length === 0 ? "MATCHED" : "DISCREPANCY_REQUIRES_REVIEW",
+    differing_fields: differingFields,
+  } as const;
+}
 
 export type PurchaseGstSupplyFacts = {
   supplier_state_at_transaction: string;
   recipient_state_at_transaction: string;
   delivery_state_at_transaction: string;
   supply_scenario: "INTRA_STATE" | "INTER_STATE";
+};
+
+type PurchaseCalculationLine = {
+  quantity: number | string | null | undefined;
+  purchase_rate: number | string | null | undefined;
+  discount_pct: number | string | null | undefined;
+  gst_rate: number | string | null | undefined;
+  hsn_sac_code?: string | null;
+  hsn_sac_catalog_id?: string | null;
+  rule_version?: string;
+  rule_source_reference?: string | null;
 };
 
 export function calculatePurchaseGstExpected(
@@ -36,20 +96,90 @@ export function calculatePurchaseGstExpected(
     net_amount: number;
   },
   facts: PurchaseGstSupplyFacts,
+  lines: PurchaseCalculationLine[],
 ): CalculatedPurchaseGstExpected {
-  const taxableValue = Math.round((totals.gross_amount - totals.total_discount) * 100) / 100;
-  const aggregateTax = Math.round(totals.total_tax * 100) / 100;
+  if (lines.length === 0) {
+    throw new Error("Purchase GST calculation is blocked: governed purchase lines are required.");
+  }
+  for (const [index, line] of lines.entries()) {
+    const quantity = Number(line.quantity);
+    const rate = Number(line.purchase_rate);
+    const discountPct = Number(line.discount_pct);
+    const gstRate = Number(line.gst_rate);
+    if (
+      !Number.isFinite(quantity) ||
+      !Number.isFinite(rate) ||
+      !Number.isFinite(discountPct) ||
+      !Number.isFinite(gstRate) ||
+      quantity < 0 ||
+      rate < 0 ||
+      discountPct < 0 ||
+      discountPct > 100 ||
+      gstRate < 0 ||
+      !line.hsn_sac_code?.trim() ||
+      !line.hsn_sac_catalog_id?.trim() ||
+      !line.rule_version?.trim() ||
+      !line.rule_source_reference?.trim()
+    ) {
+      throw new Error(`Purchase GST calculation is blocked: line ${index + 1} lacks complete governed facts.`);
+    }
+  }
+  const lineCalculations = lines.map((line) => {
+    const quantity = Number(line.quantity ?? 0);
+    const rate = Number(line.purchase_rate ?? 0);
+    const discountPct = Number(line.discount_pct ?? 0);
+    const gross = Math.round(quantity * rate * 100) / 100;
+    const discount = Math.round(gross * (discountPct / 100) * 100) / 100;
+    const taxable = Math.round((gross - discount) * 100) / 100;
+    const tax = Math.round(taxable * (Number(line.gst_rate ?? 0) / 100) * 100) / 100;
+    const cgst = facts.supply_scenario === "INTRA_STATE"
+      ? Math.round((tax / 2) * 100) / 100
+      : 0;
+    const sgst = facts.supply_scenario === "INTRA_STATE"
+      ? Math.round((tax - cgst) * 100) / 100
+      : 0;
+    const igst = facts.supply_scenario === "INTER_STATE" ? tax : 0;
+    return {
+      hsn_sac_code: line.hsn_sac_code ?? null,
+      hsn_sac_catalog_id: line.hsn_sac_catalog_id ?? null,
+      rule_version: line.rule_version?.trim() || "UNRESOLVED",
+      rule_source_reference: line.rule_source_reference ?? null,
+      amounts: {
+        taxable_value: taxable,
+        cgst,
+        sgst,
+        igst,
+        cess: 0,
+        line_total: Math.round((taxable + tax) * 100) / 100,
+      },
+    };
+  });
+  const taxableValue = Math.round(lineCalculations.reduce((sum, line) => sum + Number(line.amounts.taxable_value), 0) * 100) / 100;
+  const aggregateTax = Math.round(lineCalculations.reduce((sum, line) =>
+    sum + Number(line.amounts.cgst) + Number(line.amounts.sgst) + Number(line.amounts.igst), 0) * 100) / 100;
   const isIntraState = facts.supply_scenario === "INTRA_STATE";
+  const ruleVersions = [...new Set(lineCalculations.map((line) => line.rule_version))];
+  const calculatedLineTotal = Math.round(lineCalculations.reduce((sum, line) => sum + Number(line.amounts.line_total), 0) * 100) / 100;
+  const calculatedRoundOff = Math.round(totals.round_off * 100) / 100;
   return {
-    rule_version: "purchase-gst-rules-v1",
+    rule_version: ruleVersions.length === 0
+      ? "purchase-gst-rules-v1"
+      : ruleVersions.length === 1
+        ? ruleVersions[0] ?? "UNRESOLVED"
+        : "MIXED",
+    line_calculations: lineCalculations,
     amounts: {
       taxable_value: taxableValue,
-      cgst: isIntraState ? Math.round((aggregateTax / 2) * 100) / 100 : 0,
-      sgst: isIntraState ? Math.round((aggregateTax / 2) * 100) / 100 : 0,
+      cgst: isIntraState
+        ? Math.round(lineCalculations.reduce((sum, line) => sum + Number(line.amounts.cgst), 0) * 100) / 100
+        : 0,
+      sgst: isIntraState
+        ? Math.round(lineCalculations.reduce((sum, line) => sum + Number(line.amounts.sgst), 0) * 100) / 100
+        : 0,
       igst: isIntraState ? 0 : aggregateTax,
       cess: 0,
-      invoice_total: Math.round(totals.net_amount * 100) / 100,
-      round_off: Math.round(totals.round_off * 100) / 100,
+      invoice_total: Math.round((calculatedLineTotal + calculatedRoundOff) * 100) / 100,
+      round_off: calculatedRoundOff,
     },
   };
 }

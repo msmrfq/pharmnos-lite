@@ -1,15 +1,29 @@
 ---
 title: GST Rollout Approval and Disposable-Database Readiness
 date: 2026-10-24
-status: Review package only - no approval or execution
+status: OWNER AUTHORIZED - REVIEW PACKAGE; EXECUTION SEPARATE
 phase: POST-P7 - PRE-PRODUCTION VALIDATION
 ---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
+
 
 # GST Rollout Approval and Disposable-Database Readiness
 
 This is a review package for the GST schema rollout design. It does not
 authorize live Supabase changes, disposable-database execution, migrations,
 schema synchronization, or application deployment.
+
+**Owner authorization:** Masum Rafique granted authorization for the complete
+documented GST Modernization scope on 2026-10-31 (IST), including associated
+implementation and validation work. This review package does not itself grant
+live database, migration execution, deployment, or production-release
+approval.
 
 ## Evidence reviewed
 
@@ -185,8 +199,9 @@ the approved backend/function path; ownership and `EXECUTE` review; exact
 `expectedGrants` for the verifier.
 
 **Approval authority:** database owner and Security/Architecture reviewer,
-with application/financial-integrity review. **Status: recommended, pending
-approval.**
+with application/financial-integrity review. **Status: OWNER AUTHORIZED —
+APPROVED DESIGN DIRECTION; execution evidence and named reviewer approval
+remain required.**
 
 ### GST-APP-02 - RLS enforcement and verification roles
 
@@ -212,7 +227,8 @@ tenant-claim fail-closed tests; owner and bypass-role separation; policy
 command and grant review.
 
 **Approval authority:** Security/Architecture reviewer and database owner.
-**Status: recommended, pending approval.**
+**Status: OWNER AUTHORIZED — APPROVED DESIGN DIRECTION; execution evidence and
+named reviewer approval remain required.**
 
 ### GST-APP-03 - `calculation_id` relationship
 
@@ -238,8 +254,9 @@ orphan, cross-tenant, wrong-invoice, delete, and retry tests; approved naming
 and rollback treatment.
 
 **Approval authority:** product/accounting owner, database owner, and
-Security/Architecture reviewer. **Status: recommended Option B, pending
-approval.**
+Security/Architecture reviewer. **Status: OWNER AUTHORIZED — APPROVED OPTION B
+DESIGN DIRECTION; execution evidence and named reviewer approval remain
+required.**
 
 ### GST-APP-04 - Invoice pointers and composite keys
 
@@ -262,7 +279,8 @@ and nullability checks; approved legacy backfill/default plan; pointer
 insertion, update, delete, and cross-scope rejection tests.
 
 **Approval authority:** database owner and application/financial-integrity
-reviewer. **Status: recommended, pending approval.**
+reviewer. **Status: OWNER AUTHORIZED — APPROVED DESIGN DIRECTION; execution
+evidence and named reviewer approval remain required.**
 
 ### GST-APP-05 - Immutable evidence and reconciliation records
 
@@ -286,8 +304,9 @@ chain and event-order tests; privilege and function ownership review;
 concurrent revision tests; evidence-preservation assertions after resolution.
 
 **Approval authority:** Security/Architecture reviewer, application/financial-
-integrity reviewer, and accounting authority. **Status: recommended hybrid,
-pending approval.**
+integrity reviewer, and accounting authority. **Status: OWNER AUTHORIZED —
+APPROVED HYBRID DESIGN DIRECTION; execution evidence and named reviewer
+approval remain required.**
 
 ### GST-APP-06 - Purchase-posting state transitions
 
@@ -313,7 +332,8 @@ invoice consistency; unauthorized transition tests; retry determinism.
 
 **Approval authority:** application/financial-integrity reviewer and
 product/accounting owner, with database-owner review for any database control.
-**Status: recommended service-led hybrid, pending approval.**
+**Status: OWNER AUTHORIZED — APPROVED SERVICE-LED HYBRID DESIGN DIRECTION;
+execution evidence and named reviewer approval remain required.**
 
 ### GST-APP-07 - Defaults, backfill, and timestamp semantics
 
@@ -360,10 +380,11 @@ partial-failure behavior; rollback rehearsal where supported; mismatch stop
 evidence; post-operation schema and privilege hash/checklist.
 
 **Approval authority:** database owner and Security/Architecture reviewer,
-with application/financial-integrity review. **Status: recommended, pending
-approval.**
+with application/financial-integrity review. **Status: OWNER AUTHORIZED —
+APPROVED DESIGN DIRECTION; execution evidence and named reviewer approval
+remain required.**
 
-## Evidence checklist before any approval
+## Evidence checklist before execution approval
 
 - [ ] Each decision has written approval from the named authority; no
       recommendation is treated as approval.

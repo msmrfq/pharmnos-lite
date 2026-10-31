@@ -4,6 +4,7 @@ import {
     validateLocalDisposableTargetCandidate,
     validateDatabaseIdentityEvidence,
     validateFinancialE2eTarget,
+    validateGovernanceRuntimeTarget,
     targetBinding,
     verifyDatabaseIdentity,
 } from "../scripts/financial-e2e-safety.mjs";
@@ -39,8 +40,79 @@ test("rejects an ordinary-target overlap in the local candidate contract", () =>
         isolationLabel: "financial-e2e-isolated",
         ordinaryTarget: { host: "127.0.0.1", port: 55432, databaseName: "pharmnos_financial_e2e" },
     });
+
     assert.equal(result.ok, false);
     assert.match(result.errors.join(" "), /overlaps/);
+});
+
+test("accepts only a unique loopback governance target", () => {
+    assert.deepEqual(validateGovernanceRuntimeTarget({
+        baseUrl: "postgresql://tester@127.0.0.1:55432/pharmnos_financial_e2e",
+        ordinaryUrl: "postgresql://tester@127.0.0.1:5432/pharmnos",
+        databaseName: "pharmnos_financial_e2e_gov_1793466000000_a1b2c3",
+        runId: "gov_1793466000000_a1b2c3",
+    }), { ok: true, errors: [] });
+});
+
+test("rejects a non-loopback governance target", () => {
+    const result = validateGovernanceRuntimeTarget({
+        baseUrl: "postgresql://tester@db.example.test:55432/pharmnos_financial_e2e",
+        ordinaryUrl: "postgresql://tester@127.0.0.1:5432/pharmnos",
+        databaseName: "pharmnos_financial_e2e_gov_1793466000000_a1b2c3",
+        runId: "gov_1793466000000_a1b2c3",
+    });
+    assert.equal(result.ok, false);
+    assert.match(result.errors.join(" "), /loopback/);
+});
+
+test("rejects Supabase and pooler governance targets", () => {
+    for (const host of ["db.example.supabase.co", "pooler.example.test"]) {
+        const result = validateGovernanceRuntimeTarget({
+            baseUrl: `postgresql://tester@${host}:55432/pharmnos_financial_e2e`,
+            ordinaryUrl: "postgresql://tester@127.0.0.1:5432/pharmnos",
+            databaseName: "pharmnos_financial_e2e_gov_1793466000000_a1b2c3",
+            runId: "gov_1793466000000_a1b2c3",
+        });
+        assert.equal(result.ok, false);
+        assert.match(result.errors.join(" "), /Supabase|pooler|loopback/);
+    }
+});
+
+test("rejects previously recorded SEC-DEC-03 databases", () => {
+    for (const databaseName of [
+        "pharmnos_financial_e2e_sec_dec_03",
+        "pharmnos_financial_e2e_sec03_1793461994253b",
+    ]) {
+        const result = validateGovernanceRuntimeTarget({
+            baseUrl: "postgresql://tester@127.0.0.1:55432/pharmnos_financial_e2e",
+            ordinaryUrl: "postgresql://tester@127.0.0.1:5432/pharmnos",
+            databaseName,
+            runId: "gov_1793466000000_a1b2c3",
+        });
+        assert.equal(result.ok, false);
+        assert.match(result.errors.join(" "), /forbidden prior/);
+    }
+});
+
+test("rejects a missing ordinary database identity", () => {
+    const result = validateGovernanceRuntimeTarget({
+        baseUrl: "postgresql://tester@127.0.0.1:55432/pharmnos_financial_e2e",
+        databaseName: "pharmnos_financial_e2e_gov_1793466000000_a1b2c3",
+        runId: "gov_1793466000000_a1b2c3",
+    });
+    assert.equal(result.ok, false);
+    assert.match(result.errors.join(" "), /ordinary database identity/);
+});
+
+test("rejects the same endpoint even when database names differ", () => {
+    const result = validateGovernanceRuntimeTarget({
+        baseUrl: "postgresql://tester@127.0.0.1:55432/pharmnos_financial_e2e",
+        ordinaryUrl: "postgresql://tester@127.0.0.1:55432/pharmnos",
+        databaseName: "pharmnos_financial_e2e_gov_1793466000000_a1b2c3",
+        runId: "gov_1793466000000_a1b2c3",
+    });
+    assert.equal(result.ok, false);
+    assert.match(result.errors.join(" "), /separate local disposable endpoint|different endpoint|identity/);
 });
 import { validateFinancialE2eReadiness, validateFixtureCleanup } from "../scripts/financial-e2e-readiness.mjs";
 import {

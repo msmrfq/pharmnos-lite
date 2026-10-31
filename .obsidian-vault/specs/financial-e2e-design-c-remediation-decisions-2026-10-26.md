@@ -1,3 +1,15 @@
+---
+title: Pharmnos Lite Design C Remediation Decisions
+date: 2026-10-26
+status: Open findings; remediation and approval pending
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Pharmnos Lite Design C Remediation Decisions
 
 **Date:** 2026-10-26  

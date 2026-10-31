@@ -1,3 +1,15 @@
+---
+title: Pharmnos Lite Design C Reviewer Handoff
+date: 2026-10-26
+status: Owner-selected design; technical sign-offs pending
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Pharmnos Lite Design C Reviewer Handoff
 
 **Date:** 2026-10-26

@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/db/prisma";
 import { authAdapter } from "@/adapters/auth";
+import { Prisma } from "@prisma/client";
 import type { PermissionAction, SystemRole } from "@prisma/client";
 
 export type TenantContext = {
   tenantId: string;
   userId: string;
+  membershipId: string;
   roles: string[];
   permissions: string[];
 };
@@ -19,7 +21,10 @@ export function requireTenant(ctx: Partial<TenantContext> | null | undefined): T
   return ctx as TenantContext;
 }
 
-export function requirePermission(ctx: TenantContext, permission: PermissionAction): void {
+export function requirePermission(
+  ctx: Pick<TenantContext, "permissions">,
+  permission: PermissionAction,
+): void {
   if (!ctx.permissions.includes(permission)) {
     throw new Error("You are not authorized to perform this action.");
   }
@@ -30,6 +35,17 @@ export function tenantScoped<T extends { tenant_id: string }>(
   ctx: TenantContext,
 ): T {
   return { ...where, tenant_id: ctx.tenantId };
+}
+
+export async function establishTenantContext(
+  tx: Prisma.TransactionClient,
+  ctx: TenantContext,
+): Promise<void> {
+  await tx.$executeRaw(Prisma.sql`
+    SELECT
+      set_config('request.jwt.claim.sub', ${ctx.userId}, true),
+      set_config('request.jwt.claim.tenant_id', ${ctx.tenantId}, true)
+  `);
 }
 
 type SessionCtxResult = {
@@ -48,20 +64,25 @@ export async function getServerTenantContext(): Promise<SessionCtxResult> {
       return { ok: false, error: "Authentication is required." };
     }
     const externalId = session.user.id;
-    const user = await prisma.users.findUnique({
-      where: { external_id: externalId },
-      include: {
-        memberships: {
-          where: { status: "active" },
-          include: {
-            role: {
-              include: {
-                permissions: { select: { permission: true } },
+    const user = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw(Prisma.sql`
+        SELECT set_config('request.jwt.claim.sub', ${externalId}, true)
+      `);
+      return tx.users.findUnique({
+        where: { external_id: externalId },
+        include: {
+          memberships: {
+            where: { status: "active" },
+            include: {
+              role: {
+                include: {
+                  permissions: { select: { permission: true } },
+                },
               },
             },
           },
         },
-      },
+      });
     });
     if (!user || !user.memberships.length) {
       throw new Error("Authenticated user has no active tenant membership.");
@@ -89,6 +110,7 @@ export async function getServerTenantContext(): Promise<SessionCtxResult> {
       ctx: {
         tenantId: m.tenant_id,
         userId: user.id,
+        membershipId: m.id,
         roles,
         permissions,
       },

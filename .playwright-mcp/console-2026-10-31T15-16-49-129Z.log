@@ -1,0 +1,656 @@
+[  108192ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  108450ms] [LOG] [Fast Refresh] done in 259ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  216654ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:38559
+[  227391ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  228302ms] [LOG] [Fast Refresh] done in 911ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  350301ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  350836ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  350888ms] [LOG] [Fast Refresh] done in 52ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  351896ms] [LOG] [Fast Refresh] done in 1060ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  382263ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  382972ms] [LOG] [Fast Refresh] done in 709ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  403257ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  404144ms] [LOG] [Fast Refresh] done in 886ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  499583ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  500086ms] [LOG] [Fast Refresh] done in 504ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  533848ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  534377ms] [LOG] [Fast Refresh] done in 530ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  562854ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  563504ms] [LOG] [Fast Refresh] done in 652ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  567817ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  568507ms] [LOG] [Fast Refresh] done in 691ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  579386ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  579559ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  579676ms] [LOG] [Fast Refresh] done in 118ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  579815ms] [LOG] [Fast Refresh] done in 256ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  584069ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  584360ms] [LOG] [Fast Refresh] done in 290ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  584602ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  584834ms] [ERROR] ./src/app/_actions/gst-catalog.actions.ts
+Error: 
+  x Expected ',', got 'export'
+     ,-[E:\PharmnosLite\src\app\_actions\gst-catalog.actions.ts:135:1]
+ 135 |   sourceReference: string,
+ 136 | ): Promise<{ id: string }
+ 137 | 
+ 138 | export async function createHsnSacCatalogRecordFromForm(formData: FormData): Promise<void> {
+     : ^^^^^^
+ 139 |   await createHsnSacCatalogRecord({
+ 140 |     code: formText(formData, "code"),
+ 140 |     description: formText(formData, "description"),
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/_actions/gst-catalog.actions.ts
+./src/app/settings/_gst-catalog-panel.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/app-index.js:32
+[  584837ms] [ERROR] ./src/app/_actions/gst-catalog.actions.ts
+Error: 
+  x Expected ',', got 'export'
+     ,-[E:\PharmnosLite\src\app\_actions\gst-catalog.actions.ts:135:1]
+ 135 |   sourceReference: string,
+ 136 | ): Promise<{ id: string }
+ 137 | 
+ 138 | export async function createHsnSacCatalogRecordFromForm(formData: FormData): Promise<void> {
+     : ^^^^^^
+ 139 |   await createHsnSacCatalogRecord({
+ 140 |     code: formText(formData, "code"),
+ 140 |     description: formText(formData, "description"),
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/_actions/gst-catalog.actions.ts
+./src/app/settings/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/app-index.js:32
+[  586791ms] [ERROR] ./src/app/_actions/gst-catalog.actions.ts
+Error: 
+  x Expected ',', got 'export'
+     ,-[E:\PharmnosLite\src\app\_actions\gst-catalog.actions.ts:135:1]
+ 135 |   sourceReference: string,
+ 136 | ): Promise<{ id: string }
+ 137 | 
+ 138 | export async function createHsnSacCatalogRecordFromForm(formData: FormData): Promise<void> {
+     : ^^^^^^
+ 139 |   await createHsnSacCatalogRecord({
+ 140 |     code: formText(formData, "code"),
+ 140 |     description: formText(formData, "description"),
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/_actions/gst-catalog.actions.ts
+./src/app/settings/_gst-catalog-panel.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/app-index.js:32
+[  587492ms] [ERROR] ./src/app/_actions/gst-catalog.actions.ts
+Error: 
+  x Expected ',', got 'export'
+     ,-[E:\PharmnosLite\src\app\_actions\gst-catalog.actions.ts:135:1]
+ 135 |   sourceReference: string,
+ 136 | ): Promise<{ id: string }
+ 137 | 
+ 138 | export async function createHsnSacCatalogRecordFromForm(formData: FormData): Promise<void> {
+     : ^^^^^^
+ 139 |   await createHsnSacCatalogRecord({
+ 140 |     code: formText(formData, "code"),
+ 140 |     description: formText(formData, "description"),
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/_actions/gst-catalog.actions.ts
+./src/app/settings/_gst-catalog-panel.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/app-index.js:32
+[  587853ms] [ERROR] ./src/app/_actions/gst-catalog.actions.ts
+Error: 
+  x Expected ',', got 'export'
+     ,-[E:\PharmnosLite\src\app\_actions\gst-catalog.actions.ts:135:1]
+ 135 |   sourceReference: string,
+ 136 | ): Promise<{ id: string }
+ 137 | 
+ 138 | export async function createHsnSacCatalogRecordFromForm(formData: FormData): Promise<void> {
+     : ^^^^^^
+ 139 |   await createHsnSacCatalogRecord({
+ 140 |     code: formText(formData, "code"),
+ 140 |     description: formText(formData, "description"),
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/_actions/gst-catalog.actions.ts
+./src/app/settings/_gst-catalog-panel.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/app-index.js:32
+[  587853ms] [ERROR] ./src/app/_actions/gst-catalog.actions.ts
+Error: 
+  x Expected ',', got 'export'
+     ,-[E:\PharmnosLite\src\app\_actions\gst-catalog.actions.ts:135:1]
+ 135 |   sourceReference: string,
+ 136 | ): Promise<{ id: string }
+ 137 | 
+ 138 | export async function createHsnSacCatalogRecordFromForm(formData: FormData): Promise<void> {
+     : ^^^^^^
+ 139 |   await createHsnSacCatalogRecord({
+ 140 |     code: formText(formData, "code"),
+ 140 |     description: formText(formData, "description"),
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/_actions/gst-catalog.actions.ts
+./src/app/settings/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/app-index.js:32
+[  588284ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/purchases?_rsc=8wtty:0
+[  588319ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/purchases?_rsc=8wtty:0
+[  588372ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/purchases?_rsc=8wtty:0
+[  588499ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/purchases:0
+[  589164ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///./node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:29889
+[  589283ms] ModuleBuildError: Module build failed (from ./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):
+Error: 
+  x Expected ',', got 'export'
+     ,-[E:\PharmnosLite\src\app\_actions\gst-catalog.actions.ts:135:1]
+ 135 |   sourceReference: string,
+ 136 | ): Promise<{ id: string }
+ 137 | 
+ 138 | export async function createHsnSacCatalogRecordFromForm(formData: FormData): Promise<void> {
+     : ^^^^^^
+ 139 |   await createHsnSacCatalogRecord({
+ 140 |     code: formText(formData, "code"),
+ 140 |     description: formText(formData, "description"),
+     `----
+
+
+Caused by:
+    Syntax Error
+    at processResult (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:28:400590)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:28:402302)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:8645)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:5019)
+    at r.callback (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:4039)
+[  589278ms] [LOG] [HMR] connected @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/websocket.js:38
+[  589286ms] [ERROR] ./src/app/_actions/gst-catalog.actions.ts
+Error: 
+  x Expected ',', got 'export'
+     ,-[E:\PharmnosLite\src\app\_actions\gst-catalog.actions.ts:135:1]
+ 135 |   sourceReference: string,
+ 136 | ): Promise<{ id: string }
+ 137 | 
+ 138 | export async function createHsnSacCatalogRecordFromForm(formData: FormData): Promise<void> {
+     : ^^^^^^
+ 139 |   await createHsnSacCatalogRecord({
+ 140 |     code: formText(formData, "code"),
+ 140 |     description: formText(formData, "description"),
+     `----
+
+Caused by:
+    Syntax Error @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  589287ms] [ERROR] ./src/app/_actions/gst-catalog.actions.ts
+Error: 
+  x Expected ',', got 'export'
+     ,-[E:\PharmnosLite\src\app\_actions\gst-catalog.actions.ts:135:1]
+ 135 |   sourceReference: string,
+ 136 | ): Promise<{ id: string }
+ 137 | 
+ 138 | export async function createHsnSacCatalogRecordFromForm(formData: FormData): Promise<void> {
+     : ^^^^^^
+ 139 |   await createHsnSacCatalogRecord({
+ 140 |     code: formText(formData, "code"),
+ 140 |     description: formText(formData, "description"),
+     `----
+
+Caused by:
+    Syntax Error @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  601738ms] [ERROR] ./src/app/_actions/gst-catalog.actions.ts
+Error: 
+  x Expected ',', got 'export'
+     ,-[E:\PharmnosLite\src\app\_actions\gst-catalog.actions.ts:135:1]
+ 135 |   sourceReference: string,
+ 136 | ): Promise<{ id: string }
+ 137 | 
+ 138 | export async function createHsnSacCatalogRecordFromForm(formData: FormData): Promise<void> {
+     : ^^^^^^
+ 139 |   await createHsnSacCatalogRecord({
+ 140 |     code: formText(formData, "code"),
+ 140 |     description: formText(formData, "description"),
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/_actions/gst-catalog.actions.ts
+./src/app/settings/_gst-catalog-panel.tsx @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  601739ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:221
+[  603026ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:221
+[  604513ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:38559
+[  769725ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  770524ms] [LOG] [Fast Refresh] done in 800ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  773023ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  773560ms] [LOG] [Fast Refresh] done in 537ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  789946ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  790549ms] [LOG] [Fast Refresh] done in 602ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  793561ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  794097ms] [LOG] [Fast Refresh] done in 536ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  803031ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  803663ms] [LOG] [Fast Refresh] done in 632ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  806262ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  806501ms] [LOG] [Fast Refresh] done in 240ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  809779ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  810267ms] [LOG] [Fast Refresh] done in 487ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[  814475ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/domain/services/purchase-gst-reconciliation.service.ts
+./src/app/_actions/purchases.actions.ts @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/app-index.js:32
+[  818659ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[  818924ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/domain/services/purchase-gst-reconciliation.service.ts
+./src/app/_actions/purchases.actions.ts @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/app-index.js:32
+[  819185ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/purchases?_rsc=8wtty:0
+[  819271ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/purchases:0
+[  819667ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///./node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:29889
+[  819775ms] ModuleBuildError: Module build failed (from ./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+
+Caused by:
+    Syntax Error
+    at processResult (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:28:400590)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:28:402302)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:8645)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:5019)
+    at r.callback (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:4039)
+[  819775ms] [LOG] [HMR] connected @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/websocket.js:38
+[  819782ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  821959ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:221
+[  822245ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/domain/services/purchase-gst-reconciliation.service.ts
+./src/app/_actions/purchases.actions.ts @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  822934ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/domain/services/purchase-gst-reconciliation.service.ts
+./src/app/_actions/purchases.actions.ts @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  823002ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/_next/static/webpack/43516fdbf1c890af.webpack.hot-update.json:0
+[  823005ms] [WARNING] [Fast Refresh] performing full reload
+
+Fast Refresh will perform a full reload when you edit a file that's imported by modules outside of the React rendering tree.
+You might have a file which exports a React component but also exports a value that is imported by a non-React component file.
+Consider migrating the non-React component export to a separate file and importing it into both files.
+
+It is also possible the parent component of the component you edited is a class component, which disables Fast Refresh.
+Fast Refresh requires at least one parent function component in your React tree. @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:347
+[  823154ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/purchases:0
+[  823430ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///./node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:29889
+[  823461ms] ModuleBuildError: Module build failed (from ./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+
+Caused by:
+    Syntax Error
+    at processResult (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:28:400590)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:28:402302)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:8645)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:5019)
+    at r.callback (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:4039)
+[  823461ms] [LOG] [HMR] connected @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/websocket.js:38
+[  823465ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  823546ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  826969ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:221
+[  827236ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/domain/services/purchase-gst-reconciliation.service.ts
+./src/app/_actions/purchases.actions.ts @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  827616ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/domain/services/purchase-gst-reconciliation.service.ts
+./src/app/_actions/purchases.actions.ts @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  827656ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/_next/static/webpack/43516fdbf1c890af.webpack.hot-update.json:0
+[  827656ms] [WARNING] [Fast Refresh] performing full reload
+
+Fast Refresh will perform a full reload when you edit a file that's imported by modules outside of the React rendering tree.
+You might have a file which exports a React component but also exports a value that is imported by a non-React component file.
+Consider migrating the non-React component export to a separate file and importing it into both files.
+
+It is also possible the parent component of the component you edited is a class component, which disables Fast Refresh.
+Fast Refresh requires at least one parent function component in your React tree. @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:347
+[  827701ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/purchases:0
+[  827960ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///./node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:29889
+[  827986ms] ModuleBuildError: Module build failed (from ./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+
+Caused by:
+    Syntax Error
+    at processResult (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:28:400590)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:28:402302)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:8645)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:5019)
+    at r.callback (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:4039)
+[  827994ms] [LOG] [HMR] connected @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/websocket.js:38
+[  828013ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  828099ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  830244ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:221
+[  830546ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/domain/services/purchase-gst-reconciliation.service.ts
+./src/app/_actions/purchases.actions.ts @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  830884ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/domain/services/purchase-gst-reconciliation.service.ts
+./src/app/_actions/purchases.actions.ts @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  830919ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/_next/static/webpack/43516fdbf1c890af.webpack.hot-update.json:0
+[  830919ms] [WARNING] [Fast Refresh] performing full reload
+
+Fast Refresh will perform a full reload when you edit a file that's imported by modules outside of the React rendering tree.
+You might have a file which exports a React component but also exports a value that is imported by a non-React component file.
+Consider migrating the non-React component export to a separate file and importing it into both files.
+
+It is also possible the parent component of the component you edited is a class component, which disables Fast Refresh.
+Fast Refresh requires at least one parent function component in your React tree. @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:347
+[  830960ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/purchases:0
+[  831203ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///./node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:29889
+[  831229ms] ModuleBuildError: Module build failed (from ./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+
+Caused by:
+    Syntax Error
+    at processResult (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:28:400590)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:28:402302)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:8645)
+    at <unknown> (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:5019)
+    at r.callback (file://E:\PharmnosLite\node_modules\.pnpm\next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:4039)
+[  831231ms] [LOG] [HMR] connected @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/websocket.js:38
+[  831234ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  831315ms] [ERROR] ./src/domain/services/purchase-gst-reconciliation.service.ts
+Error: 
+  x Expected '{', got 'PurchaseLineGstExpected'
+    ,-[E:\PharmnosLite\src\domain\services\purchase-gst-reconciliation.service.ts:21:1]
+ 21 |   amounts: PurchaseGstAmountFacts;
+ 22 | };
+ 23 | 
+ 24 | export type PurchaseLineGstExpected = {
+    :             ^^^^^^^^^^^^^^^^^^^^^^^
+ 25 |   hsn_sac_code: string | null;
+ 26 |   hsn_sac_catalog_id: string | null;
+ 26 |   rule_version: string;
+    `----
+
+Caused by:
+    Syntax Error @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/internal/helpers/hydration-error-info.js:62
+[  855380ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:221
+[  856224ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/43516fdbf1c890af.webpack.hot-update.json:0
+[  856225ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:349
+[  857066ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:38559
+[ 1104914ms] [LOG] [Fast Refresh] rebuilding @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:186
+[ 1105404ms] [LOG] [Fast Refresh] done in 490ms @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/next@14.2.15_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:43
+[ 1541127ms] [WARNING] Select is changing from uncontrolled to controlled. Components should not switch from controlled to uncontrolled (or vice versa). Decide between using a controlled or uncontrolled value for the lifetime of the component. @ webpack-internal:///(app-pages-browser)/./node_modules/.pnpm/@radix-ui+react-use-controllable-state@1.2.6_@types+react@18.3.31_react@18.3.1/node_modules/@radix-ui/react-use-controllable-state/dist/index.mjs:38

@@ -1,10 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache.js";
+import { redirect } from "next/navigation.js";
+import { createHash } from "node:crypto";
 import { prisma, assertPostgresConfigured } from "@/lib/db/prisma";
 import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
+import { Prisma } from "@prisma/client";
 import type { sales_invoices, InvoiceStatus, StockMovementType, LedgerEntryType, PaymentMode, PermissionAction } from "@prisma/client";
 import {
   SalesInvoiceCreateSchema,
@@ -27,6 +29,11 @@ import {
 } from "@/domain/services/gst-calculator.service";
 import { normalizeState } from "@/lib/constants/indian-states";
 import { fefoBatchPicker } from "@/domain/services/fefo-batch.service";
+import { validateGstTreatment } from "@/lib/gst/treatment";
+import {
+  isApprovedGstClassification,
+  resolveApprovedGstRule,
+} from "@/lib/gst/rule-governance";
 
 const __SalesStatusDRAFT: InvoiceStatus = "DRAFT";
 const __SalesStatusFINALIZED: InvoiceStatus = "FINALIZED";
@@ -109,6 +116,107 @@ function computeFefoAllocationForLine(productId: string, requiredQty: number, ba
   }, batches);
 }
 
+function canonicalSalesFinalizationPayload(tenantId: string, saleId: string): string {
+  return JSON.stringify({
+    operation: "FINALIZE_SALES_INVOICE",
+    tenantId,
+    saleId,
+  });
+}
+
+function salesFinalizationPayloadHash(tenantId: string, saleId: string): string {
+  return createHash("sha256").update(canonicalSalesFinalizationPayload(tenantId, saleId), "utf8").digest("hex");
+}
+
+async function resolveSalesLineRules(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  lines: any[],
+  effectiveAt: Date,
+) {
+  const productIds = Array.from(new Set(lines.map((line) => String(line.product_id))));
+  const products = await tx.products.findMany({
+    where: { tenant_id: tenantId, id: { in: productIds } },
+    select: { id: true, hsn_code: true },
+  });
+  const productsById = new Map(products.map((product) => [product.id, product]));
+  const codes = Array.from(new Set(products.map((product) => product.hsn_code).filter((code): code is string => Boolean(code?.trim()))));
+  const classifications = await tx.hsn_sac_catalog.findMany({
+    where: { tenant_id: tenantId, code: { in: codes } },
+    select: {
+      id: true,
+      code: true,
+      classification_status: true,
+      effective_from: true,
+      effective_to: true,
+      is_active: true,
+      source_reference: true,
+    },
+  });
+  const classificationsByCode = new Map(classifications.map((classification) => [classification.code, classification]));
+  const rules = await tx.gst_rate_rules.findMany({
+    where: { tenant_id: tenantId, effective_from: { lte: effectiveAt } },
+    select: {
+      id: true,
+      hsn_sac_catalog_id: true,
+      rule_version: true,
+      tax_rate: true,
+      component_policy: true,
+      approval_status: true,
+      source_reference: true,
+      effective_from: true,
+      effective_to: true,
+      is_active: true,
+    },
+  });
+  const rulesByCatalogId = new Map<string, Array<{
+    id: string;
+    hsn_sac_catalog_id: string | null;
+    rule_version: string;
+    tax_rate: number | null;
+    component_policy: string;
+    approval_status: "PENDING" | "APPROVED" | "REJECTED";
+    source_reference: string | null;
+    effective_from: Date;
+    effective_to: Date | null;
+    is_active: boolean;
+  }>>();
+  for (const rule of rules) {
+    if (!rule.hsn_sac_catalog_id) continue;
+    const current = rulesByCatalogId.get(rule.hsn_sac_catalog_id) ?? [];
+    current.push({ ...rule, tax_rate: rule.tax_rate === null ? null : Number(rule.tax_rate) });
+    rulesByCatalogId.set(rule.hsn_sac_catalog_id, current);
+  }
+
+  return lines.map((line) => {
+    const product = productsById.get(String(line.product_id));
+    if (!product) throw new Error("Sales line product is missing or belongs to another tenant.");
+    if (!product.hsn_code?.trim()) {
+      throw new Error(`Sales GST finalization is blocked: product ${product.id} has no HSN/SAC classification.`);
+    }
+    const classification = classificationsByCode.get(product.hsn_code);
+    if (!classification || !isApprovedGstClassification(classification, effectiveAt)) {
+      throw new Error(`Sales GST finalization is blocked: HSN/SAC ${product.hsn_code} is not approved and effective.`);
+    }
+    const resolution = resolveApprovedGstRule(
+      rulesByCatalogId.get(classification.id) ?? [],
+      effectiveAt,
+      classification.id,
+    );
+    if (!resolution.ok || resolution.rule.tax_rate === null) {
+      throw new Error(`Sales GST finalization is blocked: exactly one approved GST rule is required for HSN/SAC ${product.hsn_code}.`);
+    }
+    return {
+      ...line,
+      gst_rate: Number(resolution.rule.tax_rate),
+      hsn_code_snapshot: product.hsn_code,
+      hsn_sac_catalog_id_snapshot: classification.id,
+      gst_rule_version_snapshot: resolution.rule.rule_version,
+      gst_rule_source_reference_snapshot: resolution.rule.source_reference,
+    };
+  });
+}
+
 export async function createSalesDraftAction(
   _prevState: ActionResult<sales_invoices>,
   formData: FormData,
@@ -149,6 +257,10 @@ export async function createSalesDraftAction(
     const ctx = await requireServerTenantContext();
     requirePermission(ctx, "create_invoice" as PermissionAction);
     const data = parsed.data;
+    const treatment = validateGstTreatment(data.gst_treatment);
+    if (!treatment.ok) {
+      return { ok: false, message: treatment.error, errors: { gst_treatment: [treatment.error ?? "Invalid GST treatment."] } };
+    }
 
     const profile = await prisma.business_profiles.findUnique({ where: { tenant_id: ctx.tenantId } });
     const customer = data.customer_id
@@ -165,9 +277,9 @@ export async function createSalesDraftAction(
     }
     const placeOfSupply = placeResult.type;
 
-    const gstTotals = computeServerGstTotals(linesParsed, placeOfSupply);
-
     const invoice = await prisma.$transaction(async (tx) => {
+      const governedLines = await resolveSalesLineRules(tx, ctx.tenantId, linesParsed, data.invoice_date);
+      const gstTotals = computeServerGstTotals(governedLines, placeOfSupply);
       const created = await tx.sales_invoices.create({
         data: {
           tenant_id: ctx.tenantId,
@@ -177,6 +289,8 @@ export async function createSalesDraftAction(
           invoice_date: data.invoice_date instanceof Date ? data.invoice_date : new Date(data.invoice_date as any),
           status: __SalesStatusDRAFT,
           tax_data_status: "UNVERIFIED_DRAFT",
+          gst_treatment: treatment.treatment,
+          tax_mode: data.tax_mode,
           is_cash_sale: !!data.is_cash_sale,
           gross_amount: round2(gstTotals.total_taxable),
           total_discount: Number(data.total_discount ?? 0),
@@ -193,7 +307,7 @@ export async function createSalesDraftAction(
         },
       });
 
-      const itemsData = linesParsed.map((line: any, index: number) => {
+      const itemsData = governedLines.map((line: any, index: number) => {
         const qty = Number(line.quantity ?? 0);
         const rate = Number(line.sale_rate ?? 0);
         const discPct = Number(line.trade_discount_pct ?? 0);
@@ -221,6 +335,7 @@ export async function createSalesDraftAction(
           sgst_amount: persistedTax.sgst_amount,
           igst_amount: persistedTax.igst_amount,
           cess_amount: persistedTax.cess_amount,
+          hsn_code_snapshot: line.hsn_code_snapshot,
           line_total: persistedTax.line_total,
           created_at: new Date(),
         };
@@ -280,12 +395,57 @@ export async function finalizeSalesInvoiceAction(
   _prevState: ActionResult<sales_invoices>,
   formData: FormData,
 ): Promise<ActionResult<sales_invoices>> {
+  const requestedIdempotencyKey = String(formData.get("idempotency_key") ?? "").trim();
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(requestedIdempotencyKey)) {
+    return {
+      ok: false,
+      message: "A valid idempotency key is required.",
+      errors: undefined,
+    };
+  }
+  const idempotencyKey = requestedIdempotencyKey;
   try {
     assertPostgresConfigured("finalizeSalesInvoiceAction");
     const ctx = await requireServerTenantContext();
     requirePermission(ctx, "finalize_invoice" as PermissionAction);
+    const payloadHash = salesFinalizationPayloadHash(ctx.tenantId, saleId);
 
+    let replayed = false;
     const invoice = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw(Prisma.sql`
+        SELECT set_config('request.jwt.claim.tenant_id', ${ctx.tenantId}, true)
+      `);
+      await tx.$executeRaw(Prisma.sql`
+        SELECT pg_advisory_xact_lock(
+          hashtextextended(
+            concat(CAST(${ctx.tenantId} AS text), ':', CAST(${idempotencyKey} AS text)),
+            0
+          )
+        )
+      `);
+      const priorOperation = await tx.sales_posting_operations.findUnique({
+        where: {
+          tenant_id_idempotency_key: {
+            tenant_id: ctx.tenantId,
+            idempotency_key: idempotencyKey,
+          },
+        },
+      });
+      if (priorOperation) {
+        if (priorOperation.request_payload_hash !== payloadHash) {
+          throw new Error("This idempotency key was already used with a different sales payload.");
+        }
+        if (priorOperation.status === "COMPLETED" && priorOperation.result_sales_id) {
+          const committed = await tx.sales_invoices.findUnique({
+            where: { id: priorOperation.result_sales_id, tenant_id: ctx.tenantId },
+          });
+          if (!committed) throw new Error("Committed sales operation result is missing.");
+          replayed = true;
+          return committed;
+        }
+        throw new Error("This sales finalization operation is already in progress.");
+      }
+
       const existing = await tx.sales_invoices.findUnique({
         where: { id: saleId, tenant_id: ctx.tenantId },
         include: { customer: true, items: { include: { product: true, batch: true } } },
@@ -293,10 +453,34 @@ export async function finalizeSalesInvoiceAction(
       if (!existing) throw new Error("Invoice not found.");
       if (existing.status === __SalesStatusFINALIZED) throw new Error("Invoice already finalized.");
       if (existing.status !== __SalesStatusDRAFT) throw new Error("Only draft invoices can be finalized.");
+      const treatment = validateGstTreatment(existing.gst_treatment);
+      if (!treatment.ok) {
+        throw new Error(treatment.error ?? "GST treatment must be selected before finalization.");
+      }
+      if (existing.tax_mode !== "EXCLUSIVE") {
+        throw new Error("Only tax-exclusive GST invoices are enabled for finalization.");
+      }
       if (!existing.customer) throw new Error("Customer not found.");
+
+      await tx.sales_posting_operations.create({
+        data: {
+          tenant_id: ctx.tenantId,
+          sales_invoice_id: saleId,
+          idempotency_key: idempotencyKey,
+          request_payload_hash: payloadHash,
+          status: "PROCESSING",
+        },
+      });
+      if (
+        process.env.FINANCIAL_E2E_TEST_MODE === "true" &&
+        process.env.FINANCIAL_E2E_TEST_FAIL_BEFORE_COMMIT === "true"
+      ) {
+        throw new Error("FINANCIAL_E2E_SIMULATED_PRE_COMMIT_FAILURE");
+      }
 
       const items: any[] = existing.items as any[] ?? [];
       if (items.length === 0) throw new Error("No line items found.");
+      const governedLines = await resolveSalesLineRules(tx, ctx.tenantId, items, existing.invoice_date);
 
       const profile = await tx.business_profiles.findUnique({ where: { tenant_id: ctx.tenantId } });
       const tenant = await tx.tenants.findUnique({
@@ -308,7 +492,7 @@ export async function finalizeSalesInvoiceAction(
       const placeOfSupply = requireResolvedPlaceOfSupply(
         gstCalculator.detectPlace(businessState, capturedPlaceOfSupplyState),
       );
-      const serverGst = computeServerGstTotals(items, placeOfSupply);
+      const serverGst = computeServerGstTotals(governedLines, placeOfSupply);
       const persistedPlaceOfSupplyCode = capturedPlaceOfSupplyState;
       if (!persistedPlaceOfSupplyCode) {
         throw new Error("Cannot finalize invoice until customer place-of-supply state is valid.");
@@ -353,12 +537,20 @@ export async function finalizeSalesInvoiceAction(
             sgst_amount: persistedTax.sgst_amount,
             igst_amount: persistedTax.igst_amount,
             cess_amount: persistedTax.cess_amount,
+            hsn_code_snapshot: governedLines[index]?.hsn_code_snapshot ?? null,
             product_name_snapshot: line.product?.name ?? null,
             generic_name_snapshot: line.product?.generic_name ?? null,
-            hsn_code_snapshot: line.product?.hsn_code ?? null,
             batch_expiry_snapshot: line.batch?.expiry_date ?? null,
           },
         });
+        await tx.$executeRaw(Prisma.sql`
+          UPDATE "sales_invoice_items"
+          SET
+            "hsn_sac_catalog_id_snapshot" = ${governedLines[index]?.hsn_sac_catalog_id_snapshot ?? null},
+            "gst_rule_version_snapshot" = ${governedLines[index]?.gst_rule_version_snapshot ?? null},
+            "gst_rule_source_reference_snapshot" = ${governedLines[index]?.gst_rule_source_reference_snapshot ?? null}
+          WHERE "id" = ${line.id} AND "tenant_id" = ${ctx.tenantId}
+        `);
       }
 
       const distinctProductIds = Array.from(new Set(items.map((it) => it.product_id)));
@@ -505,9 +697,27 @@ export async function finalizeSalesInvoiceAction(
         },
       });
 
+      await tx.sales_posting_operations.update({
+        where: {
+          tenant_id_idempotency_key: {
+            tenant_id: ctx.tenantId,
+            idempotency_key: idempotencyKey,
+          },
+        },
+        data: {
+          status: "COMPLETED",
+          result_invoice_no: finalInvoiceNo,
+          result_sales_id: updated.id,
+          updated_at: new Date(),
+        },
+      });
+
       return updated;
     });
 
+    if (replayed) {
+      redirect(`/billing?created=${encodeURIComponent(invoice.id)}&finalized=1&replayed=1`);
+    }
     revalidatePath("/billing");
     revalidatePath("/inventory");
     revalidatePath("/inventory/batches");
@@ -517,6 +727,29 @@ export async function finalizeSalesInvoiceAction(
     redirect(`/billing?created=${encodeURIComponent(invoice.id)}&finalized=1`);
   } catch (e: any) {
     if (e?.message && typeof e.message === "string" && e.message.includes("NEXT_REDIRECT")) throw e;
+    try {
+      const ctx = await requireServerTenantContext();
+      const retryPayloadHash = salesFinalizationPayloadHash(ctx.tenantId, saleId);
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        const committed = await prisma.sales_posting_operations.findUnique({
+          where: {
+            tenant_id_idempotency_key: {
+              tenant_id: ctx.tenantId,
+              idempotency_key: idempotencyKey,
+            },
+          },
+        });
+        if (committed &&
+          committed.request_payload_hash === retryPayloadHash &&
+          committed.status === "COMPLETED" &&
+          committed.result_sales_id) {
+          redirect(`/billing?created=${encodeURIComponent(committed.result_sales_id)}&finalized=1&replayed=1`);
+        }
+        if (attempt < 9) await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+    } catch (lookupError: any) {
+      if (lookupError?.message && typeof lookupError.message === "string" && lookupError.message.includes("NEXT_REDIRECT")) throw lookupError;
+    }
     const msg = e?.message && typeof e.message === "string" ? e.message : "Invoice could not be finalized. Please try again.";
     return { ok: false, message: msg, errors: undefined };
   }
@@ -596,10 +829,12 @@ export async function createCustomerPaymentAction(
       return { id: payment.id, warning };
     });
 
-    revalidatePath("/billing");
-    revalidatePath("/billing/payments");
-    revalidatePath("/customers");
-    revalidatePath("/dashboard");
+    if (process.env.FINANCIAL_E2E_TEST_MODE !== "true") {
+      revalidatePath("/billing");
+      revalidatePath("/billing/payments");
+      revalidatePath("/customers");
+      revalidatePath("/dashboard");
+    }
     return {
       ok: true,
       data: { id: result.id },
@@ -684,10 +919,12 @@ export async function createSupplierPaymentAction(
       return { id: payment.id, warning };
     });
 
-    revalidatePath("/purchases");
-    revalidatePath("/purchases/payments");
-    revalidatePath("/suppliers");
-    revalidatePath("/dashboard");
+    if (process.env.FINANCIAL_E2E_TEST_MODE !== "true") {
+      revalidatePath("/purchases");
+      revalidatePath("/purchases/payments");
+      revalidatePath("/suppliers");
+      revalidatePath("/dashboard");
+    }
     return {
       ok: true,
       data: { id: result.id },

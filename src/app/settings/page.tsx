@@ -31,7 +31,9 @@ import { Building2, Users, Settings2, Upload, ShieldCheck, Link2, Pill } from "l
 import { isPostgresConfigured } from "@/lib/db/prisma";
 import { requireServerTenantContext } from "@/lib/db/tenant-context";
 import { repos } from "@/repositories";
+import { getGstCatalogAdminData } from "@/app/_actions/gst-catalog.actions";
 import BusinessProfileForm from "./_business-profile-form";
+import GstCatalogPanel from "./_gst-catalog-panel";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -47,6 +49,7 @@ const staff = [
 export default async function SettingsPage() {
   let profile: any = null;
   let businessName = "";
+  let gstCatalog: Awaited<ReturnType<typeof getGstCatalogAdminData>> | null = null;
   if (isPostgresConfigured()) {
     try {
       const ctx = await requireServerTenantContext();
@@ -58,6 +61,11 @@ export default async function SettingsPage() {
       businessName = tenant?.business_name ?? "";
     } catch (_error) {
       // Keep the settings page usable when the configured database is unavailable.
+    }
+    try {
+      gstCatalog = await getGstCatalogAdminData();
+    } catch (_error) {
+      // Catalog governance is unavailable until an authorized tenant context exists.
     }
   }
 
@@ -79,6 +87,8 @@ export default async function SettingsPage() {
           default_gst_rate: profile.default_gst_rate === null ? null : Number(profile.default_gst_rate),
         } : null}
       />
+
+      {gstCatalog ? <GstCatalogPanel {...gstCatalog} /> : null}
 
       <Tabs defaultValue="team">
         <TabsList className="mb-5">

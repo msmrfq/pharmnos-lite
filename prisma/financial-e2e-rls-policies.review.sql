@@ -112,6 +112,15 @@
 -- Finalized GST fields require the separate finalized-invoice protection
 -- contract in financial-e2e-security-controls.review.sql.
 
+-- sales_posting_operations
+-- tenant_select_sales_posting_operations /
+-- tenant_insert_sales_posting_operations /
+-- tenant_update_sales_posting_operations
+-- Predicate: tenant_id::text = NULLIF(current_setting(
+--   'request.jwt.claim.tenant_id', true), '')
+-- Operation state and its unique key are tenant-scoped and must remain
+-- transactionally aligned with the finalized invoice.
+
 -- purchase_posting_operations
 -- tenant_select_purchase_posting_operations /
 -- tenant_insert_purchase_posting_operations /
@@ -163,6 +172,34 @@
 -- purchase_gst_reconciliation_event_lines
 -- tenant_select_purchase_gst_reconciliation_event_lines /
 -- tenant_insert_purchase_gst_reconciliation_event_lines
+-- Predicate: tenant_id::text = NULLIF(current_setting(
+--   'request.jwt.claim.tenant_id', true), '')
+
+-- hsn_sac_catalog
+-- tenant_select_hsn_sac_catalog
+-- No INSERT, UPDATE, or DELETE policy: application runtime reads approved
+-- tenant-scoped governance facts; maintenance remains separately authorized.
+-- Predicate: tenant_id::text = NULLIF(current_setting(
+--   'request.jwt.claim.tenant_id', true), '')
+
+-- gst_rate_rules
+-- tenant_select_gst_rate_rules
+-- No INSERT, UPDATE, or DELETE policy: application runtime reads approved
+-- tenant-scoped governance facts; maintenance remains separately authorized.
+-- Predicate: tenant_id::text = NULLIF(current_setting(
+--   'request.jwt.claim.tenant_id', true), '')
+
+-- hsn_sac_catalog_history
+-- tenant_select_hsn_sac_catalog_history /
+-- tenant_insert_hsn_sac_catalog_history
+-- No UPDATE or DELETE policy: history is append-only.
+-- Predicate: tenant_id::text = NULLIF(current_setting(
+--   'request.jwt.claim.tenant_id', true), '')
+
+-- gst_rate_rule_history
+-- tenant_select_gst_rate_rule_history /
+-- tenant_insert_gst_rate_rule_history
+-- No UPDATE or DELETE policy: history is append-only.
 -- Predicate: tenant_id::text = NULLIF(current_setting(
 --   'request.jwt.claim.tenant_id', true), '')
 

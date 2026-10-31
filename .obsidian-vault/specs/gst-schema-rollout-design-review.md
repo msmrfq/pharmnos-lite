@@ -1,8 +1,16 @@
 ---
 title: Corrected GST Schema Rollout Design Review
 date: 2026-10-24
-status: Review only - not approved for execution
+status: OWNER AUTHORIZED - REVIEW ONLY; MIGRATION EXECUTION SEPARATE
 ---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
+
 
 # Corrected GST Schema Rollout Design Review
 
@@ -10,8 +18,29 @@ This document is a review-only rollout design for the GST/posting schema gap
 identified in the intended Supabase database. It is not a migration, does not
 authorize execution, and does not replace an approved migration baseline.
 
+**Owner authorization:** Masum Rafique granted authorization for the complete
+documented GST Modernization scope on 2026-10-31 (IST), including associated
+implementation and validation work. This document remains review-only:
+migration execution, database changes, production use, and release remain
+subject to their separate controls and approvals.
+
 No database, Prisma schema, SQL asset, application code, environment file,
 roadmap, batch number, or Git state is changed by this document.
+
+**Document responsibility and hierarchy:** The [Domestic GST Modernization
+master specification](./domestic-gst-modernization.md) is the overall scope
+and architecture entry point. This document owns detailed schema, migration,
+rollout, compatibility, security, and database-integrity design review. The
+[GST Decision Closure and Engineering Contract
+Approval](./gst-decision-closure-and-engineering-contract-approval.md) owns
+owner decisions and authorization records; the [GST Accounting Decision
+Question Pack](./gst-accounting-decision-question-pack.md) owns professional
+and statutory questions; and [Purchase GST Persistence and Workflow
+Design](./purchase-gst-persistence-design.md) owns purchase persistence
+details. Read this review when a task touches schema or rollout. A master
+summary must not override this detailed review; conflicts must be recorded with
+exact locations and remain unresolved until resolved by the responsible
+authority. This hierarchy does not authorize execution.
 
 ## Evidence boundary
 
@@ -496,9 +525,33 @@ The physical foreign key belongs to the invoice's
 `current_gst_accounting_decision_id` pointer. Do not add a separate foreign
 key on the accounting-decision table for this inverse relation.
 
-The current `calculation_id` scalar has no Prisma relation and therefore no
-repository-confirmed calculation foreign key. Its integrity choice is
-explicitly deferred to the decision section below.
+The current `calculation_id` relation is present in the repository Prisma
+source as GST-APP-03 Option B: it references
+`purchase_gst_calculations(tenant_id, purchase_invoice_id, id)` with
+`ON DELETE RESTRICT`, inverse relation
+`purchase_gst_decision_calculation`, and mapped constraint
+`purchase_gst_decision_calculation_fkey`. This source declaration is not
+evidence that a migration was applied or that the relation passed database
+validation.
+
+### Current-pointer contract status
+
+The three nullable `purchase_invoices` current pointers are source-declared as
+follows:
+
+| Pointer | Target composite key | Referencing support key | Relation name / mapped constraint | Delete/lifecycle contract | Current verification |
+|---|---|---|---|---|---|
+| `current_gst_evidence_revision_id` | `purchase_gst_evidence_revisions(tenant_id, purchase_invoice_id, id)` | `UNIQUE (tenant_id, id, current_gst_evidence_revision_id)` | `purchase_current_gst_evidence_revision` / `purchase_invoices_current_gst_evidence_fkey` | Nullable for legacy rows; `RESTRICT`; historical revision remains readable | Prisma source present; Q-15 general migration validation does not prove pointer-specific runtime or applied-state behavior: `NOT VERIFIED` |
+| `current_gst_calculation_id` | `purchase_gst_calculations(tenant_id, purchase_invoice_id, id)` | `UNIQUE (tenant_id, id, current_gst_calculation_id)` | `purchase_current_gst_calculation` / `purchase_invoices_current_gst_calculation_fkey` | Nullable for legacy rows; `RESTRICT`; historical calculation remains readable | Prisma source present; Q-15 general migration validation does not prove pointer-specific runtime or applied-state behavior: `NOT VERIFIED` |
+| `current_gst_accounting_decision_id` | `purchase_gst_accounting_decisions(tenant_id, purchase_invoice_id, id)` | `UNIQUE (tenant_id, id, current_gst_accounting_decision_id)` | `purchase_current_gst_accounting_decision` / `purchase_invoices_current_gst_accounting_decision_fkey` | Nullable for legacy rows; `RESTRICT`; historical decision remains readable | Prisma source present; Q-15 general migration validation does not prove pointer-specific runtime or applied-state behavior: `NOT VERIFIED` |
+
+Each target declares the corresponding tenant/invoice/id unique key and each
+pointer is composite and tenant-aware. Required acceptance evidence remains:
+`prisma validate`; generated SQL containing the composite foreign keys and
+support keys; rejection of cross-tenant and invalid-pointer references;
+successful reads of valid historical references; and verification that
+`RESTRICT` deletion behavior matches the approved contract. No such
+pointer-specific runtime evidence is inferred from the Q-15 migration test.
 
 ### `purchase_gst_reconciliation_events`
 
@@ -953,10 +1006,13 @@ No rollback has been executed or verified.
 
 **NO-GO for rollout execution.**
 
-Execution remains blocked by the unresolved `calculation_id` relation, the
-unapproved grant/RLS model, missing non-bypass role tests, absent live
-business-row compatibility evidence, missing disposable-database execution
-evidence, and lack of approved rollback/backup proof.
+Execution remains blocked by the unapproved rollout/grant model, missing
+pointer-specific Prisma/generated-SQL and cross-tenant tests, absent live
+business-row compatibility evidence, and lack of production rollback,
+backup, recovery, and release authorization. The calculation relation is no
+longer an unresolved source-design question: Option B is owner-selected and
+present in Prisma, while migration application and database verification
+remain incomplete.
 # Owner decision addendum - 2026-10-25
 
 The project owner selected GST-APP-03 Option B: `purchase_gst_accounting_decisions.calculation_id`

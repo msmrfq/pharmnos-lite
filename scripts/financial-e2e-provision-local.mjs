@@ -18,7 +18,9 @@ import {
 const { Client } = pg;
 const BOOTSTRAP_ROLE = "pharmnos_e2e";
 const RUNTIME_ROLE = "pharmnos_e2e_runtime";
-const DATABASE_NAME = "pharmnos_financial_e2e";
+const ADMIN_ROLE = "pharmnos_e2e_admin";
+const VALIDATION_ROLE = "pharmnos_e2e_validation";
+const DATABASE_NAME = process.env.TEST_DATABASE_NAME ?? "pharmnos_financial_e2e";
 const BASELINE_PATH = new URL("../prisma/financial-e2e-schema-provisioning.generated.sql", import.meta.url);
 const TRUSTED_REPOSITORY_ROOT = fileURLToPath(new URL("..", import.meta.url));
 
@@ -33,6 +35,7 @@ const directTenantTables = [
     "suppliers",
     "purchase_invoices",
     "purchase_posting_operations",
+    "sales_posting_operations",
     "purchase_invoice_items",
     "purchase_gst_evidence_revisions",
     "purchase_gst_line_evidence",
@@ -47,6 +50,8 @@ const directTenantTables = [
     "customer_ledgers",
     "supplier_ledgers",
     "audit_logs",
+    "hsn_sac_catalog_history",
+    "gst_rate_rule_history",
 ];
 const immutableTables = [
     "purchase_gst_evidence_revisions",
@@ -55,6 +60,8 @@ const immutableTables = [
     "purchase_gst_accounting_decisions",
     "purchase_gst_reconciliation_events",
     "purchase_gst_reconciliation_event_lines",
+    "hsn_sac_catalog_history",
+    "gst_rate_rule_history",
 ];
 const mutableTables = [
     "tenants",
@@ -62,6 +69,8 @@ const mutableTables = [
     ...directTenantTables.filter((table) => !immutableTables.includes(table) && table !== "audit_logs"),
 ];
 const allTenantTables = ["tenants", "users", ...directTenantTables];
+const catalogReadTables = ["hsn_sac_catalog", "gst_rate_rules"];
+const rlsTables = [...allTenantTables, ...catalogReadTables];
 const enumTypes = [
     "SystemRole",
     "PermissionAction",
@@ -103,14 +112,43 @@ function directPredicate(table) {
     return `tenant_id::text = NULLIF(current_setting('request.jwt.claim.tenant_id', true), '')`;
 }
 
+function subjectPredicate(table) {
+    const subject = `NULLIF(current_setting('request.jwt.claim.sub', true), '')`;
+    if (table === "users") {
+        return `external_id = ${subject}`;
+    }
+    if (table === "memberships") {
+        return `user_id = ${subject}`;
+    }
+    if (table === "roles") {
+        return `EXISTS (
+            SELECT 1 FROM public.memberships AS m
+            WHERE m.role_id = roles.id
+              AND m.user_id = ${subject}
+        )`;
+    }
+    if (table === "role_permissions") {
+        return `EXISTS (
+            SELECT 1 FROM public.roles AS r
+            JOIN public.memberships AS m ON m.role_id = r.id
+            WHERE r.id = role_permissions.role_id
+              AND m.user_id = ${subject}
+        )`;
+    }
+    return null;
+}
+
 function policyStatements() {
     const statements = [];
     for (const table of allTenantTables) {
         const predicate = directPredicate(table);
+        const selectPredicate = subjectPredicate(table)
+            ? `(${predicate}) OR (${subjectPredicate(table)})`
+            : predicate;
         statements.push(
             `ALTER TABLE public.${ident(table)} ENABLE ROW LEVEL SECURITY`,
             `ALTER TABLE public.${ident(table)} FORCE ROW LEVEL SECURITY`,
-            `CREATE POLICY ${ident(`tenant_select_${table}`)} ON public.${ident(table)} FOR SELECT TO ${ident(RUNTIME_ROLE)} USING (${predicate})`,
+            `CREATE POLICY ${ident(`tenant_select_${table}`)} ON public.${ident(table)} FOR SELECT TO ${ident(RUNTIME_ROLE)} USING (${selectPredicate})`,
             `CREATE POLICY ${ident(`tenant_insert_${table}`)} ON public.${ident(table)} FOR INSERT TO ${ident(RUNTIME_ROLE)} WITH CHECK (${predicate})`,
         );
         if (!immutableTables.includes(table) && table !== "audit_logs") {
@@ -118,6 +156,14 @@ function policyStatements() {
                 `CREATE POLICY ${ident(`tenant_update_${table}`)} ON public.${ident(table)} FOR UPDATE TO ${ident(RUNTIME_ROLE)} USING (${predicate}) WITH CHECK (${predicate})`,
             );
         }
+    }
+    for (const table of catalogReadTables) {
+        const predicate = directPredicate(table);
+        statements.push(
+            `ALTER TABLE public.${ident(table)} ENABLE ROW LEVEL SECURITY`,
+            `ALTER TABLE public.${ident(table)} FORCE ROW LEVEL SECURITY`,
+            `CREATE POLICY ${ident(`tenant_select_${table}`)} ON public.${ident(table)} FOR SELECT TO ${ident(RUNTIME_ROLE)} USING (${predicate})`,
+        );
     }
     return statements;
 }
@@ -131,14 +177,19 @@ function grantStatements() {
         `ALTER DEFAULT PRIVILEGES FOR ROLE ${ident(BOOTSTRAP_ROLE)} IN SCHEMA public REVOKE ALL ON SEQUENCES FROM PUBLIC`,
         `ALTER DEFAULT PRIVILEGES FOR ROLE ${ident(BOOTSTRAP_ROLE)} IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC`,
         `GRANT SELECT, INSERT, UPDATE ON TABLE ${allTenantTables.map((table) => `public.${ident(table)}`).join(", ")} TO ${ident(RUNTIME_ROLE)}`,
+        `GRANT SELECT ON TABLE ${catalogReadTables.map((table) => `public.${ident(table)}`).join(", ")} TO ${ident(RUNTIME_ROLE)}`,
         `REVOKE UPDATE, DELETE ON TABLE ${immutableTables.map((table) => `public.${ident(table)}`).join(", ")} FROM ${ident(RUNTIME_ROLE)}`,
         `REVOKE DELETE ON TABLE public.${ident("audit_logs")} FROM ${ident(RUNTIME_ROLE)}`,
+            `REVOKE UPDATE ON TABLE public.${ident("sales_posting_operations")} FROM ${ident(RUNTIME_ROLE)}`,
+            `GRANT UPDATE (status, result_invoice_no, result_sales_id, updated_at)
+             ON TABLE public.${ident("sales_posting_operations")} TO ${ident(RUNTIME_ROLE)}`,
         `GRANT USAGE ON TYPE ${enumTypes.map((type) => `public.${ident(type)}`).join(", ")} TO ${ident(RUNTIME_ROLE)}`,
     ];
     return statements;
 }
 
 const controlSql = [
+    `CREATE EXTENSION IF NOT EXISTS btree_gist`,
     ...grantStatements(),
     ...policyStatements(),
     `CREATE OR REPLACE FUNCTION public.prevent_financial_history_mutation()
@@ -152,9 +203,83 @@ const controlSql = [
      END;
      $function$`,
     ...immutableTables.map((table) =>
-        `CREATE TRIGGER ${ident(`prevent_${table}_mutation`)}
-         BEFORE UPDATE OR DELETE ON public.${ident(table)}
-         FOR EACH ROW EXECUTE FUNCTION public.prevent_financial_history_mutation()`),
+        `DO $immutable_trigger$
+         BEGIN
+           IF NOT EXISTS (
+             SELECT 1 FROM pg_trigger t
+             JOIN pg_class c ON c.oid = t.tgrelid
+             WHERE c.relname = '${table}'
+               AND t.tgname = '${`prevent_${table}_mutation`}'
+           ) THEN
+             CREATE TRIGGER ${ident(`prevent_${table}_mutation`)}
+             BEFORE UPDATE OR DELETE ON public.${ident(table)}
+             FOR EACH ROW EXECUTE FUNCTION public.prevent_financial_history_mutation();
+           END IF;
+         END;
+         $immutable_trigger$`),
+    `DO $governance_constraints$
+     BEGIN
+       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'hsn_sac_catalog_effective_range_check') THEN
+         ALTER TABLE public."hsn_sac_catalog" ADD CONSTRAINT "hsn_sac_catalog_effective_range_check"
+           CHECK ("effective_to" IS NULL OR "effective_from" IS NULL OR "effective_to" > "effective_from");
+       END IF;
+       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'hsn_sac_catalog_approval_state_check') THEN
+         ALTER TABLE public."hsn_sac_catalog" ADD CONSTRAINT "hsn_sac_catalog_approval_state_check"
+           CHECK ("classification_status" <> 'APPROVED'::public."GstApprovalStatus" OR
+             ("is_active" = true AND "classification_approved_by_membership_id" IS NOT NULL AND "classification_approved_at" IS NOT NULL));
+       END IF;
+       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'gst_rate_rules_tax_rate_check') THEN
+         ALTER TABLE public."gst_rate_rules" ADD CONSTRAINT "gst_rate_rules_tax_rate_check"
+           CHECK ("tax_rate" IS NULL OR ("tax_rate" = "tax_rate" AND "tax_rate" >= 0));
+       END IF;
+       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'gst_rate_rules_effective_range_check') THEN
+         ALTER TABLE public."gst_rate_rules" ADD CONSTRAINT "gst_rate_rules_effective_range_check"
+           CHECK ("effective_to" IS NULL OR "effective_to" > "effective_from");
+       END IF;
+       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'gst_rate_rules_approval_state_check') THEN
+         ALTER TABLE public."gst_rate_rules" ADD CONSTRAINT "gst_rate_rules_approval_state_check"
+           CHECK ("approval_status" <> 'APPROVED'::public."GstApprovalStatus" OR
+             ("is_active" = true AND "approved_by_membership_id" IS NOT NULL AND "approved_at" IS NOT NULL));
+       END IF;
+       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'gst_rate_rules_approved_period_excl') THEN
+         ALTER TABLE public."gst_rate_rules" ADD CONSTRAINT "gst_rate_rules_approved_period_excl"
+           EXCLUDE USING gist (
+             "tenant_id" WITH =,
+             (COALESCE("hsn_sac_catalog_id", '')) WITH =,
+             "component_policy" WITH =,
+             tsrange("effective_from", COALESCE("effective_to", 'infinity'::timestamp), '[)') WITH &&
+           )
+           WHERE ("approval_status" = 'APPROVED'::public."GstApprovalStatus" AND "is_active" = true);
+       END IF;
+     END;
+     $governance_constraints$`,
+    `CREATE OR REPLACE FUNCTION public.prevent_approved_gst_rule_mutation()
+     RETURNS trigger
+     LANGUAGE plpgsql
+     SET search_path = pg_catalog, public
+     AS $function$
+     BEGIN
+       IF OLD."approval_status" = 'APPROVED'::public."GstApprovalStatus" THEN
+         RAISE EXCEPTION 'Approved GST rate rules are immutable; create a pending revision'
+           USING ERRCODE = '42501';
+       END IF;
+       RETURN NEW;
+     END;
+     $function$`,
+    `DO $approved_rule_trigger$
+     BEGIN
+       IF NOT EXISTS (
+         SELECT 1 FROM pg_trigger t
+         JOIN pg_class c ON c.oid = t.tgrelid
+         WHERE c.relname = 'gst_rate_rules'
+           AND t.tgname = 'prevent_approved_gst_rule_mutation'
+       ) THEN
+         CREATE TRIGGER prevent_approved_gst_rule_mutation
+         BEFORE UPDATE ON public."gst_rate_rules"
+         FOR EACH ROW EXECUTE FUNCTION public.prevent_approved_gst_rule_mutation();
+       END IF;
+     END;
+     $approved_rule_trigger$`,
     `CREATE OR REPLACE FUNCTION public.prevent_finalized_purchase_mutation()
      RETURNS trigger
      LANGUAGE plpgsql
@@ -236,6 +361,50 @@ const controlSql = [
     `CREATE TRIGGER guard_purchase_posting_transition
      BEFORE UPDATE ON public."purchase_posting_operations"
      FOR EACH ROW EXECUTE FUNCTION public.guard_purchase_posting_transition()`,
+    `CREATE OR REPLACE FUNCTION public.guard_sales_posting_transition()
+     RETURNS trigger
+     LANGUAGE plpgsql
+     SET search_path = pg_catalog, public
+     AS $function$
+     BEGIN
+       IF NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+          OR NEW.sales_invoice_id IS DISTINCT FROM OLD.sales_invoice_id
+          OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
+          OR NEW.request_payload_hash IS DISTINCT FROM OLD.request_payload_hash
+       THEN
+         RAISE EXCEPTION 'Sales posting operation identity is immutable'
+           USING ERRCODE = '23514';
+       END IF;
+       IF NEW.status IS DISTINCT FROM OLD.status
+          AND NOT (OLD.status = 'PROCESSING' AND NEW.status IN ('COMPLETED', 'FAILED'))
+       THEN
+         RAISE EXCEPTION 'Invalid sales posting transition'
+           USING ERRCODE = '23514';
+       END IF;
+       IF NEW.status = 'PROCESSING'
+          AND (NEW.result_invoice_no IS NOT NULL OR NEW.result_sales_id IS NOT NULL)
+       THEN
+         RAISE EXCEPTION 'Processing sales operation cannot have a result'
+           USING ERRCODE = '23514';
+       END IF;
+       IF NEW.status = 'COMPLETED'
+          AND (NEW.result_invoice_no IS NULL OR NEW.result_sales_id IS NULL)
+       THEN
+         RAISE EXCEPTION 'Completed sales operation requires a result'
+           USING ERRCODE = '23514';
+       END IF;
+       RETURN NEW;
+     END;
+     $function$`,
+    `CREATE TRIGGER guard_sales_posting_transition
+     BEFORE UPDATE ON public."sales_posting_operations"
+     FOR EACH ROW EXECUTE FUNCTION public.guard_sales_posting_transition()`,
+    `REVOKE EXECUTE ON FUNCTION public.guard_sales_posting_transition() FROM PUBLIC`,
+    `REVOKE EXECUTE ON FUNCTION public.prevent_financial_history_mutation() FROM PUBLIC`,
+    `REVOKE EXECUTE ON FUNCTION public.prevent_finalized_purchase_mutation() FROM PUBLIC`,
+    `REVOKE EXECUTE ON FUNCTION public.prevent_finalized_sales_mutation() FROM PUBLIC`,
+    `REVOKE EXECUTE ON FUNCTION public.guard_purchase_posting_transition() FROM PUBLIC`,
+    `GRANT EXECUTE ON FUNCTION public.guard_sales_posting_transition() TO ${ident(BOOTSTRAP_ROLE)}`,
 ].join(";\n");
 
 async function queryRows(client, sql, values = []) {
@@ -556,6 +725,18 @@ async function main() {
              END
              $$;`,
         );
+        await client.query(
+            `DO $$
+             BEGIN
+               IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${ADMIN_ROLE}') THEN
+                 CREATE ROLE ${ident(ADMIN_ROLE)} NOLOGIN NOSUPERUSER NOBYPASSRLS;
+               END IF;
+               IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${VALIDATION_ROLE}') THEN
+                 CREATE ROLE ${ident(VALIDATION_ROLE)} NOLOGIN NOSUPERUSER NOBYPASSRLS;
+               END IF;
+             END
+             $$;`,
+        );
         await client.query(controlSql);
         await client.query("COMMIT");
         transactionStarted = false;
@@ -577,7 +758,7 @@ async function main() {
               (SELECT rolcanlogin FROM pg_roles WHERE rolname = $1) AS runtime_can_login
         `, [RUNTIME_ROLE, allTenantTables]);
         const row = catalog[0];
-        if (Number(row?.rls_enabled) !== allTenantTables.length ||
+        if (Number(row?.rls_enabled) !== rlsTables.length ||
             Number(row?.policy_count) < allTenantTables.length * 2 ||
             Number(row?.constraint_count) === 0 ||
             Number(row?.runtime_delete_privileges) !== 0 ||

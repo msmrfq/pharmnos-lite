@@ -1,3 +1,15 @@
+---
+title: Phase 7 - Hardening + Release
+date: 2026-09-30
+status: Draft
+---
+
+## Goal
+
+
+
+## Out of Scope
+
 # Phase 7 — Hardening + Release (SPEC)
 
 ## Problem

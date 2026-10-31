@@ -1,11 +1,33 @@
+---
+title: Pharmnos Lite GST Master Specification
+date: 2026-10-29
+status: OWNER AUTHORIZED - SUPERSEDED HISTORICAL GST SPECIFICATION
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Pharmnos Lite GST Master Specification
 
-**Status:** `PROPOSED MASTER REFERENCE — READY FOR OWNER REVIEW`
+**Status:** `OWNER AUTHORIZED — SUPERSEDED HISTORICAL GST SPECIFICATION;
+SEE domestic-gst-modernization.md`
 **Working stage:** POST-P7 — PRE-PRODUCTION VALIDATION
 **Last revised:** 2026-10-29 00-25-00 (IST)
-**Authority:** Project owner approval remains required. This document consolidates
-the current evidence and recorded product decisions; it does not itself grant
-implementation, migration, testing, pilot, or production authorization.
+**Authority:** Owner authorization is recorded for the complete GST Modernization
+scope. This historical document does not replace the active master or separately
+governed implementation, migration, testing, pilot, or production controls.
+
+> **Supersession notice:** [domestic gst modernization.md](./domestic%20gst%20modernization.md)
+> is the active specification for the focused domestic GST billing
+> modernization scope. This historical document is retained for prior
+> decisions, evidence, test identifiers, traceability, and supporting technical
+> requirements. Where the two documents conflict on the new domestic billing
+> feature scope, the new document governs. Existing security, financial
+> integrity, database, purchase reconciliation, and release constraints are
+> not silently cancelled. This file must not be deleted.
 
 **Test-cleanup status (2026-10-29):** Broad GST, purchase-reconciliation,
 financial-integrity, and disposable contract suites remain retained. Only the
@@ -1219,6 +1241,20 @@ no claim beyond the evidence actually produced.
 | `REL-08` | Release authorization | Product owner + Engineering + Security | All earlier gate evidence plus rollback plan | Product release is explicitly approved after all gates pass | Any gate remains blocked or unverified | `NOT AUTHORIZED` |
 
 The release gate hierarchy is intentionally separate from implementation status. A specification can be complete and still remain unapproved for implementation or production release.
+
+### 17.2 Latest isolated engineering evidence
+
+The 2026-10-31 IST rerun supports Q-10, Q-14, and Q-15 as `PASS` for the
+disposable local PostgreSQL 17 target. Q-10 used the actual finalization
+action, Q-14 used separate ordinary role connections for SEC-DEC-01/02, and
+Q-15 used deterministic row-level checksums plus schema/security catalog
+comparison across two independent restores. Retained outputs are
+`q10-application-final.txt`, `q14-ordinary-login-final.txt`,
+`q10-q14-regression-final.txt`, `q15-final.txt`,
+`q15-1793447704646-raw-output.txt`, and
+`q15-1793447704646-restore-comparison.json`. This evidence does not change the
+blocked release gates or authorize implementation, migration, or production
+activity.
 
 ## 18. Bidirectional traceability
 

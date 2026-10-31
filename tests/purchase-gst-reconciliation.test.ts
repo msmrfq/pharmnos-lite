@@ -8,6 +8,7 @@ import {
   calculatePurchaseGstExpected,
   canCompletePurchaseAccounting,
   notYetReconciledPurchaseGst,
+  reconcilePurchaseGstLineEvidence,
   reconcilePurchaseGstEvidence,
   resolvePurchaseGstReconciliation,
   type AccountingAcceptedPurchaseGst,
@@ -30,6 +31,15 @@ function assert(condition: boolean, message: string): void {
 
 function assertEqual<T>(actual: T, expected: T, message: string): void {
   assert(actual === expected, `${message} (expected ${String(expected)}, got ${String(actual)})`);
+}
+
+function assertThrows(action: () => unknown, message: string): void {
+  try {
+    action();
+    assert(false, message);
+  } catch {
+    assert(true, message);
+  }
 }
 
 const declared: SupplierDeclaredPurchaseGstEvidence = {
@@ -70,8 +80,18 @@ const expectedIntra = calculatePurchaseGstExpected(
     delivery_state_at_transaction: "Maharashtra",
     supply_scenario: "INTRA_STATE",
   },
+  [{
+    quantity: 1,
+    purchase_rate: 100,
+    discount_pct: 0,
+    gst_rate: 18,
+    hsn_sac_code: "3004",
+    hsn_sac_catalog_id: "catalog-3004",
+    rule_version: "gst-18-v1",
+    rule_source_reference: "source-18",
+  }],
 );
-assertEqual(expectedIntra.rule_version, "purchase-gst-rules-v1", "purchase calculation records its rule version");
+assertEqual(expectedIntra.rule_version, "gst-18-v1", "purchase calculation records its governed rule version");
 assertEqual(expectedIntra.amounts.cgst, 9, "intra-state calculation splits CGST");
 assertEqual(expectedIntra.amounts.sgst, 9, "intra-state calculation splits SGST");
 assertEqual(expectedIntra.amounts.igst, 0, "intra-state calculation does not assign IGST");
@@ -83,9 +103,116 @@ const expectedInter = calculatePurchaseGstExpected(
     delivery_state_at_transaction: "Gujarat",
     supply_scenario: "INTER_STATE",
   },
+  [{
+    quantity: 1,
+    purchase_rate: 100,
+    discount_pct: 0,
+    gst_rate: 18,
+    hsn_sac_code: "3004",
+    hsn_sac_catalog_id: "catalog-3004",
+    rule_version: "gst-18-v1",
+    rule_source_reference: "source-18",
+  }],
 );
-assertEqual(expectedInter.amounts.igst, 18, "inter-state calculation assigns aggregate tax to IGST");
+assertEqual(expectedInter.amounts.igst, 18, "inter-state calculation assigns line tax to IGST");
 assertEqual(expectedInter.amounts.cgst, 0, "inter-state calculation does not assign CGST");
+assertThrows(
+  () => calculatePurchaseGstExpected(
+    { gross_amount: 100, total_discount: 0, total_tax: 18, round_off: 0, net_amount: 118 },
+    {
+      supplier_state_at_transaction: "Maharashtra",
+      recipient_state_at_transaction: "Maharashtra",
+      delivery_state_at_transaction: "Maharashtra",
+      supply_scenario: "INTRA_STATE",
+    },
+    [],
+  ),
+  "missing governed lines fail closed instead of using invoice aggregates",
+);
+assertThrows(
+  () => calculatePurchaseGstExpected(
+    { gross_amount: 100, total_discount: 0, total_tax: 18, round_off: 0, net_amount: 118 },
+    {
+      supplier_state_at_transaction: "Maharashtra",
+      recipient_state_at_transaction: "Maharashtra",
+      delivery_state_at_transaction: "Maharashtra",
+      supply_scenario: "INTRA_STATE",
+    },
+    [{
+      quantity: 1,
+      purchase_rate: 100,
+      discount_pct: 0,
+      gst_rate: 18,
+      hsn_sac_code: "3004",
+      hsn_sac_catalog_id: "catalog-3004",
+      rule_version: "UNRESOLVED",
+      rule_source_reference: null,
+    }],
+  ),
+  "incomplete governed facts fail closed",
+);
+
+const mixedRate = calculatePurchaseGstExpected(
+  { gross_amount: 200, total_discount: 0, total_tax: 28, round_off: 0, net_amount: 228 },
+  {
+    supplier_state_at_transaction: "Maharashtra",
+    recipient_state_at_transaction: "Maharashtra",
+    delivery_state_at_transaction: "Maharashtra",
+    supply_scenario: "INTRA_STATE",
+  },
+  [
+    {
+      quantity: 1,
+      purchase_rate: 100,
+      discount_pct: 0,
+      gst_rate: 18,
+      hsn_sac_code: "3004",
+      hsn_sac_catalog_id: "catalog-3004",
+      rule_version: "gst-18-v1",
+      rule_source_reference: "source-18",
+    },
+    {
+      quantity: 1,
+      purchase_rate: 100,
+      discount_pct: 0,
+      gst_rate: 10,
+      hsn_sac_code: "2106",
+      hsn_sac_catalog_id: "catalog-2106",
+      rule_version: "gst-10-v1",
+      rule_source_reference: "source-10",
+    },
+  ],
+);
+assertEqual(mixedRate.rule_version, "MIXED", "mixed rates retain a mixed calculation marker");
+assertEqual(mixedRate.line_calculations?.[0]?.amounts.cgst, 9, "first line is calculated at its own rate");
+assertEqual(mixedRate.line_calculations?.[1]?.amounts.cgst, 5, "second line is calculated at its own rate");
+assertEqual(mixedRate.amounts.cgst, 14, "invoice CGST sums independently calculated lines");
+assertEqual(mixedRate.line_calculations?.[0]?.rule_version, "gst-18-v1", "first line rule version is preserved");
+assertEqual(mixedRate.line_calculations?.[1]?.rule_version, "gst-10-v1", "second line rule version is preserved");
+const lineDiscrepancy = reconcilePurchaseGstLineEvidence(
+  { taxable_value: "100.00", cgst: "9.00", sgst: "9.00", igst: "0.00", cess: "0.00", line_total: "118.00" },
+  mixedRate.line_calculations?.[0]?.amounts ?? {
+    taxable_value: 0,
+    cgst: 0,
+    sgst: 0,
+    igst: 0,
+    cess: 0,
+    line_total: 0,
+  },
+);
+assertEqual(lineDiscrepancy.status, "MATCHED", "matching line evidence is reconciled independently");
+const lineMismatch = reconcilePurchaseGstLineEvidence(
+  { taxable_value: "100.00", cgst: "9.00", sgst: "9.01", igst: "0.00", cess: "0.00", line_total: "118.00" },
+  mixedRate.line_calculations?.[0]?.amounts ?? {
+    taxable_value: 0,
+    cgst: 0,
+    sgst: 0,
+    igst: 0,
+    cess: 0,
+    line_total: 0,
+  },
+);
+assertEqual(lineMismatch.status, "DISCREPANCY_REQUIRES_REVIEW", "line discrepancies are recorded without mutating declared values");
 
 const matching = reconcilePurchaseGstEvidence({
   ...declared,

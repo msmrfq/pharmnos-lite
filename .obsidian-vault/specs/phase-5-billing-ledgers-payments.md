@@ -1,8 +1,14 @@
 ---
-title: Phase 5 — Billing + Ledgers + Payments
+title: Phase 5 - Billing + Ledgers + Payments
 date: 2026-09-30
 status: Draft
 ---
+
+## Acceptance Criteria
+
+## Out of Scope
+
+
 
 ## Goal
 Implement the full **Billing operator workflow** end-to-end:

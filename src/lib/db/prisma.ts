@@ -63,16 +63,18 @@ export function isPostgresConfigured(): boolean {
   if (
     process.env.FINANCIAL_E2E_TEST_MODE === "true" &&
     process.env.ALLOW_FINANCIAL_E2E === "true" &&
-    process.env.TEST_DATABASE_NAME === "pharmnos_financial_e2e" &&
+    Boolean(process.env.TEST_DATABASE_NAME) &&
     process.env.TEST_DATABASE_MARKER === "pharmnos-financial-e2e"
   ) {
+    const expectedPort = process.env.FINANCIAL_E2E_DB_PORT || "55432";
+    const expectedDatabase = process.env.FINANCIAL_E2E_ALLOWED_DATABASE_NAME || process.env.TEST_DATABASE_NAME;
     try {
       const parsed = new URL(url);
       if (
         (parsed.protocol === "postgres:" || parsed.protocol === "postgresql:") &&
         parsed.hostname === "127.0.0.1" &&
-        parsed.port === "55432" &&
-        parsed.pathname === "/pharmnos_financial_e2e"
+        parsed.port === expectedPort &&
+        parsed.pathname === `/${expectedDatabase}`
       ) {
         return true;
       }

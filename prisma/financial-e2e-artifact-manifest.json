@@ -6,25 +6,25 @@
   "sourceSchema": {
     "path": "prisma/schema.prisma",
     "generation": "prisma migrate diff --from-empty",
-    "sha256": "fc7d74dfd439f7dec908bc6ef6db8ecfcbf1b4ba00d1158b38e7402bdb2321e6"
+    "sha256": "af728e6f88a594e1850991516a81014f92db1a65c49099ab22e0342dcdf0c0ea"
   },
   "artifacts": [
     {
       "order": 1,
       "path": "prisma/financial-e2e-schema-provisioning.generated.sql",
-      "sha256": "9aabb03fc9a3f9f0ae9b729377900ddb49226a643628a25932d82821d40b0ae2",
+      "sha256": "a1632fcffcc052ff2ddce6fdc1764453f2746d26e79d08376b07f70b3a93afcb",
       "classification": "executable"
     },
     {
       "order": 2,
       "path": "prisma/financial-e2e-security-controls.review.sql",
-      "sha256": "c93ccf34d6d2f63766cb3c6e7c58fb03a878bec2584315522ceabef83d9d2193",
+      "sha256": "a89c59b14a9ffdcb712b469f0bcd755d5578f3a6b2dec4b679cedad0268392b9",
       "classification": "executable"
     },
     {
       "order": 3,
       "path": "prisma/financial-e2e-rls-policies.review.sql",
-      "sha256": "0e7e47f673ebdfd187dd920822ffd3be93af0f8e2ef3f652ce31bb48127c4761",
+      "sha256": "49f7d0bb42075d2d569f24895b101fd5f580d99606bbf3aa23422873d89877b3",
       "classification": "executable"
     },
     {
@@ -35,8 +35,20 @@
     },
     {
       "order": 5,
+      "path": "prisma/migrations/0001_baseline/migration.sql",
+      "sha256": "d7d618cb6e5f30a1f62efbdf2fdf36dc7eb5b557de4da417ee8165f551512c1d",
+      "classification": "executable"
+    },
+    {
+      "order": 6,
       "path": "scripts/financial-e2e-provisioning-static-guard.mjs",
-      "sha256": "ad32aa1a4b7f54dcb00563ebe7e3889c1101df68e56ae6acd441541d58dd06f6",
+      "sha256": "c0f38fd3bda0f0f116c14537cccf76c5feb4b12ebad6b13938f014f59042fa5e",
+      "classification": "executable"
+    },
+    {
+      "order": 7,
+      "path": "prisma/migrations/0008_hsn_governance_integrity/migration.sql",
+      "sha256": "a52333f0526cf512588f488ca2c488d2322f211ca7a81505dad381bda111e047",
       "classification": "executable"
     }
   ],

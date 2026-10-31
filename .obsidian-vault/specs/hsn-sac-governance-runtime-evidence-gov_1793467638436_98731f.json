@@ -1,0 +1,234 @@
+{
+  "evidenceVersion": 1,
+  "run": "gov_1793467638436_98731f",
+  "database": "pharmnos_financial_e2e_gov_1793467638436_98731f",
+  "runtimeRole": "pharmnos_gov_gov_1793467638436_98731f",
+  "engineVersion": "PostgreSQL 17.11 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+  "harnessCommand": "node scripts/hsn-sac-governance-runtime-validation.mjs",
+  "target": "new local disposable PostgreSQL database only",
+  "forbiddenTargets": [
+    "production",
+    "Supabase",
+    "SEC-DEC-03 databases",
+    "prior disposable databases"
+  ],
+  "results": [
+    {
+      "id": "history_update_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:19.000Z",
+      "details": {
+        "sqlState": "42501"
+      }
+    },
+    {
+      "id": "history_delete_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:19.019Z",
+      "details": {
+        "sqlState": "42501"
+      }
+    },
+    {
+      "id": "cross_tenant_history_isolation",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:19.034Z"
+    },
+    {
+      "id": "runtime_history_privilege_boundary",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:19.049Z",
+      "details": {
+        "can_select": true,
+        "can_insert": true,
+        "can_update": false,
+        "can_delete": false
+      }
+    },
+    {
+      "id": "negative_rate_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:19.051Z",
+      "details": {
+        "sqlState": "23514"
+      }
+    },
+    {
+      "id": "non_finite_rate_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:19.054Z",
+      "details": {
+        "sqlState": "22003"
+      }
+    },
+    {
+      "id": "effective_date_range_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:19.057Z",
+      "details": {
+        "sqlState": "23514"
+      }
+    },
+    {
+      "id": "invalid_governance_state_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:19.060Z",
+      "details": {
+        "sqlState": "23514"
+      }
+    },
+    {
+      "id": "concurrent_overlapping_approval",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:19.065Z",
+      "details": {
+        "outcomes": [
+          "COMMITTED",
+          "REJECTED:40P01"
+        ],
+        "approved": 1
+      }
+    },
+    {
+      "id": "concurrent_non_overlapping_approval",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:20.102Z",
+      "details": {
+        "outcomes": [
+          "COMMITTED",
+          "COMMITTED"
+        ]
+      }
+    },
+    {
+      "id": "cross_tenant_approver_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:20.131Z",
+      "details": {
+        "sqlState": "23503"
+      }
+    },
+    {
+      "id": "missing_approver_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:20.133Z",
+      "details": {
+        "sqlState": "23503"
+      }
+    },
+    {
+      "id": "approved_rule_mutation_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:20.135Z",
+      "details": {
+        "sqlState": "42501"
+      }
+    },
+    {
+      "id": "revision_preserves_approved_original",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:20.138Z",
+      "details": {
+        "original_status": "APPROVED",
+        "original_active": true,
+        "successor_status": "PENDING",
+        "successor_active": false
+      }
+    },
+    {
+      "id": "catalog_history_captures_final_state",
+      "status": "PASS",
+      "startedAt": "2026-10-31T17:27:20.143Z",
+      "details": {
+        "classification_type": "SERVICES"
+      }
+    },
+    {
+      "id": "cleanup_verification",
+      "status": "PASS",
+      "details": {
+        "database": {
+          "attempted": true,
+          "command": "DROP DATABASE ... WITH (FORCE)",
+          "succeeded": true,
+          "verifiedAbsent": true,
+          "error": null
+        },
+        "role": {
+          "attempted": true,
+          "command": "DROP ROLE ...",
+          "succeeded": true,
+          "verifiedAbsent": true,
+          "error": null
+        }
+      }
+    }
+  ],
+  "fixtureCountsBeforeCleanup": {
+    "tenants": 2,
+    "users": 2,
+    "roles": 2,
+    "memberships": 2,
+    "hsn_sac_catalog": 2,
+    "hsn_sac_catalog_history": 3,
+    "gst_rate_rules": 5,
+    "gst_rate_rule_history": 0
+  },
+  "validationCoverage": {
+    "directDatabaseControlTests": [
+      "history_update_rejected",
+      "history_delete_rejected",
+      "cross_tenant_history_isolation",
+      "runtime_history_privilege_boundary",
+      "negative_rate_rejected",
+      "non_finite_rate_rejected",
+      "effective_date_range_rejected",
+      "invalid_governance_state_rejected",
+      "concurrent_overlapping_approval",
+      "concurrent_non_overlapping_approval",
+      "cross_tenant_approver_rejected",
+      "missing_approver_rejected",
+      "approved_rule_mutation_rejected",
+      "revision_preserves_approved_original",
+      "catalog_history_captures_final_state"
+    ],
+    "applicationPathTests": [],
+    "staticOnlyChecks": [
+      "manifest-hash-verification",
+      "governance-contract-tests"
+    ],
+    "notExecuted": [
+      "updateHsnSacCatalogRecord",
+      "approveGstRateRule",
+      "createGstRateRuleRevision"
+    ]
+  },
+  "cleanup": {
+    "database": {
+      "attempted": true,
+      "command": "DROP DATABASE ... WITH (FORCE)",
+      "succeeded": true,
+      "verifiedAbsent": true,
+      "error": null
+    },
+    "role": {
+      "attempted": true,
+      "command": "DROP ROLE ...",
+      "succeeded": true,
+      "verifiedAbsent": true,
+      "error": null
+    }
+  },
+  "cleanupVerified": true,
+  "fixtureCountsAfterCleanup": {
+    "tenants": 0,
+    "users": 0,
+    "roles": 0,
+    "memberships": 0,
+    "hsn_sac_catalog": 0,
+    "hsn_sac_catalog_history": 0,
+    "gst_rate_rules": 0,
+    "gst_rate_rule_history": 0
+  },
+  "noForbiddenTargetAccess": true
+}

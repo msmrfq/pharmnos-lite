@@ -1,8 +1,14 @@
 ---
-title: Phase 4 — Purchases + Inventory Transactions
+title: Phase 4 - Purchases + Inventory Transactions
 date: 2026-09-30
 status: Draft
 ---
+
+## Acceptance Criteria
+
+## Out of Scope
+
+
 
 ## Goal
 Implement the full **Purchase entry → Stock receipt → Supplier ledger impact** cycle end-to-end, plus:

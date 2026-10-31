@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/table";
 import { Plus, Trash2, Save, PackagePlus } from "lucide-react";
 import { createPurchaseDraftAction } from "@/app/_actions/purchases.actions";
+import { GstTreatmentSelect } from "@/components/gst/gst-treatment-select";
+import { GstStateSelect } from "@/components/gst/gst-state-select";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
 import type { purchase_invoices } from "@prisma/client";
 
@@ -225,6 +227,17 @@ export default function PurchasesNewClientForm({ suppliers, products }: Props) {
                   <p className="text-caption text-destructive">{fieldError(errors, "supplier_id")}</p>
                 )}
               </div>
+              <GstTreatmentSelect name="gst_treatment" error={fieldError(errors, "gst_treatment")} />
+              <div className="space-y-2">
+                <Label htmlFor="tax_mode">Tax mode *</Label>
+                <Select defaultValue="EXCLUSIVE" name="tax_mode">
+                  <SelectTrigger id="tax_mode"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EXCLUSIVE">Tax exclusive</SelectItem>
+                    <SelectItem value="INCLUSIVE" disabled>Tax inclusive (not enabled)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="supplier_invoice_no">Supplier invoice no.</Label>
                 <Input id="supplier_invoice_no" name="supplier_invoice_no" placeholder="e.g. INV/CIP/00219" />
@@ -257,18 +270,9 @@ export default function PurchasesNewClientForm({ suppliers, products }: Props) {
                 <Label htmlFor="declared_round_off">Supplier round-off</Label>
                 <Input id="declared_round_off" name="declared_round_off" type="number" step="0.01" placeholder="Signed amount" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier_state_at_transaction">Supplier state at transaction</Label>
-                <Input id="supplier_state_at_transaction" name="supplier_state_at_transaction" placeholder="As shown on invoice" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="recipient_state_at_transaction">Recipient state at transaction</Label>
-                <Input id="recipient_state_at_transaction" name="recipient_state_at_transaction" placeholder="Your registered state" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="delivery_state_at_transaction">Delivery state at transaction</Label>
-                <Input id="delivery_state_at_transaction" name="delivery_state_at_transaction" placeholder="Where goods were delivered" />
-              </div>
+              <GstStateSelect id="supplier_state_at_transaction" name="supplier_state_at_transaction" label="Supplier state at transaction" placeholder="Search supplier state/UT" error={fieldError(errors, "supply_facts")} />
+              <GstStateSelect id="recipient_state_at_transaction" name="recipient_state_at_transaction" label="Recipient state at transaction" placeholder="Search recipient state/UT" error={fieldError(errors, "supply_facts")} />
+              <GstStateSelect id="delivery_state_at_transaction" name="delivery_state_at_transaction" label="Delivery state at transaction" placeholder="Search delivery state/UT" error={fieldError(errors, "supply_facts")} />
               <div className="space-y-2">
                 <Label htmlFor="supply_scenario">Supply scenario</Label>
                 <select

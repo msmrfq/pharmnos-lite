@@ -20,6 +20,7 @@ import {
 import { Warehouse, AlertTriangle, Plus, Clock, FileSpreadsheet, Filter, ChevronLeft, ChevronRight, Download, RefreshCcw } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { repos } from "@/repositories";
+import { describeDatabaseAccessError } from "@/lib/db/database-errors";
 import { isPostgresConfigured } from "@/lib/db/prisma";
 import { requireServerTenantContext } from "@/lib/db/tenant-context";
 import { ScheduleClass, StockMovementType } from "@prisma/client";
@@ -93,6 +94,7 @@ export default async function InventoryPage({
   let movementItems: any[] = [];
   let movementTotal = 0;
   let dbOk = isPostgresConfigured();
+  let dataError: string | null = null;
 
   if (dbOk) {
     try {
@@ -130,8 +132,8 @@ export default async function InventoryPage({
       batchTotal = batchesResult.total;
       movementItems = movementsResult.items ?? [];
       movementTotal = movementsResult.total;
-    } catch (_err) {
-      dbOk = false;
+    } catch (err) {
+      dataError = describeDatabaseAccessError(err);
     }
   }
 
@@ -158,9 +160,9 @@ export default async function InventoryPage({
           <p className="mt-1 text-body-md text-body">
             Browse products, track batches, monitor low stock and near-expiry items.
           </p>
-          {!dbOk && (
+          {(!dbOk || dataError) && (
             <p className="mt-2 text-caption text-destructive">
-              Database is not configured — showing empty grid. Go to Dashboard for setup instructions.
+              {dataError ?? "Database is not configured — showing empty grid. Go to Dashboard for setup instructions."}
             </p>
           )}
         </div>

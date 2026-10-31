@@ -1,3 +1,15 @@
+---
+title: Pharmnos Lite Financial E2E Owner Decisions
+date: 2026-10-25
+status: Owner decisions recorded; implementation authorization not granted
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Pharmnos Lite Financial E2E Owner Decisions
 
 **Date:** 2026-10-25  

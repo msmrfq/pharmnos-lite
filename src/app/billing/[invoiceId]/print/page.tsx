@@ -16,8 +16,6 @@ export const metadata: Metadata = {
   title: "Print invoice",
 };
 
-export { loadBillingInvoicePrintData };
-
 const rupee = (n: number | null | undefined | string) => {
   const num = typeof n === "string" ? Number(n) : Number(n ?? 0);
   if (!Number.isFinite(num)) return "—";
@@ -341,10 +339,26 @@ export default async function BillingInvoicePrintPage({
                 )}
               </div>
               <div className="mt-4 rounded-md bg-surface-soft p-3">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <p className="text-caption text-muted">GST Treatment</p>
+                    <p className="text-body-sm font-semibold text-ink mt-0.5">
+                      {invoice.gst_treatment ?? "Unavailable (not persisted)"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-caption text-muted">Tax mode</p>
+                    <p className="text-body-sm font-semibold text-ink mt-0.5">
+                      {invoice.tax_mode === "INCLUSIVE" ? "Tax inclusive" : "Tax exclusive"}
+                    </p>
+                  </div>
+                  <div>
                 <p className="text-caption text-muted">Place of Supply</p>
                 <p className="text-body-sm font-semibold text-ink mt-0.5">
                   {invoice.place_of_supply_code ?? "Unavailable (not persisted)"}
                 </p>
+                  </div>
+                </div>
                 <p className="mt-1 text-caption text-muted">
                   {hasCompleteTaxData
                     ? "Finalized tax and snapshot facts are persisted."

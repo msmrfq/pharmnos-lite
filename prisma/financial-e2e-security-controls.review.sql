@@ -52,9 +52,15 @@ GRANT SELECT, INSERT, UPDATE ON TABLE
   public.role_permissions, public.business_profiles, public.products,
   public.product_batches, public.customers, public.suppliers,
   public.purchase_invoices, public.purchase_invoice_items,
-  public.sales_invoices, public.sales_invoice_items, public.payments,
+  public.sales_invoices, public.sales_posting_operations,
+  public.sales_invoice_items, public.payments,
   public.stock_movements, public.customer_ledgers, public.supplier_ledgers,
   public.audit_logs
+TO pharmnos_e2e_runtime;
+
+GRANT SELECT ON TABLE
+  public.hsn_sac_catalog,
+  public.gst_rate_rules
 TO pharmnos_e2e_runtime;
 
 GRANT SELECT, INSERT ON TABLE
@@ -64,7 +70,9 @@ GRANT SELECT, INSERT ON TABLE
   public.purchase_gst_calculations,
   public.purchase_gst_accounting_decisions,
   public.purchase_gst_reconciliation_events,
-  public.purchase_gst_reconciliation_event_lines
+  public.purchase_gst_reconciliation_event_lines,
+  public.hsn_sac_catalog_history,
+  public.gst_rate_rule_history
 TO pharmnos_e2e_runtime;
 
 REVOKE UPDATE, DELETE ON TABLE
@@ -73,7 +81,9 @@ REVOKE UPDATE, DELETE ON TABLE
   public.purchase_gst_calculations,
   public.purchase_gst_accounting_decisions,
   public.purchase_gst_reconciliation_events,
-  public.purchase_gst_reconciliation_event_lines
+  public.purchase_gst_reconciliation_event_lines,
+  public.hsn_sac_catalog_history,
+  public.gst_rate_rule_history
 FROM pharmnos_e2e_runtime;
 
 REVOKE DELETE ON TABLE
@@ -107,8 +117,12 @@ FROM pharmnos_e2e_runtime;
 -- purchase_gst_calculations, purchase_gst_accounting_decisions,
 -- purchase_gst_reconciliation_events,
 -- purchase_gst_reconciliation_event_lines, sales_invoices,
+-- sales_posting_operations,
 -- sales_invoice_items, payments, stock_movements, customer_ledgers,
 -- supplier_ledgers, audit_logs.
+-- hsn_sac_catalog_history, gst_rate_rule_history.
+-- sales_posting_operations is tenant-scoped operation state and is protected
+-- by the same tenant predicate and unique-key contract as purchase posting.
 --
 -- tenants is the root exception: use id::text instead of tenant_id::text.
 -- role_permissions is relation-scoped because it has no tenant_id:
@@ -166,9 +180,13 @@ FROM pharmnos_e2e_runtime;
 --   purchase_gst_accounting_decisions
 --   purchase_gst_reconciliation_events
 --   purchase_gst_reconciliation_event_lines
+--   hsn_sac_catalog_history
+--   gst_rate_rule_history
 --
 -- Corrections are INSERT-only revisions/events. Supplier-declared,
 -- calculated, and accounting-accepted values remain separate.
+-- HSN/SAC and GST rule history use the same trigger contract. Approved GST
+-- rate rules are immutable; changes must be represented by pending revisions.
 --
 -- A second trigger must reject changes to GST evidence pointers, GST statuses,
 -- and GST record version after purchase_invoices.status = 'FINALIZED', except

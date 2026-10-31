@@ -5,8 +5,17 @@ const REQUIRED_MARKER = "pharmnos-financial-e2e";
 const REQUIRED_ENVIRONMENT_MARKER = "pharmnos-financial-e2e";
 const IDENTITY_EVIDENCE_VERSION = 1;
 const DEFAULT_IDENTITY_EVIDENCE_MAX_AGE_MS = 5 * 60 * 1000;
+const DISPOSABLE_DATABASE_NAME_PATTERN = /^pharmnos_financial_e2e(?:_[a-z0-9][a-z0-9_-]*)?$/;
 const SUPABASE_HOST_PATTERN = /(^|\.)supabase\.(co|com)$/i;
 const SUPABASE_POOLER_PATTERN = /(^|\.)(pooler|pgbouncer)(\.|$)/i;
+const GOVERNANCE_DATABASE_PATTERN = /^pharmnos_financial_e2e_gov_[a-z0-9][a-z0-9_-]*$/;
+const GOVERNANCE_FORBIDDEN_DATABASES = new Set([
+    "pharmnos_financial_e2e_sec_dec_03",
+    "pharmnos_financial_e2e_sec_dec_03_validation",
+]);
+const GOVERNANCE_FORBIDDEN_DATABASE_PREFIXES = [
+    "pharmnos_financial_e2e_sec03_",
+];
 
 function connectionIdentity(rawUrl) {
     try {
@@ -33,6 +42,40 @@ function isLoopbackHost(hostname) {
     return normalized === "127.0.0.1" || normalized === "::1" || normalized === "localhost";
 }
 
+export function validateGovernanceRuntimeTarget({
+    baseUrl,
+    ordinaryUrl,
+    databaseName,
+    runId,
+} = {}) {
+    const errors = [];
+    const base = connectionIdentity(baseUrl);
+    const ordinary = connectionIdentity(ordinaryUrl);
+    if (!base) errors.push("The governance bootstrap endpoint must be a PostgreSQL URL.");
+    if (!ordinary) errors.push("The ordinary database identity is required.");
+    if (base && isBlockedHost(base.hostname)) {
+        errors.push("The governance target must not be Supabase or a pooler endpoint.");
+    }
+    if (base && !isLoopbackHost(base.hostname)) {
+        errors.push("The governance target must resolve to a loopback host.");
+    }
+    if (base && ordinary && base.hostname === ordinary.hostname && base.port === ordinary.port) {
+        errors.push("The governance target must use a separate local disposable endpoint.");
+    }
+    if (!GOVERNANCE_DATABASE_PATTERN.test(String(databaseName ?? ""))) {
+        errors.push("The governance database name must be a unique run-scoped disposable name.");
+    }
+    const normalizedDatabaseName = String(databaseName ?? "").toLowerCase();
+    if (GOVERNANCE_FORBIDDEN_DATABASES.has(normalizedDatabaseName) ||
+        GOVERNANCE_FORBIDDEN_DATABASE_PREFIXES.some((prefix) => normalizedDatabaseName.startsWith(prefix))) {
+        errors.push("The governance target matches a forbidden prior disposable database.");
+    }
+    if (!/^gov_[0-9]+_[a-f0-9]+$/.test(String(runId ?? ""))) {
+        errors.push("The governance run identifier is not unique and run-scoped.");
+    }
+    return { ok: errors.length === 0, errors };
+}
+
 export function validateLocalDisposableTargetCandidate({
     serviceName,
     profile,
@@ -51,7 +94,9 @@ export function validateLocalDisposableTargetCandidate({
     if (profile !== "financial-e2e") errors.push("The disposable Compose profile is not approved.");
     if (!isLoopbackHost(host)) errors.push("The disposable database must bind to loopback only.");
     if (!Number.isInteger(port) || port <= 0 || port > 65535) errors.push("A valid disposable database port is required.");
-    if (databaseName !== "pharmnos_financial_e2e") errors.push("The disposable database name is not approved.");
+    if (!DISPOSABLE_DATABASE_NAME_PATTERN.test(String(databaseName ?? ""))) {
+        errors.push("The disposable database name is not approved.");
+    }
     if (bootstrapRole !== "pharmnos_e2e" || runtimeRole !== "pharmnos_e2e_runtime") {
         errors.push("The approved bootstrap and runtime roles are required.");
     }

@@ -1,8 +1,14 @@
 ---
-title: Phase 6 — Dashboard Reports + Audit Views + Print Templates
+title: Phase 6 - Dashboard Reports + Audit Views + Print Templates
 date: 2026-09-30
 status: Draft
 ---
+
+## Acceptance Criteria
+
+## Out of Scope
+
+
 
 ## Goal
 Populate P2 dashboard shells with **real running aggregate data** (no more hard-coded ₹ demo numbers), ship 5 paginated standard pharmacy wholesale reports for India, turn the audit-log placeholder into a real timeline, and add browser-native print templates (invoice A4 + 80mm thermal, customer account statement) that use the P5 @media print baseline.

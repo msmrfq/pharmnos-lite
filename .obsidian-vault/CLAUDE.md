@@ -55,67 +55,101 @@ Pharmnos Lite is a free-first, multi-tenant pharmacy wholesale web app for India
 Additional layers:
 - **Architecture style**: Provider-independent core with service layer, repository layer, auth adapter, and storage adapter.
 - **Product design system**: White canvas, black primary CTAs, light-gray cards, real product fragments in cards, and dark footer per `DESIGN.md`.
-
 ---
+## Developer's Guidelines
 
+<!--
+Description: Behavioral guidelines to reduce common LLM coding mistakes. Use when writing, reviewing, or refactoring code to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria.
+-->
+
+Behavioral guidelines to reduce common LLM coding mistakes, derived from observations on LLM coding pitfalls.
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+### 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them — don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+### 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+### 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it — don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+### 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```text
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+### 5. Maintain Obsidian Vault
+- AI agents must remind the user to generate daily session-end `.md` logs in `.obsidian-vault/daily/` and follow the exact daily note structure.
+- When creating subfolder files under `.obsidian-vault/` (`specs/`, `retro/`, `bugs/`, `decisions/`), agents must use their respective `.md` template files located in `.obsidian-vault/templates/` 
+---
 ## Current state
 
 > **Update this section EVERY SESSION before you stop working. Thirty seconds here saves five minutes of re-orientation next time.**
 
-**Last updated:** `Date: 2026-10-29  Time: 01-42-07 (IST)`
+**Last updated:** `Date: 2026-11-01  Time: 04-58-38 (IST)`
 
 ### Verified working
 - **P1–P7 are complete;** the current working stage is GST Modernization within POST-P7 — PRE-PRODUCTION VALIDATION.
-- **Targeted GST test cleanup is complete:** only retired prefix-mapping assertions were removed; GST application code, schemas, migrations, workflows, broad financial tests, and historical documents remain retained.
-- **Retained JavaScript contract coverage passed 21/21** for GST, transaction integrity, financial/authentication context, and RLS static contracts.
-- **GST specification and financial verification matrices remain consolidated** in `.obsidian-vault/specs/gst-specification.md`, `.obsidian-vault/specs/gst-audit-validation-and-plan.md`, and `.obsidian-vault/specs/financial-e2e-validation-harness.md`; the master specification remains proposed and ready for owner review.
+- Purchase accepted-value posting integrity is verified on the disposable application path, including 15/15 purchase scenarios, concurrency, rollback, retry, persisted totals, ledger amount, audit metadata, and payload-hash reconciliation.
+- SEC-DEC-03 restricted-role database validation, HSN/SAC application governance (12/12), Q15 migration/recovery validation, Prisma validation, typecheck, and the targeted 57-test financial safety/initialization suite passed.
+- A fresh authorized loopback target on `127.0.0.1:55435` authenticates with both bootstrap and restricted runtime identities; the runtime role is `LOGIN`, `NOSUPERUSER`, and `NOBYPASSRLS`.
+- Restricted-runtime purchase application evidence passed 15/15 scenarios, and Q10 application evidence passed commit/replay, conflict, concurrency, rollback, retry, and persisted single-effect assertions.
+- Provisioning now applies tenant-scoped read-only RLS and SELECT grants for `hsn_sac_catalog` and `gst_rate_rules`; provisioning static contracts and GST governance contracts pass.
 
-### Broken / blocked (deferred — acceptable workaround)
-- **TypeScript GST suites are not currently runnable** because `tsx` is unavailable; direct Node execution cannot resolve the TypeScript extensionless imports.
-- **Database-backed financial verification remains blocked:** isolated database identity, applied schema, tenant fixtures, authenticated execution, trusted cleanup, and fresh runtime evidence are not established.
-- **RLS, tenant isolation, persistence, rollback, invoice sequencing, stock/ledger consistency, historical immutability, production Prisma connectivity, backup/restore, monitoring, leaked-password protection, and production approval remain unverified.**
-- **GST implementation gates remain open:** owner approval, qualified GST review, implementation authorization, purchase accounting acceptance, migration authorization, and captured transaction-fact rollout are pending.
+### Broken / Blocked
+- Direct security-behavior and rollback-recovery scripts remain gated because the checked-in reviewed expectations are explicitly `REVIEW_ONLY_PENDING_OWNER_APPROVAL`; removing the gate would bypass project safeguards.
+- HSN/SAC approval authority requires the owner to choose independent `approve_hsn_catalog` authority or combined `manage_hsn_catalog` plus approval authority.
+- Cess, inclusive GST, freight, discount allocation, rounding precedence, discrepancy tolerance, and accepted-GST inventory valuation remain accounting/GST policy blockers or explicit deferrals.
 
-### Focus right now (next immediate build step)
-- **Implement the approved GST Modernization scope only after owner review** of `.obsidian-vault/specs/gst-specification.md`; the document does not itself authorize implementation, migration, testing, pilot, legal/accounting, or production activity.
-- **Use the required roadmap order:** GST Modernization → Financial E2E Validation Harness → Invoice Modernization → Live Supabase Rollout → Post-Rollout Validation → Operational Readiness → Final Production Go/No-Go.
-- **Keep Live Supabase Rollout at `NO-GO`** until explicit authorization and durable sanitized connectivity/schema/security evidence exist; do not connect to live Supabase or production Prisma.
-- **Preserve provider-independent boundaries, Inventory contracts, historical evidence, and fail-closed GST behavior** while unresolved POS, reconciliation, acceptance, legacy-data, and statutory-workflow decisions remain gated.
-
-### Canonical GST specification
-
-The canonical GST requirements and decision reference is
-[`.obsidian-vault/specs/gst-specification.md`](./specs/gst-specification.md).
-Claude Code must read it before making GST-related code, schema, migration,
-test, workflow, report, export, invoice, or documentation changes.
-
-The specification distinguishes verified current behavior, approved
-requirements, proposed target behavior, unresolved questions, blocked work,
-historical evidence, and implementation/release status. It does not itself
-authorize implementation, migrations, database operations, production rollout,
-or changes to statutory tax policy. Explicit project-owner approval is required
-before implementing a blocked GST decision or changing source/schema behavior
-that depends on unresolved policy.
-
-Agents must fail closed for unsupported GST cases, must not infer POS or tax
-treatment from GSTIN prefixes alone, and must preserve tenant isolation,
-financial atomicity, idempotency, rollback, stock/ledger safeguards, and
-historical evidence. Do not silently change approval statuses, invent
-authoritative sources, treat old test results as current production readiness,
-or delete historical decision/evidence records to simplify documentation.
-GST changes must remain minimal, separately authorized, and accompanied by
-appropriate tests and evidence.
-
-### GST test-cleanup boundary
-
-The current cleanup removes only clearly identified prefix-mapping assertions
-from a mixed test. It does not erase GST application behavior, historical GST
-specifications, migration files, persisted schema elements, or broad GST and
-financial test suites. Do not remove or rewrite shared sales, purchase,
-financial-integrity, inventory, authorization, or database code merely because
-it contains GST references. Any future test removal requires file-level purpose,
-dependency, and regression evidence.
-
+### Focus right now
+- Obtain the owner approval and connected-initialization evidence package required to run the direct security/rollback scripts, without changing shared or production credentials.
+- Keep the restricted-runtime purchase and Q10 evidence bound to their disposable targets and preserve the fail-closed tenant-context behavior.
+- Preserve fail-closed behavior and do not claim restricted-role application evidence from bootstrap or superuser runs.
+- Keep production migration, Live Supabase access, deployment, and GST Stage 1 closure at NO-GO pending evidence and approvals.
 ---
 
 ## Key decisions made
@@ -224,69 +258,6 @@ Add rules BELOW the two permanent meta-rules as you lock in decisions. Format ea
 - Do not claim financial runtime verification without actually executing the tests against an isolated database.
 - Do not claim complete GST filing compliance merely because core tax calculation and invoice persistence are corrected.
 - Do not deploy or commit/push as part of GST remediation without the applicable explicit authorization.
+- Do not remove connected-initialization safety gates without fresh target-bound authorization and evidence.
+- Do not treat bootstrap or superuser application tests as restricted-role RLS evidence.
 ---
-## Developer's Guidelines
-
-<!--
-Description: Behavioral guidelines to reduce common LLM coding mistakes. Use when writing, reviewing, or refactoring code to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria.
--->
-
-Behavioral guidelines to reduce common LLM coding mistakes, derived from observations on LLM coding pitfalls.
-
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
-
-### 1. Think Before Coding
-
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
-
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them — don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
-
-### 2. Simplicity First
-
-**Minimum code that solves the problem. Nothing speculative.**
-
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
-
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-### 3. Surgical Changes
-
-**Touch only what you must. Clean up only your own mess.**
-
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it — don't delete it.
-
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
-
-### 4. Goal-Driven Execution
-
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-```text
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.

@@ -40,8 +40,9 @@ const tenantTables = [
     "purchase_gst_evidence_revisions", "purchase_gst_line_evidence",
     "purchase_gst_calculations", "purchase_gst_accounting_decisions",
     "purchase_gst_reconciliation_events", "purchase_gst_reconciliation_event_lines",
-    "sales_invoices", "sales_invoice_items", "payments", "stock_movements",
+    "sales_invoices", "sales_posting_operations", "sales_invoice_items", "payments", "stock_movements",
     "customer_ledgers", "supplier_ledgers", "audit_logs",
+    "hsn_sac_catalog", "gst_rate_rules", "hsn_sac_catalog_history", "gst_rate_rule_history",
 ];
 
 const immutableTables = [
@@ -51,7 +52,47 @@ const immutableTables = [
     "purchase_gst_accounting_decisions",
     "purchase_gst_reconciliation_events",
     "purchase_gst_reconciliation_event_lines",
+    "hsn_sac_catalog_history",
+    "gst_rate_rule_history",
 ];
+const readOnlyCatalogTables = ["hsn_sac_catalog", "gst_rate_rules"];
+
+export function validateGovernanceMigration(migration = "") {
+    const errors = [];
+    const normalized = String(migration).replace(/\s+/g, " ").trim();
+    const foreignKeys = [
+        {
+            declaration: 'ALTER TABLE "hsn_sac_catalog" ADD CONSTRAINT "hsn_sac_catalog_tenant_id_classification_approved_by_membe_fkey" FOREIGN KEY ("tenant_id", "classification_approved_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE',
+        },
+        {
+            declaration: 'ALTER TABLE "gst_rate_rules" ADD CONSTRAINT "gst_rate_rules_tenant_id_approved_by_membership_id_fkey" FOREIGN KEY ("tenant_id", "approved_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE',
+        },
+    ];
+    for (const foreignKey of foreignKeys) {
+        if (!normalized.includes(foreignKey.declaration)) {
+            errors.push(`missing exact tenant-aware foreign key: ${foreignKey.declaration.match(/"([^"]+_fkey)"/)?.[1] ?? "unknown"}`);
+        }
+    }
+    for (const marker of [
+        "hsn_sac_catalog_approval_state_check",
+        "gst_rate_rules_approval_state_check",
+        "prevent_hsn_sac_catalog_history_mutation",
+        "prevent_gst_rate_rule_history_mutation",
+        "prevent_approved_gst_rule_mutation",
+        "gst_rate_rules_approved_period_excl",
+    ]) {
+        if (!normalized.includes(marker)) errors.push(`missing governance migration marker: ${marker}`);
+    }
+    if (!normalized.includes("conname <> 'hsn_sac_catalog_tenant_id_classification_approved_by_membe_fkey'") ||
+        !normalized.includes("Equivalent classification approver foreign key exists under a different name")) {
+        errors.push("missing classification approver duplicate-definition guard");
+    }
+    if (!normalized.includes("conname <> 'gst_rate_rules_tenant_id_approved_by_membership_id_fkey'") ||
+        !normalized.includes("Equivalent GST rate approver foreign key exists under a different name")) {
+        errors.push("missing GST rate approver duplicate-definition guard");
+    }
+    return errors;
+}
 
 export function validateArtifacts({
     schema = fs.existsSync(schemaPath) ? fs.readFileSync(schemaPath, "utf8") : "",
@@ -60,8 +101,12 @@ export function validateArtifacts({
     rlsSql = fs.existsSync(rlsSqlPath) ? fs.readFileSync(rlsSqlPath, "utf8") : "",
     additiveSql = fs.existsSync(additiveSqlPath) ? fs.readFileSync(additiveSqlPath, "utf8") : "",
     runbook = fs.existsSync(runbookPath) ? fs.readFileSync(runbookPath, "utf8") : "",
+    migration = fs.existsSync("prisma/migrations/0008_hsn_governance_integrity/migration.sql")
+        ? fs.readFileSync("prisma/migrations/0008_hsn_governance_integrity/migration.sql", "utf8")
+        : "",
 } = {}) {
     const errors = [];
+    errors.push(...validateGovernanceMigration(migration));
 
     if (!schema) errors.push("schema is missing.");
     if (!sql) errors.push("generated provisioning artifact is missing.");
@@ -118,10 +163,11 @@ export function validateArtifacts({
             errors.push(`security artifact omits tenant table coverage: ${table}`);
         }
         if (!rlsSql.includes(`tenant_select_${table}`) ||
-            !rlsSql.includes(`tenant_insert_${table}`)) {
+            (!readOnlyCatalogTables.includes(table) && !rlsSql.includes(`tenant_insert_${table}`))) {
             errors.push(`RLS artifact omits SELECT/INSERT policy coverage: ${table}`);
         }
-        if (!immutableTables.includes(table) && table !== "audit_logs" &&
+        if (!readOnlyCatalogTables.includes(table) &&
+            !immutableTables.includes(table) && table !== "audit_logs" &&
             !rlsSql.includes(`tenant_update_${table}`)) {
             errors.push(`RLS artifact omits UPDATE policy coverage: ${table}`);
         }
@@ -205,8 +251,19 @@ export function validateArtifacts({
     for (const marker of requiredMarkers) {
         if (!sql.includes(marker)) errors.push(`missing mapped constraint: ${marker}`);
     }
+    for (const marker of [
+        "prevent_hsn_sac_catalog_history_mutation",
+        "prevent_gst_rate_rule_history_mutation",
+        "prevent_approved_gst_rule_mutation",
+        "hsn_sac_catalog_approval_state_check",
+        "gst_rate_rules_approval_state_check",
+        "gst_rate_rules_approved_period_excl",
+        "REVOKE UPDATE, DELETE ON TABLE \"hsn_sac_catalog_history\", \"gst_rate_rule_history\" FROM PUBLIC",
+    ]) {
+        if (!sql.includes(marker)) errors.push(`generated baseline omits governance control: ${marker}`);
+    }
     if (!sql.includes('"purchase_gst_decision_calculation_fkey"') ||
-        !/purchase_gst_accounting_decisions[\s\S]*calculation purchase_gst_calculations/.test(schema)) {
+        !/purchase_gst_accounting_decisions[\s\S]*calculation\s+purchase_gst_calculations/.test(schema)) {
         errors.push("Option B calculation relation is not represented in both artifacts.");
     }
     return errors;

@@ -1,0 +1,119 @@
+{
+  "mission": "GST Stage 1 critical engineering blocker follow-up",
+  "timestamp_ist": "2026-11-01T03:42:28+05:30",
+  "repository": "msmrfq/pharmnos-lite",
+  "workstreams": {
+    "purchase_application_rls": {
+      "status": "blocked",
+      "observed": "Purchase application evidence remains bootstrap-role evidence.",
+      "root_cause": "The application harness requires an authenticated restricted runtime credential that currently fails PostgreSQL authentication.",
+      "classification": [
+        "credential_or_identity_problem",
+        "missing_initialization_prerequisite"
+      ],
+      "resolution": "Run a fresh authorized disposable initialization with a valid runtime credential, then execute the purchase workflow through the restricted role.",
+      "acceptance": "Same-tenant purchase operations and financial posting succeed; cross-tenant and missing/invalid tenant contexts fail closed; runtime role is NOSUPERUSER and NOBYPASSRLS."
+    },
+    "q10_application_runtime": {
+      "status": "blocked_after_harness_correction",
+      "observed": "Q10 fails reproducibly with PostgreSQL 28P01 for pharmnos_e2e_runtime.",
+      "root_cause": "The harness previously ignored FINANCIAL_E2E_RUNTIME_DB_PASSWORD; after correction, the disposable pre-existing runtime role still rejects the configured credential.",
+      "classification": [
+        "test_or_harness_defect_fixed",
+        "credential_or_identity_problem"
+      ],
+      "correction": "q10-application-path-validation.cjs now constructs bootstrap and runtime URLs from explicit credential variables.",
+      "verification": "The corrected harness reaches Prisma and still fails at runtime authentication, separating URL-source selection from role credential drift.",
+      "remaining_action": "Authorized disposable credential rotation or fresh ephemeral target provisioning; do not modify shared or production credentials.",
+      "acceptance": "Concurrent identical finalization has one effect set, replay returns the original result, conflicting payload is rejected, rollback leaves no effects, and retry succeeds."
+    },
+    "direct_security_and_rollback": {
+      "status": "blocked_by_gate",
+      "observed": "Both scripts throw an explicit BLOCKED error before setup.",
+      "root_cause": "The scripts intentionally require the connected initialization adapter and currently have no run-bound authorization/evidence configuration.",
+      "classification": [
+        "missing_owner_authorization",
+        "missing_initialization_prerequisite"
+      ],
+      "resolution": "Supply a fresh authorized run/attempt binding and execute the existing guarded initialization sequence. Removing the early throws without that evidence would bypass the safety gate.",
+      "acceptance": "Connected initialization validates target, catalog, roles, RLS, runtime identity, and sanitized evidence before security/rollback execution."
+    },
+    "hsn_sac_approval_permission": {
+      "status": "blocked_by_owner_decision",
+      "current_model": "Maintenance requires manage_hsn_catalog; classification approval independently requires approve_hsn_catalog; GST rate approval independently requires approve_gst_rates.",
+      "alternatives": {
+        "option_a": "approve_hsn_catalog is independently sufficient, preserving preparation/approval segregation.",
+        "option_b": "classification approval also requires manage_hsn_catalog, reducing eligible approvers but coupling preparation and approval."
+      },
+      "required_decision": "Owner must confirm exactly one option in hsn-sac-approval-permission-decision-2026-10-31.md.",
+      "engineering_status": "No permission grant or code change made."
+    },
+    "accounting_policy_dependencies": {
+      "status": "blocked_or_deferred_by_policy",
+      "items": [
+        {
+          "policy": "cess treatment",
+          "affected_paths": "purchase GST calculation, accepted line snapshot, invoice tax aggregation, posting payload",
+          "current_safe_behavior": "cess is persisted as an explicit zero in the supported calculation; unsupported cess treatment is not inferred"
+        },
+        {
+          "policy": "inclusive GST",
+          "affected_paths": "purchase calculator, sales/purchase draft and finalization validation, persisted tax mode",
+          "current_safe_behavior": "inclusive mode remains disabled/fail-closed"
+        },
+        {
+          "policy": "freight allocation",
+          "affected_paths": "purchase line taxable bases and invoice-level reconciliation",
+          "current_safe_behavior": "no freight allocation is invented"
+        },
+        {
+          "policy": "discount allocation",
+          "affected_paths": "purchase line taxable values and accepted-value reconciliation",
+          "current_safe_behavior": "existing percentage line discount behavior remains; fixed/invoice-level policy is not promoted"
+        },
+        {
+          "policy": "rounding precedence",
+          "affected_paths": "line components, invoice aggregation, round-off, accepted totals",
+          "current_safe_behavior": "existing two-decimal arithmetic is tested behavior, not approved modernization policy"
+        },
+        {
+          "policy": "purchase discrepancy tolerance",
+          "affected_paths": "declared/calculated comparison, accounting acceptance, finalization eligibility",
+          "current_safe_behavior": "unresolved discrepancies require explicit decision; no silent acceptance"
+        },
+        {
+          "policy": "accepted-GST inventory valuation",
+          "affected_paths": "stock movement valuation and inventory cost accounting",
+          "current_safe_behavior": "quantity/purchase-rate valuation remains; accepted GST is not injected without approved accounting policy"
+        }
+      ],
+      "required_approvals": "Accounting/finance owner and qualified GST reviewer where specified by the canonical GST specification."
+    }
+  },
+  "disposable_identity": {
+    "container": "pharmnoslite-financial-e2e-postgres-1",
+    "endpoint": "127.0.0.1:55432",
+    "database": "pharmnos_financial_e2e",
+    "bootstrap_role": {
+      "name": "pharmnos_e2e",
+      "login": true,
+      "superuser": true,
+      "bypass_rls": true,
+      "connection": "passed"
+    },
+    "runtime_role": {
+      "name": "pharmnos_e2e_runtime",
+      "login": true,
+      "superuser": false,
+      "bypass_rls": false,
+      "connection": "failed with 28P01"
+    }
+  },
+  "validation": {
+    "q10_after_harness_correction": "failed at runtime authentication; no financial assertion was accepted",
+    "node_syntax_check": "passed",
+    "credential_secret_disclosed": false,
+    "role_password_changed": false,
+    "container_restarted": false
+  }
+}

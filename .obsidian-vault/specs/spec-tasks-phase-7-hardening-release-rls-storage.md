@@ -1,3 +1,15 @@
+---
+title: Phase 7 - Tasks / Implementation Queue
+date: 2026-09-30
+status: Draft
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Phase 7 — Tasks / Implementation Queue
 
 Map every `rule` / `rubric` AC to atomic, dependency-ordered vertical slices. Order: T1(RLS SQL) → T2(JWT claims) → T3(Storage smoke + 42501) → T4-T6 (3 reports + 3 CSV) → T7(reports landing Deferred badges remove) → T8-T9(EXPLAIN + indexes) → T10(pagination JS slice audit+fix) → T11(Backup SOP ADR 0003) → T12(Go-live OPERATIONAL_GUIDE checklist 28) → T13(typecheck) → T14(lint ≤1 legacy) → T15(30 routes HTTP 200 smoke) → T16(final gates AC19/20/21/diff-empty).

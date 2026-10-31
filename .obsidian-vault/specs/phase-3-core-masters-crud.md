@@ -1,5 +1,5 @@
 ---
-title: Phase 3 Core Masters CRUD — Products / Customers / Suppliers
+title: Phase 3 Core Masters CRUD - Products / Customers / Suppliers
 date: 2026-09-29
 status: Draft
 working_phase: P3 (CURRENT — next code build begins here; active 2026-09-30+)

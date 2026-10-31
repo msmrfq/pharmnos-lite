@@ -1,5 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies } from "next/headers.js";
 import type {
   IAuthAdapter,
   AuthUser,
@@ -19,13 +19,15 @@ let financialE2eTestExternalId: string | null = null;
 function isApprovedFinancialE2eTarget(): boolean {
   const rawUrl = process.env.DATABASE_URL;
   if (!rawUrl) return false;
+  const expectedPort = process.env.FINANCIAL_E2E_DB_PORT || "55432";
+  const expectedDatabase = process.env.FINANCIAL_E2E_ALLOWED_DATABASE_NAME || process.env.TEST_DATABASE_NAME;
   try {
     const url = new URL(rawUrl);
     return (
       (url.protocol === "postgres:" || url.protocol === "postgresql:") &&
       url.hostname === "127.0.0.1" &&
-      url.port === "55432" &&
-      url.pathname === "/pharmnos_financial_e2e"
+      url.port === expectedPort &&
+      url.pathname === `/${expectedDatabase}`
     );
   } catch {
     return false;
@@ -36,7 +38,7 @@ function getFinancialE2eTestExternalId(): string | null {
   if (process.env.NODE_ENV === "production" ||
       process.env.FINANCIAL_E2E_TEST_MODE !== "true" ||
       process.env.ALLOW_FINANCIAL_E2E !== "true" ||
-      process.env.TEST_DATABASE_NAME !== "pharmnos_financial_e2e" ||
+  !process.env.TEST_DATABASE_NAME ||
       process.env.TEST_DATABASE_MARKER !== "pharmnos-financial-e2e" ||
       !isApprovedFinancialE2eTarget()) {
     return null;
@@ -48,7 +50,7 @@ export function installFinancialE2eTestSession(externalId: string): void {
   if (process.env.NODE_ENV === "production" ||
       process.env.FINANCIAL_E2E_TEST_MODE !== "true" ||
       process.env.ALLOW_FINANCIAL_E2E !== "true" ||
-      process.env.TEST_DATABASE_NAME !== "pharmnos_financial_e2e" ||
+  !process.env.TEST_DATABASE_NAME ||
       process.env.TEST_DATABASE_MARKER !== "pharmnos-financial-e2e" ||
       !isApprovedFinancialE2eTarget() ||
       !externalId.trim()) {

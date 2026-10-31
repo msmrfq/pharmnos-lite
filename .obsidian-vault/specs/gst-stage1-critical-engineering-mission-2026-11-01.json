@@ -1,0 +1,78 @@
+{
+  "mission": "GST Stage 1 autonomous critical engineering completion",
+  "timestamp_ist": "2026-11-01T03-30-21",
+  "repository": "msmrfq/pharmnos-lite",
+  "branch": "main",
+  "head": "1dee2d8046e640cc4e7d1fc1055016adb0890e3c",
+  "git_safeguards": {
+    "reset_checkout_clean_stash_commit_push": "not performed",
+    "preexisting_work": "preserved",
+    "baseline_and_final_status": "captured with git status --short; repository remained dirty with pre-existing staged and unstaged work",
+    "diff_check": "passed"
+  },
+  "files_changed_by_mission": [
+    {
+      "path": "src/app/_actions/purchases.actions.ts",
+      "reason": "accepted accounting snapshot drives explicit-discrepancy posting effects",
+      "sha256": "3175C6445F529FFE154CB9DA5A1A0ECE4BECF1603ADC100A498268BBA1F47143"
+    },
+    {
+      "path": "scripts/purchase-gst-application-acceptance.cjs",
+      "reason": "application-path concurrency, rollback, retry, and persisted-state assertions",
+      "sha256": "295B6D9F09FFD8EAE8EF228D0E8B38B7D6E38D62FF2EB218A3A1FBF9C142D143"
+    },
+    {
+      "path": ".obsidian-vault/specs/gst-implementation-tracker-2026-10-31.md",
+      "reason": "record current purchase, HSN, concurrency, and environment-gate status",
+      "sha256": "C1DDC29C0C669990E7E69F43688114ED9F5EB7B72EB7AE57DD0BB5EE9134F78F"
+    },
+    {
+      "path": "prisma/financial-e2e-artifact-manifest.json",
+      "reason": "replace stale checked-in schema and provisioning artifact hashes",
+      "sha256": "1133A53ECA1D3AA253C891EE9CB1927B4587693941481F017D27390E1A877008"
+    }
+  ],
+  "evidence": [
+    {
+      "path": ".obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793484266961_1ffd27.json",
+      "sha256": "9CF1E1357ED98F3E67930629E949FFBE1B6484224495AB76ACC4B94F5231ED3F",
+      "result": "15/15 application-path scenarios passed on disposable PostgreSQL"
+    },
+    {
+      "path": ".obsidian-vault/specs/hsn-sac-application-runtime-evidence-hsn_app_1793484172651_39e8c6.json",
+      "sha256": "B2345480EF65E88E5C80243B67B90CE7A79A488024A29ABDD9CB914AC8578A53",
+      "result": "HSN/SAC application governance validation passed"
+    }
+  ],
+  "financial_assertions": {
+    "accepted_taxable": "191.0000",
+    "accepted_cgst": "13.6300",
+    "accepted_sgst": "13.6300",
+    "accepted_tax": "27.26",
+    "accepted_payable": "218.34",
+    "supplier_ledger_credit": "218.34",
+    "payload_hash": "reconstructed payload hash matched persisted posting hash",
+    "source_evidence_preserved": true
+  },
+  "validation": {
+    "purchase_application": "15/15 passed",
+    "sec_dec_03_restricted_role": "passed",
+    "hsn_sac_application": "12/12 passed",
+    "q15_migration_recovery": "passed",
+    "gst_rls_contracts": "20 passed",
+    "initialization_contracts": "24 passed",
+    "prisma_validate": "passed",
+    "typecheck": "passed",
+    "lint": "passed with one pre-existing React hook warning",
+    "git_diff_check": "passed"
+  },
+  "blocked_or_deferred": [
+    "Purchase application harness uses bootstrap superuser/RLS-bypassing role; restricted-role application-path RLS is not claimed.",
+    "Fresh Q10 application-path execution is blocked by invalid configured disposable pharmnos_e2e_runtime credentials; runtime role was not modified.",
+    "Direct security-behavior and rollback-recovery scripts require the gated connected initialization adapter and remain blocked.",
+    "Accepted-value inventory valuation lacks an approved accounting policy and remains quantity/rate based.",
+    "Cess, inclusive-tax, freight allocation, discount allocation, rounding precedence, and discrepancy tolerance remain policy gates.",
+    "Production migration, Live Supabase operations, deployment, and GST Stage 1 closure were not performed."
+  ],
+  "backup_manifest": "C:\\Users\\Masum Rafique\\.copilot\\session-state\\de6b39fc-5872-46e6-8130-58843b8116f4\\backups\\gst-stage1-2026-11-01T03-30-21"
+}

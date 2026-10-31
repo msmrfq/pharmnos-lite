@@ -1,3 +1,15 @@
+---
+title: Financial E2E Database Review
+date: 2026-10-26
+status: Review incomplete; approval pending
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Financial E2E Database Review
 
 **Assigned reviewer:** Masum Rafique  

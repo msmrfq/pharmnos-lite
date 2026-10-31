@@ -35,7 +35,9 @@ export default function SaleActionsCell({ saleId, status, invoiceNo }: Props) {
     startFinalize(async () => {
       try {
         const bound: any = (finalizeSalesInvoiceAction as any).bind(null, saleId);
-        const result: ActionResult<sales_invoices> = await bound({ ok: false }, new FormData());
+        const request = new FormData();
+        request.set("idempotency_key", `sales:${saleId}:${crypto.randomUUID()}`);
+        const result: ActionResult<sales_invoices> = await bound({ ok: false }, request);
         if (result.ok) {
           toast({
             variant: "success",

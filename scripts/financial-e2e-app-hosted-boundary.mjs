@@ -79,10 +79,17 @@ export function createApplicationHostedFinancialE2eBoundary({
  *   resolveTenantContext: () => Promise<{
  *     tenantId: string,
  *     userId: string,
+ *     membershipId: string,
  *     roles: string[],
  *     permissions: string[],
  *   }>,
- *   requirePermission: (context: object, permission: string) => void,
+ *   requirePermission: (context: {
+ *     tenantId: string,
+ *     userId: string,
+ *     membershipId: string,
+ *     roles: string[],
+ *     permissions: string[],
+ *   }, permission: string) => void,
  *   canStartScenario: (gate: unknown) => Promise<boolean>,
  *   scenarioOperations?: Record<string, (request: object) => Promise<unknown>>,
  * }} ApplicationHostedFinancialE2eBoundaryOptions

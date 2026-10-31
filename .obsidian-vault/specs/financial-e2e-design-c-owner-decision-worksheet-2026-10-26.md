@@ -1,3 +1,15 @@
+---
+title: Pharmnos Lite Design C Owner-Decision Worksheet
+date: 2026-10-26
+status: Owner decisions recorded; technical evidence pending
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Pharmnos Lite Design C Owner-Decision Worksheet
 
 **Date:** 2026-10-26  

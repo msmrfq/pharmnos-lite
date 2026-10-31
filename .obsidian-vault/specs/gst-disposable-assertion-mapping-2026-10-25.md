@@ -1,11 +1,28 @@
+---
+title: Pharmnos Lite GST Disposable Test Suite - Assertion Mapping
+date: 2026-10-25
+status: OWNER AUTHORIZED - READ-ONLY ASSERTION MAPPING; EXECUTION SEPARATE
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Pharmnos Lite GST Disposable Test Suite — Assertion Mapping
 
 **Date:** 2026-10-25  
 **Time:** 21-40-01 (IST)  
 **Working stage:** POST-P7 — PRE-PRODUCTION VALIDATION  
-**Status:** Read-only review document; no execution authorization
+**Status:** OWNER AUTHORIZED — READ-ONLY ASSERTION MAPPING; EXECUTION SEPARATE
 
 ## Scope and evidence rule
+
+**Owner authorization:** Masum Rafique granted authorization for the complete
+documented GST Modernization scope on 2026-10-31 (IST), including associated
+validation work. This mapping remains read-only and does not itself authorize
+database execution, migration execution, or production use.
 
 This document maps the assertions required for a future isolated GST/Financial
 E2E verification run to the repository sources that define them. It does not

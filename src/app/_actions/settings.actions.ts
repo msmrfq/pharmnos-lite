@@ -26,7 +26,7 @@ function flattenFieldErrors(fieldErrors: Record<string, unknown>): Record<string
     return result;
 }
 
-export function toBusinessProfileUpdate(data: BusinessProfileInput) {
+export async function toBusinessProfileUpdate(data: BusinessProfileInput) {
     return {
         address_line_1: data.addressLine1 || null,
         address_line_2: data.addressLine2 || null,
@@ -66,7 +66,7 @@ export async function updateBusinessProfileAction(
         const ctx = await requireServerTenantContext();
         requirePermission(ctx, "manage_business_profile");
         const data = parsed.data;
-        const profile = await repos.businessProfiles.upsertForTenant(toBusinessProfileUpdate(data), ctx);
+        const profile = await repos.businessProfiles.upsertForTenant(await toBusinessProfileUpdate(data), ctx);
 
         revalidatePath("/settings");
         revalidatePath("/billing/new");

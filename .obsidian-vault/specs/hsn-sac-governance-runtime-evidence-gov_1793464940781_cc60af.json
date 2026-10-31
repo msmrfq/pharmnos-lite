@@ -1,0 +1,150 @@
+{
+  "evidenceVersion": 1,
+  "run": "gov_1793464940781_cc60af",
+  "database": "pharmnos_financial_e2e_gov_1793464940781_cc60af",
+  "engineVersion": "PostgreSQL 17.11 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+  "harnessCommand": "node scripts/hsn-sac-governance-runtime-validation.mjs",
+  "target": "new local disposable PostgreSQL database only",
+  "forbiddenTargets": [
+    "production",
+    "Supabase",
+    "SEC-DEC-03 databases",
+    "prior disposable databases"
+  ],
+  "results": [
+    {
+      "id": "history_update_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:21.207Z",
+      "details": {
+        "sqlState": "42501"
+      }
+    },
+    {
+      "id": "history_delete_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:21.223Z",
+      "details": {
+        "sqlState": "42501"
+      }
+    },
+    {
+      "id": "cross_tenant_history_isolation",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:21.235Z"
+    },
+    {
+      "id": "runtime_history_privilege_boundary",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:21.253Z",
+      "details": {
+        "can_select": true,
+        "can_insert": true,
+        "can_update": false,
+        "can_delete": false
+      }
+    },
+    {
+      "id": "negative_rate_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:21.255Z",
+      "details": {
+        "sqlState": "23514"
+      }
+    },
+    {
+      "id": "non_finite_rate_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:21.259Z",
+      "details": {
+        "sqlState": "22003"
+      }
+    },
+    {
+      "id": "effective_date_range_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:21.260Z",
+      "details": {
+        "sqlState": "23514"
+      }
+    },
+    {
+      "id": "invalid_governance_state_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:21.261Z",
+      "details": {
+        "sqlState": "23514"
+      }
+    },
+    {
+      "id": "concurrent_overlapping_approval",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:21.264Z",
+      "details": {
+        "outcomes": [
+          "COMMITTED",
+          "REJECTED:40P01"
+        ],
+        "approved": 1
+      }
+    },
+    {
+      "id": "concurrent_non_overlapping_approval",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:22.306Z",
+      "details": {
+        "outcomes": [
+          "COMMITTED",
+          "COMMITTED"
+        ]
+      }
+    },
+    {
+      "id": "cross_tenant_approver_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:22.333Z",
+      "details": {
+        "sqlState": "23503"
+      }
+    },
+    {
+      "id": "missing_approver_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:22.334Z",
+      "details": {
+        "sqlState": "23503"
+      }
+    },
+    {
+      "id": "approved_rule_mutation_rejected",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:22.336Z",
+      "details": {
+        "sqlState": "42501"
+      }
+    },
+    {
+      "id": "revision_preserves_approved_original",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:22.339Z",
+      "details": {
+        "original_status": "APPROVED",
+        "original_active": true,
+        "successor_status": "PENDING",
+        "successor_active": false
+      }
+    },
+    {
+      "id": "catalog_history_captures_final_state",
+      "status": "PASS",
+      "startedAt": "2026-10-31T16:42:22.343Z",
+      "details": {
+        "classification_type": "SERVICES"
+      }
+    }
+  ],
+  "cleanup": {
+    "databaseDropped": true,
+    "roleDropped": true
+  }
+}

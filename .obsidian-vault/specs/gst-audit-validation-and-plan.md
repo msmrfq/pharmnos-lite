@@ -1,3 +1,21 @@
+---
+title: GST/IGST Audit Validation & Minimum Scope Implementation Plan
+date: 2026-10-18
+status: OWNER AUTHORIZED - APPROVED GST MODERNIZATION VALIDATION PLAN; EVIDENCE-GATED
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
+**Owner authorization:** Masum Rafique granted authorization for the complete
+documented GST Modernization scope on 2026-10-31 (IST), including associated
+implementation and validation work. This plan does not replace qualified
+professional review, database rollout controls, independent security review,
+or production go/no-go approval.
+
 # GST/IGST Audit Validation & Minimum Scope Implementation Plan
 
 **Date:** 2026-10-18
@@ -99,8 +117,8 @@ remain excluded.
 | GST-004 | State name/code normalization | P0 | Partially implemented / limited | `indian-states.ts`: `normalizeState()`, `determinePlaceOfSupply()` | State normalization and supported-prefix tests; 243 assertions passed | Complete authoritative prefix table unavailable | Obtain authoritative mapping evidence before claiming full verification |
 | GST-005 | Fail-closed place-of-supply handling | P0 | Implemented and verified | `determinePlaceOfSupply()` returns `UNKNOWN`; `requireResolvedPlaceOfSupply()` rejects unresolved finalization | Missing, invalid, whitespace, `97`, and `99` cases covered | Special-prefix workflow support remains deferred | Preserve fail-closed behavior |
 | GST-006 | Sales tax-component persistence | P0 | Partially implemented / limited | Local Prisma schema, SQL asset, draft persistence, and finalization updates add nullable components and taxable amount | No database-backed persistence test | SQL provisioning review/execution required | Verify persistence against an isolated database |
-| GST-007 | Sales place-of-supply persistence | P0 | Partially implemented / limited | Local Prisma schema, SQL asset, and finalization update add `place_of_supply_code` | No database-backed persistence test; current value uses customer billing-state proxy | Accepted policy requires captured supply facts; implementation and SQL rollout are not authorized or verified | Implement approved fact capture and verify persistence in an isolated database |
-| GST-008 | Purchase intra/inter-state GST calculation | P0 | Outstanding | `purchases.actions.ts` still computes aggregate GST without place-of-supply logic | No purchase GST parity suite | Accepted supplier-evidence/reconciliation policy requires approved rule version and captured transaction facts | Implement after policy model, legal review, and implementation authorization |
+| GST-007 | Sales place-of-supply persistence | P0 | Partially implemented / limited | Local Prisma schema, SQL asset, and finalization update add `place_of_supply_code` | No database-backed persistence test; current value uses customer billing-state proxy | Accepted policy requires captured supply facts; implementation is owner-authorized, while SQL rollout remains separately controlled and unverified | Implement approved fact capture and verify persistence in an isolated database |
+| GST-008 | Purchase intra/inter-state GST calculation | P0 | Outstanding | `purchases.actions.ts` still computes aggregate GST without place-of-supply logic | No purchase GST parity suite | Accepted supplier-evidence/reconciliation policy requires approved rule version and captured transaction facts | Implement after policy model and legal review; retain evidence and acceptance gates |
 | GST-009 | Purchase tax-component persistence | P0 | Partially implemented / limited | Local Prisma schema and purchase form/action capture separate supplier-declared taxable, CGST, SGST, IGST, cess, invoice-total, round-off, provenance, and supply-fact fields; versioned calculations, decisions, reconciliation events, line evidence, correction revisions, and posting-operation projections are represented locally; additive guarded RLS coverage is prepared for all seven new tenant-owned tables | `pnpm prisma generate`, typecheck, pure reconciliation/calculation tests, and static RLS policy coverage pass; no persistence or database test | No migration or database rollout; correction, duplicate, idempotency, concurrency, rollback, and RLS behavior remain database-unverified | Review the local implementation, provision the isolated schema, then verify against an isolated database |
 | GST-010 | Business-profile state validation | P0 | Partially implemented / limited | `tenant.schemas.ts`, `onboardNewTenant()`, `BusinessProfileRepository`, and `updateBusinessProfileAction` normalize/reject state values at server boundaries | `businessProfileStateSchema` and settings payload-mapping tests cover names, codes, blank, invalid values, and repository-shaped mapping; pure test evidence only | Database runtime rejection and RLS behavior unverified | Verify the save action against an isolated database |
 | GST-011 | Historical invoice tax integrity and printing | P0 | Partially implemented / limited | Print page has snapshot-selection helpers and explicit legacy fallback paths; current print behavior still has legacy recomputation paths | Pure completeness and snapshot-preference assertions; no historical immutability integration test | Finalized snapshot persistence and print parity are not database-verified | Implement snapshot-first printing and verify against an isolated database |

@@ -1,3 +1,15 @@
+---
+title: Financial E2E Application / Financial-Integrity Review
+date: 2026-10-26
+status: Review completed with changes required; approval pending
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Financial E2E Application / Financial-Integrity Review
 
 **Assigned reviewer:** Masum Rafique  

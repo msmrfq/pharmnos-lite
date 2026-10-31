@@ -1,3 +1,15 @@
+---
+title: GST/IGST Capability Audit Report
+date: 2026-10-02
+status: OWNER AUTHORIZED - HISTORICAL READ-ONLY CAPABILITY AUDIT
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # GST/IGST Capability Audit Report
 
 **Date:** 2026-10-02  

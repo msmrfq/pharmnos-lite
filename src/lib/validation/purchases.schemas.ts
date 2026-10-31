@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GST_TREATMENT_LABELS } from "@/lib/gst/treatment";
 
 const pad2 = (n: number) => n.toString().padStart(2, "0");
 
@@ -133,6 +134,8 @@ export const PurchaseInvoiceCreateSchema = z
   .object({
     invoice_no: z.string().max(50).optional().or(z.literal("")),
     supplier_id: z.string().min(1, "Supplier is required"),
+    gst_treatment: z.enum(GST_TREATMENT_LABELS, { errorMap: () => ({ message: "Select a valid GST treatment." }) }),
+    tax_mode: z.enum(["EXCLUSIVE", "INCLUSIVE"]).default("EXCLUSIVE"),
     supplier_invoice_no: z.string().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
     invoice_date: dateRequired,
     notes: z.string().max(500).optional().or(z.literal("")).transform((v) => (v || null)),
@@ -152,9 +155,10 @@ export const PurchaseInvoiceCreateSchema = z
     recipient_state_at_transaction: z.string().trim().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
     delivery_state_at_transaction: z.string().trim().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
     supply_scenario: z.enum(["INTRA_STATE", "INTER_STATE"]).optional(),
+    lines: z.array(PurchaseInvoiceLineCreateSchema).optional(),
   })
-  .superRefine((_val, ctx) => {
-    const linesRaw = (ctx as any).lines as any[] | undefined;
+  .superRefine((value, ctx) => {
+    const linesRaw = value.lines;
     if (!linesRaw || linesRaw.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -172,6 +176,17 @@ export const PurchaseGstAcceptanceSchema = z.object({
   decision_reference: z.string().trim().min(1).max(100),
   rationale: z.string().trim().min(1).max(1000),
   accepted_value_source: z.enum(["SUPPLIER_DECLARED", "APPLICATION_CALCULATED", "EXPLICIT_DECISION"]),
+});
+
+export const PurchaseGstResolutionLineSchema = z.object({
+  item_id: z.string().min(1),
+  accepted_taxable_value: decimalFromString,
+  accepted_cgst: decimalFromString,
+  accepted_sgst: decimalFromString,
+  accepted_igst: decimalFromString,
+  accepted_cess: decimalFromString,
+  accepted_line_total: decimalFromString,
+  line_reason: z.string().trim().min(1).max(500),
 });
 
 export const PurchaseGstResolutionSchema = z.object({

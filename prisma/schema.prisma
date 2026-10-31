@@ -35,6 +35,9 @@ enum PermissionAction {
   create_product
   edit_product
   view_product
+  manage_hsn_catalog
+  approve_hsn_catalog
+  approve_gst_rates
   create_customer
   edit_customer
   view_customer
@@ -107,6 +110,12 @@ enum PurchaseGstReconciliationEventKind {
   RESOLVED
   ACCOUNTING_ACCEPTED
   CORRECTED
+}
+
+enum GstApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum PaymentMode {
@@ -191,11 +200,14 @@ model tenants {
   supplier_ledger       supplier_ledgers[]
   audit_logs            audit_logs[]
   payments              payments[]
+  sales_posting_operations sales_posting_operations[]
   purchase_invoice_items purchase_invoice_items[]
   sales_invoice_items    sales_invoice_items[]
   purchase_gst_line_evidence purchase_gst_line_evidence[]
   purchase_gst_reconciliation_events purchase_gst_reconciliation_events[]
   posting_operations purchase_posting_operations[]
+  hsn_sac_catalog hsn_sac_catalog[]
+  gst_rate_rules gst_rate_rules[]
 
   @@index([slug])
 }
@@ -231,7 +243,10 @@ model memberships {
   role   roles   @relation(fields: [role_id], references: [id], onDelete: Restrict)
   captured_gst_evidence_revisions purchase_gst_evidence_revisions[] @relation("purchase_gst_evidence_capture_actor")
   accounting_decisions purchase_gst_accounting_decisions[] @relation("purchase_gst_accounting_decision_actor")
+  purchase_line_acceptances purchase_invoice_items[] @relation("purchase_line_acceptance_actor")
   gst_reconciliation_events purchase_gst_reconciliation_events[] @relation("purchase_gst_event_actor")
+  approved_hsn_catalog_records hsn_sac_catalog[] @relation("hsn_classification_approver")
+  approved_gst_rate_rules gst_rate_rules[] @relation("gst_rate_approver")
 
   @@unique([tenant_id, user_id])
   @@unique([tenant_id, id])
@@ -441,6 +456,8 @@ model purchase_invoices {
   status          InvoiceStatus @default(DRAFT)
   gst_reconciliation_status PurchaseGstReconciliationStatus @default(NOT_RECONCILED)
   gst_accounting_acceptance_status PurchaseGstAccountingAcceptanceStatus @default(NOT_ACCEPTED)
+  gst_treatment   String?
+  tax_mode        String? @default("EXCLUSIVE")
   current_gst_evidence_revision_id String?
   current_gst_calculation_id String?
   current_gst_accounting_decision_id String?
@@ -503,6 +520,94 @@ model purchase_posting_operations {
   @@index([tenant_id, purchase_invoice_id, status])
 }
 
+model hsn_sac_catalog {
+  id                    String   @id @default(cuid())
+  tenant_id             String
+  code                  String
+  description           String?
+  classification_type   String?
+  classification_metadata Json?
+  classification_status GstApprovalStatus @default(PENDING)
+  rate_approval_status  GstApprovalStatus @default(PENDING)
+  source_reference      String?
+  effective_from        DateTime?
+  effective_to          DateTime?
+  is_active             Boolean  @default(false)
+  created_by_membership_id String?
+  updated_by_membership_id String?
+  classification_approved_by_membership_id String?
+  classification_approved_at DateTime?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  rules gst_rate_rules[]
+  history hsn_sac_catalog_history[]
+  classification_approver memberships? @relation("hsn_classification_approver", fields: [tenant_id, classification_approved_by_membership_id], references: [tenant_id, id], onDelete: Restrict)
+
+  @@unique([tenant_id, code])
+  @@unique([tenant_id, id])
+  @@index([tenant_id, is_active])
+  @@index([tenant_id, classification_status, rate_approval_status])
+}
+
+model hsn_sac_catalog_history {
+  id                 String   @id @default(cuid())
+  tenant_id          String
+  catalog_id         String
+  action             String
+  snapshot           Json
+  actor_membership_id String?
+  created_at         DateTime @default(now())
+
+  catalog hsn_sac_catalog @relation(fields: [tenant_id, catalog_id], references: [tenant_id, id], onDelete: Restrict)
+
+  @@index([tenant_id, catalog_id, created_at])
+}
+
+model gst_rate_rules {
+  id                 String   @id @default(cuid())
+  tenant_id          String
+  hsn_sac_catalog_id  String?
+  rule_version       String
+  tax_rate           Decimal? @db.Decimal(7, 4)
+  component_policy   String
+  approval_status    GstApprovalStatus @default(PENDING)
+  source_reference   String?
+  effective_from     DateTime
+  effective_to       DateTime?
+  is_active          Boolean  @default(false)
+  created_by_membership_id String?
+  approved_by_membership_id String?
+  approved_at         DateTime?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  hsn_sac_catalog hsn_sac_catalog? @relation(fields: [tenant_id, hsn_sac_catalog_id], references: [tenant_id, id], onDelete: Restrict)
+  history gst_rate_rule_history[]
+  approver memberships? @relation("gst_rate_approver", fields: [tenant_id, approved_by_membership_id], references: [tenant_id, id], onDelete: Restrict)
+
+  @@unique([tenant_id, rule_version])
+  @@unique([tenant_id, id])
+  @@index([tenant_id, hsn_sac_catalog_id, effective_from, effective_to])
+  @@index([tenant_id, approval_status, is_active])
+}
+
+model gst_rate_rule_history {
+  id                 String   @id @default(cuid())
+  tenant_id          String
+  rule_id            String
+  action             String
+  snapshot           Json
+  actor_membership_id String?
+  created_at         DateTime @default(now())
+
+  rule gst_rate_rules @relation(fields: [tenant_id, rule_id], references: [tenant_id, id], onDelete: Restrict)
+
+  @@index([tenant_id, rule_id, created_at])
+}
+
 model purchase_invoice_items {
   id               String   @id @default(cuid())
   tenant_id        String
@@ -517,6 +622,30 @@ model purchase_invoice_items {
   discount_amount  Decimal  @default(0) @db.Decimal(12, 2)
   gst_rate         Decimal  @db.Decimal(5, 2)
   gst_amount       Decimal  @default(0) @db.Decimal(12, 2)
+  hsn_code_snapshot String?
+  hsn_sac_catalog_id_snapshot String?
+  gst_rule_version_snapshot String?
+  gst_rule_source_reference_snapshot String?
+  calculated_taxable_value Decimal? @db.Decimal(20, 4)
+  calculated_cgst Decimal? @db.Decimal(20, 4)
+  calculated_sgst Decimal? @db.Decimal(20, 4)
+  calculated_igst Decimal? @db.Decimal(20, 4)
+  calculated_cess Decimal? @db.Decimal(20, 4)
+  accepted_taxable_value Decimal? @db.Decimal(20, 4)
+  accepted_cgst Decimal? @db.Decimal(20, 4)
+  accepted_sgst Decimal? @db.Decimal(20, 4)
+  accepted_igst Decimal? @db.Decimal(20, 4)
+  accepted_cess Decimal? @db.Decimal(20, 4)
+  accepted_line_total Decimal? @db.Decimal(20, 4)
+  accepted_value_source String?
+  accepted_reason String?
+  accepted_at DateTime?
+  accepted_by_membership_id String?
+  accepted_decision_id String?
+  gst_acceptance_status String @default("NOT_ACCEPTED")
+  gst_discrepancy_details Json?
+  gst_calculation_reference String?
+  gst_acceptance_reference String?
   mrp              Decimal? @db.Decimal(12, 2)
   sale_rate        Decimal? @db.Decimal(12, 2)
   line_total       Decimal  @db.Decimal(14, 2)
@@ -526,6 +655,8 @@ model purchase_invoice_items {
   purchase purchase_invoices @relation("purchase_invoice_items", fields: [tenant_id, purchase_id], references: [tenant_id, id], onDelete: Cascade, map: "purchase_invoice_items_purchase_fkey")
   product  products          @relation(fields: [product_id], references: [id], onDelete: Restrict)
   gst_line_evidence purchase_gst_line_evidence[] @relation("purchase_gst_line_evidence_item")
+  accepted_by memberships? @relation("purchase_line_acceptance_actor", fields: [tenant_id, accepted_by_membership_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_line_acceptance_actor_fkey")
+  accepted_decision purchase_gst_accounting_decisions? @relation("purchase_line_acceptance_decision", fields: [tenant_id, purchase_id, accepted_decision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_line_acceptance_decision_fkey")
 
   @@index([tenant_id])
   @@index([purchase_id])
@@ -667,6 +798,7 @@ model purchase_gst_accounting_decisions {
   evidence_revision purchase_gst_evidence_revisions @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_decision_revision_fkey")
   decided_by memberships @relation("purchase_gst_accounting_decision_actor", fields: [tenant_id, decided_by_membership_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_decision_actor_fkey")
   calculation purchase_gst_calculations @relation("purchase_gst_decision_calculation", fields: [tenant_id, purchase_invoice_id, calculation_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_decision_calculation_fkey")
+  accepted_line_items purchase_invoice_items[] @relation("purchase_line_acceptance_decision")
 
   @@unique([tenant_id, purchase_invoice_id, id], map: "purchase_gst_decision_identity_key")
   @@unique([tenant_id, purchase_invoice_id, evidence_revision_id, decision_reference], map: "purchase_gst_decision_reference_key")
@@ -735,6 +867,8 @@ model sales_invoices {
   invoice_date    DateTime
   status          InvoiceStatus @default(DRAFT)
   tax_data_status TaxDataStatus?
+  gst_treatment  String?
+  tax_mode       String? @default("EXCLUSIVE")
   place_of_supply_code String?
   is_cash_sale    Boolean       @default(false)
   gross_amount    Decimal       @db.Decimal(14, 2)
@@ -773,12 +907,34 @@ model sales_invoices {
   items    sales_invoice_items[]
   payments payments[]
   ledger   customer_ledgers[]
+  posting_operations sales_posting_operations[]
 
   @@unique([tenant_id, invoice_no])
+  @@unique([tenant_id, id])
   @@index([tenant_id])
   @@index([tenant_id, status])
   @@index([tenant_id, customer_id])
   @@index([tenant_id, invoice_date])
+}
+
+model sales_posting_operations {
+  id                 String   @id @default(cuid())
+  tenant_id          String
+  sales_invoice_id   String
+  idempotency_key    String
+  request_payload_hash String
+  status             String   @default("PROCESSING")
+  result_invoice_no  String?
+  result_sales_id    String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  tenant tenants        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  sale   sales_invoices @relation(fields: [tenant_id, sales_invoice_id], references: [tenant_id, id], onDelete: Restrict)
+
+  @@unique([tenant_id, idempotency_key], map: "sales_posting_idempotency_key")
+  @@unique([tenant_id, sales_invoice_id], map: "sales_posting_invoice_key")
+  @@index([tenant_id, sales_invoice_id, status])
 }
 
 model sales_invoice_items {
@@ -801,6 +957,9 @@ model sales_invoice_items {
   sgst_amount     Decimal? @db.Decimal(12, 2)
   igst_amount     Decimal? @db.Decimal(12, 2)
   cess_amount     Decimal? @db.Decimal(12, 2)
+  hsn_sac_catalog_id_snapshot String?
+  gst_rule_version_snapshot String?
+  gst_rule_source_reference_snapshot String?
   product_name_snapshot String?
   generic_name_snapshot String?
   hsn_code_snapshot String?

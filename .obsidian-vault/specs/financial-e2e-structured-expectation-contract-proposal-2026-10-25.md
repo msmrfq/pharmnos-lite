@@ -1,3 +1,15 @@
+---
+title: Pharmnos Lite Structured Financial E2E Expectation Contract Proposal
+date: 2026-10-25
+status: Proposal; approval pending
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Pharmnos Lite Structured Financial E2E Expectation Contract Proposal
 
 **Date:** 2026-10-25  

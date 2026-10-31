@@ -1,14 +1,28 @@
+---
+title: PGST-01 - Purchase GST Workflow Policy
+date: 2026-10-24
+status: OWNER AUTHORIZED - POLICY SCOPE; FORMAL REVIEW AND EVIDENCE-GATED
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # PGST-01 — Purchase GST Workflow Policy
 
-**Status:** PENDING — PRODUCT-OWNER INPUTS RECORDED; ENGINEERING/SECURITY AND FORMAL APPROVAL PENDING
+**Status:** OWNER AUTHORIZED — POLICY SCOPE; FORMAL REVIEW AND EVIDENCE-GATED
 **Official phase:** POST-P7 — PRE-PRODUCTION VALIDATION  
 **Product decision-maker:** Project Owner / Product Owner  
 **Accountable policy owner:** Not confirmed  
-**Implementation authorization:** NOT GRANTED  
-**Database/migration authorization:** NOT GRANTED  
-**Testing authorization:** NOT GRANTED  
-**Controlled-pilot authorization:** NOT GRANTED  
-**Production-rollout authorization:** NOT GRANTED
+**Owner authorization:** Complete documented GST Modernization scope authorized
+by Masum Rafique on 2026-10-31 (IST).
+**Implementation authorization:** OWNER-AUTHORIZED — EVIDENCE-GATED
+**Database/migration execution:** Separately controlled; not implied by owner authorization
+**Testing execution:** Separately controlled by validation evidence and test gates
+**Controlled-pilot authorization:** Separately governed by pilot approval
+**Production-rollout authorization:** Separately governed by production go/no-go
 
 This record captures the consolidated Product-owner decision register
 PD-01–PD-35, together with unresolved external reviews. It does not
@@ -24,7 +38,8 @@ approval, Security/Architecture approval, or implementation authorization.
 
 ### 1.1 Controlled-pilot scope
 
-**APPROVED BY PRODUCT OWNER — PRODUCT DECISION ONLY**
+**APPROVED BY PRODUCT OWNER — PRODUCT DECISION ONLY; FULL GST OWNER
+AUTHORIZATION RECORDED SEPARATELY**
 
 Apply the new purchase-GST workflow only to a specifically selected pilot
 cohort. Apply it only to new purchases created after explicit pilot activation
@@ -165,16 +180,18 @@ Retain the following eight distinct gates:
 
 1. Policy approval.
 2. Technical design approval.
-3. Separate implementation authorization.
+3. Owner-authorized implementation, subject to the applicable evidence gates.
 4. Database/migration authorization where applicable.
 5. Isolated validation readiness.
 6. Successful isolated database-backed financial validation.
 7. Separate controlled-pilot authorization.
 8. Separate general production-rollout authorization.
 
-This Product-owner decision retains the proposed sequence; it does not approve
-any gate, assign gate-level owners or authorizers, or grant any authorization.
-Approval of one gate does not approve or waive another.
+This Product-owner decision retains the proposed sequence; the full-scope owner
+authorization now permits documented implementation work, but it does not
+approve policy, database/migration execution, testing execution, pilot,
+production rollout, or waive any gate. Approval of one gate does not approve
+or waive another.
 
 **Pending external review:** Accounting/GST, Engineering, and
 Security/Architecture as applicable. Formal gate authorizers and accountable
@@ -308,7 +325,7 @@ authorization. No entry above constitutes formal PGST-01 approval.
 | Define pilot success criteria, monitoring, escalation, and exit/rollback conditions before authorization; do not auto-expand to production. | Approved by Product Owner. | Metrics, thresholds, monitoring ownership, escalation path, and exit criteria remain pending. | Project Owner / Product Owner | 2026-10-24 | PRODUCT DECISION RECORDED; PILOT/PRODUCTION AUTHORIZATIONS PENDING |
 | Incomplete drafts may be saved and edited; finalization and posting remain blocked until approved GST controls pass. | Approved by Product Owner. | None supplied; accounting controls and minimum evidence remain pending. | Project Owner / Product Owner | 2026-10-24 | PRODUCT DECISION RECORDED; EXTERNAL APPROVALS PENDING |
 | Compact persisted lifecycle-status model supported by distinct evidence, calculation, reconciliation, accounting-decision, and audit-event records; derived UI states must not replace evidence or authorization. | Approved by Product Owner. | None supplied; technical representation and enforcement remain pending. | Project Owner / Product Owner | 2026-10-24 | PRODUCT DECISION RECORDED; EXTERNAL APPROVALS PENDING |
-| Select Alternative 3A combined finalization/posting. | Selected by Product Owner. | Preserve the existing atomic purchase-finalization boundary; accounting acceptance remains a separate authorized action before posting; posting must recheck current evidence/calculation revisions, reconciliation status, accounting decision and accepted values, actor authorization, tenant/purchase ownership, and optimistic-version or equivalent concurrency controls. | Project Owner / Product Owner | 2026-10-24 | SELECTED — IMPLEMENTATION NOT AUTHORIZED; ENGINEERING, SECURITY/ARCHITECTURE, AND ACCOUNTING/GST REVIEW PENDING |
+| Select Alternative 3A combined finalization/posting. | Selected by Product Owner. | Preserve the existing atomic purchase-finalization boundary; accounting acceptance remains a separate authorized action before posting; posting must recheck current evidence/calculation revisions, reconciliation status, accounting decision and accepted values, actor authorization, tenant/purchase ownership, and optimistic-version or equivalent concurrency controls. | Project Owner / Product Owner | 2026-10-24 | SELECTED — FULL-SCOPE OWNER AUTHORIZATION RECORDED; ENGINEERING, SECURITY/ARCHITECTURE, AND ACCOUNTING/GST REVIEW PENDING |
 | Retain eight distinct policy, design, implementation, migration, validation, pilot, and rollout gates. | Approved by Product Owner. | None supplied; gate owners, authorizers, evidence, and outcomes remain pending. | Project Owner / Product Owner | 2026-10-24 | PRODUCT DECISION RECORDED; GATE AUTHORIZATIONS PENDING |
 
 These entries record Product-owner decisions only. They do not constitute
@@ -338,7 +355,7 @@ or activation authorization.
 |---|---|---|---|---|---|---|
 | Policy approval | Approve workflow policy, scope direction, posting restrictions, and dependencies. |  | Product; Accounting/GST; qualified GST professional where relevant. | Completed decision record, scope outcome, conditions, reviewer outcomes, date. | Failure blocks technical design approval. | PENDING |
 | Technical design approval | Approve state/event, evidence, authorization, transaction, tenant, immutability, and correction design. |  | Engineering; Product; Security/Architecture; Accounting/GST for financial behavior. | Approved technical design, state/event mapping, authorization matrix, risks, and rollback design. | Failure blocks implementation authorization. | PENDING |
-| Implementation authorization | Permit defined application or schema implementation. |  | Product owner; Engineering; Security/Architecture; Accounting/GST where financial behavior changes. | Authorized scope, acceptance criteria, rollback owner, and implementation boundaries. | Failure blocks implementation. | NOT GRANTED |
+| Implementation authorization | Permit defined application or schema implementation. |  | Product owner; Engineering; Security/Architecture; Accounting/GST where financial behavior changes. | Authorized scope, acceptance criteria, rollback owner, and implementation boundaries. | Failure blocks implementation. | OWNER-AUTHORIZED — EVIDENCE-GATED |
 | Database/migration authorization | Permit schema changes, migrations, backfills, or destructive actions where applicable. |  | Engineering; Security/Architecture; Product and Accounting/GST where financial history is affected. | Migration plan, compatibility review, rollback plan, database identity, and destructive-action approval. | Failure blocks applicable database work. | NOT GRANTED |
 | Isolated validation readiness | Confirm safe readiness for an independently verified disposable database. |  | Engineering; Security/Architecture; Product and Accounting/GST for scenario coverage. | Disposable database identity, applied schema, owned fixtures, isolation plan, cleanup authorization, and recovery plan. | Failure blocks financial validation. | NOT READY |
 | Isolated financial validation completion | Confirm runtime evidence for GST gates, posting, rollback, history, and financial effects. |  | Engineering; Accounting/GST; Security/Architecture; qualified GST professional where applicable. | Executed isolated evidence for discrepancies, acceptance, stock, ledger, payable, sequence, rollback, retries, concurrency, and history. | Failure blocks pilot authorization. | PENDING |
@@ -457,7 +474,7 @@ testing, controlled-pilot, or production authorization.
   Security/Architecture reviews remain pending.
 - Gate-level owners, authorizers, and evidence remain unassigned.
 - Technical design and all later validation evidence are pending.
-- Implementation authorization is **NOT GRANTED**.
+- Full-scope owner implementation authorization is **GRANTED — EVIDENCE-GATED**.
 - Database/migration authorization is **NOT GRANTED**.
 - Testing and isolated financial validation authorization is **NOT GRANTED**.
 - Controlled-pilot authorization is **NOT GRANTED**.
@@ -490,7 +507,7 @@ controlled-pilot authorization, or production-rollout authorization.
 | F-05 | PD-11, PD-17 | Product direction now confirms preservation of supplier-declared values, original representation, provenance, and non-fabrication. Mandatory evidence, capture timing, source-quality rules, and persistence enforcement still lack specialist/technical approval. | Accounting/GST; qualified GST professional; Engineering | OPEN — SPECIALIST REVIEW | Formal approval and implementation remain blocked. |
 | F-06 | PD-01, PD-06, PD-18 | The Product Owner has accepted ordinary, documented domestic purchase scenarios as the planning boundary and excluded unsupported or legally unresolved scenarios. Existing aggregate purchase behavior and rounding are documented; applicable rule versions, components, precision, cess, and professional interpretation remain unresolved. | Accounting/GST; qualified GST professional | OPEN — SPECIALIST REVIEW | Formal approval, implementation, and pilot remain blocked. |
 | F-07 | PD-14, PD-19 | Product Owner confirmed the §12.8 acceptance boundary on 2026-10-24: reconciliation and acceptance remain separate; only an explicitly authorized accounting role or named authority may accept; accepted values, evidence/reconciliation references, rationale, actor, timestamp, and append-only decision event are required; unresolved discrepancies and incomplete, stale, missing, or unauthorized inputs fail closed. Exact accounting policy and enforcement remain pending. | Product Owner; Accounting/GST; Engineering; Security/Architecture | DECIDED — PRODUCT OWNER CONFIRMED; EXTERNAL/TECHNICAL REVIEW PENDING | Product-decision dependency closed; formal approval and technical design remain gated by required reviews. |
-| F-08 | PD-15 | Product Owner selected Alternative 3A in §12.11 on 2026-10-24. The selection preserves the existing atomic purchase-finalization boundary, but Engineering, Security/Architecture, and Accounting/GST reviews remain pending; implementation is not authorized. | Product Owner; Engineering; Accounting/GST; Security/Architecture | SELECTED — PRODUCT OWNER; REVIEW PENDING | Technical design, implementation, and database authorization remain blocked pending required reviews. |
+| F-08 | PD-15 | Product Owner selected Alternative 3A in §12.11 on 2026-10-24. The selection preserves the existing atomic purchase-finalization boundary; full-scope owner authorization is now recorded, while Engineering, Security/Architecture, and Accounting/GST reviews remain pending. | Product Owner; Engineering; Accounting/GST; Security/Architecture | SELECTED — PRODUCT OWNER; REVIEW PENDING | Technical design, implementation acceptance, and database authorization remain gated pending required reviews. |
 | F-09 | PD-15, PD-20 | Design and source inspection do not prove idempotency, concurrency, atomicity, recovery, or rollback against a database. Closure requires authorized isolated runtime evidence. | Engineering | BLOCKED — VALIDATION | Validation and pilot activation remain blocked. |
 | F-10 | PD-13, PD-16, PD-26 | Immutable evidence, append-only history, audit provenance, and traceability are proposed but not implemented or verified. Closure requires technical enforcement review and evidence. | Engineering; Security/Architecture | OPEN — TECHNICAL REVIEW | Formal approval, implementation, and database work remain blocked. |
 | F-11 | PD-12 | Historical disclosure principles are recorded, but historical immutability and representative runtime behavior are unverified. Closure requires specialist policy and isolated validation evidence. | Accounting/GST; qualified GST professional; Engineering | OPEN — SPECIALIST REVIEW | Formal approval and production readiness remain blocked. |
@@ -498,9 +515,9 @@ controlled-pilot authorization, or production-rollout authorization.
 | F-13 | PD-22, PD-23, PD-24 | Monitoring ownership, cadence, thresholds, escalation, and scope-change handling remain unassigned. | Product; Engineering; Security/Architecture | OPEN — TECHNICAL REVIEW | Pilot activation and production rollout remain blocked. |
 | F-14 | PD-21, PD-29, PD-30 | Disablement, rollback, resumption, closeout, and ongoing governance are required but lack an approved operating mechanism. | Product; Engineering; Security/Architecture; Accounting/GST | OPEN — TECHNICAL REVIEW | Pilot activation and production rollout remain blocked. |
 | F-15 | PD-31, PD-33 | A complete versioned readiness dossier with review records, validation evidence, defects, and risk decisions is not available. | Formal governance; Product | BLOCKED — AUTHORIZATION | Formal PGST-01 approval remains blocked. |
-| F-16 | PD-32, PD-34 | Eight gates are documented, but owners, authorizers, conditions, evidence, and effective points are not populated because no verified authority record exists. | Formal governance | BLOCKED — AUTHORIZATION | Formal approval and all later gates remain blocked. |
+| F-16 | PD-32, PD-34 | Eight gates are documented, but gate-specific owners, conditions, evidence, and effective points are not fully populated. Full-scope owner authorization is recorded separately and does not close these gates. | Formal governance | BLOCKED — AUTHORIZATION | Formal approval and all later gates remain blocked. |
 | F-17 | PD-09, PD-21 | Pure fixture and safety contracts exist, but database identity, owned fixtures, cleanup execution, RLS, and financial execution remain unverified. | Engineering; Security/Architecture | BLOCKED — VALIDATION | Database/migration and validation gates remain blocked. |
-| F-18 | PD-34 | Separate implementation, database/migration, testing, pilot, and production authorizations are absent. | Formal governance | BLOCKED — AUTHORIZATION | Each corresponding gate remains not granted. |
+| F-18 | PD-34 | Separate database/migration, testing, pilot, and production authorizations remain distinct and are not granted by the full-scope owner authorization. | Formal governance | BLOCKED — AUTHORIZATION | Each corresponding gate remains separately governed. |
 
 ### 11.1 Evidence classification
 
@@ -872,9 +889,9 @@ the persistence design expressly leaves transaction atomicity, authorization,
 concurrency, rollback, and database enforcement subject to later review and
 validation.
 
-**Status:** `SELECTED — PRODUCT OWNER CONFIRMED; REVIEW PENDING`; Engineering,
+**Status:** `OWNER AUTHORIZED — APPROVED PRODUCT DIRECTION`; Engineering,
 Security/Architecture, and Accounting/GST review remain required before
-implementation. This selection does not constitute formal PGST-01 approval.
+implementation evidence is accepted. This remains evidence-gated.
 
 ### 12.9 AI review issue reconciliation
 
@@ -1044,8 +1061,9 @@ external approval. No runtime evidence proves the selected boundary.
 
 | Decision ID | Decision | Current status | Required decision-maker/review |
 |---|---|---|---|
-| PD-15 / F-08 | **SELECTED — Alternative 3A**, combined finalization/posting, preserving the existing atomic purchase-finalization boundary and requiring separate authorized accounting acceptance before posting plus the listed eligibility, ownership, authorization, and concurrency rechecks. | `SELECTED — PRODUCT OWNER; REVIEWS PENDING` | Product Owner confirmed in the current conversation; Engineering, Security/Architecture, and Accounting/GST reviews remain pending. Implementation is not authorized. |
+| PD-15 / F-08 | **SELECTED — Alternative 3A**, combined finalization/posting, preserving the existing atomic purchase-finalization boundary and requiring separate authorized accounting acceptance before posting plus the listed eligibility, ownership, authorization, and concurrency rechecks. | `SELECTED — PRODUCT OWNER; REVIEWS PENDING` | Product Owner confirmed in the current conversation; full-scope owner authorization is recorded, while Engineering, Security/Architecture, and Accounting/GST reviews remain pending. |
 
 Selection of either alternative would not constitute formal PGST-01 approval,
-implementation authorization, database/migration authorization, validation
-authorization, pilot authorization, or production authorization.
+database/migration authorization, validation execution authorization, pilot
+authorization, or production authorization. Full-scope owner authorization is
+recorded separately and remains subject to these gates.

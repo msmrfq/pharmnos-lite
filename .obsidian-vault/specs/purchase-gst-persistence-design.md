@@ -1,15 +1,63 @@
+---
+title: Purchase GST Persistence and Workflow Design
+date: 2026-10-22
+status: OWNER AUTHORIZED - APPROVED PURCHASE GST PERSISTENCE DESIGN; MIGRATION SEPARATE
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Purchase GST Persistence and Workflow Design
 
 **Date:** 2026-10-22  
 **Time:** 22-19-01 (IST)  
 **Phase:** POST-P7 — PRE-PRODUCTION VALIDATION  
-**Status:** Design only; implementation and migration are not authorized
+**Status:** OWNER AUTHORIZED — APPROVED PURCHASE GST PERSISTENCE DESIGN;
+production migration, production data modification, and release remain
+separately governed
 
 This is the single canonical persistence proposal for the accepted purchase GST
 policy in [gst-audit-validation-and-plan.md](./gst-audit-validation-and-plan.md).
-It incorporates the read-only Prisma 5.22.0 feasibility findings. It does not
-authorize schema changes, migrations, database execution, data correction,
-production use, or workflow implementation.
+It incorporates the read-only Prisma 5.22.0 feasibility findings. The
+owner authorization permits documented GST implementation work, but this
+design does not itself authorize schema changes, migration execution,
+database execution, data correction, production use, or release.
+
+**Document responsibility and hierarchy:** The [Domestic GST Modernization
+master specification](./domestic-gst-modernization.md) is the overall scope
+and architecture entry point. This document owns detailed purchase-side GST
+persistence, data relationships, workflow/state design, and accounting
+acceptance design. The [GST Decision Closure and Engineering Contract
+Approval](./gst-decision-closure-and-engineering-contract-approval.md) owns
+owner decisions and authorization records; the [GST Accounting Decision
+Question Pack](./gst-accounting-decision-question-pack.md) owns professional
+and statutory questions; and the [GST Schema Rollout Design
+Review](./gst-schema-rollout-design-review.md) owns schema/migration rollout
+details. Read this design when a task touches purchase persistence. A master
+summary must not override this detailed contract; conflicts must be recorded
+with exact locations and remain unresolved until the responsible authority
+resolves them. The full-scope owner authorization permits documented GST
+implementation, but this design does not itself authorize migration execution.
+
+## 0.1 Owner-approved implementation boundary
+
+On **2026-10-31**, **Masum Rafique**, the Project Owner, authorized the
+complete documented GST Modernization scope, including this persistence design,
+its line-level calculated and accounting-accepted GST model, and the purchase
+pointer integrity contract. The implementation preserves supplier-declared
+line evidence as a separate immutable layer and adds nullable calculated and
+accepted snapshots to purchase lines. This owner authorization does not
+authorize production migration, production data modification, deployment, or
+release.
+
+The following policy questions remain unresolved and therefore fail closed:
+mixed GST rates, discount/freight allocation, rounding, supplier/application
+discrepancies, credit/debit notes, missing HSN/SAC, and missing or uncertain
+tax rates. The new persistence fields do not constitute approval of any
+statutory treatment.
 
 ## 1. Decisions and boundaries
 
@@ -76,7 +124,8 @@ model purchase_invoice_items {
 ```
 
 This removes the existing `purchase_id`-only ownership path. The exact complete
-schema still requires `prisma validate` before implementation authorization.
+schema still requires `prisma validate` and the applicable engineering
+evidence gates before implementation acceptance.
 
 ## 3. Purchase invoice projection
 
@@ -145,6 +194,26 @@ purchase_invoices:
 Each pointer requires a corresponding unique target on the referenced model and
 a unique three-column referencing key on `purchase_invoices`. Exact Prisma
 relation syntax must be confirmed by `prisma validate`.
+
+### 3.1 Current-pointer contract register
+
+The repository Prisma source now contains all three relation declarations. The
+following is the contract to validate before any rollout; source presence is
+not applied-database evidence.
+
+| Pointer | Referencing table/columns | Target table/columns | Tenant-aware target key | Referencing unique key | Relation / mapped constraint | Delete and lifecycle behavior | Verification |
+|---|---|---|---|---|---|---|---|
+| `current_gst_evidence_revision_id` | `purchase_invoices(tenant_id, id, current_gst_evidence_revision_id)` | `purchase_gst_evidence_revisions(tenant_id, purchase_invoice_id, id)` | `@@unique([tenant_id, purchase_invoice_id, id])` | `@@unique([tenant_id, id, current_gst_evidence_revision_id])` | `purchase_current_gst_evidence_revision` / `purchase_invoices_current_gst_evidence_fkey` | Nullable for legacy invoices; `onDelete: Restrict`; historical revisions remain valid | Prisma source present; `prisma validate`, generated SQL, runtime tests, and applied state `NOT VERIFIED` |
+| `current_gst_calculation_id` | `purchase_invoices(tenant_id, id, current_gst_calculation_id)` | `purchase_gst_calculations(tenant_id, purchase_invoice_id, id)` | `@@unique([tenant_id, purchase_invoice_id, id])` | `@@unique([tenant_id, id, current_gst_calculation_id])` | `purchase_current_gst_calculation` / `purchase_invoices_current_gst_calculation_fkey` | Nullable for legacy invoices; `onDelete: Restrict`; historical calculations remain valid | Prisma source present; `prisma validate`, generated SQL, runtime tests, and applied state `NOT VERIFIED` |
+| `current_gst_accounting_decision_id` | `purchase_invoices(tenant_id, id, current_gst_accounting_decision_id)` | `purchase_gst_accounting_decisions(tenant_id, purchase_invoice_id, id)` | `@@unique([tenant_id, purchase_invoice_id, id])` | `@@unique([tenant_id, id, current_gst_accounting_decision_id])` | `purchase_current_gst_accounting_decision` / `purchase_invoices_current_gst_accounting_decision_fkey` | Nullable for legacy invoices; `onDelete: Restrict`; historical decisions remain valid | Prisma source present; `prisma validate`, generated SQL, runtime tests, and applied state `NOT VERIFIED` |
+
+Acceptance requires successful `prisma validate`; generated SQL containing
+the expected composite foreign keys and unique constraints; rejection of
+cross-tenant and invalid-pointer references; readable valid historical
+references; and deletion behavior matching `RESTRICT`. General Q-15
+disposable-target migration/restore validation does not prove these
+pointer-specific runtime checks or applied-state behavior; no Q-15 result is
+treated as proof of them.
 
 ## 4. Immutable supplier evidence
 
@@ -474,6 +543,31 @@ that the actor is authorized or that the accepted values are legally correct.
 Line-level accepted values require a separate child decision model if line-level
 acceptance is approved as mandatory. They must never be written into supplier
 evidence.
+
+### 7.1 First-release line-level decision status
+
+No owner or accounting decision in the reviewed records approves whether
+calculated or accepted GST values must be persisted per purchase line in the
+first schema release. Therefore the first release does **not** silently choose
+invoice-only persistence or a new line-level child model.
+
+The unresolved decision must answer, separately:
+
+1. whether calculated line values are persisted;
+2. whether accepted line values are persisted;
+3. whether invoice-level values are sufficient;
+4. how mixed-rate invoices are represented;
+5. how line discrepancies and missing required components are represented;
+6. how line totals reconcile to invoice totals;
+7. whether accepted values are immutable;
+8. how future recalculation relates to accepted history; and
+9. which posting, reconciliation, reporting, and reprint workflows remain
+   blocked without line-level support.
+
+Until that decision and its field/precision matrix are approved, purchase
+line-level calculation, acceptance, and any workflow requiring those facts are
+`BLOCKED — ACCOUNTING DECISION REQUIRED`. Existing invoice-level fields and
+supplier line evidence remain separate and do not close this decision.
 
 ## 8. Append-only reconciliation events
 

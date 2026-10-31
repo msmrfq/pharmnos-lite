@@ -1,9 +1,25 @@
+---
+title: PGST-01 - D-GST Decision Traceability Register
+date: 2026-10-24
+status: OWNER AUTHORIZED - TRACEABILITY REGISTER; POLICY EVIDENCE-GATED
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # PGST-01 — D-GST Decision Traceability Register
 
 **Date:** 2026-10-24  
 **Phase:** POST-P7 — PRE-PRODUCTION VALIDATION  
-**Status:** Traceability register only; PGST-01 remains `PENDING — NOT APPROVED`  
-**Implementation authorization:** `NOT GRANTED`  
+**Status:** OWNER AUTHORIZED — TRACEABILITY REGISTER; PGST-01 POLICY EVIDENCE-GATED
+**Owner authorization:** Complete documented GST Modernization scope authorized
+by Masum Rafique on 2026-10-31 (IST).
+**Implementation authorization:** `OWNER-AUTHORIZED — EVIDENCE-GATED`
+**PGST-01 policy approval:** requires its separate professional, accounting,
+engineering, security, and evidence gates; it is not inferred from owner authorization.
 
 This register is the original and authoritative D-GST-01–D-GST-52 decision
 register and the canonical repository source, cross-referencing the decisions
@@ -194,7 +210,7 @@ snapshots.
 - **Engineering review:** `PENDING`
 - **Security/Architecture review:** `PENDING`
 - **PGST-01:** `PENDING — NOT APPROVED`
-- **Implementation authorization:** `NOT GRANTED`
+- **Implementation authorization:** `OWNER-AUTHORIZED — EVIDENCE-GATED`
 
 Alternative 3A requires separate authorized accounting acceptance before
 posting, followed by transaction-time revalidation of accepted evidence,

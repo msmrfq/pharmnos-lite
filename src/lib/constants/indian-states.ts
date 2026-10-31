@@ -1,41 +1,57 @@
-const STATE_DEFINITIONS = [
-    ["Andhra Pradesh", "AP"],
-    ["Arunachal Pradesh", "AR"],
-    ["Assam", "AS"],
-    ["Bihar", "BR"],
-    ["Chhattisgarh", "CG"],
-    ["Goa", "GA"],
-    ["Gujarat", "GJ"],
-    ["Haryana", "HR"],
-    ["Himachal Pradesh", "HP"],
-    ["Jharkhand", "JH"],
-    ["Karnataka", "KA"],
-    ["Kerala", "KL"],
-    ["Madhya Pradesh", "MP"],
-    ["Maharashtra", "MH"],
-    ["Manipur", "MN"],
-    ["Meghalaya", "ML"],
-    ["Mizoram", "MZ"],
-    ["Nagaland", "NL"],
-    ["Odisha", "OD"],
-    ["Punjab", "PB"],
-    ["Rajasthan", "RJ"],
-    ["Sikkim", "SK"],
-    ["Tamil Nadu", "TN"],
-    ["Telangana", "TG"],
-    ["Tripura", "TR"],
-    ["Uttar Pradesh", "UP"],
-    ["Uttarakhand", "UT"],
-    ["West Bengal", "WB"],
-    ["Andaman and Nicobar Islands", "AN"],
-    ["Chandigarh", "CH"],
-    ["Dadra and Nagar Haveli and Daman and Diu", "DD"],
-    ["Delhi", "DL"],
-    ["Jammu and Kashmir", "JK"],
-    ["Ladakh", "LA"],
-    ["Lakshadweep", "LD"],
-    ["Puducherry", "PY"],
-] as const;
+export type IndianRegionType = "STATE" | "UNION_TERRITORY";
+
+export type IndianRegion = {
+    readonly name: string;
+    readonly code: string;
+    readonly type: IndianRegionType;
+};
+
+export const INDIAN_STATES = [
+    { name: "Andhra Pradesh", code: "AP", type: "STATE" },
+    { name: "Arunachal Pradesh", code: "AR", type: "STATE" },
+    { name: "Assam", code: "AS", type: "STATE" },
+    { name: "Bihar", code: "BR", type: "STATE" },
+    { name: "Chhattisgarh", code: "CG", type: "STATE" },
+    { name: "Goa", code: "GA", type: "STATE" },
+    { name: "Gujarat", code: "GJ", type: "STATE" },
+    { name: "Haryana", code: "HR", type: "STATE" },
+    { name: "Himachal Pradesh", code: "HP", type: "STATE" },
+    { name: "Jharkhand", code: "JH", type: "STATE" },
+    { name: "Karnataka", code: "KA", type: "STATE" },
+    { name: "Kerala", code: "KL", type: "STATE" },
+    { name: "Madhya Pradesh", code: "MP", type: "STATE" },
+    { name: "Maharashtra", code: "MH", type: "STATE" },
+    { name: "Manipur", code: "MN", type: "STATE" },
+    { name: "Meghalaya", code: "ML", type: "STATE" },
+    { name: "Mizoram", code: "MZ", type: "STATE" },
+    { name: "Nagaland", code: "NL", type: "STATE" },
+    { name: "Odisha", code: "OD", type: "STATE" },
+    { name: "Punjab", code: "PB", type: "STATE" },
+    { name: "Rajasthan", code: "RJ", type: "STATE" },
+    { name: "Sikkim", code: "SK", type: "STATE" },
+    { name: "Tamil Nadu", code: "TN", type: "STATE" },
+    { name: "Telangana", code: "TG", type: "STATE" },
+    { name: "Tripura", code: "TR", type: "STATE" },
+    { name: "Uttar Pradesh", code: "UP", type: "STATE" },
+    { name: "Uttarakhand", code: "UT", type: "STATE" },
+    { name: "West Bengal", code: "WB", type: "STATE" },
+] as const satisfies readonly IndianRegion[];
+
+export const INDIAN_UNION_TERRITORIES = [
+    { name: "Andaman and Nicobar Islands", code: "AN", type: "UNION_TERRITORY" },
+    { name: "Chandigarh", code: "CH", type: "UNION_TERRITORY" },
+    { name: "Dadra and Nagar Haveli and Daman and Diu", code: "DD", type: "UNION_TERRITORY" },
+    { name: "Delhi", code: "DL", type: "UNION_TERRITORY" },
+    { name: "Jammu and Kashmir", code: "JK", type: "UNION_TERRITORY" },
+    { name: "Ladakh", code: "LA", type: "UNION_TERRITORY" },
+    { name: "Lakshadweep", code: "LD", type: "UNION_TERRITORY" },
+    { name: "Puducherry", code: "PY", type: "UNION_TERRITORY" },
+] as const satisfies readonly IndianRegion[];
+
+export const INDIAN_REGIONS = [
+    ...INDIAN_STATES,
+    ...INDIAN_UNION_TERRITORIES,
+] as const satisfies readonly IndianRegion[];
 
 const normalizeStateLabel = (value: string): string =>
     value
@@ -48,13 +64,13 @@ const normalizeStateLabel = (value: string): string =>
 
 export const STATE_NAME_TO_CODE = Object.freeze(
     Object.fromEntries(
-        STATE_DEFINITIONS.map(([name, code]) => [normalizeStateLabel(name), code]),
+        INDIAN_REGIONS.map(({ name, code }) => [normalizeStateLabel(name), code]),
     ) as Record<string, string>,
 );
 
 export const STATE_CODE_TO_NAME = Object.freeze(
     Object.fromEntries(
-        STATE_DEFINITIONS.map(([name, code]) => [code, name]),
+        INDIAN_REGIONS.map(({ name, code }) => [code, name]),
     ) as Record<string, string>,
 );
 

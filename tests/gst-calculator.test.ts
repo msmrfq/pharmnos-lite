@@ -14,6 +14,9 @@ import {
   STATE_NAME_TO_CODE,
   STATE_CODE_TO_NAME,
   VALID_STATE_CODES,
+  INDIAN_STATES,
+  INDIAN_UNION_TERRITORIES,
+  INDIAN_REGIONS,
 } from "../src/lib/constants/indian-states";
 
 import {
@@ -115,6 +118,19 @@ function assertClose(actual: number, expected: number, tolerance: number, messag
 }
 
 console.log("=== State Normalization Tests ===\n");
+
+assertEqual(INDIAN_STATES.length, 28, "Indian region catalog: 28 states");
+assertEqual(INDIAN_UNION_TERRITORIES.length, 8, "Indian region catalog: 8 union territories");
+assertEqual(INDIAN_REGIONS.length, 36, "Indian region catalog: 36 combined regions");
+assert(
+  new Set(INDIAN_REGIONS.map(({ code }) => code)).size === INDIAN_REGIONS.length,
+  "Indian region catalog: no duplicate codes",
+);
+assert(
+  INDIAN_STATES.every(({ type }) => type === "STATE") &&
+    INDIAN_UNION_TERRITORIES.every(({ type }) => type === "UNION_TERRITORY"),
+  "Indian region catalog: classifications are explicit",
+);
 
 // Test normalizeState with state names
 assertEqual(normalizeState("Maharashtra"), "MH", "normalizeState: Full state name 'Maharashtra'");
@@ -219,7 +235,7 @@ const parsedBusinessProfile = businessProfileSchema.parse({
   purchasePrefix: "PUR",
   nearExpiryDays: "60",
 });
-const businessProfileUpdate = toBusinessProfileUpdate(parsedBusinessProfile);
+const businessProfileUpdate = await toBusinessProfileUpdate(parsedBusinessProfile);
 assertEqual(
   businessProfileUpdate.state,
   "MH",

@@ -1,17 +1,22 @@
 "use server";
 
 import { createHash } from "node:crypto";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache.js";
+import { redirect } from "next/navigation.js";
 import { prisma, assertPostgresConfigured } from "@/lib/db/prisma";
-import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
+import { establishTenantContext, requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
 import { Prisma } from "@prisma/client";
 import type { purchase_invoices, InvoiceStatus, StockMovementType, LedgerEntryType, PermissionAction } from "@prisma/client";
-import { calculatePurchaseInvoiceTotals, calculatePurchaseLineTotals } from "@/domain/services/purchase-calculator.service";
+import {
+  calculatePurchaseInvoiceTotals,
+  calculatePurchaseLineGst,
+  calculatePurchaseLineTotals,
+} from "@/domain/services/purchase-calculator.service";
 import {
   calculatePurchaseGstExpected,
   canCompletePurchaseAccounting,
+  reconcilePurchaseGstLineEvidence,
   reconcilePurchaseGstEvidence,
   resolvePurchaseGstReconciliation,
   type AccountingAcceptedPurchaseGst,
@@ -22,12 +27,16 @@ import {
   PurchaseInvoiceCreateSchema,
   PurchaseInvoiceLineCreateSchema,
   PurchaseGstAcceptanceSchema,
+  PurchaseGstResolutionLineSchema,
   PurchaseGstResolutionSchema,
   StockAdjustmentSchema,
   STORAGE_PURCHASE_STATUS_DRAFT,
   STORAGE_PURCHASE_STATUS_FINALIZED,
   STORAGE_PURCHASE_STATUS_CANCELLED,
 } from "@/lib/validation/purchases.schemas";
+import { validateGstTreatment } from "@/lib/gst/treatment";
+import { resolvePurchaseSupplyFacts } from "@/lib/gst/place-of-supply";
+import { isApprovedGstClassification, resolveApprovedGstRule } from "@/lib/gst/rule-governance";
 
 const __PurchaseStatusDRAFT: InvoiceStatus = "DRAFT";
 const __PurchaseStatusFINALIZED: InvoiceStatus = "FINALIZED";
@@ -41,7 +50,6 @@ function round2(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.round(value * 100) / 100;
 }
-
 function flattenFieldErrors(zodFieldErrors: Record<string, any>): Record<string, string[] | undefined> {
   const out: Record<string, string[] | undefined> = {};
   for (const key of Object.keys(zodFieldErrors)) {
@@ -86,7 +94,32 @@ function formDataToPurchaseObject(formData: FormData): Record<string, any> {
     if (key.startsWith("lines[")) continue;
     out[key] = value === null ? "" : String(value);
   }
+
   return out;
+}
+
+function parseIndexedPurchaseGstResolutionLines(formData: FormData): any[] {
+  const lines: Array<Record<string, any>> = [];
+  for (const [rawKey, value] of formData.entries()) {
+    const match = String(rawKey).match(/^gst_lines\[(\d+)\]\.(.+)$/);
+    if (!match) continue;
+    const index = Number(match[1]);
+    if (!Number.isInteger(index)) continue;
+    while (lines.length <= index) lines.push({});
+    const line = lines[index];
+    const field = match[2];
+    if (!line || !field) continue;
+    line[field] = value === null || value === undefined ? "" : String(value);
+  }
+  return lines.filter((line) => Object.keys(line).length > 0);
+}
+
+function fixedAmount(value: unknown): number {
+  return Number(Number(value ?? 0).toFixed(4));
+}
+
+function amountsEqual(left: unknown, right: unknown): boolean {
+  return fixedAmount(left) === fixedAmount(right);
 }
 
 function decimalOrNull(value: unknown): number | null {
@@ -97,6 +130,77 @@ function decimalOrNull(value: unknown): number | null {
 
   function requestHash(value: unknown): string {
     return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  }
+
+  async function resolvePurchaseLineRules(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    lines: any[],
+    effectiveAt: Date,
+  ) {
+    const productIds = Array.from(new Set(lines.map((line) => String(line.product_id))));
+    const products = await tx.products.findMany({
+      where: { tenant_id: tenantId, id: { in: productIds } },
+      select: { id: true, hsn_code: true },
+    });
+    const productsById = new Map(products.map((product) => [product.id, product]));
+    const codes = Array.from(new Set(products.map((product) => product.hsn_code).filter((code): code is string => Boolean(code?.trim()))));
+    const classifications = await tx.hsn_sac_catalog.findMany({
+      where: { tenant_id: tenantId, code: { in: codes } },
+      select: {
+        id: true,
+        code: true,
+        classification_status: true,
+        effective_from: true,
+        effective_to: true,
+        is_active: true,
+        source_reference: true,
+      },
+    });
+    const classificationsByCode = new Map(classifications.map((classification) => [classification.code, classification]));
+    const rules = await tx.gst_rate_rules.findMany({
+      where: { tenant_id: tenantId, effective_from: { lte: effectiveAt } },
+      select: {
+        id: true,
+        hsn_sac_catalog_id: true,
+        rule_version: true,
+        tax_rate: true,
+        component_policy: true,
+        approval_status: true,
+        source_reference: true,
+        effective_from: true,
+        effective_to: true,
+        is_active: true,
+      },
+    });
+
+    return lines.map((line) => {
+      const product = productsById.get(String(line.product_id));
+      if (!product) throw new Error("Purchase line product is missing or belongs to another tenant.");
+      const code = product.hsn_code?.trim();
+      const classification = code ? classificationsByCode.get(code) : undefined;
+      if (!classification || !isApprovedGstClassification(classification, effectiveAt)) {
+        throw new Error(`Purchase GST calculation is blocked: HSN/SAC ${code || "(missing)"} is not approved and effective.`);
+      }
+      const resolution = resolveApprovedGstRule(
+        rules
+          .filter((rule) => rule.hsn_sac_catalog_id === classification.id)
+          .map((rule) => ({ ...rule, tax_rate: rule.tax_rate === null ? null : Number(rule.tax_rate) })),
+        effectiveAt,
+        classification.id,
+      );
+      if (!resolution.ok || resolution.rule.tax_rate === null) {
+        throw new Error(`Purchase GST calculation is blocked: exactly one approved GST rule is required for HSN/SAC ${code}.`);
+      }
+      return {
+        ...line,
+        gst_rate: Number(resolution.rule.tax_rate),
+        hsn_sac_code: classification.code,
+        hsn_sac_catalog_id: classification.id,
+        rule_version: resolution.rule.rule_version,
+        rule_source_reference: resolution.rule.source_reference,
+      };
+    });
   }
 
   function purchaseAmountFactsFromRecord(record: {
@@ -161,6 +265,7 @@ async function persistPurchaseGstEvidence(
     membershipId: string,
     data: any,
     totals: { gross_amount: number; total_discount: number; total_tax: number; round_off: number; net_amount: number },
+    governedLines: any[],
     options?: {
       revisionNumber?: number;
       supersedesRevisionId?: string;
@@ -169,13 +274,10 @@ async function persistPurchaseGstEvidence(
   ) {
     const declared = purchaseGstEvidenceFromData(data);
     if (!declared) return null;
-    const supplyFacts = {
-      supplier_state_at_transaction: String(data.supplier_state_at_transaction).trim(),
-      recipient_state_at_transaction: String(data.recipient_state_at_transaction).trim(),
-      delivery_state_at_transaction: String(data.delivery_state_at_transaction).trim(),
-      supply_scenario: data.supply_scenario,
-    } as const;
-    const calculated = calculatePurchaseGstExpected(totals, supplyFacts);
+    const supplyFactsResult = resolvePurchaseSupplyFacts(data);
+    if (!supplyFactsResult.ok) throw new Error(supplyFactsResult.error);
+    const supplyFacts = supplyFactsResult.facts;
+    const calculated = calculatePurchaseGstExpected(totals, supplyFacts, governedLines);
     const reconciliation = reconcilePurchaseGstEvidence(declared, calculated);
     const evidence = await tx.purchase_gst_evidence_revisions.create({
       data: {
@@ -223,7 +325,11 @@ async function persistPurchaseGstEvidence(
         calculated_cess: calculated.amounts.cess,
         calculated_invoice_total: calculated.amounts.invoice_total,
         calculated_round_off: calculated.amounts.round_off,
-        calculation_provenance: { source: "purchase-gst-rules-v1", supply_facts: supplyFacts },
+        calculation_provenance: {
+          source: "purchase-gst-governed-line-rules",
+          supply_facts: supplyFacts,
+          line_calculations: calculated.line_calculations ?? [],
+        },
       },
     });
     const event = await tx.purchase_gst_reconciliation_events.create({
@@ -254,13 +360,37 @@ async function persistPurchaseGstEvidence(
     const purchaseItems = await tx.purchase_invoice_items.findMany({
       where: { tenant_id: tenantId, purchase_id: purchaseId },
       orderBy: { created_at: "asc" },
-      select: { id: true },
+      select: { id: true, product: { select: { hsn_code: true } } },
     });
     const lines = Array.isArray(data.lines) ? data.lines : [];
     for (let index = 0; index < lines.length; index += 1) {
       const line = lines[index];
       const item = purchaseItems[index];
       if (!item) continue;
+      if (data.supply_scenario) {
+        const governedLine = governedLines[index];
+        const lineGst = calculatePurchaseLineGst(governedLine ?? line, data.supply_scenario);
+        await tx.purchase_invoice_items.update({
+          where: { id: item.id },
+          data: {
+            hsn_code_snapshot: item.product?.hsn_code ?? governedLine?.hsn_sac_code ?? line.hsn_code ?? null,
+            calculated_taxable_value: lineGst.taxable_value,
+            calculated_cgst: lineGst.cgst,
+            calculated_sgst: lineGst.sgst,
+            calculated_igst: lineGst.igst,
+            calculated_cess: lineGst.cess,
+            gst_calculation_reference: governedLine?.rule_version ?? calculated.rule_version,
+          },
+        });
+        await tx.$executeRaw(Prisma.sql`
+          UPDATE "purchase_invoice_items"
+          SET
+            "hsn_sac_catalog_id_snapshot" = ${governedLine?.hsn_sac_catalog_id ?? null},
+            "gst_rule_version_snapshot" = ${governedLine?.rule_version ?? null},
+            "gst_rule_source_reference_snapshot" = ${governedLine?.rule_source_reference ?? null}
+          WHERE "id" = ${item.id} AND "tenant_id" = ${tenantId}
+        `);
+      }
       const lineFields = [
         "declared_taxable_value",
         "declared_cgst",
@@ -270,6 +400,20 @@ async function persistPurchaseGstEvidence(
         "declared_line_total",
       ];
       if (!lineFields.some((field) => line[field] !== undefined && line[field] !== "")) continue;
+      const expectedLine = calculated.line_calculations?.[index];
+      const lineReconciliation = expectedLine
+        ? reconcilePurchaseGstLineEvidence(
+            {
+              taxable_value: decimalOrNull(line.declared_taxable_value),
+              cgst: decimalOrNull(line.declared_cgst),
+              sgst: decimalOrNull(line.declared_sgst),
+              igst: decimalOrNull(line.declared_igst),
+              cess: decimalOrNull(line.declared_cess),
+              line_total: decimalOrNull(line.declared_line_total),
+            },
+            expectedLine.amounts,
+          )
+        : { status: "DISCREPANCY_REQUIRES_REVIEW" as const, differing_fields: ["calculation"] };
       const lineEvidence = await tx.purchase_gst_line_evidence.create({
         data: {
           tenant_id: tenantId,
@@ -297,6 +441,15 @@ async function persistPurchaseGstEvidence(
           evidence_revision_id: evidence.id,
           event_id: event.id,
           line_evidence_id: lineEvidence.id,
+        },
+      });
+      await tx.purchase_invoice_items.update({
+        where: { id: item.id },
+        data: {
+          gst_discrepancy_details: {
+            status: lineReconciliation.status,
+            differing_fields: lineReconciliation.differing_fields,
+          },
         },
       });
     }
@@ -354,18 +507,30 @@ export async function createPurchaseDraftAction(
     const ctx = await requireServerTenantContext();
     requirePermission(ctx, "create_purchase" as PermissionAction);
     const data = { ...parsed.data, lines: linesParsed };
-    const gstEvidence = purchaseGstEvidenceFromData(data);
-    const membership = gstEvidence
-      ? await prisma.memberships.findFirst({
-          where: { tenant_id: ctx.tenantId, user_id: ctx.userId, status: "active" },
-          select: { id: true },
-        })
-      : null;
-    if (gstEvidence && !membership) {
-      return { ok: false, message: "Active tenant membership is required to capture GST evidence.", errors: undefined };
+    const treatment = validateGstTreatment(data.gst_treatment);
+    if (!treatment.ok) {
+      return { ok: false, message: treatment.error, errors: { gst_treatment: [treatment.error ?? "Invalid GST treatment."] } };
     }
+    const hasSupplyFacts = [
+      data.supplier_state_at_transaction,
+      data.recipient_state_at_transaction,
+      data.delivery_state_at_transaction,
+      data.supply_scenario,
+    ].some((value) => String(value ?? "").trim() !== "");
+    if (hasSupplyFacts) {
+      const supplyFacts = resolvePurchaseSupplyFacts(data);
+      if (!supplyFacts.ok) {
+        return {
+          ok: false,
+          message: supplyFacts.error,
+          errors: { supply_facts: [supplyFacts.error] },
+        };
+      }
+    }
+    const gstEvidence = purchaseGstEvidenceFromData(data);
 
     const invoice = await prisma.$transaction(async (tx) => {
+      await establishTenantContext(tx, ctx);
       const created = await tx.purchase_invoices.create({
         data: {
           tenant_id: ctx.tenantId,
@@ -375,6 +540,8 @@ export async function createPurchaseDraftAction(
           supplier_invoice_no: data.supplier_invoice_no ?? null,
           invoice_date: data.invoice_date instanceof Date ? data.invoice_date : new Date(data.invoice_date as any),
           status: __PurchaseStatusDRAFT,
+          gst_treatment: treatment.treatment,
+          tax_mode: data.tax_mode,
           gross_amount: Number(data.gross_amount ?? 0),
           total_discount: Number(data.total_discount ?? 0),
           total_tax: Number(data.total_tax ?? 0),
@@ -386,8 +553,14 @@ export async function createPurchaseDraftAction(
         },
       });
 
-      const itemsData = linesParsed.map((line: any, idx: number) => {
+      const governedLines = data.supply_scenario
+        ? await resolvePurchaseLineRules(tx, ctx.tenantId, linesParsed, created.invoice_date)
+        : linesParsed;
+      const itemsData = governedLines.map((line: any) => {
         const totals = calculatePurchaseLineTotals(line);
+        const lineGst = data.supply_scenario
+          ? calculatePurchaseLineGst(line, data.supply_scenario)
+          : null;
         return {
           tenant_id: ctx.tenantId,
           purchase_id: created.id,
@@ -401,6 +574,13 @@ export async function createPurchaseDraftAction(
           discount_amount: totals.discount_amount,
           gst_rate: Number(line.gst_rate ?? 0),
           gst_amount: totals.gst_amount,
+          hsn_code_snapshot: line.hsn_sac_code ? String(line.hsn_sac_code) : null,
+          calculated_taxable_value: lineGst?.taxable_value ?? null,
+          calculated_cgst: lineGst?.cgst ?? null,
+          calculated_sgst: lineGst?.sgst ?? null,
+          calculated_igst: lineGst?.igst ?? null,
+          calculated_cess: lineGst?.cess ?? null,
+          gst_calculation_reference: line.rule_version ?? null,
           mrp: line.mrp ? Number(line.mrp) : null,
           sale_rate: line.sale_rate ? Number(line.sale_rate) : null,
           line_total: totals.line_total,
@@ -411,12 +591,32 @@ export async function createPurchaseDraftAction(
       if (itemsData.length > 0) {
         await tx.purchase_invoice_items.createMany({ data: itemsData });
       }
-      if (gstEvidence && membership) {
+      if (data.supply_scenario) {
+        const createdItems = await tx.purchase_invoice_items.findMany({
+          where: { tenant_id: ctx.tenantId, purchase_id: created.id },
+          orderBy: { created_at: "asc" },
+          select: { id: true },
+        });
+        for (let index = 0; index < governedLines.length; index += 1) {
+          const line = governedLines[index];
+          const item = createdItems[index];
+          if (!item) continue;
+          await tx.$executeRaw(Prisma.sql`
+            UPDATE "purchase_invoice_items"
+            SET
+              "hsn_sac_catalog_id_snapshot" = ${line.hsn_sac_catalog_id ?? null},
+              "gst_rule_version_snapshot" = ${line.rule_version ?? null},
+              "gst_rule_source_reference_snapshot" = ${line.rule_source_reference ?? null}
+            WHERE "id" = ${item.id} AND "tenant_id" = ${ctx.tenantId}
+          `);
+        }
+      }
+      if (gstEvidence) {
         await persistPurchaseGstEvidence(
           tx,
           ctx.tenantId,
           created.id,
-          membership.id,
+          ctx.membershipId,
           data,
           {
             gross_amount: Number(data.gross_amount ?? 0),
@@ -425,6 +625,7 @@ export async function createPurchaseDraftAction(
             round_off: Number(data.round_off ?? 0),
             net_amount: Number(data.net_amount ?? 0),
           },
+          governedLines,
         );
       }
 
@@ -461,13 +662,8 @@ export async function acceptPurchaseGstAction(
 
     const ctx = await requireServerTenantContext();
     requirePermission(ctx, "accept_purchase_gst" as PermissionAction);
-    const membership = await prisma.memberships.findFirst({
-      where: { tenant_id: ctx.tenantId, user_id: ctx.userId, status: "active" },
-      select: { id: true },
-    });
-    if (!membership) return { ok: false, message: "Active tenant membership is required.", errors: undefined };
-
     const accepted = await prisma.$transaction(async (tx) => {
+      await establishTenantContext(tx, ctx);
       const purchase = await tx.purchase_invoices.findUnique({
         where: { id: purchaseId, tenant_id: ctx.tenantId },
       });
@@ -548,9 +744,39 @@ export async function acceptPurchaseGstAction(
           decision_reference: parsed.data.decision_reference,
           decision_outcome: "ACCEPTED",
           rationale: parsed.data.rationale,
-          decided_by_membership_id: membership.id,
+          decided_by_membership_id: ctx.membershipId,
         },
       });
+      await tx.$executeRaw(Prisma.sql`
+        UPDATE "purchase_invoice_items" AS item
+        SET
+          "accepted_taxable_value" = CASE WHEN ${source} = 'SUPPLIER_DECLARED'
+            THEN line."declared_taxable_value" ELSE item."calculated_taxable_value" END,
+          "accepted_cgst" = CASE WHEN ${source} = 'SUPPLIER_DECLARED'
+            THEN line."declared_cgst" ELSE item."calculated_cgst" END,
+          "accepted_sgst" = CASE WHEN ${source} = 'SUPPLIER_DECLARED'
+            THEN line."declared_sgst" ELSE item."calculated_sgst" END,
+          "accepted_igst" = CASE WHEN ${source} = 'SUPPLIER_DECLARED'
+            THEN line."declared_igst" ELSE item."calculated_igst" END,
+          "accepted_cess" = CASE WHEN ${source} = 'SUPPLIER_DECLARED'
+            THEN line."declared_cess" ELSE item."calculated_cess" END,
+          "accepted_line_total" = CASE WHEN ${source} = 'SUPPLIER_DECLARED'
+            THEN line."declared_line_total" ELSE item."line_total" END,
+          "accepted_value_source" = ${source},
+          "accepted_reason" = ${parsed.data.rationale},
+          "accepted_at" = CURRENT_TIMESTAMP,
+          "accepted_by_membership_id" = ${ctx.membershipId},
+          "accepted_decision_id" = ${decision.id},
+          "gst_acceptance_status" = 'ACCEPTED',
+          "gst_acceptance_reference" = ${parsed.data.decision_reference}
+        FROM "purchase_gst_line_evidence" AS line
+        WHERE item."tenant_id" = ${ctx.tenantId}
+          AND item."purchase_id" = ${purchase.id}
+          AND line."tenant_id" = item."tenant_id"
+          AND line."purchase_invoice_id" = item."purchase_id"
+          AND line."purchase_invoice_item_id" = item."id"
+          AND line."evidence_revision_id" = ${evidence.id}
+      `);
       const updated = await tx.purchase_invoices.updateMany({
         where: {
           id: purchase.id,
@@ -578,7 +804,7 @@ export async function acceptPurchaseGstAction(
           idempotency_key: `purchase:${purchase.id}:gst-accept:${parsed.data.decision_reference}`,
           decision_reference: parsed.data.decision_reference,
           rule_version: calculation.rule_version,
-          actor_membership_id: membership.id,
+          actor_membership_id: ctx.membershipId,
           accepted_snapshot: acceptedValues,
           metadata: { calculation_id: calculation.id },
         },
@@ -600,11 +826,29 @@ export async function resolvePurchaseGstDiscrepancyAction(
     assertPostgresConfigured("resolvePurchaseGstDiscrepancyAction");
     const parsed = PurchaseGstResolutionSchema.safeParse(formDataToPurchaseObject(formData));
     if (!parsed.success) return { ok: false, message: "A resolution decision, rationale, source, and complete accepted values are required.", errors: flattenFieldErrors(parsed.error.flatten().fieldErrors) };
+    const lineInputsRaw = parseIndexedPurchaseGstResolutionLines(formData);
+    const lineInputs: any[] = [];
+    const lineInputErrors: Record<string, string[] | undefined> = {};
+    for (let index = 0; index < lineInputsRaw.length; index += 1) {
+      const lineParsed = PurchaseGstResolutionLineSchema.safeParse(lineInputsRaw[index]);
+      if (!lineParsed.success) {
+        Object.assign(lineInputErrors, flattenFieldErrors(lineParsed.error.flatten().fieldErrors));
+      } else {
+        lineInputs.push(lineParsed.data);
+      }
+    }
+    if (parsed.data.accepted_value_source === "EXPLICIT_DECISION" &&
+        (lineInputs.length === 0 || Object.keys(lineInputErrors).length > 0)) {
+      return {
+        ok: false,
+        message: "Explicit discrepancy resolution requires complete accepted values for every purchase line.",
+        errors: lineInputErrors,
+      };
+    }
     const ctx = await requireServerTenantContext();
     requirePermission(ctx, "accept_purchase_gst" as PermissionAction);
-    const membership = await prisma.memberships.findFirst({ where: { tenant_id: ctx.tenantId, user_id: ctx.userId, status: "active" }, select: { id: true } });
-    if (!membership) return { ok: false, message: "Active tenant membership is required.", errors: undefined };
     const result = await prisma.$transaction(async (tx) => {
+      await establishTenantContext(tx, ctx);
       const purchase = await tx.purchase_invoices.findUnique({ where: { id: purchaseId, tenant_id: ctx.tenantId } });
       if (!purchase || purchase.status !== __PurchaseStatusDRAFT) throw new Error("Only an existing draft purchase can be resolved.");
       if (!purchase.current_gst_evidence_revision_id || !purchase.current_gst_calculation_id) throw new Error("Current GST evidence and calculation are required.");
@@ -612,6 +856,16 @@ export async function resolvePurchaseGstDiscrepancyAction(
       const evidence = await tx.purchase_gst_evidence_revisions.findFirst({ where: { tenant_id: ctx.tenantId, purchase_invoice_id: purchase.id, id: purchase.current_gst_evidence_revision_id } });
       const calculation = await tx.purchase_gst_calculations.findFirst({ where: { tenant_id: ctx.tenantId, purchase_invoice_id: purchase.id, id: purchase.current_gst_calculation_id } });
       if (!evidence || !calculation) throw new Error("Current GST revisions could not be loaded.");
+      const items = await tx.purchase_invoice_items.findMany({
+        where: { tenant_id: ctx.tenantId, purchase_id: purchase.id },
+        orderBy: [{ created_at: "asc" }, { id: "asc" }],
+      });
+      const lineEvidence = await tx.purchase_gst_line_evidence.findMany({
+        where: { tenant_id: ctx.tenantId, purchase_invoice_id: purchase.id, evidence_revision_id: evidence.id },
+      });
+      if (items.length === 0 || lineEvidence.length !== items.length) {
+        throw new Error("Every purchase line requires current supplier GST evidence before resolution.");
+      }
       const reconciliation = reconcilePurchaseGstEvidence(
         {
           source_document_reference: evidence.source_document_reference,
@@ -651,11 +905,54 @@ export async function resolvePurchaseGstDiscrepancyAction(
         source: parsed.data.accepted_value_source,
         decision_reference: parsed.data.decision_reference,
       } as AccountingAcceptedPurchaseGst;
+      const evidenceByItem = new Map(lineEvidence.map((line) => [line.purchase_invoice_item_id, line]));
+      const inputByItem = new Map(lineInputs.map((line) => [line.item_id, line]));
+      if (inputByItem.size !== lineInputs.length || (parsed.data.accepted_value_source === "EXPLICIT_DECISION" && inputByItem.size !== items.length)) {
+        throw new Error("Each purchase line must have exactly one accepted-value decision.");
+      }
+      const acceptedLineValues = items.map((item) => {
+        const supplierLine = evidenceByItem.get(item.id);
+        const explicitLine = inputByItem.get(item.id);
+        if (!supplierLine) throw new Error("A purchase line is missing supplier GST evidence.");
+        if (parsed.data.accepted_value_source === "EXPLICIT_DECISION") {
+          if (!explicitLine) throw new Error("Explicit accepted values are missing for a purchase line.");
+          return explicitLine;
+        }
+        const useSupplier = parsed.data.accepted_value_source === "SUPPLIER_DECLARED";
+        return {
+          item_id: item.id,
+          accepted_taxable_value: fixedAmount(useSupplier ? supplierLine.declared_taxable_value : item.calculated_taxable_value),
+          accepted_cgst: fixedAmount(useSupplier ? supplierLine.declared_cgst : item.calculated_cgst),
+          accepted_sgst: fixedAmount(useSupplier ? supplierLine.declared_sgst : item.calculated_sgst),
+          accepted_igst: fixedAmount(useSupplier ? supplierLine.declared_igst : item.calculated_igst),
+          accepted_cess: fixedAmount(useSupplier ? supplierLine.declared_cess : item.calculated_cess),
+          accepted_line_total: fixedAmount(useSupplier ? supplierLine.declared_line_total : item.line_total),
+          line_reason: parsed.data.rationale,
+        };
+      });
+      const lineTotals = acceptedLineValues.reduce((totals, line) => ({
+        taxable_value: totals.taxable_value + fixedAmount(line.accepted_taxable_value),
+        cgst: totals.cgst + fixedAmount(line.accepted_cgst),
+        sgst: totals.sgst + fixedAmount(line.accepted_sgst),
+        igst: totals.igst + fixedAmount(line.accepted_igst),
+        cess: totals.cess + fixedAmount(line.accepted_cess),
+        invoice_total: totals.invoice_total + fixedAmount(line.accepted_line_total),
+      }), { taxable_value: 0, cgst: 0, sgst: 0, igst: 0, cess: 0, invoice_total: 0 });
+      const aggregateChecks = [
+        ["taxable value", lineTotals.taxable_value, accepted.amounts.taxable_value],
+        ["CGST", lineTotals.cgst, accepted.amounts.cgst],
+        ["SGST", lineTotals.sgst, accepted.amounts.sgst],
+        ["IGST", lineTotals.igst, accepted.amounts.igst],
+        ["cess", lineTotals.cess, accepted.amounts.cess],
+        ["invoice total", lineTotals.invoice_total + fixedAmount(accepted.amounts.round_off), accepted.amounts.invoice_total],
+      ];
+      const mismatch = aggregateChecks.find(([, lineValue, aggregateValue]) => !amountsEqual(lineValue, aggregateValue));
+      if (mismatch) throw new Error(`Accepted line values do not reconcile to the invoice ${mismatch[0]}.`);
       const resolved = resolvePurchaseGstReconciliation(reconciliation, {
         decision_reference: parsed.data.decision_reference,
         decision: parsed.data.decision,
         rationale: parsed.data.rationale,
-        approved_by: membership.id,
+        approved_by: ctx.membershipId,
         resolved_at: new Date().toISOString(),
         accepted,
       });
@@ -677,9 +974,35 @@ export async function resolvePurchaseGstDiscrepancyAction(
           decision_reference: accepted.decision_reference,
           decision_outcome: "RESOLVED_ACCEPTED",
           rationale: parsed.data.rationale,
-          decided_by_membership_id: membership.id,
+          decided_by_membership_id: ctx.membershipId,
         },
       });
+      for (const line of acceptedLineValues) {
+        const updatedLine = await tx.purchase_invoice_items.updateMany({
+          where: {
+            tenant_id: ctx.tenantId,
+            purchase_id: purchase.id,
+            id: line.item_id,
+            accepted_decision_id: null,
+          },
+          data: {
+            accepted_taxable_value: line.accepted_taxable_value,
+            accepted_cgst: line.accepted_cgst,
+            accepted_sgst: line.accepted_sgst,
+            accepted_igst: line.accepted_igst,
+            accepted_cess: line.accepted_cess,
+            accepted_line_total: line.accepted_line_total,
+            accepted_value_source: accepted.source,
+            accepted_reason: line.line_reason,
+            accepted_at: new Date(),
+            accepted_by_membership_id: ctx.membershipId,
+            accepted_decision_id: decision.id,
+            gst_acceptance_status: "ACCEPTED",
+            gst_acceptance_reference: accepted.decision_reference,
+          },
+        });
+        if (updatedLine.count !== 1) throw new Error("A purchase line was already accepted or changed while resolving.");
+      }
       const updated = await tx.purchase_invoices.updateMany({
         where: { id: purchase.id, tenant_id: ctx.tenantId, gst_record_version: purchase.gst_record_version, current_gst_evidence_revision_id: evidence.id, current_gst_calculation_id: calculation.id, gst_reconciliation_status: "DISCREPANCY_REQUIRES_REVIEW", gst_accounting_acceptance_status: "NOT_ACCEPTED" },
         data: { current_gst_accounting_decision_id: decision.id, gst_reconciliation_status: "RESOLVED", gst_accounting_acceptance_status: "ACCEPTED", gst_record_version: { increment: 1 } },
@@ -697,7 +1020,7 @@ export async function resolvePurchaseGstDiscrepancyAction(
           idempotency_key: `purchase:${purchase.id}:gst-resolve:${accepted.decision_reference}`,
           decision_reference: accepted.decision_reference,
           rule_version: calculation.rule_version,
-          actor_membership_id: membership.id,
+          actor_membership_id: ctx.membershipId,
           declared_snapshot: reconciliation,
           calculated_snapshot: { rule_version: calculation.rule_version, amounts: resolved.comparisons },
           accepted_snapshot: accepted,
@@ -721,24 +1044,28 @@ export async function correctPurchaseGstEvidenceAction(
     assertPostgresConfigured("correctPurchaseGstEvidenceAction");
     const ctx = await requireServerTenantContext();
     requirePermission(ctx, "accept_purchase_gst" as PermissionAction);
-    const membership = await prisma.memberships.findFirst({ where: { tenant_id: ctx.tenantId, user_id: ctx.userId, status: "active" }, select: { id: true } });
-    if (!membership) return { ok: false, message: "Active tenant membership is required.", errors: undefined };
     const data = formDataToPurchaseObject(formData);
     if (!String(data.correction_reason ?? "").trim()) return { ok: false, message: "Correction reason is required.", errors: undefined };
     const result = await prisma.$transaction(async (tx) => {
+      await establishTenantContext(tx, ctx);
       const purchase = await tx.purchase_invoices.findUnique({ where: { id: purchaseId, tenant_id: ctx.tenantId } });
       if (!purchase || purchase.status !== __PurchaseStatusDRAFT) throw new Error("Only a draft purchase can be corrected.");
       if (!purchase.current_gst_evidence_revision_id) throw new Error("Current GST evidence is required.");
       const current = await tx.purchase_gst_evidence_revisions.findFirst({ where: { tenant_id: ctx.tenantId, purchase_invoice_id: purchase.id, id: purchase.current_gst_evidence_revision_id } });
       if (!current) throw new Error("Current GST evidence could not be loaded.");
       const nextRevision = await tx.purchase_gst_evidence_revisions.count({ where: { tenant_id: ctx.tenantId, purchase_invoice_id: purchase.id } }) + 1;
-      await persistPurchaseGstEvidence(tx, ctx.tenantId, purchase.id, membership.id, data, {
+      const currentItems = await tx.purchase_invoice_items.findMany({
+        where: { tenant_id: ctx.tenantId, purchase_id: purchase.id },
+        select: { product_id: true, quantity: true, purchase_rate: true, discount_pct: true, gst_rate: true },
+      });
+      const governedLines = await resolvePurchaseLineRules(tx, ctx.tenantId, currentItems, purchase.invoice_date);
+      await persistPurchaseGstEvidence(tx, ctx.tenantId, purchase.id, ctx.membershipId, data, {
         gross_amount: Number(purchase.gross_amount),
         total_discount: Number(purchase.total_discount),
         total_tax: Number(purchase.total_tax),
         round_off: Number(purchase.round_off),
         net_amount: Number(purchase.net_amount),
-      }, { revisionNumber: nextRevision, supersedesRevisionId: current.id, correctionReason: String(data.correction_reason).trim() });
+      }, governedLines, { revisionNumber: nextRevision, supersedesRevisionId: current.id, correctionReason: String(data.correction_reason).trim() });
       return { id: purchase.id };
     });
     revalidatePath("/purchases");
@@ -794,6 +1121,15 @@ export async function finalizePurchaseAction(
     const idempotencyKey = String(formData.get("idempotency_key") ?? `purchase:${purchaseId}:finalize`);
 
     const invoice = await prisma.$transaction(async (tx) => {
+      await establishTenantContext(tx, ctx);
+      await tx.$executeRaw(Prisma.sql`
+        SELECT pg_advisory_xact_lock(
+          hashtextextended(
+            concat(CAST(${ctx.tenantId} AS text), ':purchase:', CAST(${idempotencyKey} AS text)),
+            0
+          )
+        )
+      `);
       const existing = await tx.purchase_invoices.findUnique({
         where: { id: purchaseId, tenant_id: ctx.tenantId },
         include: { supplier: true, items: true },
@@ -801,52 +1137,17 @@ export async function finalizePurchaseAction(
       if (!existing) {
         throw new Error("Purchase not found.");
       }
-      const postingPayload = {
-        purchase_id: purchaseId,
-        supplier_invoice_no: existing.supplier_invoice_no,
-        gst_record_version: existing.gst_record_version,
-        current_gst_evidence_revision_id: existing.current_gst_evidence_revision_id,
-        current_gst_calculation_id: existing.current_gst_calculation_id,
-        current_gst_accounting_decision_id: existing.current_gst_accounting_decision_id,
-        totals: {
-          gross_amount: String(existing.gross_amount),
-          total_discount: String(existing.total_discount),
-          total_tax: String(existing.total_tax),
-          round_off: String(existing.round_off),
-          net_amount: String(existing.net_amount),
-        },
-        items: existing.items.map((item) => ({
-          product_id: item.product_id,
-          batch_no: item.batch_no,
-          expiry_date: item.expiry_date?.toISOString() ?? null,
-          quantity: item.quantity,
-          free_qty: item.free_qty,
-          purchase_rate: String(item.purchase_rate),
-          discount_pct: item.discount_pct === null ? null : String(item.discount_pct),
-          discount_amount: String(item.discount_amount),
-          gst_rate: String(item.gst_rate),
-          gst_amount: String(item.gst_amount),
-          mrp: item.mrp === null ? null : String(item.mrp),
-          sale_rate: item.sale_rate === null ? null : String(item.sale_rate),
-          line_total: String(item.line_total),
-        })),
-      };
-      const payloadHash = requestHash(postingPayload);
-      const priorOperation = await tx.purchase_posting_operations.findUnique({
-        where: { tenant_id_idempotency_key: { tenant_id: ctx.tenantId, idempotency_key: idempotencyKey } },
-      });
-      if (priorOperation) {
-        if (priorOperation.request_payload_hash !== payloadHash) {
-          throw new Error("This idempotency key was already used with a different purchase payload.");
-        }
-        if (priorOperation.status === "COMPLETED") return existing;
-        throw new Error("This purchase finalization is already being processed; retry with the same key.");
-      }
-      if (existing.status === __PurchaseStatusFINALIZED) {
-        throw new Error("Purchase already finalized.");
-      }
       if (existing.status !== __PurchaseStatusDRAFT) {
-        throw new Error("Only draft purchases can be finalized.");
+        if (existing.status !== __PurchaseStatusFINALIZED) {
+          throw new Error("Only draft purchases can be finalized.");
+        }
+      }
+      const treatment = validateGstTreatment(existing.gst_treatment);
+      if (!treatment.ok) {
+        throw new Error(treatment.error ?? "GST treatment must be selected before finalization.");
+      }
+      if (existing.tax_mode !== "EXCLUSIVE") {
+        throw new Error("Only tax-exclusive GST purchases are enabled for finalization.");
       }
       if (!existing.supplier) {
         throw new Error("Supplier not found.");
@@ -870,6 +1171,7 @@ export async function finalizePurchaseAction(
       if (items.length === 0) {
         throw new Error("No line items found.");
       }
+      const governedLines = await resolvePurchaseLineRules(tx, ctx.tenantId, items, existing.invoice_date);
       const gstEvidence = existing.current_gst_evidence_revision_id
         ? await tx.purchase_gst_evidence_revisions.findFirst({
             where: {
@@ -909,31 +1211,12 @@ export async function finalizePurchaseAction(
           "Purchase GST finalization is blocked: supplier evidence, a versioned calculation, a reconciled state, and explicit accounting acceptance are required. The current form captures no component tax facts or accounting decision, so this draft remains saveable but cannot be finalized.",
         );
       }
-      const claimed = await tx.purchase_invoices.updateMany({
-        where: {
-          id: existing.id,
-          tenant_id: ctx.tenantId,
-          status: __PurchaseStatusDRAFT,
-          gst_record_version: existing.gst_record_version,
-        },
-        data: { status: __PurchaseStatusFINALIZED },
-      });
-      if (claimed.count !== 1) throw new Error("Purchase changed while finalization was starting; retry.");
-      await tx.purchase_posting_operations.create({
-        data: {
-          tenant_id: ctx.tenantId,
-          purchase_invoice_id: existing.id,
-          idempotency_key: idempotencyKey,
-          request_payload_hash: payloadHash,
-          status: "PROCESSING",
-        },
-      });
       if (
         gstDecision.evidence_revision_id !== gstEvidence.id ||
         gstDecision.calculation_id !== gstCalculation.id ||
         !canCompletePurchaseAccounting(
           {
-            status: existing.gst_reconciliation_status,
+            status: "MATCHED",
             source_document_reference: gstEvidence.source_document_reference,
             rule_version: gstCalculation.rule_version,
             comparisons: [],
@@ -960,25 +1243,149 @@ export async function finalizePurchaseAction(
         throw new Error("Purchase GST finalization is blocked: accounting acceptance is stale or incomplete.");
       }
 
-      const lineComputed = items.map((it: any) => calculatePurchaseLineTotals({
+      const acceptedLineTotals = items.reduce((totals, item: any) => {
+        if (
+          item.accepted_decision_id !== gstDecision.id ||
+          item.accepted_value_source !== gstDecision.accepted_value_source ||
+          item.gst_acceptance_reference !== gstDecision.decision_reference ||
+          item.accepted_taxable_value === null ||
+          item.accepted_cgst === null ||
+          item.accepted_sgst === null ||
+          item.accepted_igst === null ||
+          item.accepted_cess === null ||
+          item.accepted_line_total === null ||
+          item.accepted_at === null ||
+          item.accepted_by_membership_id === null
+        ) {
+          throw new Error("Purchase GST finalization is blocked: every line requires an immutable accounting acceptance snapshot.");
+        }
+        return {
+          taxable_value: totals.taxable_value + fixedAmount(item.accepted_taxable_value),
+          cgst: totals.cgst + fixedAmount(item.accepted_cgst),
+          sgst: totals.sgst + fixedAmount(item.accepted_sgst),
+          igst: totals.igst + fixedAmount(item.accepted_igst),
+          cess: totals.cess + fixedAmount(item.accepted_cess),
+          invoice_total: totals.invoice_total + fixedAmount(item.accepted_line_total),
+        };
+      }, { taxable_value: 0, cgst: 0, sgst: 0, igst: 0, cess: 0, invoice_total: 0 });
+      const postingAggregateChecks = [
+        ["taxable value", acceptedLineTotals.taxable_value, gstDecision.accepted_taxable_value],
+        ["CGST", acceptedLineTotals.cgst, gstDecision.accepted_cgst],
+        ["SGST", acceptedLineTotals.sgst, gstDecision.accepted_sgst],
+        ["IGST", acceptedLineTotals.igst, gstDecision.accepted_igst],
+        ["cess", acceptedLineTotals.cess, gstDecision.accepted_cess],
+        ["invoice total", acceptedLineTotals.invoice_total + fixedAmount(gstDecision.accepted_round_off), gstDecision.accepted_invoice_total],
+      ];
+      const postingMismatch = postingAggregateChecks.find(([, lineValue, aggregateValue]) => !amountsEqual(lineValue, aggregateValue));
+      if (postingMismatch) throw new Error(`Purchase GST finalization is blocked: accepted line values do not reconcile to the invoice ${postingMismatch[0]}.`);
+
+      const lineComputed = items.map((it: any, index: number) => calculatePurchaseLineTotals({
         quantity: Number(it.quantity ?? 0),
         purchase_rate: Number(it.purchase_rate ?? 0),
         discount_pct: Number(it.discount_pct ?? 0),
-        gst_rate: Number(it.gst_rate ?? 0),
+        gst_rate: Number(governedLines[index]?.gst_rate ?? 0),
       }));
       const serverTotals = calculatePurchaseInvoiceTotals(lineComputed);
+      const usesExplicitAcceptedSnapshot = gstDecision.accepted_value_source === "EXPLICIT_DECISION";
+      const acceptedPostingTotals = {
+        gross_amount: fixedAmount(gstDecision.accepted_taxable_value) + Number(existing.total_discount ?? 0),
+        total_discount: Number(existing.total_discount ?? 0),
+        total_tax: fixedAmount(gstDecision.accepted_cgst) +
+          fixedAmount(gstDecision.accepted_sgst) +
+          fixedAmount(gstDecision.accepted_igst) +
+          fixedAmount(gstDecision.accepted_cess),
+        round_off: fixedAmount(gstDecision.accepted_round_off),
+        net_amount: fixedAmount(gstDecision.accepted_invoice_total),
+      };
+      const postingTotals = usesExplicitAcceptedSnapshot ? acceptedPostingTotals : serverTotals;
+      const postingPayload = {
+        purchase_id: purchaseId,
+        supplier_invoice_no: existing.supplier_invoice_no,
+        gst_record_version: existing.gst_record_version,
+        current_gst_evidence_revision_id: existing.current_gst_evidence_revision_id,
+        current_gst_calculation_id: existing.current_gst_calculation_id,
+        current_gst_accounting_decision_id: existing.current_gst_accounting_decision_id,
+        totals: Object.fromEntries(
+          Object.entries(postingTotals).map(([key, value]) => [key, String(value)]),
+        ),
+        items: items.map((item: any) => ({
+          product_id: item.product_id,
+          batch_no: item.batch_no,
+          expiry_date: item.expiry_date?.toISOString() ?? null,
+          quantity: item.quantity,
+          free_qty: item.free_qty,
+          purchase_rate: String(item.purchase_rate),
+          discount_pct: item.discount_pct === null ? null : String(item.discount_pct),
+          discount_amount: String(item.discount_amount),
+          gst_rate: String(item.gst_rate),
+          gst_amount: String(item.gst_amount),
+          accepted_taxable_value: String(item.accepted_taxable_value),
+          accepted_cgst: String(item.accepted_cgst),
+          accepted_sgst: String(item.accepted_sgst),
+          accepted_igst: String(item.accepted_igst),
+          accepted_cess: String(item.accepted_cess),
+          accepted_line_total: String(item.accepted_line_total),
+          mrp: item.mrp === null ? null : String(item.mrp),
+          sale_rate: item.sale_rate === null ? null : String(item.sale_rate),
+          line_total: String(item.line_total),
+        })),
+      };
+      const payloadHash = requestHash(postingPayload);
+      const priorOperation = await tx.purchase_posting_operations.findUnique({
+        where: { tenant_id_idempotency_key: { tenant_id: ctx.tenantId, idempotency_key: idempotencyKey } },
+      });
+      if (priorOperation) {
+        if (priorOperation.request_payload_hash !== payloadHash) {
+          throw new Error("This idempotency key was already used with a different purchase payload.");
+        }
+        if (priorOperation.status === "COMPLETED") return existing;
+        throw new Error("This purchase finalization is already being processed; retry with the same key.");
+      }
+      if (existing.status === __PurchaseStatusFINALIZED) {
+        throw new Error("Purchase already finalized.");
+      }
+      const claimed = await tx.purchase_invoices.updateMany({
+        where: {
+          id: existing.id,
+          tenant_id: ctx.tenantId,
+          status: __PurchaseStatusDRAFT,
+          gst_record_version: existing.gst_record_version,
+        },
+        data: { status: __PurchaseStatusFINALIZED },
+      });
+      if (claimed.count !== 1) throw new Error("Purchase changed while finalization was starting; retry.");
+      await tx.purchase_posting_operations.create({
+        data: {
+          tenant_id: ctx.tenantId,
+          purchase_invoice_id: existing.id,
+          idempotency_key: idempotencyKey,
+          request_payload_hash: payloadHash,
+          status: "PROCESSING",
+        },
+      });
 
       const diffGross = Math.abs(Number(existing.gross_amount ?? 0) - serverTotals.gross_amount);
       const diffDisc = Math.abs(Number(existing.total_discount ?? 0) - serverTotals.total_discount);
       const diffTax = Math.abs(Number(existing.total_tax ?? 0) - serverTotals.total_tax);
       const diffNet = Math.abs(Number(existing.net_amount ?? 0) - serverTotals.net_amount);
-      if (diffGross > 0.01 || diffDisc > 0.01 || diffTax > 0.01 || diffNet > 0.01) {
+      if (!usesExplicitAcceptedSnapshot && (diffGross > 0.01 || diffDisc > 0.01 || diffTax > 0.01 || diffNet > 0.01)) {
         throw new Error("Totals mismatch vs calculated; please review.");
       }
 
       for (let i = 0; i < items.length; i += 1) {
         const line = items[i];
         const qty = Number(line.quantity ?? 0);
+        const governed = governedLines[i];
+        await tx.$executeRaw(Prisma.sql`
+          UPDATE "purchase_invoice_items"
+          SET
+            "hsn_sac_catalog_id_snapshot" = ${governed?.hsn_sac_catalog_id ?? null},
+            "gst_rule_version_snapshot" = ${governed?.rule_version ?? null},
+            "gst_rule_source_reference_snapshot" = ${governed?.rule_source_reference ?? null},
+            "gst_rate" = ${Number(governed?.gst_rate ?? 0)},
+            "gst_calculation_reference" = ${governed?.rule_version ?? null}
+          WHERE "id" = ${line.id} AND "tenant_id" = ${ctx.tenantId}
+        `);
         await tx.product_batches.upsert({
           where: {
             tenant_id_product_id_batch_no: {
@@ -1079,11 +1486,11 @@ export async function finalizePurchaseAction(
           invoice_no: finalInvoiceNo,
           status: __PurchaseStatusFINALIZED,
           finalized_at: new Date(),
-          gross_amount: serverTotals.gross_amount,
-          total_discount: serverTotals.total_discount,
-          total_tax: serverTotals.total_tax,
-          round_off: serverTotals.round_off,
-          net_amount: serverTotals.net_amount,
+          gross_amount: postingTotals.gross_amount,
+          total_discount: postingTotals.total_discount,
+          total_tax: postingTotals.total_tax,
+          round_off: postingTotals.round_off,
+          net_amount: postingTotals.net_amount,
           updated_at: new Date(),
         },
       });
@@ -1102,7 +1509,7 @@ export async function finalizePurchaseAction(
         select: { payable_balance: true },
       });
       const balanceBefore = Number(supplierRow?.payable_balance ?? 0);
-      const credit = serverTotals.net_amount;
+      const credit = postingTotals.net_amount;
       const balanceAfter = Math.round((balanceBefore + credit) * 100) / 100;
 
       await tx.supplier_ledgers.create({
@@ -1142,9 +1549,11 @@ export async function finalizePurchaseAction(
       return updated;
     });
 
-    revalidatePath("/purchases");
-    revalidatePath("/inventory");
-    revalidatePath("/dashboard");
+    if (process.env.FINANCIAL_E2E_TEST_MODE !== "true") {
+      revalidatePath("/purchases");
+      revalidatePath("/inventory");
+      revalidatePath("/dashboard");
+    }
     redirect(`/purchases?created=${encodeURIComponent(invoice.id)}&finalized=1`);
   } catch (e: any) {
     if (e?.message && typeof e.message === "string" && e.message.includes("NEXT_REDIRECT")) throw e;
@@ -1176,6 +1585,7 @@ export async function createStockAdjustmentAction(
     const data = parsed.data;
 
     await prisma.$transaction(async (tx) => {
+      await establishTenantContext(tx, ctx);
       const batch = await tx.product_batches.findUnique({
         where: { id: data.batch_id, tenant_id: ctx.tenantId },
       });

@@ -27,6 +27,7 @@ import ExportCsvButton from "@/components/ui/export-csv-button";
 import { exportSuppliersCsvAction } from "@/app/_actions/exports.actions";
 import { deleteSupplierAction } from "@/app/_actions/masters.actions";
 import MasterActionsCell from "@/components/ui/master-actions-cell";
+import { describeDatabaseAccessError } from "@/lib/db/database-errors";
 
 export const metadata: Metadata = {
   title: "Suppliers",
@@ -47,6 +48,7 @@ export default async function SuppliersPage({
   const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
   const pageSize = 25;
   let dbOk = isPostgresConfigured();
+  let dataError: string | null = null;
 
   let items: any[] = [];
   let total = 0;
@@ -58,8 +60,8 @@ export default async function SuppliersPage({
       const result = await repos.suppliers.list({ skip: (page - 1) * pageSize, take: pageSize, orderBy: { business_name: "asc" } }, ctx);
       items = result.items;
       total = result.total;
-    } catch (_err) {
-      dbOk = false;
+    } catch (err) {
+      dataError = describeDatabaseAccessError(err);
     }
   }
 
@@ -79,9 +81,9 @@ export default async function SuppliersPage({
           <p className="mt-1 text-body-md text-body">
             Suppliers, credit terms and payable balances.
           </p>
-          {!dbOk && (
+          {(!dbOk || dataError) && (
             <p className="mt-2 text-caption text-destructive">
-              Database is not configured — showing empty grid.
+              {dataError ?? "Database is not configured — showing empty grid."}
             </p>
           )}
         </div>

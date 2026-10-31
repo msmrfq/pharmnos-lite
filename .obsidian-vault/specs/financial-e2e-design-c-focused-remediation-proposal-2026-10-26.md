@@ -1,3 +1,15 @@
+---
+title: Pharmnos Lite Design C Focused Remediation Proposal
+date: 2026-10-26
+status: Proposed remediation; approval pending
+---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
 # Pharmnos Lite Design C Focused Remediation Proposal
 
 **Date:** 2026-10-26  

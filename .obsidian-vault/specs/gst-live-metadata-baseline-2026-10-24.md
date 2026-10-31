@@ -1,8 +1,16 @@
 ---
 title: GST Live Supabase Metadata Baseline
 date: 2026-10-24
-status: Read-only evidence; rollout not authorized
+status: OWNER AUTHORIZED - READ-ONLY METADATA BASELINE; ROLLOUT SEPARATE
 ---
+
+## Goal
+
+## Acceptance Criteria
+
+## Out of Scope
+
+
 
 # GST Live Supabase Metadata Baseline
 

@@ -22,6 +22,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { isPostgresConfigured } from "@/lib/db/prisma";
 import { requireServerTenantContext } from "@/lib/db/tenant-context";
 import { repos } from "@/repositories";
+import { describeDatabaseAccessError } from "@/lib/db/database-errors";
 import SuccessCreatedToast from "@/components/toast/creation-success-toast";
 import ExportCsvButton from "@/components/ui/export-csv-button";
 import { exportSalesRegisterCsvAction } from "@/app/_actions/exports.actions";
@@ -52,6 +53,7 @@ export default async function BillingPage({
   const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
   const pageSize = 25;
   let dbOk = isPostgresConfigured();
+  let dataError: string | null = null;
 
   let items: any[] = [];
   let total = 0;
@@ -65,8 +67,8 @@ export default async function BillingPage({
       );
       items = result.items;
       total = result.total;
-    } catch (_err) {
-      dbOk = false;
+    } catch (err) {
+      dataError = describeDatabaseAccessError(err);
     }
   }
 
@@ -92,9 +94,9 @@ export default async function BillingPage({
           <p className="mt-1 text-body-md text-body">
             Wholesale invoices deduct FEFO batches and update customer receivables on finalize.
           </p>
-          {!dbOk && (
+          {(!dbOk || dataError) && (
             <p className="mt-2 text-caption text-destructive">
-              Database is not configured — showing empty grid.
+              {dataError ?? "Database is not configured — showing empty grid."}
             </p>
           )}
         </div>

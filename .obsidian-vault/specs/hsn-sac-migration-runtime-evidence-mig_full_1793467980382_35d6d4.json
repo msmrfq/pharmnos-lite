@@ -1,0 +1,44 @@
+{
+  "evidenceVersion": 2,
+  "run": "mig_full_1793467980382_35d6d4",
+  "target": "new local disposable PostgreSQL databases only",
+  "sourceHashes": {
+    "prisma/migrations/0001_baseline/migration.sql": "d7d618cb6e5f30a1f62efbdf2fdf36dc7eb5b557de4da417ee8165f551512c1d",
+    "prisma/migrations/0002_purchase_line_gst_model/migration.sql": "f6a618c230128e230b62b1fe358c3d623be2c428b6b5c7b0df19a952c1d86c4f",
+    "prisma/migrations/0003_gst_treatment_facts/migration.sql": "2fd3452ed8063a9eaf82c9624b8e6b5e5eab92dfe5fb6b92379956c0894ed626",
+    "prisma/migrations/0004_gst_catalog_and_rules/migration.sql": "6547957ae30c63771871f15ce0d467a76b24654c6331ab06971a0af530e26f5e",
+    "prisma/migrations/0005_sales_gst_rule_snapshots/migration.sql": "79c8cc3353c5c901984216246fbc11ddf8a5de0751eadd14419aeba25f449d65",
+    "prisma/migrations/0006_purchase_gst_rule_snapshots/migration.sql": "e01ba8fcce9f934e73db85b37e49772f59ee1d2206b012f2853cdd3cbe968c69",
+    "prisma/migrations/0007_gst_governance_controls/migration.sql": "9d2ad769aeee2e5eead741d174b1bd83b921f76687446c3d4d7b69d8b564a5e1",
+    "prisma/migrations/0008_hsn_governance_integrity/migration.sql": "a52333f0526cf512588f488ca2c488d2322f211ca7a81505dad381bda111e047"
+  },
+  "tests": [
+    {
+      "id": "fresh_migrations_0001_to_0008",
+      "status": "PASS",
+      "details": {
+        "canonicalConstraints": 2
+      }
+    },
+    {
+      "id": "wrong_named_equivalent_fk_rejected_and_rolled_back",
+      "status": "PASS",
+      "details": {
+        "error": "Equivalent classification approver foreign key exists under a different name",
+        "rollbackConstraintCount": 0
+      }
+    }
+  ],
+  "cleanup": {
+    "pharmnos_financial_e2e_mig_full_1793467980382_35d6d4_fresh": {
+      "verifiedAbsent": true
+    },
+    "pharmnos_financial_e2e_mig_full_1793467980382_35d6d4_wrong": {
+      "verifiedAbsent": true
+    }
+  },
+  "adminIdentity": {
+    "database_name": "postgres",
+    "server_address": "172.18.0.2/32"
+  }
+}

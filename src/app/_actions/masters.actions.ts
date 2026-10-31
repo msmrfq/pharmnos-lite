@@ -1,7 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { revalidatePath as nextRevalidatePath } from "next/cache.js";
+import { redirect } from "next/navigation.js";
 import { prisma, assertPostgresConfigured } from "@/lib/db/prisma";
 import {
   productCreateSchema,
@@ -14,8 +14,13 @@ import {
 } from "@/lib/validation/masters.schemas";
 import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
-import { PermissionAction } from "@prisma/client";
+import { PermissionAction, Prisma } from "@prisma/client";
 import type { products, customers, suppliers } from "@prisma/client";
+
+function revalidatePath(path: string): void {
+  if (process.env.FINANCIAL_E2E_TEST_MODE === "true") return;
+  nextRevalidatePath(path);
+}
 
 function flattenFieldErrors(zodFieldErrors: Record<string, any>): Record<string, string[] | undefined> {
   const out: Record<string, string[] | undefined> = {};
@@ -33,6 +38,31 @@ function flattenFieldErrors(zodFieldErrors: Record<string, any>): Record<string,
     }
   }
   return out;
+}
+
+async function requireApprovedProductClassification(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  hsnCode: string | null | undefined,
+): Promise<void> {
+  if (!hsnCode?.trim()) return;
+  const classification = await tx.hsn_sac_catalog.findFirst({
+    where: {
+      tenant_id: tenantId,
+      code: hsnCode.trim(),
+      classification_status: "APPROVED",
+      is_active: true,
+    },
+    select: { effective_from: true, effective_to: true },
+  });
+  const now = new Date();
+  if (
+    !classification ||
+    (classification.effective_from && classification.effective_from > now) ||
+    (classification.effective_to && classification.effective_to <= now)
+  ) {
+    throw new Error("Product classification must reference an approved, active and effective HSN/SAC catalog entry.");
+  }
 }
 
 function parseIndexedBatchesFromFormData(formData: FormData): any[] {
@@ -95,6 +125,7 @@ export async function createProductAction(
     const data = parsed.data;
 
     const product = await prisma.$transaction(async (tx) => {
+      await requireApprovedProductClassification(tx, ctx.tenantId, data.hsn_code);
       const created = await tx.products.create({
         data: {
           tenant_id: ctx.tenantId,
@@ -174,6 +205,11 @@ export async function updateProductAction(
     });
     if (!existing) {
       return { ok: false, message: "Product not found." };
+    }
+    if (data.hsn_code !== existing.hsn_code) {
+      await prisma.$transaction(async (tx) => {
+        await requireApprovedProductClassification(tx, ctx.tenantId, data.hsn_code);
+      });
     }
 
     const product = await prisma.products.update({

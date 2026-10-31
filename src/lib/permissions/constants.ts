@@ -31,6 +31,7 @@ export const ROLE_PERMISSIONS: Record<SystemRole, PermissionAction[]> = {
     PermissionAction.view_product,
     PermissionAction.view_customer,
     PermissionAction.view_supplier,
+    PermissionAction.manage_hsn_catalog,
     PermissionAction.view_purchase,
     PermissionAction.view_invoice,
     PermissionAction.view_inventory,

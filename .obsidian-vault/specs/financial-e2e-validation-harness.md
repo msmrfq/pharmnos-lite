@@ -63,9 +63,15 @@ rejects identifiers that are not owned by that run; it does not delete records o
 assume that deleting a tenant is sufficient to remove related audit, ledger,
 stock, payment, or storage records.
 
-**Current evidence:** isolation and fixture-contract unit tests pass without a
-database connection. Database identity, fixture creation, cleanup execution,
-RLS behavior, and financial scenarios remain unverified and blocked.
+**Current evidence:** the dedicated Q-10/Q-14/Q-15 isolated package has now
+verified the loopback target identity, runtime role boundaries, RLS behavior,
+durable sales idempotency protocol, migration baseline, repeatability,
+conflict-stop behavior, backup/restore, and the SEC-DEC-01/02 security-control
+scenarios. The broader GST business-scenario
+matrix below remains separately gated and is not closed by that package.
+
+The retained evidence is
+[`financial-e2e-q10-q14-q15-validation-evidence-2026-10-31.md`](./financial-e2e-q10-q14-q15-validation-evidence-2026-10-31.md).
 
 The pure fixture lifecycle contract in
 `scripts/financial-e2e-fixture-lifecycle.mjs` now requires:
@@ -122,9 +128,10 @@ fixture operation must be recorded before the manifest becomes
 
 ## Financial Verification Matrix
 
-This matrix is the execution contract for a future authorized isolated-database
-run. It records the evidence required; none of the database-backed scenarios
-below has been executed in the current disconnected environment.
+This matrix is the execution contract for the broader authorized isolated-
+database GST run. It records evidence required for business workflows; those
+scenarios remain distinct from the completed Q-10/Q-14/Q-15 engineering gate
+package.
 
 | Scenario | Preconditions | Action and assertions | Fixture / cleanup requirements | Current evidence | Blocker |
 |---|---|---|---|---|---|
@@ -132,8 +139,8 @@ below has been executed in the current disconnected environment.
 | Business-profile validation and persistence | Applied schema; authorized tenant context | Save valid name/code/blank states, reject invalid state, verify persisted canonical value and tenant boundary | Owned tenant and profile; cleanup profile before tenant | Pure schema and action-mapping tests | Database persistence and RLS verification |
 | Purchase GST reconciliation and posting guard | Approved versioned tax rules, captured transaction facts, discrepancy materiality/tolerance policy, and workflow authority | Save supplier-declared evidence intact; calculate expected taxable value, CGST, SGST, IGST, cess, and totals separately; reconcile; allow draft/review-pending discrepancy; block accounting completion/posting while material discrepancy is unresolved; assert explicit resolution, approver, audit event, accepted accounting values, preserved rounding, stock, supplier ledger, payable balance, and audit row | Owned supplier, products, invoice, lines, batches, movements, reconciliation records, ledger; cleanup all owned rows | Pure aggregate purchase contract and policy documentation only; no persistence or runtime evidence | Accounting/product approval, qualified GST review, schema/action implementation, isolated DB |
 | Purchase GST persistence after policy approval | Approved supplier-evidence model, versioned rules, component/POS policy, rounding policy, and legacy policy | Create/finalize an eligible purchase and assert declared, calculated, accepted, component, discrepancy, POS, round-off, stock, supplier ledger, payable balance, and audit facts remain distinct and consistent | Owned supplier, products, invoice, lines, batches, movements, reconciliation records, ledger; cleanup all owned rows | No database-backed evidence | Policy approval and schema/action implementation |
-| Tenant isolation and database RLS | Applied RLS; independently verified tenant/database identity | Create tenants A/B; assert cross-tenant reads and writes fail at application and database policy boundaries | Separate owned tenants/users; cleanup each run-owned tenant only | Application tenant scoping inspected; no DB evidence | Disposable DB and RLS execution |
-| Sales and purchase rollback | Applied schema; failure injection point; verified transaction behavior | Force failure after partial writes; assert no invoice, stock, ledger, balance, audit, or sequence residue remains | Owned records and resettable isolated DB; cleanup after both success/failure | Outer Prisma transactions inspected only | Runtime transaction execution |
+| Tenant isolation and database RLS | Applied RLS; independently verified tenant/database identity | Create tenants A/B; assert cross-tenant reads and writes fail at application and database policy boundaries | Separate owned tenants/users; cleanup each run-owned tenant only | Q-14 database-side tenant and RLS scenarios passed; broader application workflow remains unverified | Broader Financial E2E execution |
+| Sales and purchase rollback | Applied schema; failure injection point; verified transaction behavior | Force failure after partial writes; assert no invoice, stock, ledger, balance, audit, or sequence residue remains | Owned records and resettable isolated DB; cleanup after both success/failure | Q-10 pre-commit rollback and no-effect assertions passed for the sales operation protocol | Broader purchase and full application workflow execution |
 | Invoice-number and sequence rollback | Applied business profile and sequence fields | Fail finalization after sequence read/update boundary; assert sequence and invoice numbering remain correct | Owned profile/invoice fixture; serialized run or isolated database | Transaction code inspected only | Runtime failure-injection evidence |
 | Stock movement and batch consistency | Applied inventory schema; deterministic FEFO data | Finalize purchase/sale; assert batch quantities, movement rows, references, and rollback consistency | Owned products, batches, invoices, movements; dependent-first cleanup | FEFO and action logic inspected; pure tests only | Runtime inventory execution |
 | Customer and supplier ledger consistency | Applied ledger schema; approved tax/totals policy | Assert finalized invoice totals equal ledger debit/credit, balance updates, and audit metadata | Owned customers/suppliers, invoices, ledgers, payments; cleanup all references | Ledger write paths inspected; no DB execution | Runtime accounting verification |
@@ -162,7 +169,7 @@ below has been executed in the current disconnected environment.
 	classification, and that absent facts or unsupported scenarios fail closed.
 - GST-019 and GST-020 remain blocked until the disposable database, identity
 	verification, fixture/reset lifecycle, cleanup authorization, and explicit
-	execution approval are all present.
+	execution approval for the broader GST matrix are all present.
 
 ### Connected identity evidence contract
 

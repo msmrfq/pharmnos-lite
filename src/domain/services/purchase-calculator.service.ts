@@ -13,9 +13,42 @@ export type PurchaseInvoiceTotals = {
     net_amount: number;
 };
 
-function round2(value: number): number {
+export function round2(value: number): number {
     if (!Number.isFinite(value)) return 0;
     return Math.round(value * 100) / 100;
+}
+
+export type PurchaseLineGstCalculation = {
+    taxable_value: number;
+    cgst: number;
+    sgst: number;
+    igst: number;
+    cess: number;
+    gst_amount: number;
+};
+
+export function calculatePurchaseLineGst(
+    line: {
+        quantity: number | string | null | undefined;
+        purchase_rate: number | string | null | undefined;
+        discount_pct: number | string | null | undefined;
+        gst_rate: number | string | null | undefined;
+    },
+    scenario: "INTRA_STATE" | "INTER_STATE",
+): PurchaseLineGstCalculation {
+    const totals = calculatePurchaseLineTotals(line);
+    const intraState = scenario === "INTRA_STATE";
+    const cgst = intraState ? round2(totals.gst_amount / 2) : 0;
+    const sgst = intraState ? round2(totals.gst_amount - cgst) : 0;
+    const igst = intraState ? 0 : totals.gst_amount;
+    return {
+        taxable_value: round2(totals.gross - totals.discount_amount),
+        cgst,
+        sgst,
+        igst,
+        cess: 0,
+        gst_amount: round2(cgst + sgst + igst),
+    };
 }
 
 export function calculatePurchaseLineTotals(line: {
