@@ -71,6 +71,8 @@ GRANT SELECT, INSERT ON TABLE
   public.purchase_gst_accounting_decisions,
   public.purchase_gst_reconciliation_events,
   public.purchase_gst_reconciliation_event_lines,
+  public.inventory_valuation_decisions,
+  public.inventory_valuation_adjustments,
   public.hsn_sac_catalog_history,
   public.gst_rate_rule_history
 TO pharmnos_e2e_runtime;
@@ -82,6 +84,8 @@ REVOKE UPDATE, DELETE ON TABLE
   public.purchase_gst_accounting_decisions,
   public.purchase_gst_reconciliation_events,
   public.purchase_gst_reconciliation_event_lines,
+  public.inventory_valuation_decisions,
+  public.inventory_valuation_adjustments,
   public.hsn_sac_catalog_history,
   public.gst_rate_rule_history
 FROM pharmnos_e2e_runtime;
@@ -121,6 +125,7 @@ FROM pharmnos_e2e_runtime;
 -- sales_invoice_items, payments, stock_movements, customer_ledgers,
 -- supplier_ledgers, audit_logs.
 -- hsn_sac_catalog_history, gst_rate_rule_history.
+-- inventory_valuation_decisions, inventory_valuation_adjustments.
 -- sales_posting_operations is tenant-scoped operation state and is protected
 -- by the same tenant predicate and unique-key contract as purchase posting.
 --
@@ -180,6 +185,8 @@ FROM pharmnos_e2e_runtime;
 --   purchase_gst_accounting_decisions
 --   purchase_gst_reconciliation_events
 --   purchase_gst_reconciliation_event_lines
+--   inventory_valuation_decisions
+--   inventory_valuation_adjustments
 --   hsn_sac_catalog_history
 --   gst_rate_rule_history
 --

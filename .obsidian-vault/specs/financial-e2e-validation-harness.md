@@ -126,6 +126,48 @@ Fixture recording is a single-batch contract: all identifiers returned by one
 fixture operation must be recorded before the manifest becomes
 `FIXTURE_READY`; later incremental recording is rejected.
 
+## Authoritative Financial E2E Database Target Contract
+
+All disposable financial-E2E execution now requires the immutable,
+sanitized contract implemented by
+`scripts/financial-e2e-target-contract.mjs`. The contract binds one run ID to
+the loopback host, published port, database name, bootstrap role, restricted
+runtime role, Compose project/service/profile, marker, and the SHA-256
+fingerprint of the approved schema artifact. It contains no credentials.
+The contract also fixes the approved bootstrap and runtime credential source
+variables so a harness cannot silently resolve credentials from a competing
+environment file.
+
+Provisioning, connected initialization, runtime GST harnesses, schema
+verification, and cleanup authorization must validate the same contract before
+database mutation. Bootstrap and runtime URLs must resolve to the same
+contract endpoint while using distinct approved roles. Missing, stale,
+conflicting, unauthorized, production/shared, or unrelated-Compose metadata
+fails closed.
+
+Provisioning also performs a pre-mutation runtime credential probe when the
+runtime role already exists, and a post-provision runtime identity/schema
+probe for newly initialized targets. Runtime roles remain `LOGIN`,
+`NOSUPERUSER`, and `NOBYPASSRLS`. Cleanup authorization may only use identity
+evidence bound to the same target contract, run ID, and database name.
+
+Focused regression coverage is recorded as **88 passed, 0 failed**, including
+port, database-name, endpoint-identity, credential-role, stale-contract, and
+positive same-target contract checks. The 0419 disposable target's pre-existing
+runtime role had a stale SCRAM credential because the prior provisioning path
+created the role only when absent. The role was repaired once using the
+authorized disposable bootstrap credential source; no shared or production
+credential was changed, and no container lifecycle action occurred. A fresh
+restricted-runtime Purchase GST run then passed 16/16 scenarios with cleanup
+verified absent.
+
+Sales GST application acceptance must use
+`pnpm sales:gst:acceptance`. That entry point creates one contract, forwards
+the identical serialized value to provisioning and
+`scripts/gst-application-e2e-runner.mjs`, and stops before either child when
+the target or credential sources are incomplete. The contract is not persisted
+in `.env.financial-e2e`; a later shell must not be expected to inherit it.
+
 ## Financial Verification Matrix
 
 This matrix is the execution contract for the broader authorized isolated-
@@ -211,6 +253,11 @@ account. The guarded runner must use the separately supplied local-only
 runtime operations. The runtime role must be independently provisioned as
 `LOGIN`, `NOSUPERUSER`, and `NOBYPASSRLS`; its password must remain only in
 the ignored local environment configuration or an equivalent secret store.
+The target contract authorizes `FINANCIAL_E2E_DB_PASSWORD` and
+`FINANCIAL_E2E_RUNTIME_DB_PASSWORD` as the only credential sources for the
+bootstrap and runtime roles respectively. Existing-role authentication is
+probed before mutation, so stale credentials fail closed rather than being
+silently replaced.
 The Compose/bootstrap credentials must not be reused as proof of restricted
 runtime privileges.
 

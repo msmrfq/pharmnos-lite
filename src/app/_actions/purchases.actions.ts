@@ -244,6 +244,10 @@ function purchaseGstEvidenceFromData(data: any): SupplierDeclaredPurchaseGstEvid
     if (requiredFacts.some((key) => !String(data[key] ?? "").trim())) {
       throw new Error("Complete supplier GST evidence and transaction supply facts are required together.");
     }
+    const cess = decimalOrNull(data.declared_cess);
+    if (cess !== null && cess !== 0) {
+      throw new Error("Non-zero cess is blocked until a governed cess rule and credit-utilization policy are configured.");
+    }
     return {
       source_document_reference: data.supplier_invoice_no ?? null,
       amounts: {
@@ -251,7 +255,7 @@ function purchaseGstEvidenceFromData(data: any): SupplierDeclaredPurchaseGstEvid
         cgst: decimalOrNull(data.declared_cgst),
         sgst: decimalOrNull(data.declared_sgst),
         igst: decimalOrNull(data.declared_igst),
-        cess: decimalOrNull(data.declared_cess),
+        cess,
         invoice_total: decimalOrNull(data.declared_invoice_total),
         round_off: decimalOrNull(data.declared_round_off),
       },
@@ -511,6 +515,13 @@ export async function createPurchaseDraftAction(
     if (!treatment.ok) {
       return { ok: false, message: treatment.error, errors: { gst_treatment: [treatment.error ?? "Invalid GST treatment."] } };
     }
+    if (data.tax_mode !== "EXCLUSIVE") {
+      return {
+        ok: false,
+        message: "Inclusive GST purchases are blocked until governed Rule 35 extraction and rounding are enabled.",
+        errors: { tax_mode: ["Inclusive GST purchases are not yet enabled."] },
+      };
+    }
     const hasSupplyFacts = [
       data.supplier_state_at_transaction,
       data.recipient_state_at_transaction,
@@ -583,6 +594,7 @@ export async function createPurchaseDraftAction(
           gst_calculation_reference: line.rule_version ?? null,
           mrp: line.mrp ? Number(line.mrp) : null,
           sale_rate: line.sale_rate ? Number(line.sale_rate) : null,
+          inventory_valuation_status: "PENDING",
           line_total: totals.line_total,
           created_at: new Date(),
         };
@@ -1286,7 +1298,10 @@ export async function finalizePurchaseAction(
         gst_rate: Number(governedLines[index]?.gst_rate ?? 0),
       }));
       const serverTotals = calculatePurchaseInvoiceTotals(lineComputed);
-      const usesExplicitAcceptedSnapshot = gstDecision.accepted_value_source === "EXPLICIT_DECISION";
+      const hasAcceptedSnapshot =
+        gstDecision.accepted_value_source === "SUPPLIER_DECLARED" ||
+        gstDecision.accepted_value_source === "APPLICATION_CALCULATED" ||
+        gstDecision.accepted_value_source === "EXPLICIT_DECISION";
       const acceptedPostingTotals = {
         gross_amount: fixedAmount(gstDecision.accepted_taxable_value) + Number(existing.total_discount ?? 0),
         total_discount: Number(existing.total_discount ?? 0),
@@ -1297,7 +1312,7 @@ export async function finalizePurchaseAction(
         round_off: fixedAmount(gstDecision.accepted_round_off),
         net_amount: fixedAmount(gstDecision.accepted_invoice_total),
       };
-      const postingTotals = usesExplicitAcceptedSnapshot ? acceptedPostingTotals : serverTotals;
+      const postingTotals = hasAcceptedSnapshot ? acceptedPostingTotals : serverTotals;
       const postingPayload = {
         purchase_id: purchaseId,
         supplier_invoice_no: existing.supplier_invoice_no,
@@ -1318,7 +1333,14 @@ export async function finalizePurchaseAction(
           discount_pct: item.discount_pct === null ? null : String(item.discount_pct),
           discount_amount: String(item.discount_amount),
           gst_rate: String(item.gst_rate),
-          gst_amount: String(item.gst_amount),
+          gst_amount: hasAcceptedSnapshot
+            ? String(
+                fixedAmount(item.accepted_cgst) +
+                fixedAmount(item.accepted_sgst) +
+                fixedAmount(item.accepted_igst) +
+                fixedAmount(item.accepted_cess),
+              )
+            : String(item.gst_amount),
           accepted_taxable_value: String(item.accepted_taxable_value),
           accepted_cgst: String(item.accepted_cgst),
           accepted_sgst: String(item.accepted_sgst),
@@ -1327,7 +1349,7 @@ export async function finalizePurchaseAction(
           accepted_line_total: String(item.accepted_line_total),
           mrp: item.mrp === null ? null : String(item.mrp),
           sale_rate: item.sale_rate === null ? null : String(item.sale_rate),
-          line_total: String(item.line_total),
+          line_total: hasAcceptedSnapshot ? String(item.accepted_line_total) : String(item.line_total),
         })),
       };
       const payloadHash = requestHash(postingPayload);
@@ -1368,7 +1390,7 @@ export async function finalizePurchaseAction(
       const diffDisc = Math.abs(Number(existing.total_discount ?? 0) - serverTotals.total_discount);
       const diffTax = Math.abs(Number(existing.total_tax ?? 0) - serverTotals.total_tax);
       const diffNet = Math.abs(Number(existing.net_amount ?? 0) - serverTotals.net_amount);
-      if (!usesExplicitAcceptedSnapshot && (diffGross > 0.01 || diffDisc > 0.01 || diffTax > 0.01 || diffNet > 0.01)) {
+      if (!hasAcceptedSnapshot && (diffGross > 0.01 || diffDisc > 0.01 || diffTax > 0.01 || diffNet > 0.01)) {
         throw new Error("Totals mismatch vs calculated; please review.");
       }
 
@@ -1383,7 +1405,14 @@ export async function finalizePurchaseAction(
             "gst_rule_version_snapshot" = ${governed?.rule_version ?? null},
             "gst_rule_source_reference_snapshot" = ${governed?.rule_source_reference ?? null},
             "gst_rate" = ${Number(governed?.gst_rate ?? 0)},
-            "gst_calculation_reference" = ${governed?.rule_version ?? null}
+            "gst_calculation_reference" = ${governed?.rule_version ?? null},
+            "gst_amount" = "accepted_cgst" + "accepted_sgst" + "accepted_igst" + "accepted_cess",
+            "line_total" = "accepted_line_total",
+            "recoverable_itc" = NULL,
+            "non_recoverable_gst" = NULL,
+            "inventory_acquisition_cost" = NULL,
+            "inventory_valuation_status" = 'PENDING',
+            "inventory_valuation_policy_version" = NULL
           WHERE "id" = ${line.id} AND "tenant_id" = ${ctx.tenantId}
         `);
         await tx.product_batches.upsert({
@@ -1401,6 +1430,8 @@ export async function finalizePurchaseAction(
             expiry_date: line.expiry_date ?? null,
             mrp: line.mrp ? Number(line.mrp) : null,
             purchase_rate: Number(line.purchase_rate ?? 0),
+            inventory_valuation_status: "PENDING",
+            inventory_acquisition_cost: null,
             sale_rate: line.sale_rate ? Number(line.sale_rate) : null,
             received_qty: qty,
             available_qty: qty,
@@ -1442,7 +1473,9 @@ export async function finalizePurchaseAction(
               quantity_delta: qty,
               reference_type: "purchase_invoice",
               reference_id: existing.id,
-              unit_rate: Number(line.purchase_rate ?? 0),
+              unit_rate: null,
+              inventory_acquisition_cost: null,
+              inventory_valuation_status: "PENDING",
               notes: null,
               created_by: ctx.userId,
               created_at: new Date(),

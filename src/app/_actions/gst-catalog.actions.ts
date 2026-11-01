@@ -228,6 +228,7 @@ export async function approveHsnSacClassification(
         updated_at: new Date(),
       },
     });
+    if (result.count !== 1) return result;
     await tx.$executeRaw(Prisma.sql`
       UPDATE "hsn_sac_catalog"
       SET
@@ -235,7 +236,6 @@ export async function approveHsnSacClassification(
         "classification_approved_at" = NOW()
       WHERE "tenant_id" = ${ctx.tenantId} AND "id" = ${catalogId}
     `);
-    if (result.count !== 1) return result;
     const record = await tx.hsn_sac_catalog.findUnique({
       where: { id: catalogId },
     });

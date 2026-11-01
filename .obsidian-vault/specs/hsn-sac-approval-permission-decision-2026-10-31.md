@@ -1,7 +1,9 @@
 ---
 title: HSN/SAC approval permission decision
 date: 2026-10-31
-status: PENDING OWNER CONFIRMATION
+status: OWNER APPROVED — OPTION A
+approved_by: Company owner
+approved_at: 2026-11-01
 ---
 
 # HSN/SAC approval permission decision
@@ -10,7 +12,7 @@ status: PENDING OWNER CONFIRMATION
 
 `approve_hsn_catalog` is checked independently by the classification approval
 action. Maintenance actions require `manage_hsn_catalog`. The implementation
-has not been changed pending explicit owner confirmation.
+matches the confirmed owner decision below.
 
 ## Decision options
 
@@ -32,12 +34,21 @@ Classification approval requires both `approve_hsn_catalog` and
 - Reduces the number of eligible approvers.
 - Weakens separation of preparation and approval responsibilities.
 
-## Owner decision required
+## Owner decision
 
-Confirm exactly one option:
+**Option A — `approve_hsn_catalog` is independently sufficient.**
 
-1. `Option A — approve_hsn_catalog is independently sufficient`
-2. `Option B — approval also requires manage_hsn_catalog`
+The company owner approved this product authorization decision on 2026-11-01.
+An authorized classification approver may approve a pending HSN/SAC
+classification with `approve_hsn_catalog` without also holding
+`manage_hsn_catalog`. `manage_hsn_catalog` remains required for creating or
+maintaining catalog entries. Classification approval and catalog maintenance
+remain distinct permissions.
 
-Until confirmed, the current implementation remains unchanged and this
-permission behavior is not treated as owner-approved policy.
+GST rate approval remains governed by the separate `approve_gst_rates`
+permission and its existing governance process. All tenant-scoped access,
+server-side authorization, audit/history, immutable-history, and revision
+safeguards remain mandatory.
+
+This is owner-approved product authorization only. It is not GST-practitioner,
+legal, statutory, or accounting approval, and must not be represented as such.

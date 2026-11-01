@@ -314,7 +314,7 @@ export async function exportStockValuationCsvAction(): Promise<Response> {
   nearCutoff.setDate(nearCutoff.getDate() + 60);
 
   const rows: string[][] = [
-    ["SKU", "Product", "Schedule", "HSN", "MRP", "Avg purchase rate", "Total available qty", "Total batches", "Total value (₹)", "Near expiry batches"],
+    ["SKU", "Product", "Schedule", "HSN", "MRP", "Approved avg acquisition cost", "Total available qty", "Total batches", "Total value (₹)", "Near expiry batches"],
   ];
 
   for (const p of items as any[]) {
@@ -322,11 +322,19 @@ export async function exportStockValuationCsvAction(): Promise<Response> {
     const avail = batches.reduce((s: number, b: any) => s + Number(b.available_qty ?? 0), 0);
     const batchesCount = batches.length;
     let weightedSum = 0;
+    let approvedAvail = 0;
+    let valuationPending = false;
     for (const b of batches) {
-      weightedSum += Number(b.available_qty ?? 0) * Number(b.purchase_rate ?? 0);
+      if (b.inventory_valuation_status !== "APPROVED" || b.inventory_acquisition_cost === null) {
+        valuationPending = valuationPending || Number(b.available_qty ?? 0) > 0;
+        continue;
+      }
+      const available = Number(b.available_qty ?? 0);
+      approvedAvail += available;
+      weightedSum += available * Number(b.inventory_acquisition_cost ?? 0);
     }
-    const avgRate = avail > 0 ? weightedSum / avail : 0;
-    const totalValue = avail * avgRate;
+    const avgRate = approvedAvail > 0 ? weightedSum / approvedAvail : 0;
+    const totalValue = weightedSum;
     let nearExpireCount = 0;
     for (const b of batches) {
       if (b.expiry_date && Number(b.available_qty ?? 0) > 0) {
@@ -345,7 +353,7 @@ export async function exportStockValuationCsvAction(): Promise<Response> {
       String(Number.isFinite(avgRate) ? avgRate.toFixed(2) : ""),
       String(avail),
       String(batchesCount),
-      String(Number.isFinite(totalValue) ? totalValue.toFixed(2) : ""),
+      valuationPending ? "PENDING" : String(Number.isFinite(totalValue) ? totalValue.toFixed(2) : ""),
       String(nearExpireCount),
     ]);
   }

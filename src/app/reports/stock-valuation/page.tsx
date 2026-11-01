@@ -91,6 +91,7 @@ type ValuationRow = {
   batchesCount: number;
   avgRate: number;
   totalValue: number;
+  valuationPending: boolean;
   nearExpireCount: number;
 };
 
@@ -160,11 +161,19 @@ export default async function StockValuationPage({
         const avail = batches.reduce((s: number, b: any) => s + Number(b.available_qty ?? 0), 0);
         const batchesCount = batches.length;
         let weightedSum = 0;
+        let approvedAvail = 0;
+        let valuationPending = false;
         for (const b of batches) {
-          weightedSum += Number(b.available_qty ?? 0) * Number(b.purchase_rate ?? 0);
+          if (b.inventory_valuation_status !== "APPROVED" || b.inventory_acquisition_cost === null) {
+            valuationPending = valuationPending || Number(b.available_qty ?? 0) > 0;
+            continue;
+          }
+          const available = Number(b.available_qty ?? 0);
+          approvedAvail += available;
+          weightedSum += available * Number(b.inventory_acquisition_cost ?? 0);
         }
-        const avgRate = avail > 0 ? weightedSum / avail : 0;
-        const totalValue = avail * avgRate;
+        const avgRate = approvedAvail > 0 ? weightedSum / approvedAvail : 0;
+        const totalValue = weightedSum;
         let nearExpireCount = 0;
         for (const b of batches) {
           if (b.expiry_date && Number(b.available_qty ?? 0) > 0) {
@@ -185,6 +194,7 @@ export default async function StockValuationPage({
           batchesCount,
           avgRate,
           totalValue,
+          valuationPending,
           nearExpireCount,
         });
       }
@@ -249,7 +259,7 @@ export default async function StockValuationPage({
         <div>
           <CardTitle className="text-display-sm tracking-brand">Stock Valuation</CardTitle>
           <p className="mt-1 text-body-md text-body">
-            Closing stock value at weighted average purchase rate per SKU × available quantity.
+            Approved closing stock value; unresolved GST eligibility remains pending.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -401,7 +411,7 @@ export default async function StockValuationPage({
                       {r.mrp ? rupee(r.mrp) : "—"}
                     </TableCell>
                     <TableCell className="text-right text-body tabular-nums">
-                      {r.avail > 0 ? rupee(r.avgRate) : "—"}
+                      {r.valuationPending ? "Pending" : r.avail > 0 ? rupee(r.avgRate) : "—"}
                     </TableCell>
                     <TableCell className={`text-right font-medium tabular-nums ${r.avail === 0 ? "text-muted" : "text-ink"}`}>
                       {r.avail}
@@ -410,7 +420,7 @@ export default async function StockValuationPage({
                       {r.batchesCount}
                     </TableCell>
                     <TableCell className="text-right font-semibold text-ink tabular-nums whitespace-nowrap">
-                      {rupee(r.totalValue)}
+                      {r.valuationPending ? "Pending" : rupee(r.totalValue)}
                     </TableCell>
                     <TableCell>
                       {r.nearExpireCount > 0 ? (
@@ -512,7 +522,8 @@ export default async function StockValuationPage({
               <div className="flex items-start gap-2 text-caption text-muted">
                 <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                 <p>
-                  Method: weighted average purchase rate × available quantity per SKU.
+                  Method: approved inventory acquisition cost × available quantity per SKU.
+                  Procurement rates are not treated as approved valuation cost.
                   Near-expiry window = 60 days from today.
                 </p>
               </div>

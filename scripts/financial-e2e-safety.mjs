@@ -247,6 +247,7 @@ export function validateDatabaseIdentityEvidence({
     expectedRole,
     expectedEnvironmentMarker = REQUIRED_ENVIRONMENT_MARKER,
     targetUrl,
+    approvedTargetBinding,
     runId,
     now = Date.now(),
     maxAgeMs = DEFAULT_IDENTITY_EVIDENCE_MAX_AGE_MS,
@@ -257,8 +258,8 @@ export function validateDatabaseIdentityEvidence({
     }
     if (evidence.version !== IDENTITY_EVIDENCE_VERSION) return failIdentity("Database identity evidence version is unsupported.");
     if (!runId || evidence.runId !== runId) return failIdentity("Database identity evidence is not bound to this test run.");
-    const approvedTargetBinding = targetBinding(targetUrl);
-    if (!approvedTargetBinding || evidence.targetBinding !== approvedTargetBinding) {
+    const binding = approvedTargetBinding || targetBinding(targetUrl);
+    if (!binding || evidence.targetBinding !== binding) {
         return failIdentity("Database identity evidence is not bound to the approved test target.");
     }
     if (!Number.isFinite(evidence.verifiedAt) || now - evidence.verifiedAt < 0 || now - evidence.verifiedAt > maxAgeMs) {
@@ -287,6 +288,7 @@ export async function verifyDatabaseIdentity({
     expectedDatabase,
     expectedRole,
     targetUrl,
+    approvedTargetBinding,
     runId,
     expectedEnvironmentMarker = REQUIRED_ENVIRONMENT_MARKER,
     now = Date.now(),
@@ -313,7 +315,7 @@ export async function verifyDatabaseIdentity({
     const evidence = Object.freeze({
         version: IDENTITY_EVIDENCE_VERSION,
         runId,
-        targetBinding: targetBinding(targetUrl),
+        targetBinding: approvedTargetBinding || targetBinding(targetUrl),
         verifiedAt: now,
         databaseName: row?.database_name,
         currentUser: row?.current_user_name,
@@ -331,6 +333,7 @@ export async function verifyDatabaseIdentity({
         expectedRole,
         expectedEnvironmentMarker,
         targetUrl,
+        approvedTargetBinding,
         runId,
         now,
         maxAgeMs,

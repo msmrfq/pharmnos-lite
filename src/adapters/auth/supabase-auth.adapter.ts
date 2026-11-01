@@ -148,11 +148,16 @@ export class SupabaseAuthAdapter implements IAuthAdapter {
     const sb = createAnonClient();
     const {
       data: { session },
-      error,
+      error: sessionError,
     } = await sb.auth.getSession();
-    if (error || !session?.user) return null;
+    if (sessionError || !session?.user) return null;
+    const {
+      data: { user: verifiedUser },
+      error: verificationError,
+    } = await sb.auth.getUser();
+    if (verificationError || !verifiedUser || verifiedUser.id !== session.user.id) return null;
     return {
-      user: mapSupabaseUser(session.user),
+      user: mapSupabaseUser(verifiedUser),
       accessToken: session.access_token,
       refreshToken: session.refresh_token,
       expiresAt: session.expires_at ? new Date(session.expires_at * 1000) : undefined,

@@ -24,6 +24,8 @@ const expectedTables = [
     "purchase_gst_accounting_decisions",
     "purchase_gst_reconciliation_events",
     "purchase_gst_reconciliation_event_lines",
+    "inventory_valuation_decisions",
+    "inventory_valuation_adjustments",
 ];
 
 const requiredMarkers = [
@@ -40,6 +42,7 @@ const tenantTables = [
     "purchase_gst_evidence_revisions", "purchase_gst_line_evidence",
     "purchase_gst_calculations", "purchase_gst_accounting_decisions",
     "purchase_gst_reconciliation_events", "purchase_gst_reconciliation_event_lines",
+    "inventory_valuation_decisions", "inventory_valuation_adjustments",
     "sales_invoices", "sales_posting_operations", "sales_invoice_items", "payments", "stock_movements",
     "customer_ledgers", "supplier_ledgers", "audit_logs",
     "hsn_sac_catalog", "gst_rate_rules", "hsn_sac_catalog_history", "gst_rate_rule_history",
@@ -54,6 +57,8 @@ const immutableTables = [
     "purchase_gst_reconciliation_event_lines",
     "hsn_sac_catalog_history",
     "gst_rate_rule_history",
+    "inventory_valuation_decisions",
+    "inventory_valuation_adjustments",
 ];
 const readOnlyCatalogTables = ["hsn_sac_catalog", "gst_rate_rules"];
 

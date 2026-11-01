@@ -14,6 +14,12 @@ import {
     REQUIRED_INITIALIZATION_SEQUENCE,
     validateConnectedInitializationSequence,
 } from "./financial-e2e-initialization-contract.mjs";
+import {
+    loadTargetContractFromEnv,
+    schemaArtifactHash,
+    targetContractBinding,
+    verifyTargetSchema,
+} from "./financial-e2e-target-contract.mjs";
 
 const { Client } = pg;
 const BOOTSTRAP_ROLE = "pharmnos_e2e";
@@ -43,6 +49,8 @@ const directTenantTables = [
     "purchase_gst_accounting_decisions",
     "purchase_gst_reconciliation_events",
     "purchase_gst_reconciliation_event_lines",
+    "inventory_valuation_decisions",
+    "inventory_valuation_adjustments",
     "sales_invoices",
     "sales_invoice_items",
     "payments",
@@ -60,6 +68,8 @@ const immutableTables = [
     "purchase_gst_accounting_decisions",
     "purchase_gst_reconciliation_events",
     "purchase_gst_reconciliation_event_lines",
+    "inventory_valuation_decisions",
+    "inventory_valuation_adjustments",
     "hsn_sac_catalog_history",
     "gst_rate_rule_history",
 ];
@@ -85,6 +95,9 @@ const enumTypes = [
     "ScheduleClass",
     "AuditEventType",
     "LedgerEntryType",
+    "InventoryValuationDecisionStatus",
+    "InventoryValuationAccountingStatus",
+    "InventoryValuationAdjustmentKind",
 ];
 
 function ident(value) {
@@ -96,11 +109,7 @@ function directPredicate(table) {
         return `id::text = NULLIF(current_setting('request.jwt.claim.tenant_id', true), '')`;
     }
     if (table === "users") {
-        return `EXISTS (
-            SELECT 1 FROM public.memberships AS m
-            WHERE m.user_id = users.id
-              AND m.tenant_id::text = NULLIF(current_setting('request.jwt.claim.tenant_id', true), '')
-        )`;
+        return `external_id = NULLIF(current_setting('request.jwt.claim.sub', true), '')`;
     }
     if (table === "role_permissions") {
         return `EXISTS (
@@ -118,21 +127,29 @@ function subjectPredicate(table) {
         return `external_id = ${subject}`;
     }
     if (table === "memberships") {
-        return `user_id = ${subject}`;
+        return `status = 'active' AND EXISTS (
+            SELECT 1 FROM public.users AS u
+            WHERE u.id = memberships.user_id
+              AND u.external_id = ${subject}
+        )`;
     }
     if (table === "roles") {
         return `EXISTS (
             SELECT 1 FROM public.memberships AS m
+            JOIN public.users AS u ON u.id = m.user_id
             WHERE m.role_id = roles.id
-              AND m.user_id = ${subject}
+              AND m.status = 'active'
+              AND u.external_id = ${subject}
         )`;
     }
     if (table === "role_permissions") {
         return `EXISTS (
             SELECT 1 FROM public.roles AS r
             JOIN public.memberships AS m ON m.role_id = r.id
+            JOIN public.users AS u ON u.id = m.user_id
             WHERE r.id = role_permissions.role_id
-              AND m.user_id = ${subject}
+              AND m.status = 'active'
+              AND u.external_id = ${subject}
         )`;
     }
     return null;
@@ -476,6 +493,7 @@ export function validateInitializationAuthorization({
     initializationAttemptId,
     testUrl,
     authorizedTargetBinding,
+    targetContract,
 }) {
     if (approved !== true) {
         return { ok: false, error: "Explicit disposable-target initialization authorization is required." };
@@ -486,7 +504,7 @@ export function validateInitializationAuthorization({
     if (!RUN_ID_PATTERN.test(String(initializationAttemptId ?? "").trim())) {
         return { ok: false, error: "A valid initialization attempt ID is required." };
     }
-    const binding = targetBinding(testUrl);
+    const binding = targetContract ? targetContractBinding(targetContract) : targetBinding(testUrl);
     if (!binding || String(authorizedTargetBinding ?? "").trim() !== binding) {
         return { ok: false, error: "Initialization authorization is not bound to the exact disposable target." };
     }
@@ -512,6 +530,7 @@ export function validateConnectedInitializationRequest({
     evidencePolicy,
     recoveryPolicy,
     runtimeRoleAttributes,
+    targetContract,
 } = {}) {
     const errors = [];
     if (!authorization?.ok ||
@@ -523,8 +542,11 @@ export function validateConnectedInitializationRequest({
     if (!target?.testUrl || !target?.testDatabaseName) {
         errors.push("An exact disposable target is required.");
     }
-    if (authorization?.targetBinding && target?.testUrl &&
-        authorization.targetBinding !== targetBinding(target.testUrl)) {
+    const expectedBinding = targetContract
+        ? targetContractBinding(targetContract)
+        : targetBinding(target?.testUrl);
+    if (authorization?.targetBinding && expectedBinding &&
+        authorization.targetBinding !== expectedBinding) {
         errors.push("Initialization authorization does not match the disposable target.");
     }
     if (initializationScope !== "DATABASE_INITIALIZATION_ONLY") {
@@ -572,6 +594,11 @@ export function validateConnectedInitializationRequest({
 }
 
 async function main() {
+    const targetContract = loadTargetContractFromEnv();
+    if (targetContract.databaseName !== process.env.TEST_DATABASE_NAME ||
+        targetContract.schemaArtifactHash !== schemaArtifactHash()) {
+        throw new Error("Target contract does not match the requested database or schema artifact.");
+    }
     const required = [
         "TEST_DATABASE_URL",
         "DATABASE_URL",
@@ -594,6 +621,7 @@ async function main() {
         "FINANCIAL_E2E_EVIDENCE_RETENTION_DAYS",
         "FINANCIAL_E2E_EVIDENCE_PATH_APPROVED",
         "FINANCIAL_E2E_RECOVERY_POLICY",
+        "FINANCIAL_E2E_TARGET_CONTRACT",
     ];
     const missing = required.filter((name) => !process.env[name]);
     if (missing.length > 0) {
@@ -605,6 +633,7 @@ async function main() {
         initializationAttemptId: process.env.FINANCIAL_E2E_INITIALIZATION_ATTEMPT_ID,
         testUrl: process.env.TEST_DATABASE_URL,
         authorizedTargetBinding: process.env.FINANCIAL_E2E_AUTHORIZED_TARGET_BINDING,
+        targetContract,
     });
     if (!authorization.ok) throw new Error(authorization.error);
     const target = await validateFinancialE2eTarget({
@@ -661,6 +690,7 @@ async function main() {
             rolsuper: false,
             rolbypassrls: false,
         },
+        targetContract,
     });
     if (!preparation.ok) throw new Error(`Initialization preparation guard failed: ${preparation.errors.join(" ")}`);
 
@@ -700,6 +730,11 @@ async function main() {
             identity.marker !== REQUIRED_MARKER) {
             throw new Error("Bootstrap identity did not match the verified local target.");
         }
+        if (identity.database_name !== targetContract.databaseName ||
+            targetContract.host !== new URL(process.env.TEST_DATABASE_URL).hostname ||
+            targetContract.port !== Number(new URL(process.env.TEST_DATABASE_URL).port || 5432)) {
+            throw new Error("Connected bootstrap identity does not match the immutable target contract.");
+        }
         const bootstrapFlags = await queryRows(client, `
             SELECT rolsuper, rolbypassrls, rolcanlogin
             FROM pg_roles WHERE rolname = current_user
@@ -708,6 +743,32 @@ async function main() {
             throw new Error("Bootstrap role is not a login role.");
         }
         await assertEmpty(client);
+        const existingRuntimeRole = await queryRows(
+            client,
+            "SELECT 1 FROM pg_roles WHERE rolname = $1",
+            [RUNTIME_ROLE],
+        );
+        if (existingRuntimeRole.length > 0) {
+            const runtimeProbe = new Client({
+                connectionString: process.env.FINANCIAL_E2E_RUNTIME_DATABASE_URL,
+                application_name: REQUIRED_MARKER,
+            });
+            try {
+                await runtimeProbe.connect();
+                const runtimeIdentity = (await runtimeProbe.query(
+                    "SELECT current_database() AS database_name, current_user AS current_role, session_user AS session_role",
+                )).rows[0];
+                if (runtimeIdentity?.database_name !== targetContract.databaseName ||
+                    runtimeIdentity.current_role !== targetContract.runtimeRole ||
+                    runtimeIdentity.session_role !== targetContract.runtimeRole) {
+                    throw new Error("Existing runtime credential resolved to an unexpected database or role.");
+                }
+            } catch {
+                throw new Error("Existing runtime credential failed pre-mutation authentication.");
+            } finally {
+                await runtimeProbe.end().catch(() => {});
+            }
+        }
 
         const baseline = (await fs.readFile(BASELINE_PATH, "utf8")).replace(/^\uFEFF/, "");
         if (baseline.includes("\\ir ") || !baseline.includes("CREATE TABLE")) {
@@ -740,6 +801,25 @@ async function main() {
         await client.query(controlSql);
         await client.query("COMMIT");
         transactionStarted = false;
+        await verifyTargetSchema(client, targetContract);
+        const runtimeProbe = new Client({
+            connectionString: process.env.FINANCIAL_E2E_RUNTIME_DATABASE_URL,
+            application_name: REQUIRED_MARKER,
+        });
+        try {
+            await runtimeProbe.connect();
+            const runtimeIdentity = (await runtimeProbe.query(
+                "SELECT current_database() AS database_name, current_user AS current_role, session_user AS session_role",
+            )).rows[0];
+            if (runtimeIdentity?.database_name !== targetContract.databaseName ||
+                runtimeIdentity.current_role !== targetContract.runtimeRole ||
+                runtimeIdentity.session_role !== targetContract.runtimeRole) {
+                throw new Error("Provisioned runtime credential resolved to an unexpected database or role.");
+            }
+            await verifyTargetSchema(runtimeProbe, targetContract);
+        } finally {
+            await runtimeProbe.end().catch(() => {});
+        }
         const catalog = await queryRows(client, `
             SELECT
               (SELECT COUNT(*) FROM pg_tables WHERE schemaname = 'public' AND rowsecurity) AS rls_enabled,

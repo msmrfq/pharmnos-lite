@@ -1,0 +1,39 @@
+{
+  "evidenceVersion": 1,
+  "audit": "authenticated-database-trust-boundary",
+  "target": "approved local disposable PostgreSQL target only",
+  "databaseIdentity": {
+    "database_name": "pharmnos_financial_e2e",
+    "current_user": "pharmnos_e2e",
+    "session_user": "pharmnos_e2e",
+    "server_address": "172.18.0.2/32",
+    "server_port": 5432
+  },
+  "runtimeRole": {
+    "can_login": true,
+    "is_superuser": true,
+    "bypasses_rls": true,
+    "public_schema_create": true,
+    "set_config_execute": true
+  },
+  "securityDefinerHelper": {
+    "publicFunctionCount": 0,
+    "status": "REMOVED"
+  },
+  "forgedClaimProbe": {
+    "status": "REPRODUCED",
+    "subject": "forged-subject",
+    "tenant": "forged-tenant",
+    "conclusion": "Transaction-local GUCs are mutable by the runtime role and are not, by themselves, authenticated identity."
+  },
+  "sourceHashes": {
+    "src/lib/db/tenant-context.ts": "bbb4bd95c04cf8aa9343e1d067a7533e0cee68bbbe4517c1822f330d8bb78069",
+    "src/lib/db/prisma.ts": "614802627fe10715c2dbecdd1c337747c07650c25829e3e7b823864c40a817a3",
+    "src/adapters/auth/supabase-auth.adapter.ts": "58b23836924cf8e74f5a528f13ae243e0e3878f53eb3773753c3a374a116bec1",
+    "scripts/financial-e2e-provision-local.mjs": "991951df84573ddd2bc60b0f9e48f90fdbe56a9602fb41372563dd978083824d",
+    "prisma/financial-e2e-rls-policies.review.sql": "c86130469264d8b25a2500c2fbce0b51ba5bb07733e83930e7916ba3b783c9b5",
+    "scripts/purchase-gst-application-acceptance.cjs": "a8a6e5baacda2efde8595309e8df3af0353a47e66563836e7da8bf1d070869ae"
+  },
+  "cleanup": "No database or persistent rows were created; transaction was rolled back.",
+  "verdict": "HIGH_TRUST_BOUNDARY_BLOCKER"
+}

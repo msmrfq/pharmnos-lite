@@ -1,25 +1,75 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import Module from "node:module";
+import path from "node:path";
+import { createRequire } from "node:module";
 import pg from "pg";
 import { installFinancialE2eTestSession, clearFinancialE2eTestSession } from "../src/adapters/auth/supabase-auth.adapter.ts";
+import { verifyDatabaseIdentity } from "./financial-e2e-safety.mjs";
+import {
+  cleanupRunOwnedFixtures,
+  createFixtureManifest,
+  recordFixtureIdentifiers,
+} from "./financial-e2e-fixture-lifecycle.mjs";
+import {
+  CLEANUP_TABLES,
+  collectOwnedResources,
+} from "./financial-e2e-fixture-ownership.mjs";
+import { loadTargetContractFromEnv, targetContractBinding, verifyTargetSchema } from "./financial-e2e-target-contract.mjs";
 
 const { Client } = pg;
-const APPROVED = Object.freeze({
-  database: "pharmnos_financial_e2e",
-  host: "127.0.0.1",
-  port: "55432",
-  runtimeRole: "pharmnos_e2e_runtime",
-  bootstrapRole: "pharmnos_e2e",
-  marker: "pharmnos-financial-e2e",
-  runId: "pharmnos-gst-validation-20261026",
-  attemptId: "pharmnos-gst-init-20261026-01",
+const require = createRequire(import.meta.url);
+const root = process.cwd();
+process.env.TS_NODE_COMPILER_OPTIONS = JSON.stringify({
+  module: "commonjs",
+  moduleResolution: "node",
+  jsx: "preserve",
 });
+const originalResolve = Module._resolveFilename;
+const originalLoad = Module._load;
+Module._resolveFilename = function (request, parent, isMain, options) {
+  if (request.startsWith("@/")) {
+    return originalResolve.call(this, path.join(root, "src", request.slice(2)), parent, isMain, options);
+  }
+  return originalResolve.call(this, request, parent, isMain, options);
+};
+Module._load = function (request, parent, isMain) {
+  if (request === "next/cache" || request === "next/cache.js") return { revalidatePath() {} };
+  if (request === "next/headers" || request === "next/headers.js") {
+    return { cookies: () => ({ get: () => undefined, set() {}, delete() {} }) };
+  }
+  if (request === "next/navigation" || request === "next/navigation.js") {
+    return { redirect: (location) => { throw new Error(`NEXT_REDIRECT:${location}`); } };
+  }
+  return originalLoad.call(this, request, parent, isMain);
+};
+require("ts-node/register/transpile-only");
+let APPROVED;
+
+async function cleanupOwnedResources(plan, client) {
+  await client.query("BEGIN");
+  try {
+    for (const resourceType of plan.order) {
+      const ids = plan.resources
+        .filter((resource) => resource.resourceType === resourceType)
+        .map((resource) => resource.id);
+      if (ids.length === 0) continue;
+      const table = CLEANUP_TABLES[resourceType];
+      await client.query(`DELETE FROM ${table} WHERE id::text = ANY($1::text[])`, [ids]);
+    }
+    await client.query("COMMIT");
+    return { success: true };
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  }
+}
 
 function loadEnv() {
   for (const line of fs.readFileSync(".env.financial-e2e", "utf8").split(/\r?\n/)) {
     const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (match) process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, "");
+    if (match && process.env[match[1]] === undefined) process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, "");
   }
 }
 
@@ -36,19 +86,16 @@ function id(label) {
   return `gst_e2e_${label}_${crypto.randomUUID().replaceAll("-", "")}`;
 }
 
-async function query(client, text, values = []) {
-  return (await client.query(text, values)).rows;
-}
-
 async function gate() {
   loadEnv();
+  APPROVED = loadTargetContractFromEnv();
   assert.equal(process.env.ALLOW_FINANCIAL_E2E, "true");
-  assert.equal(process.env.TEST_DATABASE_NAME, APPROVED.database);
+  assert.equal(process.env.TEST_DATABASE_NAME, APPROVED.databaseName);
   assert.equal(process.env.TEST_DATABASE_MARKER, APPROVED.marker);
   const configured = new URL(process.env.TEST_DATABASE_URL);
   assert.equal(configured.hostname, APPROVED.host);
-  assert.equal(configured.port, APPROVED.port);
-  assert.equal(configured.pathname, `/${APPROVED.database}`);
+  assert.equal(Number(configured.port), APPROVED.port);
+  assert.equal(configured.pathname, `/${APPROVED.databaseName}`);
   assert.equal(process.env.FINANCIAL_E2E_RUNTIME_DB_USER, APPROVED.runtimeRole);
   const bootstrap = new Client({ connectionString: targetUrl("TEST_DATABASE_URL", process.env.FINANCIAL_E2E_DB_PASSWORD) });
   await bootstrap.connect();
@@ -61,7 +108,7 @@ async function gate() {
              current_setting('application_name', true) AS application_name,
              current_setting('pharmnos.financial_e2e_marker', true) AS environment_marker
     `)).rows[0];
-    assert.equal(identity.database_name, APPROVED.database);
+    assert.equal(identity.database_name, APPROVED.databaseName);
     assert.equal(identity.current_user_name, APPROVED.bootstrapRole);
     assert.equal(identity.session_user_name, APPROVED.bootstrapRole);
     assert.equal(identity.application_name, APPROVED.marker);
@@ -74,6 +121,7 @@ async function gate() {
     assert.equal(runtime.rolcanlogin, true);
     assert.equal(runtime.rolsuper, false);
     assert.equal(runtime.rolbypassrls, false);
+    await verifyTargetSchema(bootstrap, APPROVED);
     const catalog = (await bootstrap.query(`
       SELECT
         (SELECT count(*) FROM pg_class c
@@ -86,8 +134,8 @@ async function gate() {
          JOIN pg_namespace n ON n.oid = c.relnamespace
          WHERE n.nspname = 'public' AND NOT t.tgisinternal) AS triggers
     `)).rows[0];
-    assert.equal(Number(catalog.rls_tables), 30);
-    assert.equal(Number(catalog.triggers), 12);
+    assert.equal(Number(catalog.rls_tables), 33);
+    assert.equal(Number(catalog.triggers), 16);
     return bootstrap;
   } catch (error) {
     await bootstrap.end();
@@ -184,7 +232,7 @@ async function appClient(tenant) {
   const url = targetUrl("FINANCIAL_E2E_RUNTIME_DATABASE_URL", process.env.FINANCIAL_E2E_RUNTIME_DB_PASSWORD, `-c request.jwt.claim.tenant_id=${tenant}`);
   process.env.DATABASE_URL = url;
   process.env.FINANCIAL_E2E_TEST_MODE = "true";
-  process.env.TEST_DATABASE_NAME = APPROVED.database;
+  process.env.TEST_DATABASE_NAME = APPROVED.databaseName;
   process.env.TEST_DATABASE_MARKER = APPROVED.marker;
   const { prisma } = await import("../src/lib/db/prisma.ts");
   return prisma;
@@ -250,6 +298,7 @@ async function invokeSuccessfulAction(action) {
 
 async function verifyTenantIsolationAndPrivileges(bootstrap, fixture) {
   const tenantB = id("tenant_b");
+  fixture.tenantB = tenantB;
   await bootstrap.query(
     "INSERT INTO tenants (id, slug, business_name, updated_at) VALUES ($1,$2,$3,now())",
     [tenantB, `${APPROVED.runId}-${tenantB}`, "GST E2E Tenant B"],
@@ -296,9 +345,9 @@ async function verifyTenantIsolationAndPrivileges(bootstrap, fixture) {
       (SELECT has_table_privilege($1, 'public.tenants', 'INSERT')) AS runtime_can_insert_tenants,
       (SELECT rolcanlogin AND NOT rolsuper AND NOT rolbypassrls FROM pg_roles WHERE rolname = $1) AS restricted_runtime
   `, [APPROVED.runtimeRole]))[0];
-  assert.equal(Number(catalog.forced_rls_tables), 30);
-  assert.equal(Number(catalog.policies), 76);
-  assert.equal(Number(catalog.triggers), 12);
+  assert.equal(Number(catalog.forced_rls_tables), 33);
+  assert.equal(Number(catalog.policies), 84);
+  assert.equal(Number(catalog.triggers), 16);
   assert.equal(Number(catalog.runtime_delete_grants), 0);
   assert.equal(catalog.runtime_can_select_tenants, true);
   assert.equal(catalog.runtime_can_insert_tenants, true);
@@ -309,19 +358,24 @@ async function verifyTenantIsolationAndPrivileges(bootstrap, fixture) {
 async function main() {
   let bootstrap = null;
   let prisma = null;
+  let fixture = null;
+  let fixtureManifest = null;
   try {
     bootstrap = await gate();
-    const fixture = await createFixture(bootstrap);
+    fixture = await createFixture(bootstrap);
     await verifyTenantIsolationAndPrivileges(bootstrap, fixture);
     const snapshotFixture = await createSnapshotFixtures(bootstrap, fixture);
+    fixtureManifest = recordFixtureIdentifiers(
+      createFixtureManifest(APPROVED.runId),
+      await collectOwnedResources(bootstrap, [fixture.tenant, fixture.tenantB], APPROVED.runId),
+    );
     await bootstrap.end();
     bootstrap = null;
     prisma = await appClient(fixture.tenant);
     installFinancialE2eTestSession(fixture.externalId);
-    const { finalizeSalesInvoiceAction } = await import("../src/app/_actions/sales.actions.ts");
-    const { finalizePurchaseAction } = await import("../src/app/_actions/purchases.actions.ts");
-    const { createCustomerPaymentAction, createSupplierPaymentAction } = await import("../src/app/_actions/sales.actions.ts");
-    const { repos } = await import("../src/repositories/index.ts");
+    const { finalizeSalesInvoiceAction, createCustomerPaymentAction, createSupplierPaymentAction } = require("../src/app/_actions/sales.actions.ts");
+    const { finalizePurchaseAction } = require("../src/app/_actions/purchases.actions.ts");
+    const { repos } = require("../src/repositories/index.ts");
     const onlyGst016 = process.env.GST_E2E_ONLY === "016";
     if (!onlyGst016) {
     const salesBefore = await prisma.sales_invoices.findUnique({ where: { id: fixture.sales, tenant_id: fixture.tenant }, include: { items: true, customer: true } });
@@ -521,6 +575,76 @@ async function main() {
     clearFinancialE2eTestSession();
     if (prisma) await prisma.$disconnect().catch(() => {});
     if (bootstrap) await bootstrap.end().catch(() => {});
+    if (!fixtureManifest && fixture) {
+      const recoveryBootstrap = new Client({
+        connectionString: targetUrl("TEST_DATABASE_URL", process.env.FINANCIAL_E2E_DB_PASSWORD),
+      });
+      await recoveryBootstrap.connect();
+      try {
+        fixtureManifest = recordFixtureIdentifiers(
+          createFixtureManifest(APPROVED.runId),
+          await collectOwnedResources(
+            recoveryBootstrap,
+            [fixture.tenant, fixture.tenantB].filter(Boolean),
+            APPROVED.runId,
+          ),
+        );
+      } finally {
+        await recoveryBootstrap.end();
+      }
+    }
+    if (fixtureManifest) {
+      const cleanupBootstrap = new Client({
+        connectionString: targetUrl("TEST_DATABASE_URL", process.env.FINANCIAL_E2E_DB_PASSWORD),
+      });
+      await cleanupBootstrap.connect();
+      try {
+        const runtime = new Client({
+          connectionString: targetUrl("FINANCIAL_E2E_RUNTIME_DATABASE_URL", process.env.FINANCIAL_E2E_RUNTIME_DB_PASSWORD),
+        });
+        await runtime.connect();
+        let identityEvidence;
+        try {
+          identityEvidence = await verifyDatabaseIdentity({
+            client: runtime,
+            expectedDatabase: APPROVED.databaseName,
+            expectedRole: APPROVED.runtimeRole,
+            targetUrl: process.env.FINANCIAL_E2E_RUNTIME_DATABASE_URL,
+            approvedTargetBinding: targetContractBinding(APPROVED),
+            runId: APPROVED.runId,
+          });
+        } finally {
+          await runtime.end();
+        }
+        if (!identityEvidence.ok) throw new Error(identityEvidence.error);
+        const completed = await cleanupRunOwnedFixtures({
+          manifest: fixtureManifest,
+          identityEvidence: identityEvidence.evidence,
+          targetUrl: process.env.TEST_DATABASE_URL,
+          runtimeUrl: process.env.FINANCIAL_E2E_RUNTIME_DATABASE_URL,
+          ordinaryUrl: process.env.DATABASE_URL,
+          databaseName: APPROVED.databaseName,
+          databaseRole: APPROVED.runtimeRole,
+          runId: APPROVED.runId,
+          cleanupAuthorized: process.env.FINANCIAL_E2E_CLEANUP_AUTHORIZED === "true",
+          targetContract: APPROVED,
+          executePlan: (plan) => cleanupOwnedResources(plan, cleanupBootstrap),
+          verifyCompletion: async (plan) => {
+            for (const resource of plan.resources) {
+              const table = resource.resourceType === "role_permissions"
+                ? "role_permissions"
+                : CLEANUP_TABLES[resource.resourceType];
+              const remaining = await query(cleanupBootstrap, `SELECT 1 FROM ${table} WHERE id::text = $1 LIMIT 1`, [resource.id]);
+              assert.equal(remaining.length, 0, `Cleanup left ${resource.resourceType}/${resource.id}.`);
+            }
+          },
+        });
+        assert.equal(completed.status, "CLEANUP_COMPLETE");
+        console.log("FIXTURE-CLEANUP=PASS_RUN_SCOPED_POST_VERIFIED");
+      } finally {
+        await cleanupBootstrap.end();
+      }
+    }
   }
 }
 

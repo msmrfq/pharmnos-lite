@@ -59,6 +59,22 @@ test("rejects missing or inactive tenant membership", async () => {
     );
 });
 
+test("rejects ambiguous active tenant memberships", async () => {
+    const adapter = makeAdapter({
+        findUserByExternalId: async () => ({
+            ...user,
+            memberships: [
+                user.memberships[0],
+                { ...user.memberships[0], tenant_id: "second-tenant" },
+            ],
+        }),
+    });
+    await assert.rejects(
+        adapter.getAuthenticatedContext(),
+        (error) => error.code === "AMBIGUOUS_ACTIVE_MEMBERSHIPS",
+    );
+});
+
 test("builds context from the authenticated membership and permissions", async () => {
     const adapter = makeAdapter();
     const context = await adapter.getAuthenticatedContext();

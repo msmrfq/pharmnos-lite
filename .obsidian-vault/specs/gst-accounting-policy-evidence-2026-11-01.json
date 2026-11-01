@@ -1,0 +1,37 @@
+{
+  "evidenceVersion": 1,
+  "scope": "Owner-approved domestic purchase and inventory GST policy enforcement",
+  "approval": {
+    "approvedBy": "Masum Rafique - Owner",
+    "approvedAt": "2026-11-01T14:55:50+05:30",
+    "professionalAdviceClaimed": false
+  },
+  "implementationStatus": {
+    "inventoryValuation": "POLICY_RECORDED_VALUATION_FIELDS_PENDING",
+    "cess": "NON_ZERO_BLOCKED_UNTIL_GOVERNED_RULE",
+    "inclusivePricing": "BLOCKED_UNTIL_RULE_35_EXTRACTION",
+    "freightAndDiscountAllocation": "UNSUPPORTED_ALLOCATION_BLOCKED",
+    "rounding": "EXISTING_BEHAVIOR_PRESERVED_VERSIONED_PRECEDENCE_PENDING",
+    "discrepancyTolerance": "REQUIRES_ATTRIBUTABLE_RESOLUTION"
+  },
+  "tests": {
+    "command": "pnpm exec node --test tests/gst-accounting-policy-contract.test.mjs tests/purchase-gst-line-model-contract.test.mjs tests/gst-treatment-contract.test.mjs",
+    "passed": 5,
+    "failed": 0,
+    "typecheck": "PASS",
+    "eslint": "PASS",
+    "gitDiffCheck": "PASS"
+  },
+  "failClosedControls": [
+    "Inclusive GST purchase creation is rejected until governed Rule 35 extraction and rounding are enabled.",
+    "Non-zero declared cess is rejected until a governed cess rule and utilization policy are configured.",
+    "Non-zero accepted cess cannot complete accounting acceptance without governed support.",
+    "GST discrepancies retain supplier and calculated values and require attributable resolution."
+  ],
+  "nonClaims": [
+    "No professional or legal GST conclusion is claimed.",
+    "No inventory valuation policy is inferred from purchase_rate.",
+    "No production or Live Supabase operation was performed.",
+    "No new runtime accounting evidence is claimed beyond the focused policy contracts."
+  ]
+}

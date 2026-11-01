@@ -1,0 +1,87 @@
+{
+  "evidenceVersion": 1,
+  "runId": "purchase_gst_completion_2026-11-01T15-13-15_ist",
+  "branch": "main",
+  "head": "89e7b96627553249ec07fb1304fffcff19836d12",
+  "scope": "Owner-approved Purchase GST Financial Integrity completion audit",
+  "targetContract": {
+    "implementation": "scripts/financial-e2e-target-contract.mjs",
+    "consumers": [
+      "scripts/financial-e2e-provision-local.mjs",
+      "scripts/financial-e2e-initialization-contract.mjs",
+      "scripts/gst-disposable-runner.mjs",
+      "scripts/gst-application-e2e-runner.mjs",
+      "scripts/financial-e2e-fixture-lifecycle.mjs"
+    ],
+    "regressionChecks": "88 passed, 0 failed",
+    "requiredRuntimeAttributes": [
+      "LOGIN",
+      "NOSUPERUSER",
+      "NOBYPASSRLS"
+    ],
+    "runtimeProbe": {
+      "0419Bootstrap": "PASS — initialized schema target on loopback port 55435",
+      "0419RuntimeCredential": "PASS — restricted runtime credential authenticates against the authorized 0419 target",
+      "passwordRepair": "PASS — disposable role repaired from the authorized runtime credential source",
+      "containerLifecycleChanges": "NONE"
+    },
+    "status": "IMPLEMENTED_AND_RUNTIME_AUTHENTICATED"
+  },
+  "runtimeEvidence": {
+    "artifact": "specs/purchase-gst-application-evidence-purchase_gst_1793531037977_0975f5.json",
+    "sha256": "D56D72072C790FFC1EE40D13C934201BE982C5633C0D16E37419AFA33D6E8D7E",
+    "scenarios": 16,
+    "failures": 0,
+    "role": "pharmnos_e2e_runtime",
+    "roleAttributes": ["LOGIN", "NOSUPERUSER", "NOBYPASSRLS"],
+    "cleanupVerifiedAbsent": true,
+    "payloadHashEquality": true,
+    "targetPort": 55435,
+    "targetDatabasePrefix": "pharmnos_financial_e2e_0419_purchase_gst_<run>",
+    "targetContractCleanup": "PASS"
+  },
+  "acceptanceStatus": {
+    "implementation": "COMPLETE",
+    "runtimeVerification": "COMPLETE",
+    "independentAcceptance": "PARTIAL — restricted-runtime target-bound execution passed; accounting-policy, production-rollout, and forged-GUC residual-risk gates remain open"
+  },
+  "persistedAmounts": {
+    "acceptedLineTotal": "218.3400",
+    "canonicalLineTotal": "218.34",
+    "canonicalGstAmount": "27.26",
+    "invoiceNet": "218.34",
+    "supplierLedgerCredit": "218.34",
+    "auditNet": "218.34"
+  },
+  "implementation": {
+    "inclusivePurchase": "BLOCKED",
+    "nonZeroCess": "BLOCKED",
+    "inventoryValuationWithoutEligibility": "PENDING_AND_NON_AUTHORITATIVE",
+    "procurementRateUsedAsApprovedInventoryCost": false,
+    "approvedInventoryCostPersisted": false,
+    "recoverabilityDecisionPersisted": false,
+    "pendingValuationLines": 2,
+    "pendingValuationBatches": 2,
+    "pendingValuationMovements": 2,
+    "nullValuationMovementCosts": 2
+  },
+  "focusedChecks": {
+    "policyAndValuationContracts": "9 passed, 0 failed",
+    "typecheck": "PASS",
+    "eslint": "PASS",
+    "gitDiffCheck": "PASS",
+    "prismaGenerate": "PASS",
+    "prismaValidateWithDisposableFallback": "PASS",
+    "standaloneTsxTests": "NOT RUN — tsx unavailable"
+  },
+  "verdict": "PARTIAL_BLOCKED_BY_POLICY_DETAIL",
+  "blockers": [
+    "ITC eligibility, apportionment, provisional reversal, and ITC asset posting model are unspecified",
+    "Freight allocation and pure-agent qualification workflow are unspecified",
+    "Post-supply discount and invoice-wide allocation workflow is unspecified",
+    "Exact statutory rounding precedence and precision are unspecified",
+    "HIGH forged-GUC trust-boundary finding remains open",
+    "Production and Live Supabase rollout remain NO-GO"
+  ],
+  "artifactSha256": "RECORDED_IN_GST_IMPLEMENTATION_TRACKER"
+}

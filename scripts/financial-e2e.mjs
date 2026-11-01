@@ -6,6 +6,7 @@ import {
     validateFinancialE2eTarget,
     verifyDatabaseIdentity,
 } from "./financial-e2e-safety.mjs";
+import { loadTargetContractFromEnv, verifyTargetSchema } from "./financial-e2e-target-contract.mjs";
 const BLOCKED_EXIT = 2;
 
 function fail(message) {
@@ -19,11 +20,11 @@ function readRequiredEnv(name) {
     return value;
 }
 
-async function verifyConnectedIdentity(runtimeUrl, expectedDatabase, expectedRole, marker, runId) {
+async function verifyConnectedIdentity(runtimeUrl, expectedDatabase, expectedRole, marker, runId, targetContract) {
     const client = new Client({ connectionString: runtimeUrl, application_name: marker });
     await client.connect();
     try {
-        return await verifyDatabaseIdentity({
+        const identity = await verifyDatabaseIdentity({
             client,
             expectedDatabase,
             expectedRole,
@@ -31,6 +32,8 @@ async function verifyConnectedIdentity(runtimeUrl, expectedDatabase, expectedRol
             runId,
             expectedEnvironmentMarker: REQUIRED_MARKER,
         });
+        if (identity.ok) await verifyTargetSchema(client, targetContract);
+        return identity;
     } finally {
         await client.end();
     }
@@ -50,8 +53,10 @@ async function main() {
     let marker;
     let runtimeUrl;
     let runtimeDatabaseRole;
+    let targetContract;
     const runId = `financial-e2e-${Date.now()}`;
     try {
+        targetContract = loadTargetContractFromEnv();
         testUrl = readRequiredEnv("TEST_DATABASE_URL");
         ordinaryUrl = readRequiredEnv("DATABASE_URL");
         testDatabaseName = readRequiredEnv("TEST_DATABASE_NAME");
@@ -60,6 +65,9 @@ async function main() {
         runtimeDatabaseRole = readRequiredEnv("FINANCIAL_E2E_RUNTIME_DB_USER");
         const safety = await validateFinancialE2eTarget({ testUrl, ordinaryUrl, testDatabaseName, marker });
         if (!safety.ok) throw new Error(safety.errors.join(" "));
+        if (targetContract.databaseName !== testDatabaseName) {
+            throw new Error("Target contract database name does not match the execution target.");
+        }
         const runtimeSafety = await validateFinancialE2eTarget({
             testUrl: runtimeUrl,
             ordinaryUrl,
@@ -73,7 +81,7 @@ async function main() {
     }
 
     try {
-        const identity = await verifyConnectedIdentity(runtimeUrl, testDatabaseName, runtimeDatabaseRole, marker, runId);
+        const identity = await verifyConnectedIdentity(runtimeUrl, testDatabaseName, runtimeDatabaseRole, marker, runId, targetContract);
         if (!identity.ok) throw new Error(identity.error);
     } catch {
         fail("isolated test database identity could not be verified");

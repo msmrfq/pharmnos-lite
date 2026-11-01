@@ -3,6 +3,10 @@ import {
     validateDatabaseIdentityEvidence,
     validateFinancialE2eTarget,
 } from "./financial-e2e-safety.mjs";
+import {
+    targetContractBinding,
+    validateTargetContract,
+} from "./financial-e2e-target-contract.mjs";
 
 const DEFAULT_MAX_AGE_MS = 5 * 60 * 1000;
 const REQUIRED_MARKER = "pharmnos-financial-e2e";
@@ -143,6 +147,7 @@ export async function evaluateDisposableInitialization({
     roleEvidence,
     catalogEvidence,
     identityEvidence,
+    targetContract,
     now = Date.now(),
     maxAgeMs = DEFAULT_MAX_AGE_MS,
 }) {
@@ -155,7 +160,17 @@ export async function evaluateDisposableInitialization({
     if (!/^[a-z0-9][a-z0-9_-]{2,63}$/.test(normalizedAttemptId)) {
         errors.push("A valid initialization attempt ID is required.");
     }
-    const binding = targetBinding(target?.testUrl);
+    const binding = targetContract ? targetContractBinding(targetContract) : targetBinding(target?.testUrl);
+    if (targetContract) {
+        const contractResult = validateTargetContract({
+            contract: targetContract,
+            targetUrl: target?.testUrl,
+            runtimeUrl: target?.runtimeUrl,
+            ordinaryUrl: target?.ordinaryUrl,
+            now,
+        });
+        if (!contractResult.ok) errors.push(...contractResult.errors);
+    }
     if (!binding) errors.push("An approved PostgreSQL disposable target is required.");
 
     let targetResult;
@@ -196,6 +211,7 @@ export async function evaluateDisposableInitialization({
         expectedDatabase: target.testDatabaseName,
         expectedRole: runtimeRole,
         targetUrl: target.testUrl,
+        approvedTargetBinding: binding,
         runId: normalizedRunId,
         now,
         maxAgeMs,

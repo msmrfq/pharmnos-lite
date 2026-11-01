@@ -3,6 +3,7 @@ export * from "./fefo-batch.service";
 export * from "./stock-movement.service";
 export * from "./ledger-impact.service";
 export * from "./purchase-gst-reconciliation.service";
+export * from "./inventory-valuation.service";
 
 import { gstCalculator } from "./gst-calculator.service";
 import { fefoBatchPicker } from "./fefo-batch.service";

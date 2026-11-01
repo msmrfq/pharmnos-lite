@@ -84,8 +84,11 @@ export async function getServerTenantContext(): Promise<SessionCtxResult> {
         },
       });
     });
-    if (!user || !user.memberships.length) {
+    if (!user || user.memberships.length === 0) {
       throw new Error("Authenticated user has no active tenant membership.");
+    }
+    if (user.memberships.length !== 1) {
+      throw new Error("Authenticated user has ambiguous active tenant memberships.");
     }
     const m = user.memberships[0];
     if (!m) {

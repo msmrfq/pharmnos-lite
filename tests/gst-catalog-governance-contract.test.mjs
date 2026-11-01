@@ -22,7 +22,9 @@ test("catalog and rate approvals require source evidence and tenant guards", () 
 
 test("classification approval activates the approved record and records membership audit history", () => {
   const approvalBody = source.slice(source.indexOf("export async function approveHsnSacClassification("), source.indexOf("export async function approveHsnSacClassificationFromForm"));
+  assert.match(approvalBody, /requirePermission\(ctx, "approve_hsn_catalog"/);
   assert.doesNotMatch(approvalBody, /manage_hsn_catalog/);
+  assert.match(approvalBody, /if \(result\.count !== 1\) return result/);
   assert.match(source, /"classification_approved_by_membership_id" = \$\{membershipId\}/);
   assert.match(source, /"classification_approved_at" = NOW\(\)/);
   assert.match(source, /classification_status: "APPROVED"/);
@@ -31,6 +33,17 @@ test("classification approval activates the approved record and records membersh
   assert.match(source, /action: "CLASSIFICATION_APPROVED"/);
   assert.match(source, /actor_membership_id: membershipId/);
   assert.match(source, /Updated catalog record could not be reloaded/);
+});
+
+test("catalog maintenance remains separate from classification approval", () => {
+  for (const name of ["createHsnSacCatalogRecord", "updateHsnSacCatalogRecord"]) {
+    const start = source.indexOf(`export async function ${name}`);
+    const end = source.indexOf("\nexport async function ", start + 1);
+    const body = source.slice(start, end === -1 ? source.length : end);
+    assert.match(body, /requirePermission\(ctx, "manage_hsn_catalog"/);
+  }
+  const rateApproval = source.slice(source.indexOf("export async function approveGstRateRule("));
+  assert.match(rateApproval, /requirePermission\(ctx, "approve_gst_rates"/);
 });
 
 test("GST rate approval records the approver membership rather than the user id", () => {

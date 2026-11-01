@@ -97,6 +97,26 @@ enum PurchaseGstAccountingAcceptanceStatus {
   ACCEPTED
 }
 
+enum InventoryValuationDecisionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUPERSEDED
+  REVERSED
+}
+
+enum InventoryValuationAccountingStatus {
+  NOT_APPLICABLE
+  PENDING_POLICY
+  POSTED
+  REVERSED
+}
+
+enum InventoryValuationAdjustmentKind {
+  CORRECTION
+  REVERSAL
+}
+
 enum PurchaseGstEvidenceRevisionKind {
   INITIAL
   CORRECTION
@@ -206,6 +226,8 @@ model tenants {
   purchase_gst_line_evidence purchase_gst_line_evidence[]
   purchase_gst_reconciliation_events purchase_gst_reconciliation_events[]
   posting_operations purchase_posting_operations[]
+  inventory_valuation_decisions inventory_valuation_decisions[]
+  inventory_valuation_adjustments inventory_valuation_adjustments[]
   hsn_sac_catalog hsn_sac_catalog[]
   gst_rate_rules gst_rate_rules[]
 
@@ -247,6 +269,8 @@ model memberships {
   gst_reconciliation_events purchase_gst_reconciliation_events[] @relation("purchase_gst_event_actor")
   approved_hsn_catalog_records hsn_sac_catalog[] @relation("hsn_classification_approver")
   approved_gst_rate_rules gst_rate_rules[] @relation("gst_rate_approver")
+  inventory_valuation_decisions inventory_valuation_decisions[] @relation("inventory_valuation_decision_actor")
+  inventory_valuation_adjustments inventory_valuation_adjustments[] @relation("inventory_valuation_adjustment_actor")
 
   @@unique([tenant_id, user_id])
   @@unique([tenant_id, id])
@@ -354,6 +378,9 @@ model product_batches {
   expiry_date   DateTime?
   mrp           Decimal? @db.Decimal(12, 2)
   purchase_rate Decimal? @db.Decimal(12, 2)
+  inventory_acquisition_cost Decimal? @db.Decimal(20, 4)
+  inventory_valuation_status String @default("PENDING")
+  inventory_valuation_policy_version String?
   sale_rate     Decimal? @db.Decimal(12, 2)
   received_qty  Int      @default(0)
   available_qty Int      @default(0)
@@ -369,8 +396,10 @@ model product_batches {
   purchase_invoice purchase_invoices?  @relation(fields: [purchase_id], references: [id])
   stock_movements  stock_movements[]
   sales_invoice_items sales_invoice_items[]
+  inventory_valuation_decisions inventory_valuation_decisions[]
 
   @@unique([tenant_id, product_id, batch_no])
+  @@unique([tenant_id, id])
   @@index([tenant_id])
   @@index([tenant_id, expiry_date])
   @@index([tenant_id, available_qty])
@@ -488,6 +517,7 @@ model purchase_invoices {
   current_gst_accounting_decision purchase_gst_accounting_decisions? @relation("purchase_current_gst_accounting_decision", fields: [tenant_id, id, current_gst_accounting_decision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_invoices_current_gst_accounting_decision_fkey")
   gst_reconciliation_events purchase_gst_reconciliation_events[] @relation("purchase_gst_event_purchase")
   posting_operations purchase_posting_operations[]
+  inventory_valuation_decisions inventory_valuation_decisions[]
 
   @@unique([tenant_id, invoice_no])
   @@unique([tenant_id, id])
@@ -642,6 +672,11 @@ model purchase_invoice_items {
   accepted_at DateTime?
   accepted_by_membership_id String?
   accepted_decision_id String?
+  recoverable_itc Decimal? @db.Decimal(20, 4)
+  non_recoverable_gst Decimal? @db.Decimal(20, 4)
+  inventory_acquisition_cost Decimal? @db.Decimal(20, 4)
+  inventory_valuation_status String @default("PENDING")
+  inventory_valuation_policy_version String?
   gst_acceptance_status String @default("NOT_ACCEPTED")
   gst_discrepancy_details Json?
   gst_calculation_reference String?
@@ -657,11 +692,82 @@ model purchase_invoice_items {
   gst_line_evidence purchase_gst_line_evidence[] @relation("purchase_gst_line_evidence_item")
   accepted_by memberships? @relation("purchase_line_acceptance_actor", fields: [tenant_id, accepted_by_membership_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_line_acceptance_actor_fkey")
   accepted_decision purchase_gst_accounting_decisions? @relation("purchase_line_acceptance_decision", fields: [tenant_id, purchase_id, accepted_decision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_line_acceptance_decision_fkey")
+  inventory_valuation_decisions inventory_valuation_decisions[]
 
   @@index([tenant_id])
   @@index([purchase_id])
   @@index([product_id])
   @@unique([tenant_id, purchase_id, id])
+}
+
+model inventory_valuation_decisions {
+  id                         String                           @id @default(cuid())
+  tenant_id                  String
+  purchase_invoice_id        String
+  purchase_invoice_item_id   String
+  product_batch_id           String
+  stock_movement_id          String?
+  status                     InventoryValuationDecisionStatus @default(PENDING)
+  accounting_status          InventoryValuationAccountingStatus @default(PENDING_POLICY)
+  eligibility_status         String
+  accepted_taxable_value     Decimal                          @db.Decimal(20, 4)
+  accepted_gst               Decimal                          @db.Decimal(20, 4)
+  recoverable_itc            Decimal?
+  non_recoverable_gst        Decimal?
+  direct_acquisition_cost    Decimal                          @default(0) @db.Decimal(20, 4)
+  inventory_acquisition_cost Decimal?
+  policy_version             String
+  decision_reference         String
+  rationale                  String
+  idempotency_key            String
+  request_payload_hash       String
+  supersedes_decision_id     String?
+  decided_by_membership_id   String
+  decided_at                 DateTime                         @default(now())
+  created_at                 DateTime                         @default(now())
+
+  tenant        tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  purchase      purchase_invoices     @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "inventory_valuation_decisions_purchase_fkey")
+  purchase_item purchase_invoice_items @relation(fields: [tenant_id, purchase_invoice_id, purchase_invoice_item_id], references: [tenant_id, purchase_id, id], onDelete: Restrict, map: "inventory_valuation_decisions_purchase_item_fkey")
+  batch         product_batches       @relation(fields: [tenant_id, product_batch_id], references: [tenant_id, id], onDelete: Restrict, map: "inventory_valuation_decisions_batch_fkey")
+  movement      stock_movements?      @relation(fields: [tenant_id, stock_movement_id], references: [tenant_id, id], onDelete: Restrict, map: "inventory_valuation_decisions_movement_fkey")
+  actor         memberships           @relation("inventory_valuation_decision_actor", fields: [tenant_id, decided_by_membership_id], references: [tenant_id, id], onDelete: Restrict)
+  supersedes    inventory_valuation_decisions? @relation("valuation_decision_supersession", fields: [tenant_id, supersedes_decision_id], references: [tenant_id, id], onDelete: Restrict)
+  successors    inventory_valuation_decisions[] @relation("valuation_decision_supersession")
+  adjustments  inventory_valuation_adjustments[] @relation("valuation_adjustment_result")
+  prior_adjustments inventory_valuation_adjustments[] @relation("valuation_adjustment_prior")
+
+  @@unique([tenant_id, id])
+  @@unique([tenant_id, idempotency_key], map: "inventory_valuation_decision_idempotency_key")
+  @@index([tenant_id, purchase_invoice_id, purchase_invoice_item_id])
+  @@index([tenant_id, product_batch_id, created_at])
+  @@index([tenant_id, status, created_at])
+}
+
+model inventory_valuation_adjustments {
+  id                       String                         @id @default(cuid())
+  tenant_id                String
+  prior_decision_id        String
+  resulting_decision_id   String
+  adjustment_kind          InventoryValuationAdjustmentKind
+  recoverable_itc_delta    Decimal                        @db.Decimal(20, 4)
+  non_recoverable_gst_delta Decimal                       @db.Decimal(20, 4)
+  inventory_cost_delta     Decimal                        @db.Decimal(20, 4)
+  reason                   String
+  idempotency_key          String
+  request_payload_hash       String
+  adjusted_by_membership_id String
+  adjusted_at              DateTime                       @default(now())
+
+  tenant       tenants                       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  prior        inventory_valuation_decisions @relation("valuation_adjustment_prior", fields: [tenant_id, prior_decision_id], references: [tenant_id, id], onDelete: Restrict)
+  resulting    inventory_valuation_decisions @relation("valuation_adjustment_result", fields: [tenant_id, resulting_decision_id], references: [tenant_id, id], onDelete: Restrict)
+  actor        memberships                   @relation("inventory_valuation_adjustment_actor", fields: [tenant_id, adjusted_by_membership_id], references: [tenant_id, id], onDelete: Restrict)
+
+  @@unique([tenant_id, id])
+  @@unique([tenant_id, idempotency_key], map: "inventory_valuation_adjustment_idempotency_key")
+  @@index([tenant_id, prior_decision_id])
+  @@index([tenant_id, resulting_decision_id])
 }
 
 model purchase_gst_evidence_revisions {
@@ -1016,6 +1122,9 @@ model stock_movements {
   reference_type String?
   reference_id   String?
   unit_rate      Decimal?           @db.Decimal(12, 2)
+  inventory_acquisition_cost Decimal? @db.Decimal(20, 4)
+  inventory_valuation_status String @default("PENDING")
+  inventory_valuation_policy_version String?
   notes          String?
   created_by     String?
   created_at     DateTime           @default(now())
@@ -1023,12 +1132,14 @@ model stock_movements {
   tenant  tenants         @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   product products        @relation(fields: [product_id], references: [id], onDelete: Cascade)
   batch   product_batches? @relation(fields: [batch_id], references: [id])
+  inventory_valuation_decisions inventory_valuation_decisions[]
 
   @@index([tenant_id])
   @@index([tenant_id, product_id])
   @@index([tenant_id, batch_id])
   @@index([tenant_id, movement_type])
   @@index([tenant_id, created_at])
+  @@unique([tenant_id, id])
 }
 
 // ═══════════════════════════════════════════════════════════

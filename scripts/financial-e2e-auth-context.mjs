@@ -14,11 +14,14 @@ function resolveActiveMembership(user) {
     if (!user || !Array.isArray(user.memberships)) {
         fail("APPLICATION_USER_NOT_FOUND", "Authenticated application user could not be resolved.");
     }
-    const membership = user.memberships.find((candidate) => candidate?.status === "active");
-    if (!membership || !String(membership.tenant_id ?? "").trim()) {
+    const activeMemberships = user.memberships.filter((candidate) => candidate?.status === "active");
+    if (activeMemberships.length === 0 || !String(activeMemberships[0]?.tenant_id ?? "").trim()) {
         fail("ACTIVE_MEMBERSHIP_REQUIRED", "Authenticated user has no active tenant membership.");
     }
-    return membership;
+    if (activeMemberships.length !== 1) {
+        fail("AMBIGUOUS_ACTIVE_MEMBERSHIPS", "Authenticated user has ambiguous active tenant memberships.");
+    }
+    return activeMemberships[0];
 }
 
 function buildTenantContext(user, membership) {

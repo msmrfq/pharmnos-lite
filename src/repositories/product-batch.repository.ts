@@ -152,16 +152,22 @@ export class ProductBatchRepository extends BaseRepository<
         available_qty: true,
         received_qty: true,
         purchase_rate: true,
+        inventory_acquisition_cost: true,
+        inventory_valuation_status: true,
         expiry_date: true,
       },
     });
     let total_value_inr = 0;
     let near_expiry_60d_value = 0;
+    let pending_batches_count = 0;
     const skuSeen = new Set<string>();
     let batches_count = 0;
     for (const b of batches) {
-      const rate = Number(b.purchase_rate ?? 0);
+      const approved = b.inventory_valuation_status === "APPROVED" &&
+        b.inventory_acquisition_cost !== null;
+      const rate = approved ? Number(b.inventory_acquisition_cost) : 0;
       const avail = Number(b.available_qty ?? 0);
+      if (!approved && avail > 0) pending_batches_count += 1;
       const lineValue = avail * rate;
       total_value_inr += lineValue;
       batches_count += 1;
@@ -174,6 +180,7 @@ export class ProductBatchRepository extends BaseRepository<
       total_value_inr,
       sku_count: skuSeen.size,
       batches_count,
+      pending_batches_count,
       near_expiry_60d_value,
     };
   }

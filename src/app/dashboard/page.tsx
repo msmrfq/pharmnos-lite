@@ -98,10 +98,12 @@ export default async function DashboardPage() {
           href: "/reports/customer-dues",
         },
         {
-          label: "Stock value",
+          label: "Approved stock value",
           value: rupee(stockVal.total_value_inr),
-          change: `${stockVal.sku_count} SKUs · ${stockVal.batches_count} batches`,
-          variant: "default" as const,
+          change: stockVal.pending_batches_count > 0
+            ? `${stockVal.pending_batches_count} batches pending valuation`
+            : `${stockVal.sku_count} SKUs · ${stockVal.batches_count} batches`,
+          variant: stockVal.pending_batches_count > 0 ? ("warning" as const) : ("default" as const),
           icon: FileSpreadsheet,
           href: "/reports/stock-valuation",
         },

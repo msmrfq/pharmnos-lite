@@ -55,20 +55,35 @@
 -- memberships
 -- tenant_select_memberships / tenant_insert_memberships /
 -- tenant_update_memberships
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- The subject-scoped SELECT predicate must resolve the external authenticated
+-- subject through users.external_id to the internal users.id relationship:
+--   status = 'active'
+--   AND EXISTS (
+--     SELECT 1 FROM public.users AS u
+--     WHERE u.id = memberships.user_id
+--       AND u.external_id = NULLIF(current_setting(
+--         'request.jwt.claim.sub', true), '')
+--   )
+-- The lookup is a schema-qualified users join evaluated by the same RLS
+-- boundary; no SECURITY DEFINER authorization helper is used.
+-- Tenant-scoped writes remain guarded by tenant_id.
 
 -- roles
 -- tenant_select_roles / tenant_insert_roles / tenant_update_roles
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Subject-scoped reads must use roles -> active memberships -> users.external_id.
 
 -- role_permissions: no tenant_id column. Predicate is:
 --   EXISTS (
 --     SELECT 1 FROM public.roles AS r
+--     JOIN public.memberships AS m ON m.role_id = r.id
 --     WHERE r.id = role_permissions.role_id
---       AND r.tenant_id::text = NULLIF(current_setting(
---         'request.jwt.claim.tenant_id', true), '')
+--       AND m.status = 'active'
+--       AND EXISTS (
+--         SELECT 1 FROM public.users AS u
+--         WHERE u.id = m.user_id
+--           AND u.external_id = NULLIF(current_setting(
+--             'request.jwt.claim.sub', true), '')
+--       )
 --   )
 -- Required policies:
 --   tenant_select_role_permissions
@@ -172,6 +187,20 @@
 -- purchase_gst_reconciliation_event_lines
 -- tenant_select_purchase_gst_reconciliation_event_lines /
 -- tenant_insert_purchase_gst_reconciliation_event_lines
+-- Predicate: tenant_id::text = NULLIF(current_setting(
+--   'request.jwt.claim.tenant_id', true), '')
+
+-- inventory_valuation_decisions
+-- tenant_select_inventory_valuation_decisions /
+-- tenant_insert_inventory_valuation_decisions
+-- Immutable history: no tenant_update policy.
+-- Predicate: tenant_id::text = NULLIF(current_setting(
+--   'request.jwt.claim.tenant_id', true), '')
+
+-- inventory_valuation_adjustments
+-- tenant_select_inventory_valuation_adjustments /
+-- tenant_insert_inventory_valuation_adjustments
+-- Immutable history: no tenant_update policy.
 -- Predicate: tenant_id::text = NULLIF(current_setting(
 --   'request.jwt.claim.tenant_id', true), '')
 

@@ -357,7 +357,8 @@ function hasCompleteValidAcceptedAmounts(accepted: AccountingAcceptedPurchaseGst
     AMOUNT_FIELDS.every((field) => {
     const value = accepted.amounts[field];
     return value !== null && canonicalDecimal(value) !== null;
-    });
+    }) &&
+    Number(accepted.amounts.cess ?? 0) === 0;
 }
 
 /**

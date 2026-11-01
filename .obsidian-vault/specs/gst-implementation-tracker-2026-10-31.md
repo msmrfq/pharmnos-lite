@@ -10,6 +10,328 @@ This tracker records the current engineering implementation state. It does
 not replace the active master specification, professional review, independent
 security acceptance, migration authorization, or production approval.
 
+## Sales GST application-path acceptance attempt — 2026-11-01 16-53-48 IST
+
+- Static Sales GST governance, transaction-boundary, finalized-immutability,
+  and server-authoritative rule-resolution contracts passed **9/9**.
+- Repository TypeScript validation and ESLint passed. ESLint reported only the
+  pre-existing React hook warning in
+  `src/app/inventory/products/new/page.tsx`.
+- The authenticated application-path harness did not execute. It stopped
+  before fixture mutation because `FINANCIAL_E2E_TARGET_CONTRACT` was absent.
+- The configured `127.0.0.1:55432/pharmnos_financial_e2e` target authenticated
+  as `pharmnos_e2e` with `rolsuper = true` and `rolbypassrls = true`, so it is
+  not an acceptable restricted-runtime target.
+- The initialized `127.0.0.1:55435/pharmnos_financial_e2e_0419` target could
+  not authenticate with the configured bootstrap credential. No credential,
+  container, process, schema, or database state was changed.
+- Sales GST application-path acceptance remains **NOT VERIFIED / BLOCKED BY
+  DISPOSABLE TARGET AUTHENTICATION AND TARGET-CONTRACT AVAILABILITY**. No
+  runtime financial, RLS, concurrency, rollback, retry, or historical
+  snapshot acceptance claim is made from this attempt.
+
+## Owner-approved GST accounting policy decisions — 2026-11-01 14-55-50 IST
+
+The owner approved six policy directions effective `2026-11-01`:
+
+- Inventory GST valuation: recoverable GST is separate ITC; non-recoverable GST
+  may enter inventory cost; unresolved eligibility blocks authoritative
+  valuation. ADR: `decisions/0003-inventory-gst-valuation-policy.md`.
+- Cess: separate governed component with effective rule, source, and credit
+  treatment; unsupported non-zero cess blocks. ADR:
+  `decisions/0004-cess-governance-policy.md`.
+- Inclusive pricing: explicit inclusive/exclusive basis, governed Rule 35
+  extraction, preserved supplier amount, and transparent residual rounding.
+  ADR: `decisions/0005-inclusive-purchase-pricing-policy.md`.
+- Freight and discounts: GST valuation remains separate from inventory-cost
+  allocation; unsupported allocation blocks and finalized invoices are not
+  rewritten. ADR: `decisions/0006-freight-discount-allocation-policy.md`.
+- Precision and rounding: preserve intermediate precision, line components,
+  explicit precedence, and separate invoice adjustments. ADR:
+  `decisions/0007-gst-rounding-precision-policy.md`.
+- Discrepancy tolerance: only arithmetic differences may enter reconciliation;
+  classification, POS, rate, treatment, eligibility, or missing-fact
+  differences block automatic acceptance. ADR:
+  `decisions/0008-purchase-gst-discrepancy-tolerance-policy.md`.
+
+Approval record: `Masum Rafique - Owner`, `2026-11-01T14:55:50+05:30`.
+This is owner/product authorization and is not represented as professional or
+legal advice. Engineering must implement only the explicit requirements;
+unsupported or unresolved exceptional cases remain fail-closed.
+
+## Inventory valuation persistence — 2026-11-01 15-48-42 IST
+
+- Added `inventory_valuation_decisions` as an append-only, tenant-scoped
+  record of accepted GST split, eligibility state, acquisition-cost result,
+  policy version, decision reference, actor, idempotency key, and payload hash.
+- Added `inventory_valuation_adjustments` as an append-only correction or
+  reversal record with prior/resulting decision links and exact deltas.
+- Added composite tenant-aware foreign keys to purchase invoices, purchase
+  lines, product batches, stock movements, and memberships. Current valuation
+  columns remain projections and do not replace historical evidence.
+- Added restricted actions that use tenant context, advisory locking, the
+  shared fail-closed resolver, payload-hash idempotency, atomic projection
+  updates, and audit metadata. Prior decisions are never rewritten.
+- Accounting status is explicitly `PENDING_POLICY`; no tax-asset or inventory
+  journal entry is posted because account codes, direction, and balancing
+  treatment remain unspecified.
+- Prisma validation, client generation, typecheck, eight focused valuation
+  tests, changed-file lint, and the provisioning static guard passed.
+- Restricted-role runtime verification of the new actions remains outstanding
+  and must use a fresh authorized disposable target.
+
+## Policy implementation status — 2026-11-01 15-00-00 IST
+
+- **Inventory valuation:** policy recorded; authoritative recoverability and
+  inventory-cost fields are not yet persisted. Unresolved valuation remains
+  blocked and is not inferred from `purchase_rate`.
+- **Cess:** non-zero declared or accepted cess is now blocked until a governed
+  cess rule and credit-utilization policy exist. Zero-cess flows remain
+  supported.
+- **Inclusive pricing:** inclusive purchase creation is now blocked until
+  governed Rule 35 extraction and rounding are implemented. Exclusive pricing
+  remains unchanged.
+- **Freight and discounts:** no unsupported freight or invoice-wide allocation
+  path was added. Existing explicitly line-allocated discounts remain
+  supported; unsupported allocation remains outside the accepted path.
+- **Precision and rounding:** existing rounding behavior is preserved pending
+  a versioned statutory precedence implementation; no historical values were
+  rewritten.
+- **Discrepancy tolerance:** existing reconciliation continues to preserve
+  declared/calculated values and requires an attributable resolution for
+  discrepancies; no silent tolerance acceptance was introduced.
+
+Focused policy contract tests were added in
+`tests/gst-accounting-policy-contract.test.mjs`. TypeScript typecheck and
+changed-file lint passed. The standalone TypeScript test runner remains
+unavailable because `tsx` is not installed.
+
+Evidence artifact:
+`specs/gst-accounting-policy-evidence-2026-11-01.json`, SHA-256
+`5C167708A0C8067A8BD21945A9F5E41E1E0DA4C412C5F1487968027C2E77BA79`.
+
+## Purchase GST Financial Integrity completion audit — 2026-11-01 15-06-27 IST
+
+- The six owner-approved policies were traced against current readers,
+  writers, schema, migrations, reports, exports, purchase finalization, and
+  runtime evidence.
+- Accepted-value financial posting remains runtime-verified from
+  `purchase_gst_1793524087997_be4146`: 16/16, zero failures, restricted role
+  `LOGIN`/`NOSUPERUSER`/`NOBYPASSRLS`, cleanup verified, and payload hash
+  equality passed. Persisted canonical line total `218.34`, canonical GST
+  `27.26`, invoice net `218.34`, supplier ledger credit `218.34`, and audit
+  net `218.34`.
+- Added additive pending inventory valuation fields to purchase items, batches,
+  and stock movements. Without a governed ITC eligibility decision, new
+  inventory acquisition cost remains `NULL`, valuation status is `PENDING`,
+  recoverability values remain `NULL`, and stock valuation/report export no
+  longer treats procurement `purchase_rate` as approved inventory cost.
+- Existing safe gates remain enforced: inclusive purchase creation and
+  unsupported non-zero cess are blocked. No Rule 35 extraction, freight
+  allocation, post-supply discount, or statutory rounding precedence was
+  invented.
+- Focused contracts passed **9/9**, typecheck, Prisma generate, changed-file
+  ESLint, and `git diff --check` passed. Prisma validate passed with the
+  authorized disposable URL fallback; the default environment lacks
+  `DIRECT_URL`.
+- Completion audit:
+  `bugs/purchase-gst-financial-integrity-completion-audit-2026-11-01.md`.
+- Machine evidence:
+  `specs/purchase-gst-financial-integrity-completion-evidence-2026-11-01.json`.
+  SHA-256:
+  `BD56525132F853AE843FECF8853A344220DFD9AC3DB56810C95B064F54944530`.
+- Status: **PARTIALLY ACCEPTED / BLOCKED BY POLICY DETAIL**. GST Stage 1
+  remains **IN PROGRESS** and Production/Live Supabase remains **NO-GO**.
+
+## Independent authenticated identity security audit — 2026-11-01 13-20-37 IST
+
+- The independent audit found that `pharmnos_e2e_runtime` can execute
+  `pg_catalog.set_config`, so database GUC claims cannot be treated as
+  cryptographically authenticated when arbitrary SQL runs under the same
+  runtime role. This remains a **HIGH architecture blocker** requiring a
+  trusted authentication-to-database boundary; no RLS weakening was applied.
+- The prior `SECURITY DEFINER public.authenticated_subject_user_id()` helper
+  was removed from the provisioning authorization path. Subject-scoped
+  policies now use schema-qualified joins through `users.external_id` under
+  ordinary RLS, avoiding helper ownership, `PUBLIC` execution, search-path,
+  and forced-RLS bypass risks.
+- Fresh restricted-role run `purchase_gst_1793519733253_d9cf5c` passed
+  **16/16** scenarios with distinct internal/external IDs, inactive-membership
+  denial, cross-tenant rejection, accepted GST posting, idempotency,
+  concurrency, rollback, retry, and pooled transaction-local claim isolation.
+- Runtime role: `LOGIN`, `NOSUPERUSER`, `NOBYPASSRLS`. Bootstrap remained
+  fixture/assertion-only. The run-owned database was dropped and independently
+  verified absent.
+- Evidence:
+  `.obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793519733253_d9cf5c.json`
+  SHA-256
+  `D494EC8553F4D9A92DB7193BFE12EE2DE9F2DCCC373F4181A8ACB6BDAF80B8AA`.
+- Static guard, focused authentication/safety tests, typecheck, and
+  `git diff --check` passed. GST Stage 1 remains open.
+
+## Trusted authentication-to-database boundary — 2026-11-01 13-27-49 IST
+
+- Architecture tracing confirms Supabase session verification is server-side,
+  membership resolution is server-side, and Prisma uses a pooled PostgreSQL
+  runtime role. The runtime role can nevertheless execute
+  `pg_catalog.set_config`, so transaction-local GUCs are isolated but not
+  intrinsically authenticated.
+- No unsafe workaround was introduced. The prior SECURITY DEFINER helper
+  remains removed, and RLS/role attributes were not weakened.
+- Options and threat model are documented in
+  `.obsidian-vault/specs/authenticated-database-trust-boundary-2026-11-01.md`.
+- Recommended minimum is a server-only database boundary with no
+  client-visible runtime credentials or arbitrary SQL endpoint. If arbitrary
+  SQL under the runtime role is inside the threat model, an owner-approved
+  signed assertion, per-request identity boundary, or direct Supabase
+  authenticated RLS path is required.
+- Status: **BLOCKED — HIGH TRUST-BOUNDARY FINDING REMAINS OPEN**. GST Stage 1
+  remains in progress.
+
+## Restricted-role trust-boundary audit evidence — 2026-11-01 13-29-21 IST
+
+- The audit harness was corrected to require
+  `FINANCIAL_E2E_RUNTIME_DATABASE_URL`; the earlier bootstrap-role artifact was
+  not used as security evidence.
+- Fresh runtime evidence confirms the actual restricted role is
+  `pharmnos_e2e_runtime` with `LOGIN`, `NOSUPERUSER`, `NOBYPASSRLS`, no public
+  schema `CREATE`, and no `public.authenticated_subject_user_id()` helper.
+- The restricted role can still execute `pg_catalog.set_config` and set
+  transaction-local subject and tenant claims to forged values. This
+  reproduces the HIGH trust-boundary blocker; it does not weaken RLS or prove
+  an application-path impersonation.
+- Evidence:
+  `.obsidian-vault/specs/authenticated-database-trust-boundary-evidence-1793519941211.json`
+  SHA-256
+  `FE25C097F16E1A95C4C615E4077339A4FD35075CB61ECA5512FD16724B2262C6`.
+- The audit transaction rolled back without creating persistent rows. Static
+  provisioning guard, typecheck, and `git diff --check` passed. GST Stage 1
+  remains open pending an owner-approved trusted authentication-to-database
+  boundary.
+
+## Authenticated database trust-boundary ADR — 2026-11-01 14-03-10 IST
+
+- The architecture decision record
+  `.obsidian-vault/decisions/authenticated-database-trust-boundary-ADR-2026-11-01.md`
+  adopts **Option A — Trusted server-side identity establishment** for the
+  intended web threat model.
+- The decision explicitly requires server-only database credentials, no
+  arbitrary SQL endpoint, server-side Supabase session verification,
+  server-side membership resolution, transaction-local claim setup, and
+  forced fail-closed RLS. It does not claim cryptographic forged-GUC
+  resistance against a principal that already has arbitrary SQL under the
+  runtime role.
+- Options B (signed assertions), C (stronger role/gateway separation), and the
+  authenticated Supabase Data API path remain alternatives only if the owner
+  expands the threat model to include arbitrary SQL under the shared runtime
+  role. No new authentication mechanism or database role was implemented.
+- Status: **DECISION RECORDED; SECURITY ACCEPTANCE AND GST STAGE 1 REMAIN
+  OPEN**. Production and Live Supabase remain NO-GO.
+
+## Authenticated database trust-boundary verification — 2026-11-01 14-13-13 IST
+
+- Verified the accepted Option A request path: server-side Supabase session,
+  `users.external_id` lookup, exactly one active membership, transaction-local
+  claims, Prisma pooled transactions, and tenant-scoped forced RLS.
+- Added a focused regression for ambiguous active memberships and corrected the
+  financial E2E auth-context adapter to reject more than one active membership.
+- `src/app/api/health/db/route.ts` is a fixed `SELECT 1` health probe requiring
+  `DB_HEALTHCHECK_TOKEN`; no arbitrary SQL API route was found. No unsafe raw
+  SQL helpers were found under `src/`.
+- Focused trust-boundary/RLS tests passed **41/41**; TypeScript typecheck and
+  `git diff --check` passed.
+- Existing runtime evidence remains:
+  `.obsidian-vault/specs/authenticated-database-trust-boundary-evidence-1793519941211.json`,
+  SHA-256
+  `FE25C097F16E1A95C4C615E4077339A4FD35075CB61ECA5512FD16724B2262C6`.
+- Verification supports Option A only for the scoped server-only web threat
+  model. The HIGH forged-GUC residual risk remains and is eligible for
+  independent security review, not closure. GST Stage 1 remains in progress.
+
+## Trust-boundary security remediation — 2026-11-01 14-18-05 IST
+
+- The HIGH forged-GUC finding is **NOT FIXED**. The current shared Prisma
+  runtime role can set the same GUCs consumed by RLS; fixing this requires a
+  new signed-assertion, trusted gateway/role, or authenticated Supabase Data
+  API boundary with owner-approved key/credential operations. No unsafe helper
+  workaround or unapproved cryptographic design was introduced.
+- Session identity handling is **PARTIALLY FIXED**: `supabase-auth.adapter.ts`
+  now requires successful server-side `getUser()` verification and matching
+  session/user IDs. Live expired, malformed, tampered, and revoked-session
+  tests remain **NOT VERIFIED**.
+- The undeclared `u` alias was **FIXED** in the review-only RLS contract. The
+  disposable provisioner already had the explicit join; the artifact manifest
+  now records the corrected review-contract hash.
+- Focused authentication/RLS tests passed **43/43**; TypeScript typecheck and
+  provisioning static guard passed. GST Stage 1 remains IN PROGRESS.
+
+## Production-shaped authenticated identity correction — 2026-11-01 13-14-09 IST
+
+- The independent audit's HIGH finding was corrected in the disposable RLS
+  provisioner. Subject-scoped membership, role, and permission policies now
+  resolve `request.jwt.claim.sub` through `users.external_id` to the internal
+  `users.id`; only active memberships qualify.
+- Direct policy subqueries initially caused PostgreSQL forced-RLS recursion.
+  The historical helper-based attempt was superseded by ordinary-RLS,
+  schema-qualified joins recorded in the later security audit.
+- Fresh run `purchase_gst_1793519228586_c4e0ac` passed **16/16** scenarios,
+  including distinct internal/external IDs, inactive-membership denial,
+  cross-tenant rejection, accepted GST posting, idempotency, concurrency,
+  rollback, retry, and transaction-local claim isolation across independent
+  connections.
+- Runtime role evidence: `pharmnos_e2e_runtime` was `LOGIN`,
+  `NOSUPERUSER`, and `NOBYPASSRLS`. Bootstrap was fixture/assertion-only.
+  The run-owned database was dropped and verified absent.
+- Immutable evidence:
+  `.obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793519228586_c4e0ac.json`
+  SHA-256
+  `719DE9EEF68ED30CE5263A1A783165674552D9721861DB2616CDC0543492B1D9`.
+- This is authenticated application-path evidence for the production-shaped
+  identity relationship. GST Stage 1 remains open for separately gated
+  security/rollback acceptance, accounting policy decisions, professional
+  approval, and production authorization.
+
+## Authenticated tenant-context acceptance — 2026-11-01 13-04-27 IST
+
+- The previous harness configuration defect was corrected: the acceptance
+  runner now loads the ordinary `DATABASE_URL` from `.env.local` and forwards
+  the repository-approved initialization contract values to the guarded
+  provisioning child process.
+- Static authenticated-context and provisioning checks remain PASS. No fixed
+  tenant claim was reintroduced; the application continues to derive tenant
+  context from the authenticated subject and active membership.
+- Runtime acceptance is **BLOCKED — ENVIRONMENT UNAVAILABLE**. The approved
+  loopback target `127.0.0.1:55432` refused connection and `docker ps`
+  reported no running disposable container. No container was restarted or
+  recreated under the session safety boundary.
+- No authenticated application-path result is claimed. Previous restricted
+  runtime evidence using a pre-established tenant claim remains separately
+  classified and does not prove authenticated tenant binding.
+
+## Authenticated tenant-context acceptance — runtime result 2026-11-01 13-08-20 IST
+
+- The approved disposable target became available on `127.0.0.1:55432`.
+- Fresh run `purchase_gst_1793518743403_f9d09c` completed **15/15 scenarios
+  passed** under the restricted application role `pharmnos_e2e_runtime`
+  (`LOGIN`, `NOSUPERUSER`, `NOBYPASSRLS`). Bootstrap was used only for
+  fixtures and independent persisted-state assertions.
+- Authenticated tenant binding was verified from session user ID to
+  `users.external_id`, active membership, and transaction-local subject/tenant
+  claims. Fixed connection tenant claims were not used; caller tenant
+  overrides were rejected.
+- Verified scenarios include active-membership purchase lifecycle,
+  unauthorized cross-tenant acceptance rejection, explicit discrepancy
+  resolution, accepted line-level GST posting, idempotency replay/conflict,
+  concurrency, forced rollback, and retry. Accepted posting totals were
+  taxable `191.0000`, CGST `13.6300`, SGST `13.6300`, payable `218.34`;
+  persisted posting payload hash matched the accepted snapshot.
+- Immutable evidence:
+  `.obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793518743403_f9d09c.json`
+  SHA-256
+  `C86A89A9EBA9B35A2B02DC5CB63986EBF2132FD546116AE7B5468FA7766655B1`.
+- Remaining blockers are policy decisions and separately gated independent
+  security/rollback acceptance; GST Stage 1 remains open.
+
 | Requirement | Implementation evidence | Tests/evidence | Status | Remaining dependency |
 |---|---|---|---|---|
 | DGM-01 | Shared exact eight-label treatment control with search and disabled deferred options; persisted invoice fact | Typecheck/build pending; server validation covered by action path | IMPLEMENTED — TESTED | UI runtime verification |
@@ -181,3 +503,120 @@ evidence.
   connected-initialization authorization contract; HSN/SAC approval authority
   and accounting-policy decisions remain unresolved; GST Stage 1 closure and
   production/Live Supabase authorization remain `NO-GO`.
+
+## Purchase GST authoritative posting correction — 2026-11-01 14-31-16 IST
+
+- Corrected the finalization source-of-truth gate in
+  `src/app/_actions/purchases.actions.ts`. A persisted accounting decision now
+  selects the accepted posting snapshot for all approved sources:
+  `SUPPLIER_DECLARED`, `APPLICATION_CALCULATED`, and `EXPLICIT_DECISION`.
+  Previously, only `EXPLICIT_DECISION` selected accepted aggregate totals;
+  supplier-declared and application-calculated decisions could continue with
+  ordinary `serverTotals` despite accepted line snapshots being persisted.
+- The accepted aggregate totals continue to drive the invoice projection,
+  supplier payable/ledger credit, audit metadata, and posting payload totals.
+  Inventory unit-rate treatment remains unchanged and is not presented as an
+  accepted-GST valuation policy.
+- Added a regression contract in
+  `tests/purchase-gst-line-model-contract.test.mjs` asserting that every
+  accepted source selects accepted posting totals and bypasses the ordinary
+  calculated-total mismatch guard.
+- Fresh restricted-runtime campaign
+  `purchase_gst_1793523621669_dcaf26` passed **16/16** scenarios, including
+  matched application-calculated acceptance, explicit line-level values that
+  differ from calculated values, persisted invoice/payable/audit amounts,
+  payload-hash reconciliation, idempotent replay, conflicting keys,
+  concurrency, forced rollback, retry, cross-tenant denial, and inactive
+  membership denial. The run-owned database was verified absent after cleanup.
+- Evidence:
+  `.obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793523621669_dcaf26.json`
+  SHA-256
+  `31DB225B62CAB258823F3A69C5B53A8D13AE47CD8AEF9918C450A19D01B49869`.
+  Source hash for the corrected purchase action in that evidence is
+  `afd38645dbdc0a9bf9e5aa648d9a40746ac889065fcc0b73bb25af87b21b6809`.
+- Before the disposable run, the approved loopback PostgreSQL schema baseline
+  was captured and read back from the existing container. Backup SHA-256:
+  `B2147A72CD426A2DBAB139B45775C323BE2D0010AD2ABA8B4685E69A598D55CE`.
+- Validation passed: focused financial/provisioning contracts **63/63**,
+  TypeScript typecheck, Prisma validation with local environment, ESLint on
+  changed files, and `git diff --check`. The GST calculator TypeScript test
+  runner was not available because `tsx` is not installed; no dependency was
+  added.
+- Status: **PARTIALLY ACCEPTED** for Purchase GST financial integrity.
+  Accounting-policy blockers, production schema rollout/recovery approval,
+  and the separate HIGH forged-GUC trust-boundary finding remain open.
+
+## Purchase GST line-level canonical reconciliation — 2026-11-01 14-40-00 IST
+
+- Independent acceptance review confirmed a remaining defect in the prior
+  evidence: accepted invoice and payable aggregates were correct, but
+  finalized `purchase_invoice_items.line_total` and `gst_amount` retained
+  ordinary calculated values.
+- Finalization now synchronizes those canonical line fields from the validated
+  accepted snapshot while preserving supplier evidence, calculated values, and
+  accepted decision fields separately. The posting payload also uses the
+  accepted line amount and accepted tax components for accepted sources.
+- Fresh restricted-runtime campaign
+  `purchase_gst_1793524087997_be4146` passed **16/16** scenarios with zero
+  failures. Persisted explicit-decision values reconciled as accepted line
+  total `218.3400`, canonical line total `218.34`, canonical GST amount
+  `27.26`, invoice net `218.34`, supplier ledger credit `218.34`, and audit
+  net `218.34`. Payload hash equality passed.
+- Fresh evidence:
+  `.obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793524087997_be4146.json`
+  SHA-256
+  `AABF59F913DAF9BA4F748F98CD0BF8FE46E6E6E34A19AF04E35908A94361CFA7`.
+  The disposable database was verified absent after cleanup.
+- A new schema baseline was captured before the campaign:
+  `C:\Users\Masum Rafique\.copilot\session-state\de6b39fc-5872-46e6-8130-58843b8116f4\files\purchase-gst-audit-baseline-schema-2026-11-01T14-34-17.sql`,
+  SHA-256
+  `228D0A64B04663D902817DC937FDDE1864899A404D80A54E2B9C6EB11FB09C7C`.
+- Validation passed: focused contracts, TypeScript typecheck, ESLint, and
+  `git diff --check`. Status remains **PARTIALLY ACCEPTED** because inventory
+  valuation and other accounting-policy gates, production rollout approval,
+  and the separate HIGH forged-GUC trust-boundary finding remain open.
+
+## Purchase GST valuation-aware runtime revalidation — 2026-11-01 15-13-15 IST
+
+- Corrected the disposable provisioning artifact so valuation columns are
+  present on `product_batches` rather than the unrelated `products` table.
+  The artifact manifest was updated to the resulting schema and SQL hashes.
+- Fresh restricted-runtime campaign
+  `purchase_gst_1793526172673_fd9781` passed **16/16** scenarios with zero
+  failures. Pending valuation persisted for two invoice lines, two batches,
+  and two stock movements with null approved acquisition cost.
+- Accepted explicit-decision values reconciled to accepted line total
+  `218.3400`, canonical line total `218.34`, canonical GST `27.26`, invoice
+  net `218.34`, supplier ledger credit `218.34`, and audit net `218.34`.
+  Replay, conflict, concurrency, forced rollback, retry, tenant isolation,
+  transaction-local claim isolation, and cleanup all passed.
+- Fresh evidence:
+  `.obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793526172673_fd9781.json`
+  SHA-256
+  `79986E1265BE6251FCCBF715EC0D6FE2A6448D21DAE7B682D7541F30C9AC4C39`.
+- Status remains **PARTIALLY ACCEPTED / BLOCKED BY POLICY DETAIL**. ITC
+  eligibility/apportionment, freight and discount allocation, post-supply
+  notes, exact statutory rounding precedence, the HIGH forged-GUC finding,
+  and production/Live Supabase rollout remain open.
+
+## Inventory valuation root-cause remediation — 2026-11-01 15-36-03 IST
+
+- Root cause: pending valuation columns existed, but there was no shared
+  domain resolver for an explicit ITC split and the dashboard repository still
+  used operational `purchase_rate` for its stock-value metric.
+- Added a fail-closed inventory valuation resolver. It accepts only explicit
+  eligibility status, recoverable/non-recoverable GST amounts, direct
+  acquisition cost, policy version, decision reference, and actor; it never
+  infers eligibility or cost.
+- Added an explicit subsequent-adjustment delta calculator. Historical
+  snapshots remain caller-owned and are not overwritten.
+- Dashboard stock value now uses only approved acquisition cost and exposes
+  pending batch count. Stock report/export approved averages use only approved
+  quantity and approved acquisition cost.
+- Root-cause and architecture report:
+  `.obsidian-vault/bugs/purchase-gst-inventory-valuation-root-cause-2026-11-01.md`.
+- Valuation service and contract checks passed. Status remains
+  **PARTIALLY ACCEPTED / BLOCKED BY POLICY DETAIL** because authoritative
+  decision persistence, ITC asset posting, freight/discount allocation,
+  reversal lifecycle, and exact rounding precedence still require governed
+  specifications.

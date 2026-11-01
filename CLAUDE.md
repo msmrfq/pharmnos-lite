@@ -35,7 +35,7 @@ Additional layers:
 - **Architecture style**: Provider-independent core with service layer, repository layer, auth adapter, and storage adapter.
 - **Product design system**: White canvas, black primary CTAs, light-gray cards, real product fragments in cards, and dark footer per `DESIGN.md`.
 ---
-## Developer's Guidelines
+## Developer's Guidelines to AI Agents
 
 <!--
 Description: Behavioral guidelines to reduce common LLM coding mistakes. Use when writing, reviewing, or refactoring code to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria.
@@ -45,7 +45,7 @@ Behavioral guidelines to reduce common LLM coding mistakes, derived from observa
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
-### 1. Think Before Coding
+### 1. Think Before Coding -- You have owner's full authorization for the in-scope engineering work.
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
 
@@ -83,6 +83,23 @@ When your changes create orphans:
 
 The test: Every changed line should trace directly to the user's request.
 
+### 4. Engineering Directive — Eliminate Configuration and Environment Drift
+
+Treat recurring configuration mismatches and environment inconsistencies as architectural defects, not isolated incidents.
+
+Establish authoritative, consistent configuration contracts across all system components and workflows.
+
+- Ensure provisioning, initialization, runtime, deployment and cleanup use compatible, verifiable configuration.
+- Eliminate competing defaults, hidden overrides and ambiguous environment selection.
+- Enforce preflight validation and fail closed on conflicting, stale, missing or unauthorized configuration.
+- Prevent unintended access to unrelated, shared or production resources.
+- Add regression tests covering configuration drift, environment isolation and lifecycle consistency.
+- Verify complete workflows in appropriately isolated environments.
+- Preserve existing data, Git state, running processes and infrastructure unless explicitly authorized to modify them.
+- Document architectural decisions and retain verifiable implementation and runtime evidence.
+Investigate root causes, implement durable corrections and verify that the original failure class cannot recur through the same pathway.
+Do not settle for symptom-level fixes or declare completion based solely on static checks or an isolated successful run.
+
 ### 4. Goal-Driven Execution
 
 **Define success criteria. Loop until verified.**
@@ -102,14 +119,22 @@ For multi-step tasks, state a brief plan:
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
 ### 5. Maintain Obsidian Vault
-- AI agents must remind the user to generate daily session-end `.md` logs in `.obsidian-vault/daily/` and follow the exact daily note structure.
-- When creating subfolder files under `.obsidian-vault/` (`specs/`, `retro/`, `bugs/`, `decisions/`), agents must use their respective `.md` template files located in `.obsidian-vault/templates/` 
+- AI agents must remind the user and give the user two `YES` or `No` clickable options to run the exact daily note prompt at `.obsidian-vault/daily/_PROMPT-session-end-generate-daily-note.md` to generate daily session-end `.md` logs in `.obsidian-vault/daily/`. Ai Agent can recommend whether to generate a daily log or not but agent should follow the users's decision.
+- Any specs, retros, bugs, or decision records must be recorded in their designated folders inside `.obsidian-vault/` (`specs/`, `retro/`, `bugs/`, and `decisions/`).
+- When creating subfolder files under `.obsidian-vault/` (`specs/`, `retro/`, `bugs/`, `decisions/`), agents must use their respective `.md` template files located in `.obsidian-vault/templates/`
+
+### 5. Comprehensive Blocker & Failure Analysis
+- When blockers, task non-completions, or failures occur, do not just list them.
+- Comprehensively analyze underlying causes (technical dead-ends, scope creep, missing acceptance criteria, architectural bottlenecks, environment discrepancies, or incorrect assumptions).
+- Provide actionable workarounds and detailed root-cause reports.
+- Suggest relevant engineering and architectural philosophy changes to prevent recurrence
+
 ---
 ## Current state
 
 > **Update this section EVERY SESSION before you stop working. Thirty seconds here saves five minutes of re-orientation next time.**
 
-**Last updated:** `Date: 2026-11-01  Time: 04-58-38 (IST)`
+**Last updated:** `Date: 2026-11-01  Time: 15-09-11 (IST)`
 
 ### Verified working
 - **P1–P7 are complete;** the current working stage is GST Modernization within POST-P7 — PRE-PRODUCTION VALIDATION.
@@ -118,17 +143,41 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - A fresh authorized loopback target on `127.0.0.1:55435` authenticates with both bootstrap and restricted runtime identities; the runtime role is `LOGIN`, `NOSUPERUSER`, and `NOBYPASSRLS`.
 - Restricted-runtime purchase application evidence passed 15/15 scenarios, and Q10 application evidence passed commit/replay, conflict, concurrency, rollback, retry, and persisted single-effect assertions.
 - Provisioning now applies tenant-scoped read-only RLS and SELECT grants for `hsn_sac_catalog` and `gst_rate_rules`; provisioning static contracts and GST governance contracts pass.
+- The authenticated purchase harness now loads ordinary `DATABASE_URL` configuration and forwards the approved initialization contract. The authorized 0419 disposable target on `127.0.0.1:55435` now authenticates with both bootstrap and restricted runtime credentials.
+- Fresh authenticated tenant-context purchase acceptance subsequently passed 15/15 under restricted role `pharmnos_e2e_runtime` (`LOGIN`, `NOSUPERUSER`, `NOBYPASSRLS`) on run `purchase_gst_1793518743403_f9d09c`; session subject, active membership, transaction-local claims, cross-tenant rejection, accepted GST posting, idempotency, concurrency, rollback, and retry were verified. Evidence: `.obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793518743403_f9d09c.json`, SHA-256 `C86A89A9EBA9B35A2B02DC5CB63986EBF2132FD546116AE7B5468FA7766655B1`. GST Stage 1 remains open.
+- The production-shaped identity mapping is corrected in disposable RLS provisioning: subject-scoped membership, role, and permission policies resolve `request.jwt.claim.sub` through `users.external_id` to internal `users.id`, with active-membership guards and ordinary schema-qualified joins; the earlier SECURITY DEFINER helper was removed.
+- Fresh run `purchase_gst_1793519228586_c4e0ac` passed 16/16 scenarios with distinct internal/external IDs, inactive-membership denial, cross-tenant rejection, accepted GST posting, idempotency, concurrency, rollback, retry, and independent transaction-local claim isolation. Restricted runtime was `LOGIN`, `NOSUPERUSER`, `NOBYPASSRLS`; cleanup verified database absence. Evidence: `.obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793519228586_c4e0ac.json`, SHA-256 `719DE9EEF68ED30CE5263A1A783165674552D9721861DB2616CDC0543492B1D9`.
+- Independent security audit confirmed the runtime role can set the request claim GUCs, so forged-claim resistance is not established when arbitrary SQL executes as the runtime role. The architecture decision record adopts a server-only boundary for the intended web threat model while retaining this as an explicit residual risk and security-acceptance gate.
+- The corrected trust-boundary audit now uses the restricted runtime URL rather than the bootstrap URL. Runtime evidence confirms `LOGIN`, `NOSUPERUSER`, `NOBYPASSRLS`, no public schema `CREATE`, no SECURITY DEFINER helper, and reproducible forged-GUC behavior.
+- Fresh security regression run `purchase_gst_1793519733253_d9cf5c` passed 16/16 under `LOGIN`, `NOSUPERUSER`, `NOBYPASSRLS`; cleanup was independently verified. Evidence: `.obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793519733253_d9cf5c.json`, SHA-256 `D494EC8553F4D9A92DB7193BFE12EE2DE9F2DCCC373F4181A8ACB6BDAF80B8AA`.
+- Option A verification passed the scoped server-only checks: the fixed-token database health route exposes only `SELECT 1`, no unsafe raw SQL helpers or arbitrary SQL API route were found, and focused trust-boundary/RLS contracts passed 41/41. The financial E2E auth-context adapter now rejects ambiguous active memberships. Typecheck and `git diff --check` passed.
+- Purchase finalization now uses the persisted accepted GST snapshot for every accepted source (`SUPPLIER_DECLARED`, `APPLICATION_CALCULATED`, and `EXPLICIT_DECISION`) rather than selecting accepted totals only for explicit decisions. Fresh restricted-runtime run `purchase_gst_1793523621669_dcaf26` passed 16/16 with persisted amount, ledger, audit, payload-hash, concurrency, rollback, retry, and tenant assertions. Evidence SHA-256: `31DB225B62CAB258823F3A69C5B53A8D13AE47CD8AEF9918C450A19D01B49869`.
+- The disposable run's pre-mutation schema baseline was captured and verified from the approved local container; backup SHA-256: `B2147A72CD426A2DBAB139B45775C323BE2D0010AD2ABA8B4685E69A598D55CE`. Focused contracts passed 63/63, TypeScript typecheck, Prisma validation, changed-file ESLint, and `git diff --check` passed.
+- Independent Purchase GST acceptance found and corrected stale finalized canonical line values: `purchase_invoice_items.line_total` and `gst_amount` now synchronize from the validated accepted snapshot, and accepted posting payload line amounts match those persisted values. Fresh restricted-runtime run `purchase_gst_1793524087997_be4146` passed 16/16 with zero failures; canonical line total `218.34`, canonical GST `27.26`, invoice net `218.34`, supplier ledger credit `218.34`, audit net `218.34`, and payload-hash equality were verified. Evidence SHA-256: `AABF59F913DAF9BA4F748F98CD0BF8FE46E6E6E34A19AF04E35908A94361CFA7`.
+- Fresh target-contract Purchase GST run `purchase_gst_1793531037977_0975f5` passed 16/16 with zero failures after repairing the isolated 0419 runtime role from the authorized credential source. Restricted role attributes, schema identity, tenant isolation, rollback/retry behavior, and cleanup absence were verified. Evidence SHA-256: `D56D72072C790FFC1EE40D13C934201BE982C5633C0D16E37419AFA33D6E8D7E`.
 
 ### Broken / Blocked
 - Direct security-behavior and rollback-recovery scripts remain gated because the checked-in reviewed expectations are explicitly `REVIEW_ONLY_PENDING_OWNER_APPROVAL`; removing the gate would bypass project safeguards.
+- Forged `request.jwt.claim.sub` and `request.jwt.claim.tenant_id` resistance remains unverified against arbitrary SQL under the runtime role; do not treat GUC population as JWT authenticity.
+- Trusted authentication-to-database boundary decision is recorded in `.obsidian-vault/decisions/authenticated-database-trust-boundary-ADR-2026-11-01.md`; Option A is accepted only for the scoped server-only web threat model. Stronger signed/per-request identity mechanisms remain gated if arbitrary SQL is in scope.
+- Restricted-role evidence is recorded in `.obsidian-vault/specs/authenticated-database-trust-boundary-evidence-1793519941211.json` with SHA-256 `FE25C097F16E1A95C4C615E4077339A4FD35075CB61ECA5512FD16724B2262C6`; GST Stage 1 remains open.
+- Option A remains limited to the scoped server-only web threat model; the HIGH forged-GUC residual risk is eligible for independent security review but is not closed or claimed as cryptographically fixed.
+- Trust-boundary remediation partially hardened Supabase session identity with server-side `getUser()` verification and corrected the review-only RLS alias; live session expiry/tampering evidence remains unverified and the HIGH forged-GUC finding remains open.
 - HSN/SAC approval authority requires the owner to choose independent `approve_hsn_catalog` authority or combined `manage_hsn_catalog` plus approval authority.
 - Cess, inclusive GST, freight, discount allocation, rounding precedence, discrepancy tolerance, and accepted-GST inventory valuation remain accounting/GST policy blockers or explicit deferrals.
+- The disposable container remains operator-owned; do not restart, recreate, or remove it implicitly. Future campaigns must continue using an explicitly authorized target contract.
+- Direct security-behavior and rollback-recovery scripts remain separately owner-gated; this authenticated purchase campaign does not close SEC-DEC-03, Q15, or GST Stage 1.
+- Purchase GST financial integrity remains **PARTIALLY ACCEPTED**, not fully closed: the target-bound restricted-runtime application path is verified, while the separate accounting-policy blockers, production rollout/recovery gates, and HIGH forged-GUC residual risk remain open. The missing `tsx` runner prevented the standalone GST calculator TypeScript test command from running; this is a tooling gap, not a passing test claim.
+- Full Purchase GST Financial Integrity acceptance remains blocked by missing ITC eligibility/apportionment lifecycle, freight and discount allocation workflow, and exact statutory rounding precedence. GST Stage 1 remains IN PROGRESS; Production/Live Supabase remains NO-GO.
+- Owner-approved GST accounting policy decisions are recorded in `.obsidian-vault/decisions/0003-inventory-gst-valuation-policy.md` through `0008-purchase-gst-discrepancy-tolerance-policy.md`, approved by `Masum Rafique - Owner` at `2026-11-01T14:55:50+05:30`. Non-zero cess and inclusive pricing now fail closed; inventory valuation, freight/allocation, and statutory rounding implementation remain explicitly incomplete.
+- Purchase GST completion audit added additive pending valuation fields and fail-closed inventory reporting. Without governed ITC eligibility, recoverability and acquisition cost remain null with status `PENDING`; procurement `purchase_rate` is no longer treated as approved inventory cost. Focused policy/valuation contracts passed 9/9. Evidence: `.obsidian-vault/specs/purchase-gst-financial-integrity-completion-evidence-2026-11-01.json`, SHA-256 `BD56525132F853AE843FECF8853A344220DFD9AC3DB56810C95B064F54944530`.
 
 ### Focus right now
-- Obtain the owner approval and connected-initialization evidence package required to run the direct security/rollback scripts, without changing shared or production credentials.
+- Obtain connected-initialization evidence needed for the direct security/rollback scripts, without changing shared or production credentials.
 - Keep the restricted-runtime purchase and Q10 evidence bound to their disposable targets and preserve the fail-closed tenant-context behavior.
 - Preserve fail-closed behavior and do not claim restricted-role application evidence from bootstrap or superuser runs.
 - Keep production migration, Live Supabase access, deployment, and GST Stage 1 closure at NO-GO pending evidence and approvals.
+- Run `& .\sync-agent-briefings.ps1` after this canonical briefing update so generated briefing mirrors reflect the current evidence.
 ---
 
 ## Key decisions made

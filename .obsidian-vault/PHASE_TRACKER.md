@@ -11,7 +11,7 @@
 
 **Working phase numbering (PROJECT-WIDE MANDATORY):** We use 7 working phases P1…P7. The PRD `.obsidian-vault/prd-technical-architecture.md §29 Suggested Development Phases` originally proposed 6 phases (Phase 0…Phase 5). The crosswalk column below maps every working phase to its corresponding PRD coverage area so we never confuse the two. **Always use P1…P7 working phase numbers in all notes, bugs, specs, decisions, retro, TODO lists, and commit messages going forward.** Do NOT use PRD numbering in day-to-day work.
 
-**Last updated:** `Date: 2026-11-01  Time: 03-54-02 (IST)`
+**Last updated:** `Date: 2026-11-01  Time: 16-34-23 (IST)`
 
 N.B: ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. 
 
@@ -209,6 +209,7 @@ flowchart LR
 
 - Local schema/security catalog, ordinary-role isolation, immutable-history, finalized-invoice, posting, rollback, cleanup, and focused regression evidence are recorded.
 - The broader financial lifecycle matrix remains pending; static validation and local testing do not prove preview-to-Supabase, production Prisma, or live rollout readiness.
+- The authoritative Financial E2E target contract is implemented; the authorized 0419 disposable runtime credential was repaired from the approved source, and Purchase GST run `purchase_gst_1793531037977_0975f5` passed 16/16 with restricted-role and cleanup evidence.
 - Backup/restore, operational readiness, and final approval remain outstanding.
 - **Next action:** implement the approved GST Modernization scope, then prepare the separately authorized Financial E2E Validation Harness run. Do not connect to live Supabase or production Prisma.
 

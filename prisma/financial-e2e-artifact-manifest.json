@@ -6,25 +6,25 @@
   "sourceSchema": {
     "path": "prisma/schema.prisma",
     "generation": "prisma migrate diff --from-empty",
-    "sha256": "af728e6f88a594e1850991516a81014f92db1a65c49099ab22e0342dcdf0c0ea"
+    "sha256": "a4c2d9e2eadf25b58728b3dcb9b7274278d08dd948aab2da16e1999dd543368d"
   },
   "artifacts": [
     {
       "order": 1,
       "path": "prisma/financial-e2e-schema-provisioning.generated.sql",
-      "sha256": "a1632fcffcc052ff2ddce6fdc1764453f2746d26e79d08376b07f70b3a93afcb",
+      "sha256": "508e0122b95496466544b4b508a50b18a326b7f4a43b6f6a5849232291a8bea5",
       "classification": "executable"
     },
     {
       "order": 2,
       "path": "prisma/financial-e2e-security-controls.review.sql",
-      "sha256": "a89c59b14a9ffdcb712b469f0bcd755d5578f3a6b2dec4b679cedad0268392b9",
+      "sha256": "88af752140aab6bffa6a71ed613f7456adf93c493a05691674025efdadc596c0",
       "classification": "executable"
     },
     {
       "order": 3,
       "path": "prisma/financial-e2e-rls-policies.review.sql",
-      "sha256": "49f7d0bb42075d2d569f24895b101fd5f580d99606bbf3aa23422873d89877b3",
+      "sha256": "327339cdee28392964fc336d4177ffe01475959a78f5fadba372742e967d8b8b",
       "classification": "executable"
     },
     {
@@ -42,13 +42,19 @@
     {
       "order": 6,
       "path": "scripts/financial-e2e-provisioning-static-guard.mjs",
-      "sha256": "c0f38fd3bda0f0f116c14537cccf76c5feb4b12ebad6b13938f014f59042fa5e",
+      "sha256": "d3fd847a8d900e27eeadc1b5369817fff3d3ff823a7f8df51767e64c42ba9f52",
       "classification": "executable"
     },
     {
       "order": 7,
       "path": "prisma/migrations/0008_hsn_governance_integrity/migration.sql",
       "sha256": "a52333f0526cf512588f488ca2c488d2322f211ca7a81505dad381bda111e047",
+      "classification": "executable"
+    },
+    {
+      "order": 8,
+      "path": "prisma/migrations/0011_inventory_valuation_decision_history/migration.sql",
+      "sha256": "d7148f60b6cfb2493af7c8a5216778de80acd7c8e17127350daa7231fffab768",
       "classification": "executable"
     }
   ],

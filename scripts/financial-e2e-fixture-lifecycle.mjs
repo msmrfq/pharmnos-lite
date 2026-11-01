@@ -1,4 +1,5 @@
 import { validateDatabaseIdentityEvidence } from "./financial-e2e-safety.mjs";
+import { targetContractBinding, validateTargetContract } from "./financial-e2e-target-contract.mjs";
 
 const RESOURCE_CLEANUP_ORDER = Object.freeze([
     "payments",
@@ -249,15 +250,31 @@ export function recordFixtureCreationFailure(manifest, errorMessage, confirmedId
 export function authorizeFixtureCleanup(manifest, {
     identityEvidence,
     targetUrl,
+    runtimeUrl,
+    ordinaryUrl,
     databaseName,
     databaseRole,
     runId,
     cleanupAuthorized,
+    targetContract,
     now = Date.now(),
 }) {
     validateManifest(manifest);
     if (manifest.status !== FIXTURE_READY_STATUS && manifest.status !== CLEANUP_READY_FAILURE_STATUS) {
         throw new Error("Cleanup requires a FIXTURE_READY or ownership-confirmed partial-failure manifest.");
+    }
+    if (targetContract) {
+        const contractResult = validateTargetContract({
+            contract: targetContract,
+            targetUrl,
+            runtimeUrl,
+            ordinaryUrl,
+            now,
+        });
+        if (!contractResult.ok) throw new Error(contractResult.errors.join(" "));
+        if (targetContract.runId !== runId || targetContract.databaseName !== databaseName) {
+            throw new Error("Cleanup target does not match the authorized target contract.");
+        }
     }
     const identityResult = validateDatabaseIdentityEvidence({
         evidence: identityEvidence,
@@ -265,6 +282,7 @@ export function authorizeFixtureCleanup(manifest, {
         expectedDatabase: databaseName,
         expectedRole: databaseRole,
         runId,
+        approvedTargetBinding: targetContract ? targetContractBinding(targetContract) : undefined,
         now,
     });
     if (!identityResult?.ok) {
@@ -327,6 +345,56 @@ export function recordCleanupSuccess(manifest, result) {
         cleanupError: null,
         cleanupCompletion: { plan: suppliedPlan },
     });
+}
+
+export async function cleanupRunOwnedFixtures({
+    manifest,
+    identityEvidence,
+    targetUrl,
+    runtimeUrl,
+    ordinaryUrl,
+    databaseName,
+    databaseRole,
+    runId,
+    cleanupAuthorized,
+    targetContract,
+    executePlan,
+    verifyCompletion,
+    now = Date.now(),
+}) {
+    const authorized = authorizeFixtureCleanup(manifest, {
+        identityEvidence,
+        targetUrl,
+        runtimeUrl,
+        ordinaryUrl,
+        databaseName,
+        databaseRole,
+        runId,
+        cleanupAuthorized,
+        targetContract,
+        now,
+    });
+    const plan = buildOwnedCleanupPlan(authorized);
+    if (typeof executePlan !== "function") {
+        throw new TypeError("Cleanup requires an injected executor.");
+    }
+    try {
+        const result = await executePlan(plan);
+        const completed = recordCleanupSuccess(authorized, { ...result, plan });
+        if (typeof verifyCompletion !== "function") {
+            throw new TypeError("Cleanup requires a post-cleanup verifier.");
+        }
+        await verifyCompletion(plan);
+        return completed;
+    } catch (error) {
+        const failedManifest = recordCleanupFailure(
+            authorized,
+            error instanceof Error ? error.message : "Cleanup failed.",
+        );
+        const propagated = error instanceof Error ? error : new Error(failedManifest.cleanupError);
+        propagated.cleanupManifest = failedManifest;
+        throw propagated;
+    }
 }
 
 export function canStartFinancialScenario({

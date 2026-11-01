@@ -2,13 +2,9 @@ import fs from "node:fs";
 import pg from "pg";
 import { getGstContract, validateGstContract } from "./gst-disposable-contract.mjs";
 import { verifyDatabaseIdentity } from "./financial-e2e-safety.mjs";
+import { loadTargetContractFromEnv, verifyTargetSchema } from "./financial-e2e-target-contract.mjs";
 
 const BLOCKED_EXIT = 2;
-const APPROVED_RUN_ID = "pharmnos-gst-validation-20261026";
-const APPROVED_INITIALIZATION_ATTEMPT = "pharmnos-gst-init-20261026-01";
-const APPROVED_DATABASE = "pharmnos_financial_e2e";
-const APPROVED_RUNTIME_ROLE = "pharmnos_e2e_runtime";
-const APPROVED_MARKER = "pharmnos-financial-e2e";
 const { Client } = pg;
 
 function readLocalEnv() {
@@ -23,39 +19,41 @@ function readLocalEnv() {
 }
 
 function approvedTargetEvidence(env) {
+    const contract = loadTargetContractFromEnv(env);
     const targetUrl = env.TEST_DATABASE_URL;
     const runtimeUrl = env.FINANCIAL_E2E_RUNTIME_DATABASE_URL;
     if (!targetUrl || !runtimeUrl ||
-        env.TEST_DATABASE_NAME !== APPROVED_DATABASE ||
-        env.TEST_DATABASE_MARKER !== APPROVED_MARKER ||
+        env.TEST_DATABASE_NAME !== contract.databaseName ||
+        env.TEST_DATABASE_MARKER !== contract.marker ||
         env.ALLOW_FINANCIAL_E2E !== "true") {
         throw new Error("Approved local GST target configuration is incomplete.");
     }
     const target = new URL(targetUrl);
     const runtime = new URL(runtimeUrl);
-    if (target.hostname !== "127.0.0.1" || Number(target.port) !== 55432 ||
-        target.pathname !== `/${APPROVED_DATABASE}` ||
+    if (target.hostname !== contract.host || Number(target.port) !== contract.port ||
+        target.pathname !== `/${contract.databaseName}` ||
         runtime.hostname !== target.hostname || Number(runtime.port) !== Number(target.port) ||
-        runtime.pathname !== target.pathname || decodeURIComponent(runtime.username) !== APPROVED_RUNTIME_ROLE) {
+        runtime.pathname !== target.pathname || decodeURIComponent(runtime.username) !== contract.runtimeRole) {
         throw new Error("GST target is not the approved loopback database and runtime role.");
     }
-    return { targetUrl, runtimeUrl };
+    return { targetUrl, runtimeUrl, contract };
 }
 
-async function verifyConnectedTarget({ targetUrl, runtimeUrl }) {
+async function verifyConnectedTarget({ targetUrl, runtimeUrl, contract }) {
     const client = new Client({ connectionString: runtimeUrl });
     await client.connect();
     try {
-        await client.query("SELECT set_config('pharmnos.financial_e2e_marker', $1, false)", [APPROVED_MARKER]);
+        await client.query("SELECT set_config('pharmnos.financial_e2e_marker', $1, false)", [contract.marker]);
         const identity = await verifyDatabaseIdentity({
             client,
-            expectedDatabase: APPROVED_DATABASE,
-            expectedRole: APPROVED_RUNTIME_ROLE,
+            expectedDatabase: contract.databaseName,
+            expectedRole: contract.runtimeRole,
             targetUrl,
-            runId: APPROVED_RUN_ID,
-            expectedEnvironmentMarker: APPROVED_MARKER,
+            runId: contract.runId,
+            expectedEnvironmentMarker: contract.marker,
         });
         if (!identity.ok) throw new Error(identity.error);
+        await verifyTargetSchema(client, contract);
         const catalog = (await client.query(`
             SELECT
               (SELECT count(*) FROM pg_tables WHERE schemaname = 'public' AND rowsecurity) AS rls_tables,
@@ -322,16 +320,16 @@ async function executeHistoricalImmutabilityScenario(client) {
     }
 }
 
-async function executeSupportedScenarios(client, contract) {
+async function executeSupportedScenarios(client, gstContract, targetContract) {
     const results = [];
-    for (const entry of contract) {
+    for (const entry of gstContract) {
         if (entry.executionStatus !== "EXECUTABLE_DB_PREFLIGHT") {
             results.push(safeResult(entry, entry.sourceStatus));
             continue;
         }
         try {
             const database = (await client.query("SELECT current_database() AS database_name")).rows[0]?.database_name;
-            if (database !== APPROVED_DATABASE) throw new Error("Database identity changed during scenario execution.");
+            if (database !== targetContract.databaseName) throw new Error("Database identity changed during scenario execution.");
             const vector = calculateScenario(entry.id);
             if (entry.id === "GST-014" || entry.id === "GST-015") {
                 await executeRollbackScenario(client, entry.id);
@@ -409,13 +407,19 @@ export async function runAuthorizedGstSuite() {
     const target = approvedTargetEvidence(env);
     const connected = await verifyConnectedTarget(target);
     try {
-        const results = await executeSupportedScenarios(connected.client, contract);
+        const results = await executeSupportedScenarios(connected.client, contract, target.contract);
         const counts = results.reduce((summary, result) => {
             summary[result.status.toLowerCase()] += 1;
             if (result.status === "BLOCKED") summary.notRun += 1;
             return summary;
         }, { pass: 0, fail: 0, blocked: 0, notRun: 0 });
-        return { ok: counts.fail === 0 && counts.blocked === 0, runId: APPROVED_RUN_ID, initializationAttemptId: APPROVED_INITIALIZATION_ATTEMPT, target: connected.identity, results, counts };
+        return {
+            ok: counts.fail === 0 && counts.blocked === 0,
+            runId: target.contract.runId,
+            target: connected.identity,
+            results,
+            counts,
+        };
     } finally {
         await connected.client.end();
     }

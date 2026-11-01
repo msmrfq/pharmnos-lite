@@ -58,4 +58,15 @@ test("purchase line GST keeps calculated and accepted layers separate", () => {
   assert.match(action, /resolvePurchaseLineRules/);
   assert.match(action, /isApprovedGstClassification/);
   assert.match(action, /gst_rule_version_snapshot/);
+  assert.match(
+    action,
+    /const hasAcceptedSnapshot =[\s\S]*SUPPLIER_DECLARED[\s\S]*APPLICATION_CALCULATED[\s\S]*EXPLICIT_DECISION/,
+  );
+  assert.match(action, /const postingTotals = hasAcceptedSnapshot \? acceptedPostingTotals : serverTotals/);
+  assert.match(action, /if \(!hasAcceptedSnapshot &&/);
+  assert.match(action, /"gst_amount" = "accepted_cgst" \+ "accepted_sgst" \+ "accepted_igst" \+ "accepted_cess"/);
+  assert.match(action, /"line_total" = "accepted_line_total"/);
+  assert.match(action, /Inclusive GST purchases are blocked until governed Rule 35 extraction and rounding are enabled/);
+  assert.match(action, /Non-zero cess is blocked until a governed cess rule and credit-utilization policy are configured/);
+  assert.match(calculation, /Number\(accepted\.amounts\.cess \?\? 0\) === 0/);
 });

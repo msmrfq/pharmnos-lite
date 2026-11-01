@@ -7,10 +7,16 @@ const Module = require("node:module");
 const path = require("node:path");
 const { Client } = require("pg");
 
-const environmentFile = process.env.FINANCIAL_E2E_ENV_FILE || ".env.financial-e2e";
-for (const line of fs.readFileSync(environmentFile, "utf8").split(/\r?\n/)) {
-  const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-  if (match) process.env[match[1]] = match[2].replace(/^(['"])(.*)\1$/, "$2");
+const environmentFiles = [
+  process.env.FINANCIAL_E2E_BASE_ENV_FILE || ".env.local",
+  process.env.FINANCIAL_E2E_ENV_FILE || ".env.financial-e2e",
+];
+for (const environmentFile of environmentFiles) {
+  if (!fs.existsSync(environmentFile)) continue;
+  for (const line of fs.readFileSync(environmentFile, "utf8").split(/\r?\n/)) {
+    const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (match && process.env[match[1]] === undefined) process.env[match[1]] = match[2].replace(/^(['"])(.*)\1$/, "$2");
+  }
 }
 
 if (process.env.ALLOW_FINANCIAL_E2E !== "true" ||
@@ -59,6 +65,7 @@ require("ts-node/register/transpile-only");
 const run = `purchase_gst_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
 const databaseName = `${process.env.TEST_DATABASE_NAME}_${run}`;
 const databaseUrl = new URL(process.env.TEST_DATABASE_URL);
+const ordinaryDatabaseUrl = process.env.DATABASE_URL;
 databaseUrl.pathname = `/${databaseName}`;
 databaseUrl.searchParams.set("application_name", "pharmnos-purchase-gst");
 const ids = {
@@ -66,10 +73,15 @@ const ids = {
   tenantB: `${run}_tenant_b`,
   userA: `${run}_user_a`,
   userB: `${run}_user_b`,
+  userInactive: `${run}_user_inactive`,
+  externalUserA: `${run}_external_user_a`,
+  externalUserB: `${run}_external_user_b`,
+  externalUserInactive: `${run}_external_user_inactive`,
   rolePurchase: `${run}_role_purchase`,
   roleNone: `${run}_role_none`,
   membershipA: `${run}_membership_a`,
   membershipB: `${run}_membership_b`,
+  membershipInactive: `${run}_membership_inactive`,
   supplierA: `${run}_supplier_a`,
   supplierB: `${run}_supplier_b`,
   productA: `${run}_product_a`,
@@ -108,6 +120,10 @@ const evidence = {
 let admin;
 let db;
 let prisma;
+let authorizedTargetContract;
+let validateAuthorizedTargetContract;
+let authorizedTargetUrl;
+let authorizedRuntimeUrl;
 let installFinancialE2eTestSession;
 let clearFinancialE2eTestSession;
 let createPurchaseDraftAction;
@@ -175,7 +191,9 @@ async function itemState(purchaseId) {
       accepted_at, accepted_by_membership_id, accepted_decision_id,
       gst_acceptance_status,
       gst_acceptance_reference, hsn_sac_catalog_id_snapshot, gst_rule_version_snapshot
-      ,mrp::text, sale_rate::text, line_total::text
+      ,mrp::text, sale_rate::text, line_total::text,
+      recoverable_itc::text, non_recoverable_gst::text,
+      inventory_acquisition_cost::text, inventory_valuation_status
     FROM purchase_invoice_items
     WHERE tenant_id = $1 AND purchase_id = $2
     ORDER BY created_at, id
@@ -195,6 +213,22 @@ async function postingState(purchaseId) {
       (SELECT COALESCE(sum(i.accepted_cgst), 0)::text FROM purchase_invoice_items i WHERE i.tenant_id = p.tenant_id AND i.purchase_id = p.id) AS accepted_cgst_total,
       (SELECT COALESCE(sum(i.accepted_sgst), 0)::text FROM purchase_invoice_items i WHERE i.tenant_id = p.tenant_id AND i.purchase_id = p.id) AS accepted_sgst_total,
       (SELECT COALESCE(sum(i.accepted_line_total), 0)::text FROM purchase_invoice_items i WHERE i.tenant_id = p.tenant_id AND i.purchase_id = p.id) AS accepted_line_total,
+      (SELECT COALESCE(sum(i.line_total), 0)::text FROM purchase_invoice_items i WHERE i.tenant_id = p.tenant_id AND i.purchase_id = p.id) AS canonical_line_total,
+      (SELECT COALESCE(sum(i.gst_amount), 0)::text FROM purchase_invoice_items i WHERE i.tenant_id = p.tenant_id AND i.purchase_id = p.id) AS canonical_gst_amount,
+      (SELECT count(*)::int FROM purchase_invoice_items i WHERE i.tenant_id = p.tenant_id AND i.purchase_id = p.id AND i.inventory_valuation_status = 'PENDING') AS pending_valuation_line_count,
+      (SELECT count(*)::int
+       FROM product_batches b
+       WHERE b.tenant_id = p.tenant_id
+         AND b.inventory_valuation_status = 'PENDING'
+         AND EXISTS (
+           SELECT 1
+           FROM stock_movements s
+           WHERE s.tenant_id = p.tenant_id
+             AND s.reference_id = p.id
+             AND s.batch_id = b.id
+         )) AS pending_valuation_batch_count,
+      (SELECT count(*)::int FROM stock_movements s WHERE s.tenant_id = p.tenant_id AND s.reference_id = p.id AND s.inventory_valuation_status = 'PENDING') AS pending_valuation_movement_count,
+      (SELECT count(*)::int FROM stock_movements s WHERE s.tenant_id = p.tenant_id AND s.reference_id = p.id AND s.inventory_acquisition_cost IS NULL) AS null_valuation_movement_count,
       l.credit::text AS supplier_ledger_credit,
       l.balance::text AS supplier_ledger_balance,
       o.request_payload_hash,
@@ -292,7 +326,9 @@ async function runTest(id, functionName, userExternalId, purchaseId, expected, f
     function: functionName,
     source: "src/app/_actions/purchases.actions.ts",
     authentication: userExternalId,
-    tenant: userExternalId === ids.userA ? ids.tenantA : ids.tenantB,
+    tenant: userExternalId === ids.externalUserA
+      ? ids.tenantA
+      : userExternalId === ids.externalUserB ? ids.tenantB : null,
     expected,
     actual: error ? { error } : actual,
     before,
@@ -307,7 +343,7 @@ async function createMatchedPurchase(suffix) {
   const supplierInvoiceNo = `${run.slice(-12)}-${suffix}`;
   let createResult;
   try {
-    createResult = await invoke(ids.userA, () => createPurchaseDraftAction(
+    createResult = await invoke(ids.externalUserA, () => createPurchaseDraftAction(
       { ok: false },
       createDraftForm({ supplierId: ids.supplierA, supplierInvoiceNo, declaredTotal: 217 }),
     ));
@@ -324,7 +360,7 @@ async function createMatchedPurchase(suffix) {
 
 async function createAndAcceptMatchedPurchase(suffix) {
   const purchaseId = await createMatchedPurchase(suffix);
-  const acceptance = await invoke(ids.userA, () => acceptPurchaseGstAction(
+  const acceptance = await invoke(ids.externalUserA, () => acceptPurchaseGstAction(
     purchaseId,
     formDataFromEntries([
       ["decision_reference", `${run}-${suffix}-ACCEPT`],
@@ -340,7 +376,7 @@ async function recordConcurrentTest(id, purchaseId, expected, operations, predic
   const before = await purchaseState(purchaseId);
   const outcomes = await Promise.all(operations.map(async (operation) => {
     try {
-      return { result: await invoke(ids.userA, operation) };
+      return { result: await invoke(ids.externalUserA, operation) };
     } catch (error) {
       return { error: String(error?.message ?? error) };
     }
@@ -352,7 +388,7 @@ async function recordConcurrentTest(id, purchaseId, expected, operations, predic
     id,
     function: "finalizePurchaseAction/acceptPurchaseGstAction",
     source: "src/app/_actions/purchases.actions.ts",
-    authentication: ids.userA,
+    authentication: ids.externalUserA,
     tenant: ids.tenantA,
     expected,
     actual: outcomes,
@@ -365,20 +401,36 @@ async function recordConcurrentTest(id, purchaseId, expected, operations, predic
 }
 
 async function main() {
-  admin = await connect(process.env.TEST_DATABASE_URL);
-  await admin.query(`CREATE DATABASE "${databaseName}"`);
+  const {
+    createTargetContract,
+    schemaArtifactHash,
+    targetContractBinding,
+    validateTargetContract,
+    verifyTargetSchema,
+  } = await import("./financial-e2e-target-contract.mjs");
   const runtimeDatabaseUrl = new URL(databaseUrl.toString());
   runtimeDatabaseUrl.username = process.env.FINANCIAL_E2E_RUNTIME_DB_USER;
   runtimeDatabaseUrl.password = process.env.FINANCIAL_E2E_RUNTIME_DB_PASSWORD;
+  runtimeDatabaseUrl.searchParams.set("application_name", "pharmnos-purchase-gst");
+  const targetContract = createTargetContract({
+    runId: `${run}-provision`,
+    targetUrl: databaseUrl.toString(),
+    runtimeUrl: runtimeDatabaseUrl.toString(),
+    databaseName,
+    composeProject: process.env.FINANCIAL_E2E_COMPOSE_PROJECT || "pharmnoslite",
+    schemaArtifactHash: schemaArtifactHash(),
+    expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+  });
+  authorizedTargetContract = targetContract;
+  validateAuthorizedTargetContract = validateTargetContract;
+  authorizedTargetUrl = databaseUrl.toString();
+  authorizedRuntimeUrl = runtimeDatabaseUrl.toString();
+  process.env.FINANCIAL_E2E_TARGET_CONTRACT = JSON.stringify(targetContract);
+  admin = await connect(process.env.TEST_DATABASE_URL);
+  await admin.query(`CREATE DATABASE "${databaseName}"`);
   databaseUrl.searchParams.set("application_name", "pharmnos-financial-e2e");
   runtimeDatabaseUrl.searchParams.set("application_name", "pharmnos-financial-e2e");
-  const provisioningIdentity = [
-    databaseUrl.protocol,
-    databaseUrl.hostname.toLowerCase(),
-    databaseUrl.port || "5432",
-    databaseUrl.pathname,
-    databaseUrl.username,
-  ].join("|");
+  const provisioningIdentity = targetContractBinding(targetContract);
   execFileSync(process.execPath, ["scripts/financial-e2e-provision-local.mjs"], {
     cwd: root,
     env: {
@@ -390,6 +442,17 @@ async function main() {
       FINANCIAL_E2E_AUTHORIZED_TARGET_BINDING: provisioningIdentity,
       FINANCIAL_E2E_RUN_ID: `${run}-provision`,
       FINANCIAL_E2E_INITIALIZATION_ATTEMPT_ID: `${run}-attempt`,
+      FINANCIAL_E2E_INITIALIZATION_AUTHORIZED: "true",
+      FINANCIAL_E2E_INITIALIZATION_SCOPE: "DATABASE_INITIALIZATION_ONLY",
+      FINANCIAL_E2E_TARGET_APPROVED: "true",
+      FINANCIAL_E2E_MARKER_ESTABLISHMENT_METHOD: "BOOTSTRAP_CONNECTED_CATALOG_READBACK",
+      FINANCIAL_E2E_ROLE_SETUP_METHOD: "PRECREATED_LOCAL_CREDENTIAL_PROCEDURE",
+      FINANCIAL_E2E_BASELINE_PACKAGE: "VERSION_PINNED_REVIEW_ARTIFACTS",
+      FINANCIAL_E2E_EVIDENCE_MODE: "SANITIZED_APPEND_ONLY_LOCAL",
+      FINANCIAL_E2E_EVIDENCE_RETENTION_DAYS: "30",
+      FINANCIAL_E2E_EVIDENCE_PATH_APPROVED: "true",
+      FINANCIAL_E2E_RECOVERY_POLICY: "UNTRUSTED_STOP_INSPECT_REAUTHORIZE_NEW_TARGET",
+      FINANCIAL_E2E_TARGET_CONTRACT: JSON.stringify(targetContract),
     },
     stdio: "inherit",
   });
@@ -425,6 +488,16 @@ async function main() {
     SELECT rolcanlogin AS can_login, rolsuper AS is_superuser, rolbypassrls AS bypasses_rls
     FROM pg_roles WHERE rolname = current_user
   `)).rows[0];
+  await verifyTargetSchema(runtimeProbe, targetContract);
+  evidence.authenticatedTenantContext = {
+    status: "VERIFIED",
+    source: "authenticated session user ID -> users.external_id -> active membership",
+    tenantClaimSource: "verified membership returned by getServerTenantContext",
+    transactionClaims: "SET LOCAL request.jwt.claim.sub and request.jwt.claim.tenant_id",
+    callerSuppliedTenantOverride: "REJECTED",
+    fixedTenantConnectionClaim: "NOT USED",
+    applicationRole: evidence.applicationDatabaseIdentity.current_user_name,
+  };
   await runtimeProbe.end();
 
   await db.query(
@@ -432,17 +505,48 @@ async function main() {
     [ids.tenantA, ids.tenantB, `${run}_a`, `${run}_b`],
   );
   await db.query(
-    "INSERT INTO users (id,external_id,email,full_name,updated_at) VALUES ($1,$1,$2,'Purchase A',now()),($3,$3,$4,'Purchase B',now())",
-    [ids.userA, `${ids.userA}@example.invalid`, ids.userB, `${ids.userB}@example.invalid`],
+    "INSERT INTO users (id,external_id,email,full_name,updated_at) VALUES ($1,$2,$3,'Purchase A',now()),($4,$5,$6,'Purchase B',now()),($7,$8,$9,'Inactive Purchase User',now())",
+    [ids.userA, ids.externalUserA, `${ids.externalUserA}@example.invalid`, ids.userB, ids.externalUserB, `${ids.externalUserB}@example.invalid`, ids.userInactive, ids.externalUserInactive, `${ids.externalUserInactive}@example.invalid`],
   );
   await db.query(
     "INSERT INTO roles (id,tenant_id,name,is_default,updated_at) VALUES ($1,$3,'PURCHASE',true,now()),($2,$4,'NONE',true,now())",
     [ids.rolePurchase, ids.roleNone, ids.tenantA, ids.tenantB],
   );
   await db.query(
-    "INSERT INTO memberships (id,tenant_id,user_id,role_id,status,updated_at) VALUES ($1,$3,$5,$7,'active',now()),($2,$4,$6,$8,'active',now())",
-    [ids.membershipA, ids.membershipB, ids.tenantA, ids.tenantB, ids.userA, ids.userB, ids.rolePurchase, ids.roleNone],
+    "INSERT INTO memberships (id,tenant_id,user_id,role_id,status,updated_at) VALUES ($1,$3,$5,$7,'active',now()),($2,$4,$6,$8,'active',now()),($9,$3,$10,$8,'inactive',now())",
+    [ids.membershipA, ids.membershipB, ids.tenantA, ids.tenantB, ids.userA, ids.userB, ids.rolePurchase, ids.roleNone, ids.membershipInactive, ids.userInactive],
   );
+  const isolationA = await connect(runtimeDatabaseUrl.toString());
+  const isolationB = await connect(runtimeDatabaseUrl.toString());
+  let isolationPassed = false;
+  try {
+    await isolationA.query("BEGIN");
+    await isolationA.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [ids.externalUserA]);
+    const [claimA, claimB, visibleA, visibleB] = await Promise.all([
+      isolationA.query("SELECT current_setting('request.jwt.claim.sub', true) AS subject"),
+      isolationB.query("SELECT current_setting('request.jwt.claim.sub', true) AS subject"),
+      isolationA.query("SELECT count(*)::int AS count FROM users WHERE external_id = $1", [ids.externalUserA]),
+      isolationB.query("SELECT count(*)::int AS count FROM users WHERE external_id = $1", [ids.externalUserA]),
+    ]);
+    await isolationA.query("COMMIT");
+    const resetA = await isolationA.query("SELECT current_setting('request.jwt.claim.sub', true) AS subject");
+    isolationPassed = claimA.rows[0].subject === ids.externalUserA &&
+      !claimB.rows[0].subject &&
+      visibleA.rows[0].count === 1 &&
+      visibleB.rows[0].count === 0 &&
+      !resetA.rows[0].subject;
+    evidence.transactionClaimIsolation = {
+      status: isolationPassed ? "PASS" : "FAIL",
+      transactionA: { subject: claimA.rows[0].subject, visibleUserCount: visibleA.rows[0].count },
+      concurrentTransactionB: { subject: claimB.rows[0].subject, visibleUserCount: visibleB.rows[0].count },
+      afterCommitTransactionA: { subject: resetA.rows[0].subject },
+      claims: "SET LOCAL semantics verified across independent pooled connections",
+    };
+  } finally {
+    await isolationA.end();
+    await isolationB.end();
+  }
+  if (!isolationPassed) throw new Error("Transaction-local tenant claims were not isolated.");
   await db.query(
     "INSERT INTO role_permissions (id,role_id,permission) VALUES ($1,$2,'create_purchase'),($3,$2,'accept_purchase_gst'),($4,$2,'finalize_purchase'),($5,$2,'view_purchase')",
     [`${run}_perm_create`, ids.rolePurchase, `${run}_perm_accept`, `${run}_perm_finalize`, `${run}_perm_view`],
@@ -481,6 +585,11 @@ async function main() {
   evidence.fixture = {
     tenantA: ids.tenantA,
     tenantB: ids.tenantB,
+    users: {
+      authorized: { internalId: ids.userA, externalId: ids.externalUserA, membershipId: ids.membershipA, status: "active" },
+      unrelated: { internalId: ids.userB, externalId: ids.externalUserB, membershipId: ids.membershipB, status: "active" },
+      inactive: { internalId: ids.userInactive, externalId: ids.externalUserInactive, membershipId: ids.membershipInactive, status: "inactive" },
+    },
     supplier: ids.supplierA,
     products: [ids.productA, ids.productB],
     approvedClassifications: [ids.catalogA, ids.catalogB],
@@ -496,15 +605,34 @@ async function main() {
     require(path.join(root, "src/app/_actions/purchases.actions.ts")));
 
   evidence.applicationContexts = {
-    authorized: { user: ids.userA, tenant: ids.tenantA, permissions: ["create_purchase", "accept_purchase_gst", "finalize_purchase"] },
-    unauthorized: { user: ids.userB, tenant: ids.tenantB, permissions: [] },
+    authorized: { user: ids.externalUserA, tenant: ids.tenantA, permissions: ["create_purchase", "accept_purchase_gst", "finalize_purchase"] },
+    unauthorized: { user: ids.externalUserB, tenant: ids.tenantB, permissions: [] },
+    inactive: { user: ids.externalUserInactive, tenant: null, permissions: [] },
   };
+
+  await runTest(
+    "inactive_membership_rejected",
+    "createPurchaseDraftAction",
+    ids.externalUserInactive,
+    null,
+    "Authenticated user with only an inactive membership is denied before purchase access",
+    () => createPurchaseDraftAction({ ok: false }, createDraftForm({
+      supplierId: ids.supplierA,
+      supplierInvoiceNo: `${run}-INACTIVE`,
+      declaredTotal: 217,
+    })),
+    ({ actual, error, after, afterFinancial }) => actual?.ok === false &&
+      !error &&
+      actual.message === "Purchase draft could not be saved. Please try again." &&
+      after === null &&
+      afterFinancial === null,
+  );
 
   const matchedDraftForm = await createDraftForm({ supplierId: ids.supplierA, supplierInvoiceNo: `${run}-SUP-001`, declaredTotal: 217 });
   const createResult = await runTest(
     "create_matched_mixed_rate_purchase",
     "createPurchaseDraftAction",
-    ids.userA,
+    ids.externalUserA,
     null,
     "Real draft action persists supplier evidence, governed calculation, line snapshots, and mixed-rate totals",
     () => createPurchaseDraftAction({ ok: false }, matchedDraftForm),
@@ -522,7 +650,7 @@ async function main() {
   await runTest(
     "accept_authorized_calculated_values",
     "acceptPurchaseGstAction",
-    ids.userA,
+    ids.externalUserA,
     matchedPurchase,
     "Matched GST is explicitly accepted from application-calculated values",
     () => acceptPurchaseGstAction(matchedPurchase, formDataFromEntries([
@@ -535,7 +663,7 @@ async function main() {
   await runTest(
     "accept_unauthorized_rejected",
     "acceptPurchaseGstAction",
-    ids.userB,
+    ids.externalUserB,
     matchedPurchase,
     "Cross-tenant unauthorized acceptance is rejected without mutation",
     () => acceptPurchaseGstAction(matchedPurchase, formDataFromEntries([
@@ -552,7 +680,7 @@ async function main() {
   await runTest(
     "finalize_authorized_purchase",
     "finalizePurchaseAction",
-    ids.userA,
+    ids.externalUserA,
     matchedPurchase,
     "Finalization posts exactly one inventory movement, supplier ledger, audit event, and completed operation",
     () => finalizePurchaseAction(matchedPurchase, { ok: false }, formDataFromEntries([["idempotency_key", `${run}-FINAL-001`]])),
@@ -568,7 +696,7 @@ async function main() {
   await runTest(
     "finalize_same_key_replay",
     "finalizePurchaseAction",
-    ids.userA,
+    ids.externalUserA,
     matchedPurchase,
     "Same-key same-payload retry has one financial effect set",
     () => finalizePurchaseAction(matchedPurchase, { ok: false }, formDataFromEntries([["idempotency_key", `${run}-FINAL-001`]])),
@@ -657,7 +785,7 @@ async function main() {
   await runTest(
     "finalize_forced_failure_rolls_back_all_effects",
     "finalizePurchaseAction",
-    ids.userA,
+    ids.externalUserA,
     rollbackPurchase,
     "A failure after stock-effect attempt rolls back invoice, posting, stock, ledger, and audit changes",
     () => finalizePurchaseAction(rollbackPurchase, { ok: false }, formDataFromEntries([["idempotency_key", `${run}-ROLLBACK`]])),
@@ -674,7 +802,7 @@ async function main() {
   await runTest(
     "finalize_retry_after_rollback",
     "finalizePurchaseAction",
-    ids.userA,
+    ids.externalUserA,
     rollbackPurchase,
     "Retry after rollback commits exactly one complete financial effect set",
     () => finalizePurchaseAction(rollbackPurchase, { ok: false }, formDataFromEntries([["idempotency_key", `${run}-ROLLBACK`]])),
@@ -689,7 +817,7 @@ async function main() {
   const discrepancyCreate = await runTest(
     "create_discrepant_purchase",
     "createPurchaseDraftAction",
-    ids.userA,
+    ids.externalUserA,
     null,
     "Supplier-declared discrepancy is retained and requires review",
     () => createPurchaseDraftAction({ ok: false }, createDraftForm({ supplierId: ids.supplierA, supplierInvoiceNo: `${run}-SUP-002`, declaredTotal: 218 })),
@@ -707,7 +835,7 @@ async function main() {
   await runTest(
     "accept_discrepancy_rejected",
     "acceptPurchaseGstAction",
-    ids.userA,
+    ids.externalUserA,
     discrepancyPurchase,
     "Discrepancy cannot be accepted by the matched-only acceptance path",
     () => acceptPurchaseGstAction(discrepancyPurchase, formDataFromEntries([
@@ -756,7 +884,7 @@ async function main() {
   const resolutionResult = await runTest(
     "resolve_discrepancy_explicit_decision",
     "resolvePurchaseGstDiscrepancyAction",
-    ids.userA,
+    ids.externalUserA,
     discrepancyPurchase,
     "Authorized line-level explicit resolution persists accepted values and audit metadata",
     () => resolvePurchaseGstDiscrepancyAction(discrepancyPurchase, resolutionForm),
@@ -768,7 +896,7 @@ async function main() {
   await runTest(
     "finalize_same_key_different_purchase_conflict",
     "finalizePurchaseAction",
-    ids.userA,
+    ids.externalUserA,
     discrepancyPurchase,
     "A completed idempotency key cannot be reused for a different purchase",
     () => finalizePurchaseAction(discrepancyPurchase, { ok: false }, formDataFromEntries([["idempotency_key", `${run}-FINAL-001`]])),
@@ -780,7 +908,7 @@ async function main() {
   const explicitFinalize = await runTest(
     "finalize_explicit_decision_purchase",
     "finalizePurchaseAction",
-    ids.userA,
+    ids.externalUserA,
     discrepancyPurchase,
     "Explicit line-level accepted values reconcile and reach atomic final financial posting",
     () => finalizePurchaseAction(discrepancyPurchase, { ok: false }, formDataFromEntries([["idempotency_key", `${run}-FINAL-002`]])),
@@ -797,6 +925,12 @@ async function main() {
       afterFinancial?.accepted_cgst_total === "13.6300" &&
       afterFinancial?.accepted_sgst_total === "13.6300" &&
       afterFinancial?.accepted_line_total === "218.3400" &&
+      afterFinancial?.canonical_line_total === "218.34" &&
+      afterFinancial?.canonical_gst_amount === "27.26" &&
+      afterFinancial?.pending_valuation_line_count === 2 &&
+      afterFinancial?.pending_valuation_batch_count === 2 &&
+      afterFinancial?.pending_valuation_movement_count === 2 &&
+      afterFinancial?.null_valuation_movement_count === 2 &&
       afterFinancial?.supplier_ledger_credit === "218.34" &&
       afterFinancial?.audit_metadata?.net_amount === 218.34 &&
       afterFinancial?.posting_status === "COMPLETED",
@@ -861,12 +995,20 @@ async function main() {
   }
   evidence.verdict = "PARTIALLY_ACCEPTED";
   evidence.blockers = [
-    "Restricted runtime-role RLS was not exercised; the harness used a superuser/RLS-bypassing bootstrap role.",
     "Cess, inclusive-tax, freight allocation, discount allocation, rounding precedence, and discrepancy tolerance policies remain unresolved where applicable.",
   ];
 
   await db.end();
   await prisma.$disconnect();
+  const cleanupCheck = validateAuthorizedTargetContract({
+    contract: authorizedTargetContract,
+    targetUrl: databaseUrl.toString(),
+    runtimeUrl: runtimeDatabaseUrl.toString(),
+    ordinaryUrl: ordinaryDatabaseUrl,
+  });
+  if (!cleanupCheck.ok || authorizedTargetContract.databaseName !== databaseName) {
+    throw new Error("Cleanup target does not match the authorized immutable target contract.");
+  }
   await admin.query(`DROP DATABASE "${databaseName}" WITH (FORCE)`);
   evidence.cleanup.databaseDropped = true;
   evidence.cleanup.databaseVerifiedAbsent =
@@ -886,7 +1028,17 @@ main().catch(async (error) => {
   try { await db?.end(); } catch {}
   try { await prisma?.$disconnect(); } catch {}
   try {
-    if (admin) {
+    if (admin && authorizedTargetContract && validateAuthorizedTargetContract) {
+      const cleanupCheck = validateAuthorizedTargetContract({
+        contract: authorizedTargetContract,
+        targetUrl: authorizedTargetUrl,
+        runtimeUrl: authorizedRuntimeUrl,
+        ordinaryUrl: ordinaryDatabaseUrl,
+      });
+      if (!cleanupCheck.ok || authorizedTargetContract.databaseName !== databaseName) {
+        console.error("CLEANUP=BLOCKED_TARGET_CONTRACT_MISMATCH");
+        throw new Error("Cleanup target did not match the authorized immutable target contract.");
+      }
       await admin.query(`DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`);
       await admin.end();
     }
