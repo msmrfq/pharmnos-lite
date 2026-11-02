@@ -305,3 +305,32 @@ test("propagates a non-zero child failure", () => {
         /runner exited/,
     );
 });
+
+test("forwards disposal cleanup mode to children", () => {
+    const env = environment({ FINANCIAL_E2E_CLEANUP_MODE: "DISPOSABLE_TARGET_DISPOSAL" });
+    const contract = contractFor(env);
+    const calls = [];
+    runSalesGstAcceptance({
+        environment: env,
+        createContract: () => contract,
+        validateBinding: targetContractBinding,
+        runChild: (script, childEnv) => calls.push({ script, childEnv }),
+    });
+    assert.equal(calls.length, 2);
+    for (const { childEnv } of calls) {
+        assert.equal(childEnv.FINANCIAL_E2E_CLEANUP_MODE, "DISPOSABLE_TARGET_DISPOSAL");
+    }
+});
+
+test("defaults to row-level cleanup mode when unspecified", () => {
+    const env = environment();
+    const contract = contractFor(env);
+    let childEnv;
+    runSalesGstAcceptance({
+        environment: env,
+        createContract: () => contract,
+        validateBinding: targetContractBinding,
+        runChild: (script, childEnvArg) => { childEnv = childEnvArg; },
+    });
+    assert.equal(childEnv.FINANCIAL_E2E_CLEANUP_MODE, "ROW_LEVEL_CLEANUP");
+});

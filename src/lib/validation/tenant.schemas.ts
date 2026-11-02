@@ -32,8 +32,9 @@ export const businessProfileSchema = z.object({
   country: z.string().default("India"),
   gstin: z
     .string()
-    .regex(/^[0-9A-Z]{0,15}$/, "GSTIN must be 15 alphanumeric characters or less")
-    .optional(),
+    .regex(/^[0-9A-Z]{15}$/, "GSTIN must contain exactly 15 alphanumeric characters")
+    .optional()
+    .or(z.literal("")),
   pan: z
     .string()
     .regex(/^[A-Z]{0,10}$/, "PAN must be 10 uppercase letters or less")
@@ -65,8 +66,9 @@ export const onboardingBusinessSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and dashes"),
   gstin: z
     .string()
-    .regex(/^[0-9A-Z]{0,15}$/, "GSTIN must be 15 alphanumeric characters or less")
-    .optional(),
+    .regex(/^[0-9A-Z]{15}$/, "GSTIN must contain exactly 15 alphanumeric characters")
+    .optional()
+    .or(z.literal("")),
   city: z.string().optional(),
   state: businessProfileStateSchema,
   contactPhone: z.string().max(20).optional(),

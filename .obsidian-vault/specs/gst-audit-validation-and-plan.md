@@ -501,7 +501,18 @@ and therefore cannot silently drive place-of-supply classification.
 | Customer/supplier ledgers | ✅ `customer_ledgers`/`supplier_ledgers` | **YES** |
 | State-based POS for compliance | ⚠️ Broken | **YES** |
 
-### Advanced Statutory Automation (Post-MVP Backlog)
+### Advanced statutory automation and separately gated areas
+
+The table below is historical capability-gap evidence, not the current
+credit/debit-note scope decision. Credit/debit notes are current-release scope
+for supplier issuance and recipient processing, while broader filing,
+e-invoice, and statutory automation remain separately gated.
+
+The finalized implementation contract is maintained in the [GST Credit and
+Debit Note Engineering Contract](./gst-credit-debit-note-engineering-contract.md).
+Its supplier/recipient workflows, commercial-adjustment boundary, state
+machines, permissions, scenarios, and CDN-01-CDN-27 denominator are separate
+from this historical capability matrix and from DGM-T25.
 
 | Feature | Status | Required for MVP? |
 |---------|--------|-------------------|
@@ -518,7 +529,7 @@ and therefore cannot silently drive place-of-supply classification.
 | RCM (Reverse Charge) | ❌ Missing | **NO** |
 | Composition scheme | ❌ Missing | **NO** |
 | Export/SEZ zero-rated | ❌ Missing | **NO** |
-| Credit/Debit notes with GST adjustment | ❌ Missing | **NO** |
+| Credit/Debit notes with GST adjustment | ❌ Missing; current-release scope approved, implementation and acceptance open | **YES, after gates pass** |
 | ITC reconciliation (GSTR-2A/2B) | ❌ Missing | **NO** |
 | Multi-GSTIN per tenant | ❌ Missing | **NO** |
 | GSTIN checksum validation | ❌ Missing | **NO** (format only is MVP) |
@@ -748,7 +759,7 @@ ALTER TABLE purchase_invoices ADD COLUMN is_rcm BOOLEAN DEFAULT FALSE;
 | E-Invoice / IRN integration | Only mandatory for >₹5Cr turnover; not MVP |
 | E-Way Bill integration | Only for inter-state >₹50k; can be manual initially |
 | RCM flag & liability | Rare in pharma wholesale; handle manually |
-| Credit/Debit notes with GST adjustment | Not in current scope; returns handled separately |
+| Credit/Debit notes with GST adjustment | Current-release scope for supplier issuance and recipient processing; implementation, statutory confirmation, reporting/IRP, runtime, and acceptance gates remain open |
 | ITC reconciliation (GSTR-2A/2B) | Requires GSTN API access; post-MVP |
 | Multi-GSTIN per tenant | Single GSTIN per tenant is MVP scope |
 | GSTIN checksum validation | Format validation sufficient for MVP; checksum adds UX friction |

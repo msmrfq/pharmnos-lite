@@ -1,0 +1,68 @@
+{
+  "evidenceVersion": 1,
+  "kind": "pharmnos-sales-gst-application-evidence-v1",
+  "runId": "sales_gst_campaign_1793540554806_5441f9",
+  "contractRunIdCapture": "NOT_CAPTURED",
+  "contractRunIdNote": "The acceptance wrapper generates its internal target-contract run ID at runtime and never persists or prints it; no artifact records its exact value. A previously published acceptedRunId field was fabricated and has been removed during independent audit.",
+  "generatedAt": "2026-11-01T19:15:48+05:30",
+  "auditedAt": "2026-11-01T19:25:19+05:30",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 55450,
+    "database": "pharmnos_financial_e2e_salesgst_mvxvql2g9dacd0c0",
+    "composeProject": "pharmnoslite-financial-e2e-salesgst-mvxvql2g9dacd0c0",
+    "marker": "pharmnos-financial-e2e",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime"
+  },
+  "result": "PASS",
+  "acceptanceExitCode": 0,
+  "targetIdentityVerified": true,
+  "disposal": "DATABASE_LEVEL_DISPOSAL_VERIFIED",
+  "immutableHistory": "PRESERVED_NOT_DELETED",
+  "scenarios": [
+    { "id": "GST-014", "status": "PASS", "evidence": "PASS_APPLICATION_PATH_DATABASE_E2E", "description": "Sales finalization fails closed with insufficient FEFO stock and rolls back." },
+    { "id": "GST-015", "status": "PASS", "evidence": "PASS_APPLICATION_PATH_DATABASE_E2E", "description": "Purchase finalization fails closed with status, sequence, posting, stock, and ledger all unchanged; the exact rejection reason is not asserted by the harness." },
+    { "id": "SALES-SUCCESS", "status": "PASS", "evidence": "PASS_APPLICATION_PATH_DATABASE_E2E", "description": "Intra-state sales finalization posts CGST/SGST, stock movement, ledger, and audit." },
+    { "id": "PURCHASE-SUCCESS", "status": "PASS", "evidence": "PASS_APPLICATION_PATH_DATABASE_E2E", "description": "Accepted purchase finalization posts supplier ledger, stock movement, and audit." },
+    { "id": "PURCHASE-GST-REVIEW-GUARD", "status": "PASS", "evidence": "PASS_APPLICATION_PATH_DATABASE_E2E", "description": "Unreconciled purchase is blocked from finalization with no side effects." },
+    { "id": "PAYMENT", "status": "PASS", "evidence": "PASS_APPLICATION_PATH_DATABASE_E2E", "description": "Customer and supplier payments update balances and ledgers; invalid references are rejected." },
+    { "id": "GST-016", "status": "PASS", "evidence": "PASS_APPLICATION_PATH_DATABASE_E2E", "description": "Finalized invoice snapshot facts remain immutable after master-data edits and print snapshot fallbacks." }
+  ],
+  "databaseVerification": {
+    "provisioning": "PASS",
+    "rlsTables": 33,
+    "policies": 84,
+    "triggers": 16,
+    "constraints": 123,
+    "runtimeDeletePrivileges": 0,
+    "tenantRlsPrivileges": "PASS_DATABASE_EVIDENCE",
+    "ownedResourcesRecorded": 45
+  },
+  "tests": {
+    "focused": { "passed": 31, "failed": 0, "files": ["tests/financial-e2e-fixture-ownership.test.mjs", "tests/financial-e2e-fixture-cleanup.test.mjs", "tests/sales-gst-application-acceptance.test.mjs"] },
+    "fullJavascriptSuite": { "passed": 231, "failed": 0 },
+    "typecheck": "PASS",
+    "prismaValidate": "PASS",
+    "gitDiffCheck": "PASS",
+    "eslintChangedFiles": "PASS",
+    "typescriptTestToolingGap": "tests/gst-calculator.test.ts remains unrunnable via node --test due to the pre-existing missing tsx runner; not a passing-test claim."
+  },
+  "architectureCorrections": [
+    "Fixture ownership collector resolves users through memberships and role_permissions through tenant-owned roles (fail-closed).",
+    "Acceptance runner uses a single ts-node CJS module instance for the auth adapter so the financial E2E test session resolves correctly.",
+    "Sales/purchase fixtures now carry gst_treatment, approved HSN/SAC catalog and GST rate rules, and per-line accepted accounting snapshots required by the current action contracts.",
+    "Disposal mode defers immutable-history cleanup to database-level target disposal; row-level deletion of immutable financial history is prohibited by assertion.",
+    "New campaign orchestrator creates a uniquely identified disposable target, runs the acceptance, and disposes the target at the database level."
+  ],
+  "safety": {
+    "productionUntouched": true,
+    "target0419Preserved": true,
+    "preExistingContainersUntouched": true,
+    "noRemoteGit": true,
+    "noMutationOutsideMissionTarget": true,
+    "financialHistoryProtectionsEnabled": true
+  },
+  "evidenceLogPath": "C:\\Users\\Masum Rafique\\.copilot\\session-state\\36655790-940b-43b8-a4bc-ed460b133e52\\files\\sales-gst-acceptance-mvxvql2g9dacd0c0.log",
+  "evidenceLogSha256": "02773131F94B61707B6C689934135C87D335DE868CA6A356D1AD3CCBDB93DDA0"
+}

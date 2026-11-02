@@ -1,0 +1,17 @@
+{
+  "runId": "sales_gst_campaign_1793540554806_5441f9",
+  "suffix": "mvxvql2g9dacd0c0",
+  "port": 55450,
+  "databaseName": "pharmnos_financial_e2e_salesgst_mvxvql2g9dacd0c0",
+  "composeProject": "pharmnoslite-financial-e2e-salesgst-mvxvql2g9dacd0c0",
+  "baseEnvPath": "C:\\Users\\Masum Rafique\\.copilot\\session-state\\de6b39fc-5872-46e6-8130-58843b8116f4\\gst-runtime-0419.env",
+  "logPath": "C:\\Users\\Masum Rafique\\.copilot\\session-state\\36655790-940b-43b8-a4bc-ed460b133e52\\files\\sales-gst-acceptance-mvxvql2g9dacd0c0.log",
+  "startedAt": "2026-11-01T13:42:34.807Z",
+  "containerCreated": true,
+  "targetVerified": true,
+  "acceptanceExitCode": 0,
+  "disposed": true,
+  "disposalVerified": true,
+  "acceptancePassed": true,
+  "completedAt": "2026-11-01T13:43:42.611Z"
+}

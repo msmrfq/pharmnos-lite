@@ -1,0 +1,14 @@
+[    3377ms] [INFO] Slow network is detected. See https://www.chromestatus.com/feature/5636954674692096 for more details. Fallback font will be used while loading: https://static.gst.gov.in/uiassets/css/fonts/minified/v1.1/FontAwesome.woff2?v=4.7.0 @ https://www.gst.gov.in/help/returns:0
+[    7404ms] [ERROR] Error: [$compile:nodomevents] http://errors.angularjs.org/1.5.6/$compile/nodomevents
+    at https://static.gst.gov.in/uiassets/javascripts/fwk/angular-all1.0.js:6:412
+    at Object.pre (https://static.gst.gov.in/uiassets/javascripts/fwk/angular-all1.0.js:79:244)
+    at https://static.gst.gov.in/uiassets/javascripts/fwk/angular-all1.0.js:16:230
+    at ia (https://static.gst.gov.in/uiassets/javascripts/fwk/angular-all1.0.js:81:35)
+    at n (https://static.gst.gov.in/uiassets/javascripts/fwk/angular-all1.0.js:65:490)
+    at g (https://static.gst.gov.in/uiassets/javascripts/fwk/angular-all1.0.js:58:429)
+    at n (https://static.gst.gov.in/uiassets/javascripts/fwk/angular-all1.0.js:66:115)
+    at g (https://static.gst.gov.in/uiassets/javascripts/fwk/angular-all1.0.js:58:429)
+    at g (https://static.gst.gov.in/uiassets/javascripts/fwk/angular-all1.0.js:58:446)
+    at g (https://static.gst.gov.in/uiassets/javascripts/fwk/angular-all1.0.js:58:446) 02-11-2026 07:25:48 PM @ https://static.gst.gov.in/uiassets/javascripts/fwk/angular-all1.0.js:116
+[    7408ms] [LOG] 2026 @ https://static.gst.gov.in/uiassets/javascripts/common/directives1.6.js:0
+[    7408ms] [LOG] FY: 2026-27 @ https://static.gst.gov.in/uiassets/javascripts/common/directives1.6.js:0

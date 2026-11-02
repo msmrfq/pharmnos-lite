@@ -21,6 +21,7 @@ import {
 import {
   gstCalculator,
   canMarkSalesInvoiceComplete,
+  calculateSalesLineAmounts,
   requireResolvedPlaceOfSupply,
   toPersistedSalesTaxFacts,
   toTaxableGstLine,
@@ -34,6 +35,7 @@ import {
   isApprovedGstClassification,
   resolveApprovedGstRule,
 } from "@/lib/gst/rule-governance";
+import { decimalOrZero, sumDecimals } from "@/lib/decimal";
 
 const __SalesStatusDRAFT: InvoiceStatus = "DRAFT";
 const __SalesStatusFINALIZED: InvoiceStatus = "FINALIZED";
@@ -96,8 +98,7 @@ function formDataToSalesObject(formData: FormData): Record<string, any> {
 }
 
 function round2(n: number): number {
-  if (!Number.isFinite(n)) return 0;
-  return Math.round(n * 100) / 100;
+  return decimalOrZero(n).round(2, "HALF_UP").toNumber();
 }
 
 function computeServerGstTotals(items: any[], placeOfSupply: GstPlaceOfSupply): GstTotals {
@@ -280,6 +281,10 @@ export async function createSalesDraftAction(
     const invoice = await prisma.$transaction(async (tx) => {
       const governedLines = await resolveSalesLineRules(tx, ctx.tenantId, linesParsed, data.invoice_date);
       const gstTotals = computeServerGstTotals(governedLines, placeOfSupply);
+      const lineAmounts = governedLines.map((line: any) => calculateSalesLineAmounts(line));
+      const totalDiscount = sumDecimals(lineAmounts.map((line) => line.discount_amount))
+        .round(2, "HALF_UP")
+        .toNumber();
       const created = await tx.sales_invoices.create({
         data: {
           tenant_id: ctx.tenantId,
@@ -293,7 +298,7 @@ export async function createSalesDraftAction(
           tax_mode: data.tax_mode,
           is_cash_sale: !!data.is_cash_sale,
           gross_amount: round2(gstTotals.total_taxable),
-          total_discount: Number(data.total_discount ?? 0),
+          total_discount: totalDiscount,
           total_tax: gstTotals.total_tax,
           round_off: gstTotals.round_off_applied,
           net_amount: gstTotals.grand_total,
@@ -310,11 +315,9 @@ export async function createSalesDraftAction(
       const itemsData = governedLines.map((line: any, index: number) => {
         const qty = Number(line.quantity ?? 0);
         const rate = Number(line.sale_rate ?? 0);
-        const discPct = Number(line.trade_discount_pct ?? 0);
-        const lineGross = round2(qty * rate);
-        const lineDiscAmt = round2(lineGross * (discPct / 100));
+        const lineAmount = lineAmounts[index];
         const lineSplit = gstTotals.lines[index];
-        if (!lineSplit) throw new Error("GST line calculation missing.");
+        if (!lineSplit || !lineAmount) throw new Error("GST line calculation missing.");
         const persistedTax = toPersistedSalesTaxFacts(lineSplit);
         return {
           tenant_id: ctx.tenantId,
@@ -327,7 +330,7 @@ export async function createSalesDraftAction(
           sale_rate: rate,
           mrp: line.mrp ? Number(line.mrp) : null,
           discount_pct: Number(line.trade_discount_pct ?? 0),
-          discount_amount: lineDiscAmt,
+          discount_amount: lineAmount.discount_amount,
           taxable_amount: persistedTax.taxable_amount,
           gst_rate: Number(line.gst_rate ?? 0),
           gst_amount: persistedTax.gst_amount,
@@ -513,13 +516,13 @@ export async function finalizeSalesInvoiceAction(
       if (!snapshotsReady) {
         throw new Error("Cannot finalize invoice until required historical snapshot facts are available.");
       }
-      const diffGross = Math.abs(Number(existing.gross_amount ?? 0) - serverGst.total_taxable);
-      const diffTax = Math.abs(Number(existing.total_tax ?? 0) - serverGst.total_tax);
-      const diffNet = Math.abs(Number(existing.net_amount ?? 0) - serverGst.grand_total);
+      const diffGross = decimalOrZero(existing.gross_amount?.toString()).subtract(serverGst.total_taxable).abs();
+      const diffTax = decimalOrZero(existing.total_tax?.toString()).subtract(serverGst.total_tax).abs();
+      const diffNet = decimalOrZero(existing.net_amount?.toString()).subtract(serverGst.grand_total).abs();
       if (
-        diffGross > __MAX_SALES_TOTALS_MISMATCH_PAISE ||
-        diffTax > __MAX_SALES_TOTALS_MISMATCH_PAISE ||
-        diffNet > __MAX_SALES_TOTALS_MISMATCH_PAISE
+        diffGross.compare(__MAX_SALES_TOTALS_MISMATCH_PAISE) === 1 ||
+        diffTax.compare(__MAX_SALES_TOTALS_MISMATCH_PAISE) === 1 ||
+        diffNet.compare(__MAX_SALES_TOTALS_MISMATCH_PAISE) === 1
       ) {
         throw new Error("Totals mismatch vs calculated; please review lines, rates or GST.");
       }
@@ -661,7 +664,7 @@ export async function finalizeSalesInvoiceAction(
 
       const balanceBefore = Number(cust.receivable_balance ?? 0);
       const debit = serverGst.grand_total;
-      const balanceAfter = round2(balanceBefore + debit);
+      const balanceAfter = decimalOrZero(balanceBefore).add(debit).round(2, "HALF_UP").toNumber();
 
       await tx.customer_ledgers.create({
         data: {
@@ -784,12 +787,15 @@ export async function createCustomerPaymentAction(
         select: { receivable_balance: true },
       });
       if (!cust) throw new Error("Customer not found.");
-      const before = Number(cust.receivable_balance ?? 0);
-      const credit = Number(data.amount);
-      const applied = Math.min(before, credit);
-      const clamped = Math.max(0, before - applied);
-      const newBal = round2(clamped);
-      const warning = before < credit - 0.001 ? "Payment exceeds total dues; clamped to 0 — please verify." : null;
+      const before = decimalOrZero(cust.receivable_balance?.toString());
+      const credit = decimalOrZero(data.amount);
+      const appliedDecimal = before.compare(credit) < 0 ? before : credit;
+      const clamped = before.subtract(appliedDecimal).round(2, "HALF_UP");
+      const applied = appliedDecimal.round(2, "HALF_UP").toNumber();
+      const newBal = clamped.toNumber();
+      const warning = credit.subtract(before).compare("0.001") === 1
+        ? "Payment exceeds total dues; clamped to 0 — please verify."
+        : null;
 
       const payment = await tx.payments.create({
         data: {
@@ -824,7 +830,7 @@ export async function createCustomerPaymentAction(
       });
       await tx.customers.update({
         where: { id: data.customer_id, tenant_id: ctx.tenantId },
-        data: { receivable_balance: clamped, updated_at: new Date() },
+        data: { receivable_balance: clamped.toNumber(), updated_at: new Date() },
       });
       return { id: payment.id, warning };
     });
@@ -875,12 +881,15 @@ export async function createSupplierPaymentAction(
         select: { payable_balance: true },
       });
       if (!sup) throw new Error("Supplier not found.");
-      const before = Number(sup.payable_balance ?? 0);
-      const debit = Number(data.amount);
-      const applied = Math.min(before, debit);
-      const clamped = Math.max(0, before - applied);
-      const newBal = round2(clamped);
-      const warning = before < debit - 0.001 ? "Payment exceeds total payables; clamped to 0 — please verify." : null;
+      const before = decimalOrZero(sup.payable_balance?.toString());
+      const debit = decimalOrZero(data.amount);
+      const appliedDecimal = before.compare(debit) < 0 ? before : debit;
+      const clamped = before.subtract(appliedDecimal).round(2, "HALF_UP");
+      const applied = appliedDecimal.round(2, "HALF_UP").toNumber();
+      const newBal = clamped.toNumber();
+      const warning = debit.subtract(before).compare("0.001") === 1
+        ? "Payment exceeds total payables; clamped to 0 — please verify."
+        : null;
 
       const payment = await tx.payments.create({
         data: {
@@ -914,7 +923,7 @@ export async function createSupplierPaymentAction(
       });
       await tx.suppliers.update({
         where: { id: data.supplier_id, tenant_id: ctx.tenantId },
-        data: { payable_balance: clamped, updated_at: new Date() },
+        data: { payable_balance: clamped.toNumber(), updated_at: new Date() },
       });
       return { id: payment.id, warning };
     });

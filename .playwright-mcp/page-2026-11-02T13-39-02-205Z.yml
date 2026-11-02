@@ -1,0 +1,590 @@
+- generic [ref=e1]:
+  - dialog [ref=e2]:
+    - generic [ref=e3]:
+      - heading "Accessibility options Ctrl+F2" [level=2] [ref=e4]:
+        - text: Accessibility options
+        - generic [ref=e5]: Ctrl+F2
+      - button "Close main navigation panel" [ref=e7] [cursor=pointer]
+    - generic [ref=e10]:
+      - button "Bigger Text" [ref=e12] [cursor=pointer]
+      - generic [ref=e16]:
+        - button "Smaller Text" [disabled]
+      - button "Text Spacing" [ref=e18] [cursor=pointer]
+      - button "Line Height" [ref=e23] [cursor=pointer]
+      - button "Dyslexia Friendly Font" [ref=e28] [cursor=pointer]:
+        - generic [ref=e31]: Dyslexia Friendly
+      - button "ADHD Mode" [ref=e33] [cursor=pointer]
+      - button "Saturate Colors" [ref=e38] [cursor=pointer]:
+        - generic [ref=e41]: Saturation
+      - button "Light Dark Theme" [ref=e43] [cursor=pointer]:
+        - generic [ref=e44]:
+          - generic [ref=e45]:
+            - switch "Toggle light and dark mode" [ref=e46]
+            - generic: 
+          - text: Light-Dark
+      - button "Invert Colors" [ref=e48] [cursor=pointer]
+      - button "Highlight Links" [ref=e53] [cursor=pointer]
+      - button "Text To Speech" [ref=e58] [cursor=pointer]
+      - button "Cursor Bigger" [ref=e63] [cursor=pointer]:
+        - generic [ref=e66]: Cursor
+      - button "Pause Animation" [ref=e68] [cursor=pointer]
+      - button "Hide Images" [ref=e73] [cursor=pointer]
+    - generic [ref=e78]:
+      - button "Reset All Settings" [ref=e79] [cursor=pointer]
+      - link "Created by" [ref=e82] [cursor=pointer]:
+        - /url: https://www.ux4g.gov.in
+  - generic [ref=e85]:
+    - link "Skip to Main Content" [active] [ref=e86] [cursor=pointer]:
+      - /url: "#mainContent"
+    - generic [ref=e87]:
+      - banner [ref=e91]:
+        - generic [ref=e92]:
+          - generic [ref=e93]:
+            - navigation [ref=e94]:
+              - generic [ref=e95]:
+                - link "Indian flag - change language24" [ref=e96] [cursor=pointer]:
+                  - /url: https://www.india.gov.in/
+                  - img "Indian Flag" [ref=e97]
+                  - generic [ref=e98]: Government of India
+                - list [ref=e100]:
+                  - listitem [ref=e101]:
+                    - button [ref=e102] [cursor=pointer]:
+                      - img "down arrow" [ref=e103]
+                  - listitem [ref=e104]:
+                    - button "Accessibility Tools" [ref=e105] [cursor=pointer]:
+                      - img "Accessibility-icon" [ref=e106]
+                  - listitem [ref=e107]:
+                    - button [ref=e108] [cursor=pointer]:
+                      - img "Bilingual Icon" [ref=e109]
+            - generic [ref=e113]:
+              - link [ref=e115] [cursor=pointer]:
+                - /url: /
+                - img "State Emblem of India" [ref=e116]
+              - heading "Tax Information Portal" [level=1] [ref=e118]
+          - navigation [ref=e121]:
+            - text: 
+            - list [ref=e123]:
+              - listitem [ref=e124]:
+                - link "Home" [ref=e125] [cursor=pointer]:
+                  - /url: /
+                  - img [aria-hidden] [ref=e127]: 
+              - listitem [ref=e130]:
+                - list [ref=e132]:
+                  - listitem [ref=e133]:
+                    - link "GST" [ref=e134] [cursor=pointer]:
+                      - /url: "#"
+                      - generic [aria-hidden] [ref=e135]: 
+                      - text: GST
+                    - text:       
+              - listitem [ref=e136]:
+                - list [ref=e138]:
+                  - listitem [ref=e139]:
+                    - link "Customs" [ref=e140] [cursor=pointer]:
+                      - /url: "#"
+                      - generic [aria-hidden] [ref=e141]: 
+                      - text: Customs
+                    - text:         
+              - listitem [ref=e142]:
+                - list [ref=e144]:
+                  - listitem [ref=e145]:
+                    - link "Central Excise" [ref=e146] [cursor=pointer]:
+                      - /url: "#"
+                      - generic [aria-hidden] [ref=e147]: 
+                      - text: Central Excise
+                    - text:        
+              - listitem [ref=e148]:
+                - list [ref=e150]:
+                  - listitem [ref=e151]:
+                    - link "Service Tax" [ref=e152] [cursor=pointer]:
+                      - /url: "#"
+                      - generic [aria-hidden] [ref=e153]: 
+                      - text: Service Tax
+                    - text:       
+              - listitem [ref=e154]:
+                - list [ref=e156]:
+                  - listitem [ref=e157]:
+                    - link "Finance Acts, Ordinances" [ref=e158] [cursor=pointer]:
+                      - /url: "#"
+                      - generic [aria-hidden] [ref=e159]: 
+                      - text: Finance Acts, Ordinances
+                    - text:   
+              - listitem [ref=e160]:
+                - list [ref=e162]:
+                  - listitem [ref=e163]:
+                    - link "HSNS Cess" [ref=e164] [cursor=pointer]:
+                      - /url: "#"
+                      - generic [aria-hidden] [ref=e165]: 
+                      - text: HSNS Cess
+                    - text:     
+      - generic [ref=e169]:
+        - link "Download" [ref=e171] [cursor=pointer]:
+          - /url: ""
+          - text: Download
+          - generic [aria-hidden] [ref=e172]: 
+        - generic [ref=e175]:
+          - generic [ref=e176]:
+            - generic "Page 1" [ref=e178]
+            - generic [ref=e179]:
+              - generic [ref=e180]: Page
+              - generic [ref=e181]: "1"
+              - generic [ref=e182]: of
+              - generic [ref=e183]: "4"
+              - generic [ref=e184]: Circular No.
+              - generic [ref=e185]: "-"
+              - generic [ref=e186]: "2"
+              - generic [ref=e187]: 12/6
+              - generic [ref=e188]: /2024
+              - generic [ref=e189]: "-"
+              - generic [ref=e190]: GST
+              - generic [ref=e191]: F.No. CBIC
+              - generic [ref=e192]: "-"
+              - generic [ref=e193]: 20001/
+              - generic [ref=e194]: "4"
+              - generic [ref=e195]: /2024
+              - generic [ref=e196]: "-"
+              - generic [ref=e197]: GST
+              - generic [ref=e198]: Government of India
+              - generic [ref=e199]: Ministry of Finance
+              - generic [ref=e200]: (Department of Revenue)
+              - generic [ref=e201]: Central Board of Indirect Taxes and Customs
+              - generic [ref=e202]: GST Policy Wing
+              - generic [ref=e203]: "*****"
+              - generic [ref=e204]: North Block, New Delhi
+              - generic [ref=e205]: Dated the 2
+              - generic [ref=e206]: "6"
+              - generic [ref=e207]: th
+              - generic [ref=e208]: June, 2024
+              - generic [ref=e209]: To,
+              - generic [ref=e210]: The
+              - generic [ref=e211]: Principal
+              - generic [ref=e212]: Chief
+              - generic [ref=e213]: Commissioners/
+              - generic [ref=e214]: Chief
+              - generic [ref=e215]: Commissioners/
+              - generic [ref=e216]: Principal
+              - generic [ref=e217]: Commissioners/
+              - generic [ref=e218]: Commissioners
+              - generic [ref=e219]: of Central Tax (All)
+              - generic [ref=e220]: The Principal Directors General/ Directors General (All)
+              - generic [ref=e221]: Madam/Sir,
+              - generic [ref=e222]: "Subject:"
+              - generic [ref=e223]: M
+              - generic [ref=e224]: echanism for
+              - generic [ref=e225]: providing evidence of compliance of conditions of
+              - generic [ref=e226]: Section 15(3)
+              - generic [ref=e227]: (b)
+              - generic [ref=e228]: (ii) of the CGST Act, 2017
+              - generic [ref=e229]: by the
+              - generic [ref=e230]: suppliers
+              - generic [ref=e231]: "-"
+              - generic [ref=e232]: reg.
+              - generic [ref=e233]: I
+              - generic [ref=e234]: n cases where the discounts are offered by the suppliers through tax credit
+              - generic [ref=e235]: notes, after the supply has been effected,
+              - generic [ref=e236]: the
+              - generic [ref=e237]: said discount is not to be included in the
+              - generic [ref=e238]: taxable
+              - generic [ref=e239]: value
+              - generic [ref=e240]: only if the condition of
+              - generic [ref=e241]: clause (b)(ii) of sub
+              - generic [ref=e242]: "-"
+              - generic [ref=e243]: section (3) of section 15 of
+              - generic [ref=e244]: the Central Goods and Services Tax Act, 2017 (hereinafter referred to as “CGST
+              - generic [ref=e245]: Act”),
+              - generic [ref=e246]: for
+              - generic [ref=e247]: revers
+              - generic [ref=e248]: al of
+              - generic [ref=e249]: the input tax credit
+              - generic [ref=e250]: attributable to the said discount by the
+              - generic [ref=e251]: recipient
+              - generic [ref=e252]: ","
+              - generic [ref=e253]: is satisfied
+              - generic [ref=e254]: .
+              - generic [ref=e255]: Representations have been received from the trade and the field
+              - generic [ref=e256]: formations
+              - generic [ref=e257]: mentioning
+              - generic [ref=e258]: that
+              - generic [ref=e259]: there is presently no facility available to the supplier as
+              - generic [ref=e260]: well as the tax officers on the common
+              - generic [ref=e261]: portal to verify whether the input tax credit
+              - generic [ref=e262]: attributable to the said discount has been reversed by the recipient or not. Request has
+              - generic [ref=e263]: been made to provide a suitable mechanism for
+              - generic [ref=e264]: enabling the
+              - generic [ref=e265]: suppliers
+              - generic [ref=e266]: as well as tax
+              - generic [ref=e267]: officers to verify fulfilment of the condition of section 15(3)(b)(ii) of
+              - generic [ref=e268]: the CGST Act
+              - generic [ref=e269]: regarding proportionate reversal of input tax credit by the recipients in respect of
+              - generic [ref=e270]: such
+              - generic [ref=e271]: discounts given by the supplier by issuing
+              - generic [ref=e272]: tax credit notes aft
+              - generic [ref=e273]: er the supply has been
+              - generic [ref=e274]: effected.
+          - generic [ref=e275]:
+            - generic "Page 2" [ref=e277]
+            - generic [ref=e278]:
+              - generic [ref=e279]: Page
+              - generic [ref=e280]: "2"
+              - generic [ref=e281]: of
+              - generic [ref=e282]: "4"
+              - generic [ref=e283]: "2."
+              - generic [ref=e284]: In order to clarify the issue and to ensure uniformity in the implementation of
+              - generic [ref=e285]: the provisions of law across the field formations, the Board, in exercise of its powers
+              - generic [ref=e286]: conferred by section 168 (1) of the CGST Act, hereby
+              - generic [ref=e287]: "clarifies the issues as under:"
+              - generic [ref=e288]: "2.1"
+              - generic [ref=e289]: Section 15 of the
+              - generic [ref=e290]: CGST Act
+              - generic [ref=e291]: provides for value of taxable supply of goods or
+              - generic [ref=e292]: services or both. Sub
+              - generic [ref=e293]: "-"
+              - generic [ref=e294]: section (3) of the said section provides that the value of supply
+              - generic [ref=e295]: shall not include discount given by the supplier, subject to certain conditions.
+              - generic [ref=e296]: As per
+              - generic [ref=e297]: clause (b) of the said
+              - generic [ref=e298]: sub
+              - generic [ref=e299]: "-"
+              - generic [ref=e300]: section
+              - generic [ref=e301]: ","
+              - generic [ref=e302]: any discount which is given after the suppl
+              - generic [ref=e303]: y has
+              - generic [ref=e304]: been effected shall not be included in the value of the supply
+              - generic [ref=e305]: ","
+              - generic [ref=e306]: only if
+              - generic [ref=e307]: it satisfies the
+              - generic [ref=e308]: "following conditions:"
+              - generic [ref=e309]: i.
+              - generic [ref=e310]: Such discount is established in terms of an agreement entered into
+              - generic [ref=e311]: at or before the time of such supply;
+              - generic [ref=e312]: ii.
+              - generic [ref=e313]: Such discount must be specifically linked to the relevant invoices
+              - generic [ref=e314]: iii.
+              - generic [ref=e315]: Input Tax Credit attributable to such discount on the basis of
+              - generic [ref=e316]: document issued by the supplier has been duly reversed by the
+              - generic [ref=e317]: recipient.
+              - generic [ref=e318]: "2.2"
+              - generic [ref=e319]: Accordingly, wherever any discount is offered
+              - generic [ref=e320]: by the supplier to the recipient,
+              - generic [ref=e321]: by issuance of a tax credit note as per section 34 of the CGST Act, after the supply
+              - generic [ref=e322]: has been effected, the said discount can be excluded from the value of taxable supply
+              - generic [ref=e323]: only if the conditions of clause (b) of sub
+              - generic [ref=e324]: "-"
+              - generic [ref=e325]: sectio
+              - generic [ref=e326]: n (3) of section 15 of the CGST Act
+              - generic [ref=e327]: are fulfilled. Such conditions inter
+              - generic [ref=e328]: alia includes the requirement of reversal of input
+              - generic [ref=e329]: tax credit by the recipient attributable to the said discount.
+              - generic [ref=e330]: "2.3"
+              - generic [ref=e331]: However
+              - generic [ref=e332]: ","
+              - generic [ref=e333]: there is no system functionality
+              - generic [ref=e334]: / facility
+              - generic [ref=e335]: presently
+              - generic [ref=e336]: available on the
+              - generic [ref=e337]: common
+              - generic [ref=e338]: portal to
+              - generic [ref=e339]: enable the supplier or the tax officer to
+              - generic [ref=e340]: verify the
+              - generic [ref=e341]: compliance of the
+              - generic [ref=e342]: said condition of
+              - generic [ref=e343]: proportionate
+              - generic [ref=e344]: reversal of input tax credit by the recipient.
+              - generic [ref=e345]: "2.4"
+              - generic [ref=e346]: In view of the above,
+              - generic [ref=e347]: till
+              - generic [ref=e348]: the time
+              - generic [ref=e349]: a functionality
+              - generic [ref=e350]: / facility
+              - generic [ref=e351]: is
+              - generic [ref=e352]: made available
+              - generic [ref=e353]: on the common portal
+              - generic [ref=e354]: to
+              - generic [ref=e355]: enable
+              - generic [ref=e356]: the suppliers as well as the tax officers to verify
+              - generic [ref=e357]: whether the input tax credit attributable to such discounts offered through tax credit
+              - generic [ref=e358]: notes has been reversed by the recipient or not,
+              - generic [ref=e359]: the supplier may proc
+              - generic [ref=e360]: ure a certificate
+              - generic [ref=e361]: from the recipient of supply, issued by the Chartered Accountant (CA) or the Cost
+              - generic [ref=e362]: Accountant (CMA), certifying that the recipient has
+              - generic [ref=e363]: made the required
+              - generic [ref=e364]: proportionate
+          - generic [ref=e365]:
+            - generic "Page 3" [ref=e367]
+            - generic [ref=e368]:
+              - generic [ref=e369]: Page
+              - generic [ref=e370]: "3"
+              - generic [ref=e371]: of
+              - generic [ref=e372]: "4"
+              - generic [ref=e373]: reversal of input tax credit
+              - generic [ref=e374]: at
+              - generic [ref=e375]: his
+              - generic [ref=e376]: end in respect of such
+              - generic [ref=e377]: credit
+              - generic [ref=e378]: note issued by the
+              - generic [ref=e379]: supplier
+              - generic [ref=e380]: .
+              - generic [ref=e381]: "2.5"
+              - generic [ref=e382]: The said
+              - generic [ref=e383]: CA/CMA certificate may include details such as the details of the
+              - generic [ref=e384]: credit notes, the details of the relevant invoice number against which the said credit
+              - generic [ref=e385]: note has been issued, the amount of ITC reversal in respect
+              - generic [ref=e386]: of each of the said credit
+              - generic [ref=e387]: notes along with the details of
+              - generic [ref=e388]: the
+              - generic [ref=e389]: FORM GST DRC
+              - generic [ref=e390]: "-"
+              - generic [ref=e391]: 03/
+              - generic [ref=e392]: return / any other relevant
+              - generic [ref=e393]: document through
+              - generic [ref=e394]: which such reversal of ITC has been made by the recipient.
+              - generic [ref=e395]: "2.6"
+              - generic [ref=e396]: Such c
+              - generic [ref=e397]: ertificate issued by CA
+              - generic [ref=e398]: or CMA shall contain UDIN
+              - generic [ref=e399]: (Unique Document
+              - generic [ref=e400]: Identification Number). UDIN of the certificate issued by CAs can be verified from
+              - generic [ref=e401]: ICAI website
+              - generic [ref=e402]: https://udin.icai.org/search
+              - generic [ref=e403]: "-"
+              - generic [ref=e404]: udin
+              - generic [ref=e405]: and that issued by CMAs can be
+              - generic [ref=e406]: verified from ICMAI website
+              - generic [ref=e407]: https://eicmai.in/udin/VerifyUDIN.aspx.
+              - generic [ref=e408]: "2.7"
+              - generic [ref=e409]: In cases, where the amount of
+              - generic [ref=e410]: tax (CGST+SGST+IGST and including
+              - generic [ref=e411]: compensation cess, if any) involved in the
+              - generic [ref=e412]: discount given by the supplier to a
+              - generic [ref=e413]: recipient through tax credit notes in a Financial Year is not exceeding Rs
+              - generic [ref=e414]: "5"
+              - generic [ref=e415]: ",00,000"
+              - generic [ref=e416]: (rupees
+              - generic [ref=e417]: five
+              - generic [ref=e418]: la
+              - generic [ref=e419]: khs
+              - generic [ref=e420]: only), then instead of CA/CMA certificate, the said supplier may
+              - generic [ref=e421]: procure an undertaking/ certificate from t
+              - generic [ref=e422]: he
+              - generic [ref=e423]: said
+              - generic [ref=e424]: re
+              - generic [ref=e425]: cipient that the said input tax credit
+              - generic [ref=e426]: attributable to such discount has been reversed by him, along with the details
+              - generic [ref=e427]: mentioned in Para 2.5 above.
+              - generic [ref=e428]: "2.8"
+              - generic [ref=e429]: Such certificate
+              - generic [ref=e430]: s issued by the CA/CMA or the undertakings/ certificates issued
+              - generic [ref=e431]: by the recipient of supp
+              - generic [ref=e432]: ly, as the case may be, shall
+              - generic [ref=e433]: be treated as a suitable and
+              - generic [ref=e434]: admissible evidence
+              - generic [ref=e435]: f
+              - generic [ref=e436]: or the purpose of section 15(3)(b)(ii) of the CGST Act, 2017.
+              - generic [ref=e437]: The supplier shall produce
+              - generic [ref=e438]: such certificates
+              - generic [ref=e439]: /undertakings
+              - generic [ref=e440]: before
+              - generic [ref=e441]: the tax officers,
+              - generic [ref=e442]: if
+              - generic [ref=e443]: required,
+              - generic [ref=e444]: during any
+              - generic [ref=e445]: proceedings such as scrutiny, audit, investigations, etc. Even for
+              - generic [ref=e446]: the past period, where ever any such evidence as per section 15(3)(b)(ii) of CGST Act
+              - generic [ref=e447]: in respect of credit note issued by the supplier for post
+              - generic [ref=e448]: "-"
+              - generic [ref=e449]: sale discounts is required to be
+              - generic [ref=e450]: produced by
+              - generic [ref=e451]: him to the tax authorities, the concerned taxpayer may procure and
+              - generic [ref=e452]: provide such certificates issued by CA/CMA
+              - generic [ref=e453]: or the undertakings/ certificates issued
+              - generic [ref=e454]: by the recipients of supply, as the case may be,
+              - generic [ref=e455]: to the concerned
+              - generic [ref=e456]: investigating/audit/adjudicating autho
+              - generic [ref=e457]: rity as evidence of requisite reversal of
+              - generic [ref=e458]: input
+              - generic [ref=e459]: tax credit
+              - generic [ref=e460]: by his recipients.
+            - generic:
+              - link "https://udin.icai.org/search-udin" [ref=e462] [cursor=pointer]:
+                - /url: https://udin.icai.org/search-udin
+              - link "https://eicmai.in/udin/VerifyUDIN.aspx." [ref=e464] [cursor=pointer]:
+                - /url: https://eicmai.in/udin/VerifyUDIN.aspx.
+          - generic [ref=e465]:
+            - generic "Page 4" [ref=e467]
+            - generic [ref=e468]:
+              - generic [ref=e469]: Page
+              - generic [ref=e470]: "4"
+              - generic [ref=e471]: of
+              - generic [ref=e472]: "4"
+              - generic [ref=e473]: "3."
+              - generic [ref=e474]: It is requested that suitable trade notices may be issued to
+              - generic [ref=e475]: publicize the
+              - generic [ref=e476]: contents of this
+              - generic [ref=e477]: Circular.
+              - generic [ref=e478]: "4."
+              - generic [ref=e479]: Difficulty, if any, in implementation of this Circular may please be bro
+              - generic [ref=e480]: ught to
+              - generic [ref=e481]: the notice of the Board. Hindi version would follow.
+              - generic [ref=e482]: (Sanjay Mangal)
+              - generic [ref=e483]: Principal
+              - generic [ref=e484]: Commissioner
+              - generic [ref=e485]: (GST)
+              - generic [ref=e486]: .
+    - generic [ref=e487]:
+      - generic [ref=e489]:
+        - generic [ref=e491]:
+          - strong [ref=e492]: Cookie Preferences
+          - paragraph [ref=e493]: We use cookies to improve your browsing experience, analyze traffic, and personalize content. You can manage your preferences below.
+        - generic [ref=e494]:
+          - generic [ref=e495]:
+            - checkbox "Essential" [checked] [disabled] [ref=e496]
+            - text: Essential
+          - generic [ref=e497]:
+            - checkbox "Analytics" [ref=e498]
+            - text: Analytics
+          - generic [ref=e499]:
+            - checkbox "Marketing" [ref=e500]
+            - text: Marketing
+        - generic [ref=e501]:
+          - button "Accept All Cookies" [ref=e502] [cursor=pointer]
+          - button "Save Preferences" [ref=e503] [cursor=pointer]
+      - contentinfo [ref=e505]:
+        - generic [ref=e506]:
+          - generic [ref=e507]:
+            - generic [ref=e508]:
+              - heading "QUICK LINKS" [level=2] [ref=e509]
+              - list [ref=e510]:
+                - listitem [ref=e511]:
+                  - link "Home" [ref=e512] [cursor=pointer]:
+                    - /url: /
+                - listitem [ref=e513]:
+                  - link "About Us" [ref=e514] [cursor=pointer]:
+                    - /url: /aboutUs
+                - listitem [ref=e515]:
+                  - link "Contact Us" [ref=e516] [cursor=pointer]:
+                    - /url: /Contactus
+            - generic [ref=e517]:
+              - heading "SERVICES" [level=2] [ref=e518]
+              - list [ref=e519]:
+                - listitem [ref=e520]:
+                  - link "GST" [ref=e521] [cursor=pointer]:
+                    - /url: javascript:void(0)
+                - listitem [ref=e522]:
+                  - link "Customs" [ref=e523] [cursor=pointer]:
+                    - /url: javascript:void(0)
+                - listitem [ref=e524]:
+                  - link "Central Excise" [ref=e525] [cursor=pointer]:
+                    - /url: javascript:void(0)
+                - listitem [ref=e526]:
+                  - link "Service Tax" [ref=e527] [cursor=pointer]:
+                    - /url: javascript:void(0)
+                - listitem [ref=e528]:
+                  - link "Finance Acts, Ordinances" [ref=e529] [cursor=pointer]:
+                    - /url: javascript:void(0)
+                - listitem [ref=e530]:
+                  - link "HSNS Cess" [ref=e531] [cursor=pointer]:
+                    - /url: javascript:void(0)
+            - generic [ref=e532]:
+              - heading "EXTERNAL LINKS" [level=2] [ref=e533]
+              - list [ref=e534]:
+                - listitem [ref=e535]:
+                  - link "CBIC Portal" [ref=e536] [cursor=pointer]:
+                    - /url: https://www.cbic.gov.in/
+                    - generic [aria-hidden] [ref=e537]: 
+                    - text: CBIC Portal
+                - listitem [ref=e538]:
+                  - link "GST Portal" [ref=e539] [cursor=pointer]:
+                    - /url: https://www.gst.gov.in/
+                    - generic [aria-hidden] [ref=e540]: 
+                    - text: GST Portal
+                - listitem [ref=e541]:
+                  - link "CBIC GST" [ref=e542] [cursor=pointer]:
+                    - /url: https://cbic-gst.gov.in/
+                    - generic [aria-hidden] [ref=e543]: 
+                    - text: CBIC GST
+                - listitem [ref=e544]:
+                  - link "RTI Online" [ref=e545] [cursor=pointer]:
+                    - /url: https://rtionline.gov.in/
+                    - generic [aria-hidden] [ref=e546]: 
+                    - text: RTI Online
+                - listitem [ref=e547]:
+                  - link "Ministry of Finance" [ref=e548] [cursor=pointer]:
+                    - /url: https://www.finmin.nic.in/
+                    - generic [aria-hidden] [ref=e549]: 
+                    - text: Ministry of Finance
+                - listitem [ref=e550]:
+                  - link "Department of Revenue" [ref=e551] [cursor=pointer]:
+                    - /url: https://dor.gov.in/
+                    - generic [aria-hidden] [ref=e552]: 
+                    - text: Department of Revenue
+            - generic [ref=e553]:
+              - heading "Policies & Help" [level=2] [ref=e554]
+              - list [ref=e555]:
+                - listitem [ref=e556]:
+                  - link "Website Policy" [ref=e557] [cursor=pointer]:
+                    - /url: /websitepolicy
+                - listitem [ref=e558]:
+                  - link "Sitemap" [ref=e559] [cursor=pointer]:
+                    - /url: /sitemap
+                - listitem [ref=e560]:
+                  - link "Help" [ref=e561] [cursor=pointer]:
+                    - /url: javascript:void(0)
+                - listitem [ref=e562]:
+                  - link "Feedback" [ref=e563] [cursor=pointer]:
+                    - /url: /feedback
+            - generic [ref=e564]:
+              - heading "CONTACT" [level=2] [ref=e565]
+              - generic [ref=e566]:
+                - paragraph [ref=e567]: "Address: CBIC, Kartavya Bhawan - 1, Central Secretariat, Kartavya Path, New Delhi, Delhi – 110001"
+                - paragraph [ref=e568]: "Phone: 011-24012770, 011-24012771, 011-24012772"
+          - separator [ref=e569]
+          - generic [ref=e570]:
+            - generic [ref=e572]:
+              - paragraph [ref=e573]:
+                - text: "Contact Us :"
+                - strong [ref=e574]: nodal[dot]nav[at]icegate[dot]gov[dot]in
+              - paragraph [ref=e575]:
+                - link "Web Info Manager :" [ref=e576] [cursor=pointer]:
+                  - /url: javascript:void(0)
+                - strong [ref=e577]: Webmaster[dot]CBIC[at]icegate[dot]gov[dot]in
+            - generic [ref=e578]:
+              - heading "Official Portals" [level=2] [ref=e579]
+              - generic [ref=e580]: Official Portals
+              - generic [ref=e581]:
+                - link "Government of India" [ref=e582] [cursor=pointer]:
+                  - /url: https://www.india.gov.in/
+                  - generic [ref=e583]: GoI
+                - link "Ministry of Finance" [ref=e584] [cursor=pointer]:
+                  - /url: https://financialservices.gov.in/
+                  - generic [ref=e585]: MoF
+                - link "Department of Revenue" [ref=e586] [cursor=pointer]:
+                  - /url: https://dor.gov.in/
+                  - generic [ref=e587]: DoR
+                - link "Central Board of Indirect Taxes & Customs" [ref=e588] [cursor=pointer]:
+                  - /url: https://www.cbic.gov.in/
+                  - generic [ref=e589]: CBIC
+            - generic [ref=e590]:
+              - heading "Social Media" [level=2] [ref=e591]
+              - generic [ref=e592]: Social Media
+              - generic [ref=e593]:
+                - link "WhatsApp" [ref=e594] [cursor=pointer]:
+                  - /url: https://www.whatsapp.com/channel/0029VaIHEmo9Gv7XcriPOW27
+                  - generic [aria-hidden] [ref=e595]: 
+                - link "Twitter" [ref=e596] [cursor=pointer]:
+                  - /url: https://x.com/cbic_india
+                - link "YouTube" [ref=e599] [cursor=pointer]:
+                  - /url: https://www.youtube.com/channel/UC4Pwb1Utd_Pu3tEp09gMZlQ
+                  - generic [aria-hidden] [ref=e600]: 
+                - link "Facebook" [ref=e601] [cursor=pointer]:
+                  - /url: https://www.facebook.com/cbicindia/#
+                  - generic [aria-hidden] [ref=e602]: 
+                - link "Instagram" [ref=e603] [cursor=pointer]:
+                  - /url: https://www.instagram.com/cbicindia
+                  - generic [aria-hidden] [ref=e604]: 
+        - generic [ref=e605]:
+          - paragraph [ref=e606]: All Rights Reserved. This Website belongs to Central Board of Indirect Taxes and Customs (CBIC), Department of Revenue,Ministry of Finance, Government of India
+          - paragraph [ref=e607]:
+            - strong [ref=e608]: "Last Update:"
+            - text: "|"
+            - strong [ref=e609]: "Visitors:"
+            - text: 20,705,640

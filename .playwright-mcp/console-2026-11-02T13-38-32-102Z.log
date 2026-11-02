@@ -1,0 +1,49 @@
+[     944ms] [ERROR] The Content-Security-Policy directive name 'img-src'self'' contains one or more invalid characters. Only ASCII alphanumeric characters or dashes '-' are allowed in directive names. @ https://taxinformation.cbic.gov.in/view-pdf/1003209/ENG/Circulars:0
+[    5783ms] ReferenceError: bootstrap is not defined
+    at https://taxinformation.cbic.gov.in/view-pdf/1003209/ENG/Circulars:80:24
+[   25855ms] [ERROR] ERROR TypeError: Cannot read properties of undefined (reading 'lastUpdate')
+    at FooterComponent.ngOnInit (https://taxinformation.cbic.gov.in/main.js:9917:40)
+    at callHook (https://taxinformation.cbic.gov.in/vendor.js:83449:18)
+    at callHooks (https://taxinformation.cbic.gov.in/vendor.js:83420:17)
+    at executeInitAndCheckHooks (https://taxinformation.cbic.gov.in/vendor.js:83371:9)
+    at refreshView (https://taxinformation.cbic.gov.in/vendor.js:90347:21)
+    at refreshComponent (https://taxinformation.cbic.gov.in/vendor.js:91498:13)
+    at refreshChildComponents (https://taxinformation.cbic.gov.in/vendor.js:90129:9)
+    at refreshView (https://taxinformation.cbic.gov.in/vendor.js:90382:13)
+    at renderComponentOrTemplate (https://taxinformation.cbic.gov.in/vendor.js:90446:9)
+    at tickRootContext (https://taxinformation.cbic.gov.in/vendor.js:91672:9) @ https://taxinformation.cbic.gov.in/vendor.js:87075
+[   25857ms] [LOG] NavigationStart(id: 1, url: '/view-pdf/1003209/ENG/Circulars') @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25857ms] [LOG] NavigationStart @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25858ms] [LOG] Angular is running in development mode. Call enableProdMode() to enable production mode. @ https://taxinformation.cbic.gov.in/vendor.js:108820
+[   25862ms] [LOG] RoutesRecognized(id: 1, url: '/view-pdf/1003209/ENG/Circulars', urlAfterRedirects: '/view-pdf/1003209/ENG/Circulars', state: Route(url:'', path:'') { Route(url:'view-pdf/1003209/ENG/Circulars', path:'view-pdf/:id/:type/:selectedTab'), Route(url:'', path:'') } ) @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25863ms] [LOG] RoutesRecognized @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25863ms] [LOG] GuardsCheckStart(id: 1, url: '/view-pdf/1003209/ENG/Circulars', urlAfterRedirects: '/view-pdf/1003209/ENG/Circulars', state: Route(url:'', path:'') { Route(url:'view-pdf/1003209/ENG/Circulars', path:'view-pdf/:id/:type/:selectedTab'), Route(url:'', path:'') } ) @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25863ms] [LOG] GuardsCheckStart @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25864ms] [LOG] ChildActivationStart(path: '') @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25865ms] [LOG] ChildActivationStart @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25865ms] [LOG] ActivationStart(path: 'view-pdf/:id/:type/:selectedTab') @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25865ms] [LOG] ActivationStart @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25866ms] [LOG] ChildActivationStart(path: '') @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25866ms] [LOG] ChildActivationStart @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25867ms] [LOG] ActivationStart(path: '') @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25867ms] [LOG] ActivationStart @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25867ms] [LOG] GuardsCheckEnd(id: 1, url: '/view-pdf/1003209/ENG/Circulars', urlAfterRedirects: '/view-pdf/1003209/ENG/Circulars', state: Route(url:'', path:'') { Route(url:'view-pdf/1003209/ENG/Circulars', path:'view-pdf/:id/:type/:selectedTab'), Route(url:'', path:'') } , shouldActivate: true) @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25868ms] [LOG] GuardsCheckEnd @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25868ms] [LOG] ResolveStart(id: 1, url: '/view-pdf/1003209/ENG/Circulars', urlAfterRedirects: '/view-pdf/1003209/ENG/Circulars', state: Route(url:'', path:'') { Route(url:'view-pdf/1003209/ENG/Circulars', path:'view-pdf/:id/:type/:selectedTab'), Route(url:'', path:'') } ) @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25868ms] [LOG] ResolveStart @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   25886ms] [LOG] Application started @ https://taxinformation.cbic.gov.in/main.js:21011
+[   25891ms] [INFO] Slow network is detected. See https://www.chromestatus.com/feature/5636954674692096 for more details. Fallback font will be used while loading: https://taxinformation.cbic.gov.in/NotoSans-Regular.ttf @ https://taxinformation.cbic.gov.in/view-pdf/1003209/ENG/Circulars:0
+[   26593ms] [LOG] ResolveEnd(id: 1, url: '/view-pdf/1003209/ENG/Circulars', urlAfterRedirects: '/view-pdf/1003209/ENG/Circulars', state: Route(url:'', path:'') { Route(url:'view-pdf/1003209/ENG/Circulars', path:'view-pdf/:id/:type/:selectedTab'), Route(url:'', path:'') } ) @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   26594ms] [LOG] ResolveEnd @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   26601ms] [LOG] ActivationEnd(path: 'view-pdf/:id/:type/:selectedTab') @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   26601ms] [LOG] ActivationEnd @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   26604ms] [LOG] ActivationEnd(path: '') @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   26604ms] [LOG] ActivationEnd @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   26605ms] [LOG] ChildActivationEnd(path: '') @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   26605ms] [LOG] ChildActivationEnd @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   26606ms] [LOG] NavigationEnd(id: 1, url: '/view-pdf/1003209/ENG/Circulars', urlAfterRedirects: '/view-pdf/1003209/ENG/Circulars') @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   26607ms] [LOG] NavigationEnd @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   26611ms] [LOG] Scroll(anchor: 'null', position: 'null') @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   26611ms] [LOG] Scroll @ https://taxinformation.cbic.gov.in/vendor.js:114507
+[   27391ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://taxinformation.cbic.gov.in/api/account:0
+[   28959ms] [LOG] Warning: TT: undefined function: 32 @ https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/es5/build/pdf.worker.js:1728

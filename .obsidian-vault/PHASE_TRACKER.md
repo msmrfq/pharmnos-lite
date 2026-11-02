@@ -11,7 +11,7 @@
 
 **Working phase numbering (PROJECT-WIDE MANDATORY):** We use 7 working phases P1…P7. The PRD `.obsidian-vault/prd-technical-architecture.md §29 Suggested Development Phases` originally proposed 6 phases (Phase 0…Phase 5). The crosswalk column below maps every working phase to its corresponding PRD coverage area so we never confuse the two. **Always use P1…P7 working phase numbers in all notes, bugs, specs, decisions, retro, TODO lists, and commit messages going forward.** Do NOT use PRD numbering in day-to-day work.
 
-**Last updated:** `Date: 2026-11-01  Time: 16-34-23 (IST)`
+**Last updated:** `Date: 2026-11-02  Time: 20-37-42 (IST)`
 
 N.B: ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. 
 
@@ -85,7 +85,7 @@ decision.
 ### GST Modernization initiative
 
 - **Current work:** Implement the hybrid-architecture GST suite described in
-  `.obsidian-vault/specs/gst-specification.md`, using its recorded decisions,
+  `.obsidian-vault/specs/domestic-gst-modernization.md, using its recorded decisions,
   requirements, evidence boundaries, and approval gates.
 - **Status:** Full-scope owner authorization is granted by Masum Rafique on
   2026-10-31 (IST). The specification remains subject to its own review,
@@ -112,19 +112,19 @@ decision.
 4. **Preview → Prisma → Supabase connectivity — `░░░░░░░░░░░░░░░░░░░░` 0% — `NOT VERIFIED`**
    - Prior fake/test response is not database evidence. Dependency: authorized, independently identified connectivity evidence. Next action: remain unexecuted.
 5. **Financial E2E infrastructure — `████████████████░░░░` 80% — `IN PROGRESS`**
-   - Owner authorization is recorded for the broader isolated run. Target guards, fixture contracts, prior local role/RLS evidence, the pure dispatcher (`8 PASS`), the injected authenticated application-context adapter (`16 PASS`), the Phase C application-hosted delegation contract (`9 PASS`), the Phase D server-library binding (`3 PASS`), the Phase E internal invocation contract (`5 PASS`), and the Phase G fixture orchestration contract (`11 PASS`) now exist. The Phase F audit records `82 PASS` offline tests, and Phase G adds no database provider: Compose and the executable provisioner still do not create the marker or roles, no real request has been exercised, and no trusted cleanup executor exists. Dependency: reviewed local provisioning ownership, real fixture provider, request invocation, and cleanup executor. Next action: retain the pure fixture contract while separately reviewing isolated provisioning and trusted cleanup prerequisites.
+   - Owner authorization is recorded for the broader isolated run. Target guards, fixture contracts, prior local role/RLS evidence, the pure dispatcher (`8 PASS`), the injected authenticated application-context adapter (`16 PASS`), the Phase C application-hosted delegation contract (`9 PASS`), the Phase D server-library binding (`3 PASS`), the Phase E internal invocation contract (`5 PASS`), and the Phase G fixture orchestration contract (`11 PASS`) now exist. The Phase F audit records `82 PASS` offline tests, and the authorized 0419 target now has restricted-runtime application evidence. Immutable-history cleanup remains deferred; the broader harness still requires separate recovery and operational-readiness evidence.
 6. **Financial runtime behavior — `████████░░░░░░░░░░░░` 40% — `IN PROGRESS`**
-   - GST security behavior has 19 passing assertions; no authenticated local E2E orchestration invokes production server actions. Purchase, sales/FEFO, invoice-sequence, payment, and cross-module scenarios remain `BLOCKED` or `NOT RUN`.
+   - The authorized 0419 restricted-runtime application path now verifies scoped GST/Purchase/Sales, tenant-isolation, stale-revision, rollback, retry, snapshot, and payment scenarios. The broader Financial E2E lifecycle, FEFO, invoice-sequence, recovery, and production-readiness claims remain `BLOCKED`, `PENDING`, or outside this campaign.
 7. **Purchase atomicity — `████████░░░░░░░░░░░░` 40% — `IN PROGRESS`**
-   - Local unique/FK rollback passed; the authorized purchase lifecycle scenario was `BLOCKED` because no authenticated end-to-end harness exists. Full purchase finalization stock/ledger/audit atomicity remains unverified.
+   - The authorized restricted-runtime path verifies accepted purchase posting, stale-revision protection, concurrent single-effect stock/ledger posting, rollback boundaries, and incomplete-draft holds. Full purchase lifecycle recovery and production rollout remain unverified.
 8. **Sales/FEFO runtime behavior — `░░░░░░░░░░░░░░░░░░░░` 0% — `BLOCKED`**
-   - Authorized scenario was not executed because no authenticated end-to-end harness exists. Dependency: reviewed inventory fixtures and focused local harness.
+   - Scoped Sales retry, conflict, rollback, snapshot, and immutable-finalized-invoice assertions passed under the authorized runtime path. FEFO and the broader Sales/Inventory lifecycle remain outside this campaign.
 9. **Rollback behavior — `████████████░░░░░░░░` 60% — `IN PROGRESS`**
-   - Three rollback/recovery cases passed; stale-version and cleanup-failure recovery were `NOT RUN`. Dependency: a version contract or safe cleanup-failure seam if introduced.
+   - Sales rollback and purchase stale-version/single-effect cases passed in the authorized runtime path. Immutable-history cleanup remains deliberately deferred; full recovery/disposal behavior still requires separate authorization.
 10. **Invoice-sequence rollback — `░░░░░░░░░░░░░░░░░░░░` 0% — `NOT RUN`**
 - Sequence allocation is embedded in sales finalization through `business_profiles.invoice_next_seq`; no standalone acceptance harness or documented rollback contract was available. Dependency: authoritative contract review and focused sequence scenario.
 11. **Payment runtime behavior — `░░░░░░░░░░░░░░░░░░░░` 0% — `BLOCKED`**
-- Authorized scenario was not executed because no authenticated end-to-end harness exists. Dependency: payment, ledger, balance, and cleanup fixtures plus a focused local harness.
+- Authorized runtime payment regressions passed for customer and supplier balances, ledger rows, and invalid-target rejection. Broader payment lifecycle and recovery remain pending.
 12. **Production Prisma connectivity — `░░░░░░░░░░░░░░░░░░░░` 0% — `NOT VERIFIED`**
 - No current authorized production connectivity evidence. Dependency: production approval and sanitized identity evidence.
 13. **Backup/restore operational drill — `░░░░░░░░░░░░░░░░░░░░` 0% — `PENDING`**
@@ -139,18 +139,22 @@ tasks and statuses live in Layer A; no underlying task is duplicated.
 
 ### 1. GST Modernization — `████████░░░░░░░░░░░░` 40% — `IN PROGRESS`
 
-- **Authoritative source:** `.obsidian-vault/specs/gst-specification.md`.
+- **Authoritative source:** `.obsidian-vault/specs/domestic-gst-modernization.md`.
 - **Scope:** implement the specification's hybrid GST architecture for
   captured sales supply facts, purchase supplier-evidence reconciliation,
   persisted tax components, immutable finalized-invoice facts, and explicit
   versioned/auditable rules.
-- **Completed evidence:** local GST calculation, reconciliation, validation,
-  security, and transaction-contract coverage remains recorded; this evidence
-  does not establish database rollout or production readiness.
-- **Current blockers:** qualified GST review for covered scenarios, isolated
-  database evidence, implementation/test gaps, and unresolved policy
-  decisions recorded in the specification. Owner authorization is no longer a
-  blocker.
+- **Completed evidence:** current gap-resolution evidence records 23/25
+  engineering criteria, including authorized 0419 restricted-runtime
+  inter-state purchase, POS-negative, Sales retry, stale-revision,
+  tenant-isolation, and legacy-hold scenarios. This evidence does not
+  establish database rollout or production readiness.
+- **Current blockers:** DGM-T13 length-only validation and DGM-T19 current
+  safeguards are scope-approved with Version 2 deferrals; their independent
+  acceptance/runtime evidence remains separate and is not claimed. DGM-T25
+  precision/rounding remains blocked until detailed owner approval and exact
+  precedence are recorded; broader statutory/accounting policies and qualified
+  GST review remain open.
 - **Exit criterion:** approved requirements are implemented and verified with
   the required isolated evidence, without treating local tests as live
   validation.

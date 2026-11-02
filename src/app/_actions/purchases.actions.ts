@@ -37,6 +37,7 @@ import {
 import { validateGstTreatment } from "@/lib/gst/treatment";
 import { resolvePurchaseSupplyFacts } from "@/lib/gst/place-of-supply";
 import { isApprovedGstClassification, resolveApprovedGstRule } from "@/lib/gst/rule-governance";
+import { Decimal, decimalOrZero } from "@/lib/decimal";
 
 const __PurchaseStatusDRAFT: InvoiceStatus = "DRAFT";
 const __PurchaseStatusFINALIZED: InvoiceStatus = "FINALIZED";
@@ -47,8 +48,7 @@ const __MovementADJUSTMENT_OUT: StockMovementType = "ADJUSTMENT_OUT";
 const __LedgerEntryPURCHASE: LedgerEntryType = "PURCHASE";
 
 function round2(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.round(value * 100) / 100;
+  return decimalOrZero(value).round(2, "HALF_UP").toNumber();
 }
 function flattenFieldErrors(zodFieldErrors: Record<string, any>): Record<string, string[] | undefined> {
   const out: Record<string, string[] | undefined> = {};
@@ -114,18 +114,22 @@ function parseIndexedPurchaseGstResolutionLines(formData: FormData): any[] {
   return lines.filter((line) => Object.keys(line).length > 0);
 }
 
+function fixedDecimal(value: unknown): Decimal {
+  if (value === null || value === undefined || value === "") return Decimal.zero();
+  return Decimal.from(String(value)).round(4, "HALF_UP");
+}
+
 function fixedAmount(value: unknown): number {
-  return Number(Number(value ?? 0).toFixed(4));
+  return fixedDecimal(value).toNumber();
 }
 
 function amountsEqual(left: unknown, right: unknown): boolean {
-  return fixedAmount(left) === fixedAmount(right);
+  return fixedDecimal(left).compare(fixedDecimal(right)) === 0;
 }
 
-function decimalOrNull(value: unknown): number | null {
+function decimalOrNull(value: unknown): string | null {
     if (value === null || value === undefined || value === "") return null;
-    const n = Number(value);
-    return Number.isFinite(n) ? round2(n) : null;
+    return Decimal.tryFrom(String(value))?.toString() ?? null;
   }
 
   function requestHash(value: unknown): string {
@@ -245,7 +249,7 @@ function purchaseGstEvidenceFromData(data: any): SupplierDeclaredPurchaseGstEvid
       throw new Error("Complete supplier GST evidence and transaction supply facts are required together.");
     }
     const cess = decimalOrNull(data.declared_cess);
-    if (cess !== null && cess !== 0) {
+    if (cess !== null && !Decimal.from(cess).isZero()) {
       throw new Error("Non-zero cess is blocked until a governed cess rule and credit-utilization policy are configured.");
     }
     return {
@@ -584,7 +588,7 @@ export async function createPurchaseDraftAction(
           discount_pct: Number(line.discount_pct ?? 0),
           discount_amount: totals.discount_amount,
           gst_rate: Number(line.gst_rate ?? 0),
-          gst_amount: totals.gst_amount,
+          gst_amount: lineGst?.gst_amount ?? totals.gst_amount,
           hsn_code_snapshot: line.hsn_sac_code ? String(line.hsn_sac_code) : null,
           calculated_taxable_value: lineGst?.taxable_value ?? null,
           calculated_cgst: lineGst?.cgst ?? null,
@@ -942,21 +946,35 @@ export async function resolvePurchaseGstDiscrepancyAction(
           line_reason: parsed.data.rationale,
         };
       });
-      const lineTotals = acceptedLineValues.reduce((totals, line) => ({
-        taxable_value: totals.taxable_value + fixedAmount(line.accepted_taxable_value),
-        cgst: totals.cgst + fixedAmount(line.accepted_cgst),
-        sgst: totals.sgst + fixedAmount(line.accepted_sgst),
-        igst: totals.igst + fixedAmount(line.accepted_igst),
-        cess: totals.cess + fixedAmount(line.accepted_cess),
-        invoice_total: totals.invoice_total + fixedAmount(line.accepted_line_total),
-      }), { taxable_value: 0, cgst: 0, sgst: 0, igst: 0, cess: 0, invoice_total: 0 });
+      const lineTotals = acceptedLineValues.reduce<{
+        taxable_value: Decimal;
+        cgst: Decimal;
+        sgst: Decimal;
+        igst: Decimal;
+        cess: Decimal;
+        invoice_total: Decimal;
+      }>((totals, line) => ({
+        taxable_value: totals.taxable_value.add(fixedDecimal(line.accepted_taxable_value)),
+        cgst: totals.cgst.add(fixedDecimal(line.accepted_cgst)),
+        sgst: totals.sgst.add(fixedDecimal(line.accepted_sgst)),
+        igst: totals.igst.add(fixedDecimal(line.accepted_igst)),
+        cess: totals.cess.add(fixedDecimal(line.accepted_cess)),
+        invoice_total: totals.invoice_total.add(fixedDecimal(line.accepted_line_total)),
+      }), {
+        taxable_value: Decimal.zero(),
+        cgst: Decimal.zero(),
+        sgst: Decimal.zero(),
+        igst: Decimal.zero(),
+        cess: Decimal.zero(),
+        invoice_total: Decimal.zero(),
+      });
       const aggregateChecks = [
         ["taxable value", lineTotals.taxable_value, accepted.amounts.taxable_value],
         ["CGST", lineTotals.cgst, accepted.amounts.cgst],
         ["SGST", lineTotals.sgst, accepted.amounts.sgst],
         ["IGST", lineTotals.igst, accepted.amounts.igst],
         ["cess", lineTotals.cess, accepted.amounts.cess],
-        ["invoice total", lineTotals.invoice_total + fixedAmount(accepted.amounts.round_off), accepted.amounts.invoice_total],
+        ["invoice total", lineTotals.invoice_total.add(fixedDecimal(accepted.amounts.round_off)), accepted.amounts.invoice_total],
       ];
       const mismatch = aggregateChecks.find(([, lineValue, aggregateValue]) => !amountsEqual(lineValue, aggregateValue));
       if (mismatch) throw new Error(`Accepted line values do not reconcile to the invoice ${mismatch[0]}.`);
@@ -1255,7 +1273,14 @@ export async function finalizePurchaseAction(
         throw new Error("Purchase GST finalization is blocked: accounting acceptance is stale or incomplete.");
       }
 
-      const acceptedLineTotals = items.reduce((totals, item: any) => {
+      const acceptedLineTotals = items.reduce<{
+        taxable_value: Decimal;
+        cgst: Decimal;
+        sgst: Decimal;
+        igst: Decimal;
+        cess: Decimal;
+        invoice_total: Decimal;
+      }>((totals, item: any) => {
         if (
           item.accepted_decision_id !== gstDecision.id ||
           item.accepted_value_source !== gstDecision.accepted_value_source ||
@@ -1272,21 +1297,28 @@ export async function finalizePurchaseAction(
           throw new Error("Purchase GST finalization is blocked: every line requires an immutable accounting acceptance snapshot.");
         }
         return {
-          taxable_value: totals.taxable_value + fixedAmount(item.accepted_taxable_value),
-          cgst: totals.cgst + fixedAmount(item.accepted_cgst),
-          sgst: totals.sgst + fixedAmount(item.accepted_sgst),
-          igst: totals.igst + fixedAmount(item.accepted_igst),
-          cess: totals.cess + fixedAmount(item.accepted_cess),
-          invoice_total: totals.invoice_total + fixedAmount(item.accepted_line_total),
+          taxable_value: totals.taxable_value.add(fixedDecimal(item.accepted_taxable_value)),
+          cgst: totals.cgst.add(fixedDecimal(item.accepted_cgst)),
+          sgst: totals.sgst.add(fixedDecimal(item.accepted_sgst)),
+          igst: totals.igst.add(fixedDecimal(item.accepted_igst)),
+          cess: totals.cess.add(fixedDecimal(item.accepted_cess)),
+          invoice_total: totals.invoice_total.add(fixedDecimal(item.accepted_line_total)),
         };
-      }, { taxable_value: 0, cgst: 0, sgst: 0, igst: 0, cess: 0, invoice_total: 0 });
+      }, {
+        taxable_value: Decimal.zero(),
+        cgst: Decimal.zero(),
+        sgst: Decimal.zero(),
+        igst: Decimal.zero(),
+        cess: Decimal.zero(),
+        invoice_total: Decimal.zero(),
+      });
       const postingAggregateChecks = [
         ["taxable value", acceptedLineTotals.taxable_value, gstDecision.accepted_taxable_value],
         ["CGST", acceptedLineTotals.cgst, gstDecision.accepted_cgst],
         ["SGST", acceptedLineTotals.sgst, gstDecision.accepted_sgst],
         ["IGST", acceptedLineTotals.igst, gstDecision.accepted_igst],
         ["cess", acceptedLineTotals.cess, gstDecision.accepted_cess],
-        ["invoice total", acceptedLineTotals.invoice_total + fixedAmount(gstDecision.accepted_round_off), gstDecision.accepted_invoice_total],
+        ["invoice total", acceptedLineTotals.invoice_total.add(fixedDecimal(gstDecision.accepted_round_off)), gstDecision.accepted_invoice_total],
       ];
       const postingMismatch = postingAggregateChecks.find(([, lineValue, aggregateValue]) => !amountsEqual(lineValue, aggregateValue));
       if (postingMismatch) throw new Error(`Purchase GST finalization is blocked: accepted line values do not reconcile to the invoice ${postingMismatch[0]}.`);
@@ -1302,13 +1334,15 @@ export async function finalizePurchaseAction(
         gstDecision.accepted_value_source === "SUPPLIER_DECLARED" ||
         gstDecision.accepted_value_source === "APPLICATION_CALCULATED" ||
         gstDecision.accepted_value_source === "EXPLICIT_DECISION";
+      const totalDiscount = fixedDecimal(existing.total_discount);
       const acceptedPostingTotals = {
-        gross_amount: fixedAmount(gstDecision.accepted_taxable_value) + Number(existing.total_discount ?? 0),
-        total_discount: Number(existing.total_discount ?? 0),
-        total_tax: fixedAmount(gstDecision.accepted_cgst) +
-          fixedAmount(gstDecision.accepted_sgst) +
-          fixedAmount(gstDecision.accepted_igst) +
-          fixedAmount(gstDecision.accepted_cess),
+        gross_amount: fixedDecimal(gstDecision.accepted_taxable_value).add(totalDiscount).toNumber(),
+        total_discount: totalDiscount.toNumber(),
+        total_tax: fixedDecimal(gstDecision.accepted_cgst)
+          .add(fixedDecimal(gstDecision.accepted_sgst))
+          .add(fixedDecimal(gstDecision.accepted_igst))
+          .add(fixedDecimal(gstDecision.accepted_cess))
+          .toNumber(),
         round_off: fixedAmount(gstDecision.accepted_round_off),
         net_amount: fixedAmount(gstDecision.accepted_invoice_total),
       };
@@ -1334,12 +1368,11 @@ export async function finalizePurchaseAction(
           discount_amount: String(item.discount_amount),
           gst_rate: String(item.gst_rate),
           gst_amount: hasAcceptedSnapshot
-            ? String(
-                fixedAmount(item.accepted_cgst) +
-                fixedAmount(item.accepted_sgst) +
-                fixedAmount(item.accepted_igst) +
-                fixedAmount(item.accepted_cess),
-              )
+            ? fixedDecimal(item.accepted_cgst)
+              .add(fixedDecimal(item.accepted_sgst))
+              .add(fixedDecimal(item.accepted_igst))
+              .add(fixedDecimal(item.accepted_cess))
+              .toString()
             : String(item.gst_amount),
           accepted_taxable_value: String(item.accepted_taxable_value),
           accepted_cgst: String(item.accepted_cgst),
@@ -1386,11 +1419,11 @@ export async function finalizePurchaseAction(
         },
       });
 
-      const diffGross = Math.abs(Number(existing.gross_amount ?? 0) - serverTotals.gross_amount);
-      const diffDisc = Math.abs(Number(existing.total_discount ?? 0) - serverTotals.total_discount);
-      const diffTax = Math.abs(Number(existing.total_tax ?? 0) - serverTotals.total_tax);
-      const diffNet = Math.abs(Number(existing.net_amount ?? 0) - serverTotals.net_amount);
-      if (!hasAcceptedSnapshot && (diffGross > 0.01 || diffDisc > 0.01 || diffTax > 0.01 || diffNet > 0.01)) {
+      const diffGross = fixedDecimal(existing.gross_amount).subtract(serverTotals.gross_amount).abs();
+      const diffDisc = fixedDecimal(existing.total_discount).subtract(serverTotals.total_discount).abs();
+      const diffTax = fixedDecimal(existing.total_tax).subtract(serverTotals.total_tax).abs();
+      const diffNet = fixedDecimal(existing.net_amount).subtract(serverTotals.net_amount).abs();
+      if (!hasAcceptedSnapshot && (diffGross.compare("0.01") === 1 || diffDisc.compare("0.01") === 1 || diffTax.compare("0.01") === 1 || diffNet.compare("0.01") === 1)) {
         throw new Error("Totals mismatch vs calculated; please review.");
       }
 
@@ -1543,7 +1576,7 @@ export async function finalizePurchaseAction(
       });
       const balanceBefore = Number(supplierRow?.payable_balance ?? 0);
       const credit = postingTotals.net_amount;
-      const balanceAfter = Math.round((balanceBefore + credit) * 100) / 100;
+      const balanceAfter = decimalOrZero(balanceBefore).add(credit).round(2, "HALF_UP").toNumber();
 
       await tx.supplier_ledgers.create({
         data: {

@@ -3,6 +3,7 @@ import test from "node:test";
 import fs from "node:fs";
 
 const source = fs.readFileSync("src/lib/gst/place-of-supply.ts", "utf8");
+const stateSource = fs.readFileSync("src/lib/constants/indian-states.ts", "utf8");
 const action = fs.readFileSync("src/app/_actions/purchases.actions.ts", "utf8");
 
 test("purchase POS uses the centralized state resolver and rejects incomplete facts", () => {
@@ -11,6 +12,9 @@ test("purchase POS uses the centralized state resolver and rejects incomplete fa
   assert.match(source, /Supplier, recipient, and delivery states are required/);
   assert.match(source, /Delivery state must match/);
   assert.match(source, /Supply scenario does not match/);
+  assert.match(source, /UNSUPPORTED_UTGST/);
+  assert.match(stateSource, /INDIAN_UNION_TERRITORIES/);
+  assert.match(stateSource, /UNSUPPORTED_UTGST/);
   assert.match(action, /resolvePurchaseSupplyFacts/);
 });
 

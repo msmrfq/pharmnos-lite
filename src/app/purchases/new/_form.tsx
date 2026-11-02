@@ -33,6 +33,10 @@ import {
 } from "@/components/ui/table";
 import { Plus, Trash2, Save, PackagePlus } from "lucide-react";
 import { createPurchaseDraftAction } from "@/app/_actions/purchases.actions";
+import {
+  calculatePurchaseInvoiceTotals,
+  calculatePurchaseLineTotals,
+} from "@/domain/services/purchase-calculator.service";
 import { GstTreatmentSelect } from "@/components/gst/gst-treatment-select";
 import { GstStateSelect } from "@/components/gst/gst-state-select";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
@@ -68,21 +72,6 @@ function fieldError(
 ): string | undefined {
   const e = errors?.[field];
   return e && e.length ? e[0] : undefined;
-}
-
-const round2 = (n: number) => (Number.isFinite(n) ? Math.round(n * 100) / 100 : 0);
-
-function computeLineTotals(row: LineRow) {
-  const qty = Number(row.quantity ?? 0);
-  const rate = Number(row.purchase_rate ?? 0);
-  const discPct = Number(row.discount_pct ?? 0);
-  const gstPct = Number(row.gst_rate ?? 0);
-  const gross = round2(qty * rate);
-  const discount_amount = round2(gross * (discPct / 100));
-  const taxable = round2(gross - discount_amount);
-  const gst_amount = round2(taxable * (gstPct / 100));
-  const line_total = round2(taxable + gst_amount);
-  return { gross, discount_amount, gst_amount, line_total };
 }
 
 function emptyLine(): LineRow {
@@ -143,15 +132,8 @@ export default function PurchasesNewClientForm({ suppliers, products }: Props) {
   }, [params.get("created")]);
 
   const totals = useMemo(() => {
-    const lineTotals = lines.map((l) => computeLineTotals(l));
-    const gross_amount = round2(lineTotals.reduce((s, l) => s + l.gross, 0));
-    const total_discount = round2(lineTotals.reduce((s, l) => s + l.discount_amount, 0));
-    const total_tax = round2(lineTotals.reduce((s, l) => s + l.gst_amount, 0));
-    const subtotal = round2(gross_amount - total_discount + total_tax);
-    const rounded = Math.round(subtotal * 100) / 100;
-    const round_off = round2(Math.round(rounded) - rounded);
-    const net_amount = round2(rounded + round_off);
-    return { gross_amount, total_discount, total_tax, round_off, net_amount, lineTotals };
+    const lineTotals = lines.map((line) => calculatePurchaseLineTotals(line));
+    return { ...calculatePurchaseInvoiceTotals(lineTotals), lineTotals };
   }, [lines]);
 
   const setLineAt = (idx: number, patch: Partial<LineRow>) => {

@@ -40,6 +40,12 @@ export function resolvePurchaseSupplyFacts(
   }
 
   const resolved = determinePlaceOfSupply(supplier, recipient);
+  if (resolved.type === "UNKNOWN" && resolved.reason === "UNSUPPORTED_UTGST") {
+    return {
+      ok: false,
+      error: "Intra-UT supply is blocked until an approved UTGST treatment is available.",
+    };
+  }
   const expectedScenario =
     resolved.type === "INTRA" ? "INTRA_STATE" :
     resolved.type === "INTER" ? "INTER_STATE" : null;

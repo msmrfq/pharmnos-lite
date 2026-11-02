@@ -5,7 +5,6 @@ import Module from "node:module";
 import path from "node:path";
 import { createRequire } from "node:module";
 import pg from "pg";
-import { installFinancialE2eTestSession, clearFinancialE2eTestSession } from "../src/adapters/auth/supabase-auth.adapter.ts";
 import { verifyDatabaseIdentity } from "./financial-e2e-safety.mjs";
 import {
   cleanupRunOwnedFixtures,
@@ -45,6 +44,10 @@ Module._load = function (request, parent, isMain) {
   return originalLoad.call(this, request, parent, isMain);
 };
 require("ts-node/register/transpile-only");
+const {
+  installFinancialE2eTestSession,
+  clearFinancialE2eTestSession,
+} = require("../src/adapters/auth/index.ts");
 let APPROVED;
 
 async function cleanupOwnedResources(plan, client) {
@@ -84,6 +87,10 @@ function targetUrl(name, password, options = "") {
 
 function id(label) {
   return `gst_e2e_${label}_${crypto.randomUUID().replaceAll("-", "")}`;
+}
+
+async function query(client, text, values) {
+  return (await client.query(text, values)).rows;
 }
 
 async function gate() {
@@ -176,7 +183,7 @@ async function createFixture(bootstrap) {
     await bootstrap.query("INSERT INTO users (id, external_id, email, full_name, updated_at) VALUES ($1,$2,$3,$4,now())", [user, invoiceUser, invoiceUser, "GST E2E User"]);
     await bootstrap.query("INSERT INTO roles (id, tenant_id, name, is_default, updated_at) VALUES ($1,$2,$3,true,now())", [role, tenant, "GST E2E Role"]);
     await bootstrap.query("INSERT INTO memberships (id, tenant_id, user_id, role_id, status, updated_at) VALUES ($1,$2,$3,$4,'active',now())", [membership, tenant, user, role]);
-    for (const permission of ["finalize_invoice", "finalize_purchase", "view_invoice", "view_customer_ledger", "view_supplier_ledger", "edit_product", "edit_customer"]) {
+    for (const permission of ["create_purchase", "accept_purchase_gst", "finalize_invoice", "finalize_purchase", "view_invoice", "view_customer_ledger", "view_supplier_ledger", "edit_product", "edit_customer"]) {
       await bootstrap.query("INSERT INTO role_permissions (id, role_id, permission) VALUES ($1,$2,$3)", [id(`permission_${permission}`), role, permission]);
     }
     await bootstrap.query("INSERT INTO business_profiles (id, tenant_id, state, invoice_prefix, invoice_next_seq, purchase_prefix, purchase_next_seq, updated_at) VALUES ($1,$2,'MH','INV',41,'PUR',71,now())", [profile, tenant]);
@@ -185,18 +192,23 @@ async function createFixture(bootstrap) {
     for (const [product, name] of [[productA, "GST Product A"], [productB, "GST Product B"]]) {
       await bootstrap.query("INSERT INTO products (id, tenant_id, name, generic_name, hsn_code, gst_rate, standard_sale_rate, updated_at) VALUES ($1,$2,$3,$4,'3004',18,100,now())", [product, tenant, name, `${name} Generic`]);
     }
+    const catalog = id("catalog");
+    const catalogNine = id("catalog_9999");
+    const rateRule = id("rate_rule");
+    await bootstrap.query(`INSERT INTO hsn_sac_catalog (id,tenant_id,code,description,classification_type,classification_status,rate_approval_status,source_reference,effective_from,is_active,classification_approved_by_membership_id,classification_approved_at,created_at,updated_at) VALUES ($1,$2,'3004','GST E2E Goods','GOODS','APPROVED','APPROVED','E2E-SOURCE','2020-01-01',true,$3,now(),now(),now()), ($4,$2,'9999','GST E2E Edited Goods','GOODS','APPROVED','APPROVED','E2E-SOURCE','2020-01-01',true,$3,now(),now(),now())`, [catalog, tenant, membership, catalogNine]);
+    await bootstrap.query(`INSERT INTO gst_rate_rules (id,tenant_id,hsn_sac_catalog_id,rule_version,tax_rate,component_policy,approval_status,source_reference,effective_from,is_active,approved_by_membership_id,approved_at,created_at,updated_at) VALUES ($1,$2,$3,'e2e-v1',18,'IGST','APPROVED','E2E-RATE','2020-01-01',true,$4,now(),now(),now())`, [rateRule, tenant, catalog, membership]);
     await bootstrap.query("INSERT INTO product_batches (id, tenant_id, product_id, batch_no, sale_rate, received_qty, available_qty, updated_at) VALUES ($1,$2,$3,'A-1',100,1,1,now()), ($4,$2,$5,'B-1',100,1,0,now())", [batchA, tenant, productA, batchB, productB]);
-    await bootstrap.query(`INSERT INTO sales_invoices (id,tenant_id,invoice_no,customer_id,invoice_date,status,gross_amount,total_discount,total_tax,net_amount,balance_due,place_of_supply_code,updated_at)
-    VALUES ($1,$2,$4,$3,now(),'DRAFT',200,0,36,236,236,'MH',now())`, [sales, tenant, customer, `DRAFT-${sales.slice(-8)}`]);
+    await bootstrap.query(`INSERT INTO sales_invoices (id,tenant_id,invoice_no,customer_id,invoice_date,status,gst_treatment,tax_mode,gross_amount,total_discount,total_tax,net_amount,balance_due,place_of_supply_code,updated_at)
+    VALUES ($1,$2,$4,$3,now(),'DRAFT','Registered Business – Regular','EXCLUSIVE',200,0,36,236,236,'MH',now())`, [sales, tenant, customer, `DRAFT-${sales.slice(-8)}`]);
     await bootstrap.query(`INSERT INTO sales_invoice_items (id,tenant_id,invoice_id,product_id,batch_id,batch_no,quantity,sale_rate,gst_rate,line_total)
     VALUES ($1,$2,$3,$4,$5,'A-1',1,100,18,118),($6,$2,$3,$7,$8,'B-1',1,100,18,118)`, [salesItemA, tenant, sales, productA, batchA, salesItemB, productB, batchB]);
     await bootstrap.query("INSERT INTO product_batches (id, tenant_id, product_id, batch_no, sale_rate, received_qty, available_qty, updated_at) VALUES ($1,$2,$3,'SUCCESS-1',100,5,5,now())", [id("success_batch"), tenant, productA]);
     const successBatch = (await bootstrap.query("SELECT id FROM product_batches WHERE tenant_id=$1 AND product_id=$2 AND batch_no='SUCCESS-1'", [tenant, productA])).rows[0].id;
-    await bootstrap.query(`INSERT INTO sales_invoices (id,tenant_id,invoice_no,customer_id,invoice_date,status,gross_amount,total_discount,total_tax,net_amount,balance_due,place_of_supply_code,updated_at)
-      VALUES ($1,$2,$4,$3,now(),'DRAFT',100,0,18,118,118,'MH',now())`, [salesSuccess, tenant, customer, `DRAFT-${salesSuccess.slice(-8)}`]);
+    await bootstrap.query(`INSERT INTO sales_invoices (id,tenant_id,invoice_no,customer_id,invoice_date,status,gst_treatment,tax_mode,gross_amount,total_discount,total_tax,net_amount,balance_due,place_of_supply_code,updated_at)
+      VALUES ($1,$2,$4,$3,now(),'DRAFT','Registered Business – Regular','EXCLUSIVE',100,0,18,118,118,'MH',now())`, [salesSuccess, tenant, customer, `DRAFT-${salesSuccess.slice(-8)}`]);
     await bootstrap.query(`INSERT INTO sales_invoice_items (id,tenant_id,invoice_id,product_id,batch_id,batch_no,quantity,sale_rate,gst_rate,line_total)
       VALUES ($1,$2,$3,$4,$5,'SUCCESS-1',1,100,18,118)`, [salesSuccessItem, tenant, salesSuccess, productA, successBatch]);
-    await bootstrap.query("INSERT INTO purchase_invoices (id,tenant_id,invoice_no,supplier_id,supplier_invoice_no,invoice_date,status,gst_reconciliation_status,gst_accounting_acceptance_status,gst_record_version,gross_amount,total_discount,total_tax,round_off,net_amount,updated_at) VALUES ($1,$2,'',$3,NULL,now(),'DRAFT','MATCHED','ACCEPTED',0,100,0,18,0,118,now()), ($4,$2,'PUR-00071',$3,'CONFLICT',now(),'DRAFT','NOT_RECONCILED','NOT_ACCEPTED',0,100,0,0,0,100,now())", [purchase, tenant, supplier, purchaseConflict]);
+    await bootstrap.query("INSERT INTO purchase_invoices (id,tenant_id,invoice_no,supplier_id,supplier_invoice_no,invoice_date,status,gst_treatment,tax_mode,gst_reconciliation_status,gst_accounting_acceptance_status,gst_record_version,gross_amount,total_discount,total_tax,round_off,net_amount,updated_at) VALUES ($1,$2,'',$3,NULL,now(),'DRAFT','Registered Business – Regular','EXCLUSIVE','MATCHED','ACCEPTED',0,100,0,18,0,118,now()), ($4,$2,'PUR-00071',$3,'CONFLICT',now(),'DRAFT','Registered Business – Regular','EXCLUSIVE','NOT_RECONCILED','NOT_ACCEPTED',0,100,0,0,0,100,now())", [purchase, tenant, supplier, purchaseConflict]);
     await bootstrap.query("INSERT INTO purchase_invoice_items (id,tenant_id,purchase_id,product_id,batch_no,quantity,purchase_rate,gst_rate,gst_amount,line_total) VALUES ($1,$2,$3,$4,'P-1',1,100,18,18,118)", [purchaseItem, tenant, purchase, productA]);
     const evidence = id("evidence");
     const calculation = id("calculation");
@@ -205,7 +217,7 @@ async function createFixture(bootstrap) {
     await bootstrap.query("INSERT INTO purchase_gst_calculations (id,tenant_id,purchase_invoice_id,evidence_revision_id,rule_version,calculated_taxable_value,calculated_cgst,calculated_sgst,calculated_igst,calculated_cess,calculated_invoice_total,calculated_round_off) VALUES ($1,$2,$3,$4,'e2e-v1',100,9,9,0,0,118,0)", [calculation, tenant, purchase, evidence]);
     await bootstrap.query("INSERT INTO purchase_gst_accounting_decisions (id,tenant_id,purchase_invoice_id,evidence_revision_id,calculation_id,accepted_taxable_value,accepted_cgst,accepted_sgst,accepted_igst,accepted_cess,accepted_invoice_total,accepted_round_off,accepted_value_source,decision_reference,decision_outcome,rationale,decided_by_membership_id) VALUES ($1,$2,$3,$4,$5,100,9,9,0,0,118,0,'SUPPLIER_DECLARED','E2E-ACCEPT','ACCEPTED','E2E',$6)", [decision, tenant, purchase, evidence, calculation, membership]);
     await bootstrap.query("UPDATE purchase_invoices SET current_gst_evidence_revision_id=$1,current_gst_calculation_id=$2,current_gst_accounting_decision_id=$3 WHERE id=$4 AND tenant_id=$5", [evidence, calculation, decision, purchase, tenant]);
-    await bootstrap.query("INSERT INTO purchase_invoices (id,tenant_id,invoice_no,supplier_id,supplier_invoice_no,invoice_date,status,gst_reconciliation_status,gst_accounting_acceptance_status,gst_record_version,gross_amount,total_discount,total_tax,round_off,net_amount,updated_at) VALUES ($1,$2,$5,$3,$4,now(),'DRAFT','MATCHED','ACCEPTED',0,100,0,18,0,118,now())", [purchaseSuccess, tenant, supplier, `SUCCESS-${purchaseSuccess.slice(-8)}`, `DRAFT-${purchaseSuccess.slice(-8)}`]);
+    await bootstrap.query("INSERT INTO purchase_invoices (id,tenant_id,invoice_no,supplier_id,supplier_invoice_no,invoice_date,status,gst_treatment,tax_mode,gst_reconciliation_status,gst_accounting_acceptance_status,gst_record_version,gross_amount,total_discount,total_tax,round_off,net_amount,updated_at) VALUES ($1,$2,$5,$3,$4,now(),'DRAFT','Registered Business – Regular','EXCLUSIVE','MATCHED','ACCEPTED',0,100,0,18,0,118,now())", [purchaseSuccess, tenant, supplier, `SUCCESS-${purchaseSuccess.slice(-8)}`, `DRAFT-${purchaseSuccess.slice(-8)}`]);
     await bootstrap.query("INSERT INTO purchase_invoice_items (id,tenant_id,purchase_id,product_id,batch_no,quantity,purchase_rate,gst_rate,gst_amount,line_total,hsn_code_snapshot,calculated_taxable_value,calculated_cgst,calculated_sgst,calculated_igst,calculated_cess,gst_calculation_reference) VALUES ($1,$2,$3,$4,'SUCCESS-P-1',2,50,18,18,118,'3004',100,9,9,0,0,'e2e-v1')", [purchaseSuccessItem, tenant, purchaseSuccess, productA]);
     const successEvidence = id("success_evidence");
     const successCalculation = id("success_calculation");
@@ -214,8 +226,9 @@ async function createFixture(bootstrap) {
     await bootstrap.query("INSERT INTO purchase_gst_calculations (id,tenant_id,purchase_invoice_id,evidence_revision_id,rule_version,calculated_taxable_value,calculated_cgst,calculated_sgst,calculated_igst,calculated_cess,calculated_invoice_total,calculated_round_off) VALUES ($1,$2,$3,$4,'e2e-v1',100,9,9,0,0,118,0)", [successCalculation, tenant, purchaseSuccess, successEvidence]);
     await bootstrap.query("INSERT INTO purchase_gst_line_evidence (id,tenant_id,purchase_invoice_id,evidence_revision_id,purchase_invoice_item_id,declared_taxable_value,declared_cgst,declared_sgst,declared_igst,declared_cess,declared_line_total) VALUES ($1,$2,$3,$4,$5,100,9,9,0,0,118)", [id("success_line_evidence"), tenant, purchaseSuccess, successEvidence, purchaseSuccessItem]);
     await bootstrap.query("INSERT INTO purchase_gst_accounting_decisions (id,tenant_id,purchase_invoice_id,evidence_revision_id,calculation_id,accepted_taxable_value,accepted_cgst,accepted_sgst,accepted_igst,accepted_cess,accepted_invoice_total,accepted_round_off,accepted_value_source,decision_reference,decision_outcome,rationale,decided_by_membership_id) VALUES ($1,$2,$3,$4,$5,100,9,9,0,0,118,0,'SUPPLIER_DECLARED','E2E-SUCCESS','ACCEPTED','E2E',$6)", [successDecision, tenant, purchaseSuccess, successEvidence, successCalculation, membership]);
+    await bootstrap.query("UPDATE purchase_invoice_items SET accepted_taxable_value=100, accepted_cgst=9, accepted_sgst=9, accepted_igst=0, accepted_cess=0, accepted_line_total=118, accepted_value_source='SUPPLIER_DECLARED', accepted_at=now(), accepted_by_membership_id=$2, accepted_decision_id=$3, gst_acceptance_reference='E2E-SUCCESS', gst_acceptance_status='ACCEPTED' WHERE id=$1 AND tenant_id=$4", [purchaseSuccessItem, membership, successDecision, tenant]);
     await bootstrap.query("UPDATE purchase_invoices SET current_gst_evidence_revision_id=$1,current_gst_calculation_id=$2,current_gst_accounting_decision_id=$3 WHERE id=$4 AND tenant_id=$5", [successEvidence, successCalculation, successDecision, purchaseSuccess, tenant]);
-    await bootstrap.query("INSERT INTO purchase_invoices (id,tenant_id,invoice_no,supplier_id,supplier_invoice_no,invoice_date,status,gst_reconciliation_status,gst_accounting_acceptance_status,gst_record_version,gross_amount,total_discount,total_tax,round_off,net_amount,updated_at) VALUES ($1,$2,$5,$3,$4,now(),'DRAFT','DISCREPANCY_REQUIRES_REVIEW','NOT_ACCEPTED',0,100,0,18,0,118,now())", [purchaseReview, tenant, supplier, `REVIEW-${purchaseReview.slice(-8)}`, `DRAFT-${purchaseReview.slice(-8)}`]);
+    await bootstrap.query("INSERT INTO purchase_invoices (id,tenant_id,invoice_no,supplier_id,supplier_invoice_no,invoice_date,status,gst_treatment,tax_mode,gst_reconciliation_status,gst_accounting_acceptance_status,gst_record_version,gross_amount,total_discount,total_tax,round_off,net_amount,updated_at) VALUES ($1,$2,$5,$3,$4,now(),'DRAFT','Registered Business – Regular','EXCLUSIVE','DISCREPANCY_REQUIRES_REVIEW','NOT_ACCEPTED',0,100,0,18,0,118,now())", [purchaseReview, tenant, supplier, `REVIEW-${purchaseReview.slice(-8)}`, `DRAFT-${purchaseReview.slice(-8)}`]);
     await bootstrap.query("INSERT INTO purchase_invoice_items (id,tenant_id,purchase_id,product_id,batch_no,quantity,purchase_rate,gst_rate,gst_amount,line_total) VALUES ($1,$2,$3,$4,'REVIEW-P-1',1,100,18,18,118)", [purchaseReviewItem, tenant, purchaseReview, productA]);
     await bootstrap.query("INSERT INTO purchase_gst_evidence_revisions (id,tenant_id,purchase_invoice_id,revision_number,revision_kind,source_document_reference,capture_channel,captured_by_membership_id,declared_taxable_value,declared_cgst,declared_sgst,declared_igst,declared_cess,declared_invoice_total,declared_round_off) VALUES ($1,$2,$3,1,'INITIAL','E2E-SOURCE-REVIEW','E2E',$4,100,9,9,0,0,118,0)", [reviewEvidence, tenant, purchaseReview, membership]);
     await bootstrap.query("INSERT INTO purchase_gst_calculations (id,tenant_id,purchase_invoice_id,evidence_revision_id,rule_version,calculated_taxable_value,calculated_cgst,calculated_sgst,calculated_igst,calculated_cess,calculated_invoice_total,calculated_round_off) VALUES ($1,$2,$3,$4,'e2e-v1',100,10,8,0,0,118,0)", [reviewCalculation, tenant, purchaseReview, reviewEvidence]);
@@ -296,6 +309,74 @@ async function invokeSuccessfulAction(action) {
   }
 }
 
+function appendFormFields(formData, fields) {
+  for (const [key, value] of Object.entries(fields)) {
+    formData.append(key, String(value));
+  }
+}
+
+async function createPurchaseWithGstEvidence({
+  createPurchaseDraftAction,
+  prisma,
+  fixture,
+  invoiceNo,
+  supplierInvoiceNo,
+  supplierState,
+  recipientState,
+  deliveryState,
+  scenario,
+  declared,
+  batchNo,
+}) {
+  const formData = new FormData();
+  appendFormFields(formData, {
+    invoice_no: invoiceNo,
+    supplier_id: fixture.supplier,
+    supplier_invoice_no: supplierInvoiceNo,
+    invoice_date: "2026-11-01",
+    gst_treatment: "Registered Business – Regular",
+    tax_mode: "EXCLUSIVE",
+    gross_amount: "100",
+    total_discount: "0",
+    total_tax: "18",
+    round_off: "0",
+    net_amount: "118",
+    declared_taxable_value: declared.taxable,
+    declared_cgst: declared.cgst,
+    declared_sgst: declared.sgst,
+    declared_igst: declared.igst,
+    declared_cess: "0",
+    declared_invoice_total: "118",
+    declared_round_off: "0",
+    supplier_state_at_transaction: supplierState,
+    recipient_state_at_transaction: recipientState,
+    delivery_state_at_transaction: deliveryState,
+    supply_scenario: scenario,
+    "lines[0].product_id": fixture.productA,
+    "lines[0].batch_no": batchNo,
+    "lines[0].quantity": "1",
+    "lines[0].free_qty": "0",
+    "lines[0].mrp": "120",
+    "lines[0].purchase_rate": "100",
+    "lines[0].sale_rate": "100",
+    "lines[0].discount_pct": "0",
+    "lines[0].gst_rate": "18",
+    "lines[0].declared_taxable_value": declared.taxable,
+    "lines[0].declared_cgst": declared.cgst,
+    "lines[0].declared_sgst": declared.sgst,
+    "lines[0].declared_igst": declared.igst,
+    "lines[0].declared_cess": "0",
+    "lines[0].declared_line_total": "118",
+  });
+  const result = await invokeSuccessfulAction(() => createPurchaseDraftAction({}, formData));
+  assert.equal(result.ok, true, result.message ?? "Purchase draft creation failed.");
+  const created = await prisma.purchase_invoices.findFirst({
+    where: { tenant_id: fixture.tenant, supplier_invoice_no: supplierInvoiceNo },
+  });
+  assert.ok(created, `Purchase draft ${supplierInvoiceNo} was not persisted.`);
+  return created;
+}
+
 async function verifyTenantIsolationAndPrivileges(bootstrap, fixture) {
   const tenantB = id("tenant_b");
   fixture.tenantB = tenantB;
@@ -312,13 +393,43 @@ async function verifyTenantIsolationAndPrivileges(bootstrap, fixture) {
       [fixture.tenant, fixture.tenant, tenantB],
       [tenantB, tenantB, fixture.tenant],
     ]) {
-      await runtime.query("SELECT set_config('request.jwt.claim.tenant_id', $1, false)", [claim]);
+      await runtime.query(
+        "SELECT set_config('request.jwt.claim.sub', $1, false), set_config('request.jwt.claim.tenant_id', $2, false)",
+        [fixture.externalId, claim],
+      );
       const own = await query(runtime, "SELECT id FROM tenants WHERE id = $1", [expectedOwn]);
       const cross = await query(runtime, "SELECT id FROM tenants WHERE id = $1", [expectedCross]);
       assert.equal(own.length, 1);
       assert.equal(cross.length, 0);
     }
-    await runtime.query("SELECT set_config('request.jwt.claim.tenant_id', $1, false)", [tenantB]);
+    await runtime.query(
+      "SELECT set_config('request.jwt.claim.sub', $1, false), set_config('request.jwt.claim.tenant_id', $2, false)",
+      [fixture.externalId, tenantB],
+    );
+    assert.equal(
+      (await query(runtime, "SELECT id FROM sales_invoices WHERE id = $1", [fixture.sales])).length,
+      0,
+    );
+    assert.equal(
+      (await query(runtime, "SELECT id FROM purchase_invoices WHERE id = $1", [fixture.purchase])).length,
+      0,
+    );
+    for (const [table, idValue] of [
+      ["sales_invoices", fixture.sales],
+      ["purchase_invoices", fixture.purchase],
+    ]) {
+      try {
+        assert.equal(
+          (await runtime.query(
+            `UPDATE ${table} SET notes = $1 WHERE id = $2`,
+            ["cross-tenant-write", idValue],
+          )).rowCount,
+          0,
+        );
+      } catch (error) {
+        assert.equal(error?.code, "42501");
+      }
+    }
     await assert.rejects(
       runtime.query(
         "INSERT INTO tenants (id, slug, business_name, updated_at) VALUES ($1,$2,$3,now())",
@@ -362,6 +473,7 @@ async function main() {
   let fixtureManifest = null;
   try {
     bootstrap = await gate();
+    const ordinaryDatabaseUrl = process.env.DATABASE_URL;
     fixture = await createFixture(bootstrap);
     await verifyTenantIsolationAndPrivileges(bootstrap, fixture);
     const snapshotFixture = await createSnapshotFixtures(bootstrap, fixture);
@@ -374,7 +486,11 @@ async function main() {
     prisma = await appClient(fixture.tenant);
     installFinancialE2eTestSession(fixture.externalId);
     const { finalizeSalesInvoiceAction, createCustomerPaymentAction, createSupplierPaymentAction } = require("../src/app/_actions/sales.actions.ts");
-    const { finalizePurchaseAction } = require("../src/app/_actions/purchases.actions.ts");
+    const {
+      acceptPurchaseGstAction,
+      createPurchaseDraftAction,
+      finalizePurchaseAction,
+    } = require("../src/app/_actions/purchases.actions.ts");
     const { repos } = require("../src/repositories/index.ts");
     const onlyGst016 = process.env.GST_E2E_ONLY === "016";
     if (!onlyGst016) {
@@ -430,6 +546,40 @@ async function main() {
     const availableBefore = salesSuccessBatchesBefore.reduce((total, batch) => total + Number(batch.available_qty), 0);
     const availableAfter = salesSuccessBatchesAfter.reduce((total, batch) => total + Number(batch.available_qty), 0);
     assert.equal(availableAfter, availableBefore - 1);
+    const salesRetryResult = await invokeSuccessfulAction(() =>
+      finalizeSalesInvoiceAction(fixture.salesSuccess, {}, salesSuccessForm));
+    assert.equal(salesRetryResult.ok, true);
+    assert.equal(await prisma.sales_posting_operations.count({
+      where: { tenant_id: fixture.tenant, sales_invoice_id: fixture.salesSuccess },
+    }), 1);
+    assert.equal(await prisma.stock_movements.count({
+      where: { tenant_id: fixture.tenant, reference_id: fixture.salesSuccess },
+    }), 1);
+    assert.equal(await prisma.customer_ledgers.count({
+      where: { tenant_id: fixture.tenant, invoice_id: fixture.salesSuccess },
+    }), 1);
+    const changedPayloadForm = new FormData();
+    changedPayloadForm.append("idempotency_key", salesSuccessForm.get("idempotency_key"));
+    const changedPayloadResult = await finalizeSalesInvoiceAction(fixture.sales, {}, changedPayloadForm);
+    assert.equal(changedPayloadResult.ok, false);
+    assert.match(changedPayloadResult.message ?? "", /different sales payload/);
+    assert.equal(await prisma.sales_posting_operations.count({
+      where: { tenant_id: fixture.tenant, sales_invoice_id: fixture.sales },
+    }), 0);
+    const rollbackForm = new FormData();
+    rollbackForm.append("idempotency_key", `gst-gap-sales-rollback-${fixture.sales}`);
+    process.env.FINANCIAL_E2E_TEST_FAIL_BEFORE_COMMIT = "true";
+    const rollbackResult = await finalizeSalesInvoiceAction(fixture.sales, {}, rollbackForm);
+    delete process.env.FINANCIAL_E2E_TEST_FAIL_BEFORE_COMMIT;
+    assert.equal(rollbackResult.ok, false);
+    assert.match(rollbackResult.message ?? "", /FINANCIAL_E2E_SIMULATED_PRE_COMMIT_FAILURE/);
+    assert.equal(await prisma.sales_posting_operations.count({
+      where: { tenant_id: fixture.tenant, sales_invoice_id: fixture.sales },
+    }), 0);
+    assert.equal((await prisma.sales_invoices.findUnique({
+      where: { id: fixture.sales, tenant_id: fixture.tenant },
+    })).status, "DRAFT");
+    console.log("SALES-IDEMPOTENCY-RETRY-CONFLICT-ROLLBACK=PASS_CURRENT_CAMPAIGN");
     console.log("SALES-SUCCESS=PASS_APPLICATION_PATH_DATABASE_E2E");
 
     const purchaseSuccessBefore = await prisma.purchase_invoices.findUnique({ where: { id: fixture.purchaseSuccess, tenant_id: fixture.tenant } });
@@ -468,6 +618,157 @@ async function main() {
     assert.equal(await prisma.stock_movements.count({ where: { tenant_id: fixture.tenant, reference_id: fixture.purchaseReview } }), 0);
     console.log("PURCHASE-GST-REVIEW-GUARD=PASS_APPLICATION_PATH_DATABASE_E2E");
 
+    const interPurchase = await createPurchaseWithGstEvidence({
+      createPurchaseDraftAction,
+      prisma,
+      fixture,
+      invoiceNo: `PUR-INTER-${fixture.tenant.slice(-8)}`,
+      supplierInvoiceNo: `GST-INTER-${fixture.tenant.slice(-8)}`,
+      supplierState: "GJ",
+      recipientState: "MH",
+      deliveryState: "MH",
+      scenario: "INTER_STATE",
+      declared: { taxable: "100", cgst: "0", sgst: "0", igst: "18" },
+      batchNo: `INTER-${fixture.tenant.slice(-8)}`,
+    });
+    const interEvidence = await prisma.purchase_gst_evidence_revisions.findFirst({
+      where: { purchase_invoice_id: interPurchase.id, tenant_id: fixture.tenant },
+    });
+    const interCalculation = await prisma.purchase_gst_calculations.findFirst({
+      where: { purchase_invoice_id: interPurchase.id, tenant_id: fixture.tenant },
+    });
+    assert.ok(interEvidence);
+    assert.ok(interCalculation);
+    assert.equal(interEvidence.supply_scenario, "INTER_STATE");
+    assert.equal(Number(interEvidence.declared_igst), 18);
+    assert.equal(Number(interCalculation.calculated_cgst), 0);
+    assert.equal(Number(interCalculation.calculated_sgst), 0);
+    assert.equal(Number(interCalculation.calculated_igst), 18);
+    const interAcceptanceForm = new FormData();
+    appendFormFields(interAcceptanceForm, {
+      decision_reference: `E2E-INTER-${fixture.tenant.slice(-8)}`,
+      rationale: "Current campaign inter-state application-calculated acceptance.",
+      accepted_value_source: "APPLICATION_CALCULATED",
+    });
+    const interAcceptance = await acceptPurchaseGstAction(interPurchase.id, interAcceptanceForm);
+    assert.equal(interAcceptance.ok, true, interAcceptance.message ?? "Inter-state acceptance failed.");
+    const interDecision = await prisma.purchase_gst_accounting_decisions.findFirst({
+      where: { purchase_invoice_id: interPurchase.id, tenant_id: fixture.tenant },
+    });
+    assert.ok(interDecision);
+    assert.equal(interDecision.accepted_value_source, "APPLICATION_CALCULATED");
+    assert.equal(Number(interDecision.accepted_igst), 18);
+    const interFinalizeForm = new FormData();
+    interFinalizeForm.append("idempotency_key", `gst-gap-inter-${interPurchase.id}`);
+    const interFinalized = await invokeSuccessfulAction(() =>
+      finalizePurchaseAction(interPurchase.id, {}, interFinalizeForm));
+    assert.equal(interFinalized.ok, true, interFinalized.message ?? "Inter-state finalization failed.");
+    const interAfter = await prisma.purchase_invoices.findUnique({
+      where: { id: interPurchase.id, tenant_id: fixture.tenant },
+    });
+    const interItem = await prisma.purchase_invoice_items.findFirst({
+      where: { purchase_id: interPurchase.id, tenant_id: fixture.tenant },
+    });
+    assert.equal(interAfter.status, "FINALIZED");
+    assert.ok(interItem);
+    assert.equal(Number(interItem.accepted_igst), 18);
+    assert.equal(Number(interItem.gst_amount), 18);
+    assert.equal(Number(interItem.line_total), 118);
+    assert.equal(await prisma.purchase_posting_operations.count({
+      where: { tenant_id: fixture.tenant, purchase_invoice_id: interPurchase.id, status: "COMPLETED" },
+    }), 1);
+    assert.equal(await prisma.supplier_ledgers.count({
+      where: { tenant_id: fixture.tenant, purchase_id: interPurchase.id },
+    }), 1);
+    console.log("PURCHASE-INTER-STATE-IGST=PASS_CURRENT_CAMPAIGN");
+
+    const revisionPurchase = await createPurchaseWithGstEvidence({
+      createPurchaseDraftAction,
+      prisma,
+      fixture,
+      invoiceNo: `PUR-REVISION-${fixture.tenant.slice(-8)}`,
+      supplierInvoiceNo: `GST-REVISION-${fixture.tenant.slice(-8)}`,
+      supplierState: "MH",
+      recipientState: "MH",
+      deliveryState: "MH",
+      scenario: "INTRA_STATE",
+      declared: { taxable: "100", cgst: "9", sgst: "9", igst: "0" },
+      batchNo: `REVISION-${fixture.tenant.slice(-8)}`,
+    });
+    const staleRevision = revisionPurchase.gst_record_version;
+    const revisionAcceptanceForm = new FormData();
+    appendFormFields(revisionAcceptanceForm, {
+      decision_reference: `E2E-REVISION-${fixture.tenant.slice(-8)}`,
+      rationale: "Current campaign revision acceptance.",
+      accepted_value_source: "APPLICATION_CALCULATED",
+    });
+    const revisionAcceptance = await acceptPurchaseGstAction(revisionPurchase.id, revisionAcceptanceForm);
+    assert.equal(revisionAcceptance.ok, true, revisionAcceptance.message ?? "Revision acceptance failed.");
+    const revisionAfterAcceptance = await prisma.purchase_invoices.findUnique({
+      where: { id: revisionPurchase.id, tenant_id: fixture.tenant },
+    });
+    assert.equal(revisionAfterAcceptance.gst_record_version, staleRevision + 1);
+    assert.equal(await prisma.purchase_invoices.count({
+      where: {
+        id: revisionPurchase.id,
+        tenant_id: fixture.tenant,
+        status: "DRAFT",
+        gst_record_version: staleRevision,
+      },
+    }), 0);
+    assert.equal(revisionAfterAcceptance.status, "DRAFT");
+    const revisionAForm = new FormData();
+    revisionAForm.append("idempotency_key", `gst-gap-revision-a-${revisionPurchase.id}`);
+    const revisionBForm = new FormData();
+    revisionBForm.append("idempotency_key", `gst-gap-revision-b-${revisionPurchase.id}`);
+    const revisionResults = await Promise.all([
+      invokeSuccessfulAction(() => finalizePurchaseAction(revisionPurchase.id, {}, revisionAForm)),
+      invokeSuccessfulAction(() => finalizePurchaseAction(revisionPurchase.id, {}, revisionBForm)),
+    ]);
+    assert.equal(revisionResults.filter((result) => result.ok).length, 1);
+    assert.equal(revisionResults.filter((result) => !result.ok).length, 1);
+    const staleFailure = revisionResults.find((result) => !result.ok);
+    assert.ok(staleFailure);
+    assert.match(staleFailure.message ?? "", /changed while finalization was starting|already finalized|being processed/);
+    assert.equal(await prisma.purchase_posting_operations.count({
+      where: { tenant_id: fixture.tenant, purchase_invoice_id: revisionPurchase.id, status: "COMPLETED" },
+    }), 1);
+    assert.equal(await prisma.stock_movements.count({
+      where: { tenant_id: fixture.tenant, reference_id: revisionPurchase.id },
+    }), 1);
+    assert.equal(await prisma.supplier_ledgers.count({
+      where: { tenant_id: fixture.tenant, purchase_id: revisionPurchase.id },
+    }), 1);
+    console.log("PURCHASE-STALE-REVISION-AND-POSTING=PASS_CURRENT_CAMPAIGN");
+
+    const legacyBefore = await prisma.purchase_invoices.findUnique({
+      where: { id: fixture.purchaseConflict, tenant_id: fixture.tenant },
+    });
+    const legacyProfileBefore = await prisma.business_profiles.findUnique({
+      where: { tenant_id: fixture.tenant },
+    });
+    const legacyResult = await finalizePurchaseAction(fixture.purchaseConflict, {}, new FormData());
+    assert.equal(legacyResult.ok, false);
+    assert.match(legacyResult.message ?? "", /No line items|supplier evidence|GST finalization is blocked/i);
+    const legacyAfter = await prisma.purchase_invoices.findUnique({
+      where: { id: fixture.purchaseConflict, tenant_id: fixture.tenant },
+    });
+    assert.equal(legacyAfter.status, legacyBefore.status);
+    assert.equal(legacyAfter.gst_record_version, legacyBefore.gst_record_version);
+    assert.equal((await prisma.business_profiles.findUnique({
+      where: { tenant_id: fixture.tenant },
+    })).purchase_next_seq, legacyProfileBefore.purchase_next_seq);
+    assert.equal(await prisma.purchase_posting_operations.count({
+      where: { tenant_id: fixture.tenant, purchase_invoice_id: fixture.purchaseConflict },
+    }), 0);
+    assert.equal(await prisma.stock_movements.count({
+      where: { tenant_id: fixture.tenant, reference_id: fixture.purchaseConflict },
+    }), 0);
+    assert.equal(await prisma.supplier_ledgers.count({
+      where: { tenant_id: fixture.tenant, purchase_id: fixture.purchaseConflict },
+    }), 0);
+    console.log("PURCHASE-INCOMPLETE-LEGACY-HOLD=PASS_CURRENT_CAMPAIGN");
+
     const customerPaymentForm = new FormData();
     for (const [key, value] of Object.entries({ customer_id: fixture.customer, amount: "50", payment_method: "Cash", reference_no: `GST-${fixture.salesSuccess}`, notes: "" })) customerPaymentForm.append(key, value);
     const customerBeforePayment = await prisma.customers.findUnique({ where: { id: fixture.customer, tenant_id: fixture.tenant } });
@@ -493,9 +794,9 @@ async function main() {
     const supplierPaymentFailure = await createSupplierPaymentAction({}, badSupplierPayment);
     assert.equal(supplierPaymentFailure.ok, false);
     console.log("PAYMENT=PASS_APPLICATION_PATH_DATABASE_E2E");
-  const { updateProductAction, updateCustomerAction } = await import("../src/app/_actions/masters.actions.ts");
-  const { loadBillingInvoicePrintData } = await import("../src/app/billing/[invoiceId]/print/data.ts");
-  const { buildInvoicePrintSnapshot } = await import("../src/domain/services/gst-calculator.service.ts");
+  const { updateProductAction, updateCustomerAction } = require("../src/app/_actions/masters.actions.ts");
+  const { loadBillingInvoicePrintData } = require("../src/app/billing/[invoiceId]/print/data.ts");
+  const { buildInvoicePrintSnapshot } = require("../src/domain/services/gst-calculator.service.ts");
   clearFinancialE2eTestSession();
   installFinancialE2eTestSession(snapshotFixture.externalId);
   const completeBefore = await prisma.sales_invoices.findUnique({
@@ -575,7 +876,7 @@ async function main() {
     clearFinancialE2eTestSession();
     if (prisma) await prisma.$disconnect().catch(() => {});
     if (bootstrap) await bootstrap.end().catch(() => {});
-    if (!fixtureManifest && fixture) {
+    if (fixture) {
       const recoveryBootstrap = new Client({
         connectionString: targetUrl("TEST_DATABASE_URL", process.env.FINANCIAL_E2E_DB_PASSWORD),
       });
@@ -593,7 +894,12 @@ async function main() {
         await recoveryBootstrap.end();
       }
     }
-    if (fixtureManifest) {
+    if (fixtureManifest && process.env.FINANCIAL_E2E_CLEANUP_MODE === "DISPOSABLE_TARGET_DISPOSAL") {
+      console.log("FIXTURE-DISPOSAL=DATABASE_LEVEL_DEFERRED");
+      console.log("IMMUTABLE-HISTORY=PRESERVED_NOT_DELETED");
+      console.log(`OWNED_RESOURCES=${fixtureManifest.resources.length}`);
+      console.log(`TARGET_DATABASE=${APPROVED.databaseName}`);
+    } else if (fixtureManifest) {
       const cleanupBootstrap = new Client({
         connectionString: targetUrl("TEST_DATABASE_URL", process.env.FINANCIAL_E2E_DB_PASSWORD),
       });
@@ -622,7 +928,7 @@ async function main() {
           identityEvidence: identityEvidence.evidence,
           targetUrl: process.env.TEST_DATABASE_URL,
           runtimeUrl: process.env.FINANCIAL_E2E_RUNTIME_DATABASE_URL,
-          ordinaryUrl: process.env.DATABASE_URL,
+          ordinaryUrl: ordinaryDatabaseUrl,
           databaseName: APPROVED.databaseName,
           databaseRole: APPROVED.runtimeRole,
           runId: APPROVED.runId,

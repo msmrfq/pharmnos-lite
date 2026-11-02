@@ -31,6 +31,19 @@ const RESOURCE_CLEANUP_ORDER = Object.freeze([
 ]);
 
 const RESOURCE_ORDER_INDEX = new Map(RESOURCE_CLEANUP_ORDER.map((name, index) => [name, index]));
+const IMMUTABLE_HISTORY_RESOURCE_TYPES = Object.freeze([
+    "purchase_gst_accounting_decisions",
+    "purchase_gst_calculations",
+    "purchase_gst_evidence_revisions",
+    "purchase_gst_line_evidence",
+    "purchase_gst_reconciliation_events",
+    "purchase_gst_reconciliation_event_lines",
+    "inventory_valuation_decisions",
+    "inventory_valuation_adjustments",
+    "hsn_sac_catalog_history",
+    "gst_rate_rule_history",
+]);
+const IMMUTABLE_HISTORY_RESOURCE_TYPE_SET = new Set(IMMUTABLE_HISTORY_RESOURCE_TYPES);
 const MANIFEST_KIND = "pharmnos-financial-e2e-fixture-manifest-v1";
 const FIXTURE_READY_STATUS = "FIXTURE_READY";
 const CLEANUP_READY_FAILURE_STATUS = "FIXTURE_FAILED_CLEANUP_READY";
@@ -375,6 +388,7 @@ export async function cleanupRunOwnedFixtures({
         now,
     });
     const plan = buildOwnedCleanupPlan(authorized);
+    assertRowDeletionSafe(plan.resources);
     if (typeof executePlan !== "function") {
         throw new TypeError("Cleanup requires an injected executor.");
     }
@@ -430,4 +444,19 @@ export function canStartFinancialScenario({
     }
 }
 
-export { CLEANUP_COMPLETE_STATUS, FIXTURE_READY_STATUS, MANIFEST_KIND, RESOURCE_CLEANUP_ORDER };
+export function assertRowDeletionSafe(resources) {
+    const immutable = (resources ?? []).filter((resource) =>
+        IMMUTABLE_HISTORY_RESOURCE_TYPE_SET.has(resource?.resourceType))
+        .map((resource) => `${resource.resourceType}/${resource.id}`);
+    if (immutable.length > 0) {
+        throw new Error(`Row-level deletion is prohibited for immutable financial history: ${immutable.join(", ")}.`);
+    }
+}
+
+export {
+    CLEANUP_COMPLETE_STATUS,
+    FIXTURE_READY_STATUS,
+    IMMUTABLE_HISTORY_RESOURCE_TYPES,
+    MANIFEST_KIND,
+    RESOURCE_CLEANUP_ORDER,
+};

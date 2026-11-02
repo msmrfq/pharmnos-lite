@@ -1,0 +1,47 @@
+PROVISIONING=PASS
+BASELINE_APPLIED=financial-e2e-schema-provisioning.generated.sql
+SECURITY_CONTROLS_APPLIED=grants,rls,immutable-history,finalized-invoice,posting-transition
+TARGET_DATABASE=pharmnos_financial_e2e_salesgst_mvxvql2g9dacd0c0
+TARGET_BOOTSTRAP_ROLE=pharmnos_e2e
+TARGET_RUNTIME_ROLE=pharmnos_e2e_runtime
+RLS_TABLES=33
+POLICIES=84
+TRIGGERS=16
+CONSTRAINTS=123
+RUNTIME_DELETE_PRIVILEGES=0
+RUNTIME_RLS=VERIFIED_EMPTY_TARGET
+GST_SCENARIOS=NOT_EXECUTED
+TENANT-RLS-PRIVILEGES=PASS_DATABASE_EVIDENCE
+GST-014=PASS_APPLICATION_PATH_DATABASE_E2E
+GST-015=PASS_APPLICATION_PATH_DATABASE_E2E
+SALES-SUCCESS=PASS_APPLICATION_PATH_DATABASE_E2E
+PURCHASE-SUCCESS=PASS_APPLICATION_PATH_DATABASE_E2E
+PURCHASE-GST-REVIEW-GUARD=PASS_APPLICATION_PATH_DATABASE_E2E
+PAYMENT=PASS_APPLICATION_PATH_DATABASE_E2E
+prisma:error 
+Invalid `this.prisma.sales_invoices.update()` invocation in
+E:\PharmnosLite\src\repositories\sales-invoice.repository.ts:60:39
+
+  57   ctx: TenantContext,
+  58 ): Promise<sales_invoices> {
+  59   const t = this.withTenant(ctx);
+→ 60   return this.prisma.sales_invoices.update(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42501", message: "Finalized sales invoice facts are immutable", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+prisma:error 
+Invalid `prisma.sales_invoice_items.update()` invocation:
+
+
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42501", message: "Finalized sales invoice lines are immutable", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+GST-016=PASS_APPLICATION_PATH_DATABASE_E2E fixture=gst_e2e_snapshot_complete_invoice_fd66c7a11ae544cdab100a7ee91344d6 missing=gst_e2e_snapshot_missing_invoice_4a5afe4ff66a432aa147967c0e7fe13c
+FIXTURE-DISPOSAL=DATABASE_LEVEL_DEFERRED
+IMMUTABLE-HISTORY=PRESERVED_NOT_DELETED
+OWNED_RESOURCES=45
+TARGET_DATABASE=pharmnos_financial_e2e_salesgst_mvxvql2g9dacd0c0
+
+(node:4368) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///E:/PharmnosLite/src/lib/db/prisma.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to E:\PharmnosLite\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+

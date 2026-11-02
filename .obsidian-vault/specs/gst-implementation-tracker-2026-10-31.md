@@ -10,6 +10,118 @@ This tracker records the current engineering implementation state. It does
 not replace the active master specification, professional review, independent
 security acceptance, migration authorization, or production approval.
 
+## Credit/debit-note contract finalization and repository audit — 2026-11-02 21-11-19 IST
+
+This is a documentation-only requirements and source-audit record. No
+application code, Prisma model, migration, database, container, process, or
+Git history was changed for this workstream.
+
+- Owner-approved scope includes **GST credit notes and debit notes in the
+  current release**, with both **supplier issuance** and **recipient-side
+  processing**. The scope decision is not professional/legal confirmation,
+  implementation authorization, runtime verification, independent acceptance,
+  or production approval.
+- The statutory baseline requires separate treatment for Sections 2(37),
+  2(38), 15(3)(a)/(b), 16, 34(1)-(4), Rule 53(1A), and Rule 59. The
+  contract rechecked official Section 34, Rule 53(1A), Rule 59, Circular
+  251/08/2025-GST, and Circular 253/10/2025-GST sources. Circular 253
+  withdrew Circular 212/06/2024-GST's prescribed evidence procedure; it did
+  not remove the substantive statutory ITC/output-tax conditions.
+- Notification 16/2025-Central Tax is recorded as the 2025-10-01 commencement
+  notification for the specified Finance Act 2025 provisions. Notification
+  03/2026-Central Tax appoints 2026-11-01 for Finance Act 2026 Sections
+  153-155, while the current consolidated Section 15 page retains a
+  “yet-to-be-notified” footnote. This source synchronization conflict is an
+  explicit effective-dated legal-rule and qualified-review gate; the product
+  must fail closed rather than choose a date silently.
+- The finalized implementation-ready business and engineering contract,
+  including supplier/recipient workflows, commercial-adjustment separation,
+  state machines, permissions, worked scenarios, and CDN-01-CDN-27 acceptance
+  matrix, is recorded in
+  [`gst-credit-debit-note-engineering-contract.md`](./gst-credit-debit-note-engineering-contract.md).
+- The master requirements specification remains in
+  [`domestic-gst-modernization.md`](./domestic-gst-modernization.md).
+- The review-only persistence and rollout design is recorded in
+  [`gst-schema-rollout-design-review.md`](./gst-schema-rollout-design-review.md).
+  It proposes note headers, original-invoice allocations, tax components,
+  ITC-reversal evidence, reporting/IRP state, immutable events, tenant keys,
+  and dependency order without changing the schema.
+- Repository audit confirms no note-specific model, allocation model,
+  adjustment history, recipient ITC-reversal model, CDNR/CDNUR reporting
+  workflow, IRN/IRP persistence, note permissions, note audit events, or
+  note action exists. Generic ledger entry types are primitives only; they do
+  not constitute a note workflow.
+- T25-12 is now classified as
+  `CURRENT RELEASE SCOPE APPROVED — IMPLEMENTATION/TEST/RUNTIME/ACCEPTANCE
+  UNVERIFIED`. DGM-T25 remains `BLOCKED — POLICY`; the overall acceptance
+  matrix remains **22/25** and **NOT ACCEPTED**.
+
+## GST calculation, treatment, and T25 engineering campaign — 2026-11-02 15-45-12 IST
+
+This section supersedes the earlier blocked application-path attempt below for
+the current acceptance status.
+
+- The reconciled matrix remains **22/25 evidence-supported criteria (88%)**:
+  16 current-campaign passes, 6 historical passes, 2 independent acceptance
+  criteria (`DGM-T13` and `DGM-T19`) remain `NOT VERIFIED`, 1 criterion
+  remains `BLOCKED — POLICY` (`DGM-T25`), 0 criteria remain pending owner
+  approval, and 0 verified failures. The final decision remains
+  **NOT ACCEPTED**.
+- The T25 engineering contract is implemented in
+  `src/lib/decimal.ts`, the sales and purchase calculators, the relevant
+  server/form calculation boundaries, and focused calculator tests. The
+  repository-supported `pnpm test:gst:calculator` runner passed **294/294**
+  assertions; `pnpm typecheck` passed.
+- DGM-T13 is `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`: current
+  release validation remains exactly 15 supplied GSTIN characters, with
+  checksum, state-prefix, registration-status, and effective-date checks
+  deferred to Version 2. DGM-T19 is also `CURRENT RELEASE SCOPE APPROVED —
+  VERSION 2 DEFERRED`: current acceptance-reset, authorization, revision, and
+  finalization safeguards remain, while the advanced stale
+  acceptance-revision guard is not implemented. Scope approval is not counted
+  as implementation, runtime verification, or independent acceptance.
+- Focused implementation evidence also covers HALF_UP midpoint behavior,
+  no-premature-rounding arithmetic, mixed rates, independent GST components,
+  inclusive Rule 35 extraction as an isolated helper, Section 170 helper
+  isolation, commercial round-off separation, supplier-value preservation, and
+  T13 length-only validation, plus the distinct JavaScript-number conversion
+  boundaries. No credit/debit-note or e-invoice calculation implementation is
+  claimed; credit/debit-note absence is `Not implemented / no supported
+  workflow`, not a verified pass or an owner-approved T25-12 exclusion.
+- The prior authorized target was
+  `127.0.0.1:55435/pharmnos_financial_e2e_0419`, marker
+  `pharmnos-financial-e2e`, Compose project
+  `pharmnoslite-financial-e2e-0419`. Its restricted-runtime evidence and
+  `OWNED_RESOURCES=87` qualification and runtime role
+  `LOGIN`/`NOSUPERUSER`/`NOBYPASSRLS` remain historical; immutable history was
+  retained and cleanup was deferred. No new database or runtime campaign was
+  performed for the T25 documentation/engineering update.
+- One interim harness attempt failed because it assumed two concurrent
+  acceptance calls would necessarily produce one optimistic-version loser;
+  both calls can serialize and read the current revision. The assertion was
+  removed; the final run passed the deterministic finalization stale-operation
+  race and no criterion was promoted from the failed attempt.
+- Cleanup was deliberately deferred because immutable GST financial-history
+  rows made row-level deletion unsafe. No recovery deletion or database
+  disposal was performed; immutable history remains preserved.
+- The supported TypeScript runner closes the prior tooling reproducibility gap
+  without adding a dependency. The E2E changes are harness-only; no schema,
+  migration, RLS policy, permission, rate, or deferred treatment was enabled.
+- T25-12 current-release scope is recorded as approved in
+  `decisions/0009-gst-precision-rounding-engineering-contract.md`; the note
+  workflow is not implemented, tested, runtime verified, independently
+  accepted, or production-authorized. Section 170 aggregation, e-invoice
+  obligations, Section 34(2) amendment/effective-date status, recipient
+  evidence, reporting, and other statutory interpretations remain subject to
+  qualified professional confirmation. GST Stage 1 remains **IN PROGRESS** and
+  Production/Live Supabase remains **NO-GO**.
+- The final T25 integration audit found no demonstrated defect requiring source
+  changes: the inclusive Rule 35 helper remains intentionally isolated, the
+  supported invoice boundary remains two-decimal, JavaScript-number conversion
+  limits are documented without a universal losslessness claim, and
+  credit/debit-note and e-invoice surfaces have no supported workflow despite
+  T25-12 being a current-release requirement.
+
 ## Sales GST application-path acceptance attempt — 2026-11-01 16-53-48 IST
 
 - Static Sales GST governance, transaction-boundary, finalized-immutability,
@@ -332,22 +444,22 @@ Evidence artifact:
 - Remaining blockers are policy decisions and separately gated independent
   security/rollback acceptance; GST Stage 1 remains open.
 
-| Requirement | Implementation evidence | Tests/evidence | Status | Remaining dependency |
-|---|---|---|---|---|
-| DGM-01 | Shared exact eight-label treatment control with search and disabled deferred options; persisted invoice fact | Typecheck/build pending; server validation covered by action path | IMPLEMENTED — TESTED | UI runtime verification |
-| DGM-02 | Composition, unregistered, consumer, and exceptional categories remain fail-closed | Unsupported-treatment server guard | IMPLEMENTED — TESTED | Statutory/accounting rules for activation |
-| DGM-03 | Existing centralized 28-state/8-UT catalog plus searchable `GstStateSelect` for purchase POS | `tests/gst-purchase-pos-contract.test.mjs` | IMPLEMENTED — TESTED | Browser/runtime verification |
-| DGM-04 | Existing GSTIN prefix helper remains validation-only | Existing GST calculator/state tests | IMPLEMENTED — TESTED | Checksum/status policy |
-| DGM-05 | `src/lib/gst/place-of-supply.ts` validates normalized supplier, recipient, delivery, and scenario facts; purchase action calls it server-side | `tests/gst-purchase-pos-contract.test.mjs`; no DB runtime | IMPLEMENTED — TESTED | Runtime/database evidence |
-| DGM-06 | Purchase calculations resolve tenant-scoped approved HSN/SAC classifications and effective GST rules per line, then calculate approved intra/inter-state components independently; UTGST remains blocked | `purchase-gst-reconciliation.service.ts`, `purchases.actions.ts`, `tests/purchase-gst-line-model-contract.test.mjs`, restricted-runtime disposable application run `purchase_gst_1793489343533_a2551c` | IMPLEMENTED — APPLICATION PATH VERIFIED FOR TESTED MIXED-RATE FLOW | Negative scenario expansion and professional UTGST policy approval |
-| DGM-07 | Purchase expected GST preserves mixed-rate line calculations, governed rule snapshots, supplier-declared evidence, calculated values, line discrepancies, and accepted values separately | `purchase-gst-reconciliation.service.ts`, migration `0006_purchase_gst_rule_snapshots`, migration `0009_purchase_gst_line_acceptance`, restricted-runtime application evidence `purchase-gst-application-evidence-purchase_gst_1793489343533_a2551c.json` | PARTIALLY ACCEPTED — RESTRICTED APPLICATION PATH RUNTIME VERIFIED | Unresolved accounting policy decisions remain open |
-| DGM-08 | Tax mode is persisted; inclusive mode remains disabled | Finalization guard | PARTIALLY IMPLEMENTED | Approved inclusive extraction/rounding policy |
-| DGM-09 | Sales/purchase actions persist treatment and tax mode and revalidate them; sales and purchase finalization require approved effective classification/rule evidence | `tests/gst-treatment-contract.test.mjs`, `tests/sales-gst-governance-contract.test.mjs`; no connected DB | PARTIALLY IMPLEMENTED | Disposable runtime evidence and historical snapshot verification |
-| DGM-10 | Declared/calculated/accepted purchase fields remain separate; line discrepancy status and acceptance actions remain permission-gated | `tests/purchase-gst-line-model-contract.test.mjs`, `purchase-gst-reconciliation.service.ts`, migration `0009_purchase_gst_line_acceptance`, restricted-runtime purchase application evidence | PARTIALLY ACCEPTED — EXPLICIT LINE ACCEPTANCE AND POSTING VERIFIED | Unresolved accounting policy decisions remain open |
-| DGM-11 | Print output now displays persisted treatment, POS, and tax mode | Source inspection | IMPLEMENTED — TESTED | Browser/print acceptance |
-| DGM-12 | Existing snapshot model preserved; new treatment/mode facts are transaction fields | Schema and print source | PARTIALLY IMPLEMENTED | Database immutability runtime proof |
-| DGM-13 | Invalid/missing/unsupported treatment blocks draft/finalization; POS guards remain fail-closed | Server action validation | IMPLEMENTED — TESTED | Complete negative matrix |
-| DGM-14 | Financial E2E artifact integrity remains bound to regenerated schema baseline | Artifact package tests; 15 GST-focused contracts | IMPLEMENTED — TESTED | Disposable PostgreSQL regression |
+| Requirement | Implementation evidence                                                                                                                                                                                  | Tests/evidence                                                                                                                                                                                                                                            | Status                                                             | Remaining dependency                                               |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| DGM-01      | Shared exact eight-label treatment control with search and disabled deferred options; persisted invoice fact                                                                                             | Typecheck/build pending; server validation covered by action path                                                                                                                                                                                         | IMPLEMENTED — TESTED                                               | UI runtime verification                                            |
+| DGM-02      | Composition, unregistered, consumer, and exceptional categories remain fail-closed                                                                                                                       | Unsupported-treatment server guard                                                                                                                                                                                                                        | IMPLEMENTED — TESTED                                               | Statutory/accounting rules for activation                          |
+| DGM-03      | Existing centralized 28-state/8-UT catalog plus searchable `GstStateSelect` for purchase POS                                                                                                             | `tests/gst-purchase-pos-contract.test.mjs`                                                                                                                                                                                                                | IMPLEMENTED — TESTED                                               | Browser/runtime verification                                       |
+| DGM-04      | Existing GSTIN prefix helper remains validation-only                                                                                                                                                     | Existing GST calculator/state tests                                                                                                                                                                                                                       | IMPLEMENTED — TESTED                                               | Checksum/status policy                                             |
+| DGM-05      | `src/lib/gst/place-of-supply.ts` validates normalized supplier, recipient, delivery, and scenario facts; purchase action calls it server-side                                                            | `tests/gst-purchase-pos-contract.test.mjs`; no DB runtime                                                                                                                                                                                                 | IMPLEMENTED — TESTED                                               | Runtime/database evidence                                          |
+| DGM-06      | Purchase calculations resolve tenant-scoped approved HSN/SAC classifications and effective GST rules per line, then calculate approved intra/inter-state components independently; UTGST remains blocked | `purchase-gst-reconciliation.service.ts`, `purchases.actions.ts`, `tests/purchase-gst-line-model-contract.test.mjs`, restricted-runtime disposable application run `purchase_gst_1793489343533_a2551c`                                                    | IMPLEMENTED — APPLICATION PATH VERIFIED FOR TESTED MIXED-RATE FLOW | Negative scenario expansion and professional UTGST policy approval |
+| DGM-07      | Purchase expected GST preserves mixed-rate line calculations, governed rule snapshots, supplier-declared evidence, calculated values, line discrepancies, and accepted values separately                 | `purchase-gst-reconciliation.service.ts`, migration `0006_purchase_gst_rule_snapshots`, migration `0009_purchase_gst_line_acceptance`, restricted-runtime application evidence `purchase-gst-application-evidence-purchase_gst_1793489343533_a2551c.json` | PARTIALLY ACCEPTED — RESTRICTED APPLICATION PATH RUNTIME VERIFIED  | Unresolved accounting policy decisions remain open                 |
+| DGM-08      | Tax mode is persisted; inclusive mode remains disabled                                                                                                                                                   | Finalization guard                                                                                                                                                                                                                                        | PARTIALLY IMPLEMENTED                                              | Approved inclusive extraction/rounding policy                      |
+| DGM-09      | Sales/purchase actions persist treatment and tax mode and revalidate them; sales and purchase finalization require approved effective classification/rule evidence                                       | `tests/gst-treatment-contract.test.mjs`, `tests/sales-gst-governance-contract.test.mjs`; no connected DB                                                                                                                                                  | PARTIALLY IMPLEMENTED                                              | Disposable runtime evidence and historical snapshot verification   |
+| DGM-10      | Declared/calculated/accepted purchase fields remain separate; line discrepancy status and acceptance actions remain permission-gated                                                                     | `tests/purchase-gst-line-model-contract.test.mjs`, `purchase-gst-reconciliation.service.ts`, migration `0009_purchase_gst_line_acceptance`, restricted-runtime purchase application evidence                                                              | PARTIALLY ACCEPTED — EXPLICIT LINE ACCEPTANCE AND POSTING VERIFIED | Unresolved accounting policy decisions remain open                 |
+| DGM-11      | Print output now displays persisted treatment, POS, and tax mode                                                                                                                                         | Source inspection                                                                                                                                                                                                                                         | IMPLEMENTED — TESTED                                               | Browser/print acceptance                                           |
+| DGM-12      | Existing snapshot model preserved; new treatment/mode facts are transaction fields                                                                                                                       | Schema and print source                                                                                                                                                                                                                                   | PARTIALLY IMPLEMENTED                                              | Database immutability runtime proof                                |
+| DGM-13      | Invalid/missing/unsupported treatment blocks draft/finalization; POS guards remain fail-closed                                                                                                           | Server action validation                                                                                                                                                                                                                                  | IMPLEMENTED — TESTED                                               | Complete negative matrix                                           |
+| DGM-14      | Financial E2E artifact integrity remains bound to regenerated schema baseline                                                                                                                            | Artifact package tests; 15 GST-focused contracts                                                                                                                                                                                                          | IMPLEMENTED — TESTED                                               | Disposable PostgreSQL regression                                   |
 
 ## Engineering workstreams
 
@@ -620,3 +732,37 @@ evidence.
   decision persistence, ITC asset posting, freight/discount allocation,
   reversal lifecycle, and exact rounding precedence still require governed
   specifications.
+
+## Historical prior GST calculation and treatment acceptance snapshot — 2026-11-01 20-03-44 IST
+
+This superseded snapshot is retained for provenance. The current matrix and
+decision are recorded in the gap-resolution section at the top of this
+tracker.
+
+- The authoritative contract was traced before implementation. The four
+  first-phase domestic categories remain Registered Business – Regular,
+  Registered Business – Composition, Unregistered Business, and Consumer.
+  Only Regular is conditionally enabled; Composition, Unregistered, and
+  Consumer remain fail-closed pending separate rules and acceptance evidence.
+- The acceptance matrix records **17/24 verified engineering criteria**, zero
+  verified failures, and seven `NOT VERIFIED` criteria. This is **NOT
+  ACCEPTED** as a complete GST calculation/treatment campaign.
+- Focused GST contracts passed **37/37**. The temporary existing-tool
+  TypeScript harness executed `tests/gst-calculator.test.ts` with **253/253**
+  assertions passing. The full JavaScript suite passed **231/231**.
+- Same-UT handling exposed a tightly coupled fail-closed defect: the previous
+  centralized resolver classified same-UT pairs as ordinary `INTRA`, allowing a
+  possible CGST/SGST fallback. `indian-states.ts` now returns
+  `UNKNOWN/UNSUPPORTED_UTGST`, and `place-of-supply.ts` rejects same-UT purchase
+  facts with an actionable block. No UTGST calculation was added.
+- TypeScript validation, Prisma validation with isolated placeholder URLs, and
+  changed-file ESLint passed. No database, migration, container, process,
+  production, Live Supabase, or acceptance campaign operation was performed.
+- Complete evidence package:
+  `.obsidian-vault/specs/gst-calculation-treatment-acceptance-2026-11-01.md`.
+- Machine evidence:
+  `.obsidian-vault/specs/gst-calculation-treatment-acceptance-evidence-2026-11-01.json`.
+- Remaining blockers include inter-state purchase runtime evidence, complete
+  POS-negative and GSTIN verification coverage, sales mixed-rate/idempotency
+  evidence, UTGST, inclusive Rule 35 extraction, and approved precision and
+  rounding precedence. GST Stage 1 remains open.

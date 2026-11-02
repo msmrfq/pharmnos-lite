@@ -55,6 +55,12 @@ owner decisions and engineering authorization records; [Purchase GST
 Persistence and Workflow Design](./purchase-gst-persistence-design.md) owns
 purchase persistence details; and [GST Schema Rollout Design
 Review](./gst-schema-rollout-design-review.md) owns schema and rollout details.
+The [GST Credit and Debit Note Engineering
+Contract](./gst-credit-debit-note-engineering-contract.md) owns the finalized
+current-release note workflows, state machines, permissions, scenarios, and
+CDN-01-CDN-27 acceptance matrix. This pack continues to own legal/accounting
+questions and qualified-review evidence. Its status vocabulary does not
+collapse contract finalization into implementation or acceptance.
 Read this pack when a task involves its designated subject. A master summary
 does not override a detailed accounting record; conflicts must be recorded with
 exact locations and left unresolved pending responsible review. This hierarchy
@@ -483,6 +489,252 @@ NO-GO.
 **Approval evidence:** Gate matrix, named approvers, dates, evidence links, scope exclusions, and explicit authorization text.  
 **Dependencies:** Q-01 through Q-15.  
 
+### Q-17 — Credit/debit-note statutory grounds and timing
+
+**Priority/status:** P0 — `CURRENT-RELEASE SCOPE APPROVED; CONTRACT FINALIZED;
+EFFECTIVE-DATE AND PROFESSIONAL CONFIRMATION OPEN`.
+**Decision area:** Sections 2(37), 2(38), 34(1)-(4), Rule 53(1A), and Rule 59.
+**Exact question:** Which credit-note and debit-note grounds, document
+particulars, original-invoice references, reporting periods, cut-offs, and
+amendment/transitional rules apply to each supported supplier and recipient
+scenario?
+**Why needed:** A note cannot be implemented safely from a generic “adjustment”
+concept or a secondary summary of Section 34.
+**Current project direction:** Support statutory credit/debit-note scope in the
+current release for supplier issuance and recipient-side processing, using the
+finalized [GST Credit and Debit Note Engineering
+Contract](./gst-credit-debit-note-engineering-contract.md), but fail closed
+until the applicable ground, timing, document, and reporting evidence is
+confirmed.
+**Established:** Official Section 34, Rule 53(1A), and Rule 59 sources were
+rechecked for the contract. The source register and implementation contract
+correctly distinguish Section 34(1) supplier credit notes from Section 34(3)
+supplier debit notes. Implementation and acceptance are not established.
+**Unresolved:** Finance Act 2026 Sections 153-155 commencement versus the
+current consolidated Section 15 footnote, transitional treatment, portal
+behavior, and qualified application policy.
+**Authoritative sources:** Current consolidated CGST Act and Rules; GST
+Council/CBIC notifications and circulars; GST return and IRP specifications.
+**Source limitations:** Official source pages were retrieved for the contract,
+but the Finance Act 2026 commencement notification and the current
+consolidated Section 15 page are not synchronized. A secondary summary or
+unsynchronized page must not be treated as the effective product rule.
+**Scenario:** An overcharge, return, deficiency, or undercharge is discovered
+after a finalized invoice and after a reported return period. Decide whether a
+credit/debit note is available, which date controls, and whether a correction
+or amended reporting path is required.
+**Answer choices:** (A) approve only after current source and portal evidence;
+(B) approve a narrower verified subset; (C) block until source status is
+resolved.
+**Consequences:** Changes reason codes, state transitions, numbering, date
+validation, return reporting, migration, and acceptance tests.
+**Reviewer role:** Qualified GST reviewer; accounting/finance owner.
+**Approval evidence:** Consolidated provision, commencement notification,
+effective-date matrix, portal examples, and signed interpretation.
+**Dependencies:** Q-01, Q-02, Q-06, Q-07, Q-11.
+
+### Q-18 — Post-supply discounts and recipient evidence
+
+**Priority/status:** P0 — `PROFESSIONALLY CONFIRMED PRINCIPLE; CURRENT
+EVIDENCE/THRESHOLD MECHANICS OPEN`.
+**Decision area:** Section 15(3)(a)/(b), Circular 251/08/2025-GST, and Circular
+253/10/2025-GST.
+**Exact question:** Which agreement, invoice linkage, recipient ITC-reversal,
+declaration, CA/CMA certificate, value threshold, and timing evidence is
+required before a supplier may reduce GST through a post-supply credit note?
+**Why needed:** A commercial discount must not silently reduce output tax or
+recipient ITC.
+**Current project direction:** Pre-supply/at-supply discounts and qualifying
+post-supply discounts remain distinct; missing or contradictory evidence blocks
+the GST reduction.
+**Established:** Circular 251 distinguishes commercial/financial adjustments
+from statutory tax reduction and separately contracted promotional services.
+Circular 253 withdrew Circular 212's prescribed CA/CMA certificate and
+recipient-undertaking procedure; substantive statutory ITC and output-tax
+conditions remain independent evidence gates.
+**Unresolved:** Evidence threshold, acceptable document forms, partial
+acceptance, certificate/declaration ownership, and portal reconciliation.
+**Scenario:** A supplier grants a 10% dealer discount after supply; only some
+recipients reverse ITC and one recipient disputes the amount. Decide eligible
+note amount and evidence state for each recipient.
+**Reviewer role:** Qualified GST reviewer; accounting/finance owner.
+**Approval evidence:** Current circular text, evidence checklist, sample
+declaration/certificate, and approved partial-acceptance policy.
+**Dependencies:** Q-07, Q-08, Q-12, Q-17.
+
+### Q-19 — Recipient ITC reversal and additional ITC
+
+**Priority/status:** P0 — `PROFESSIONAL INTERPRETATION AND OPERATIONAL CONTROL
+OPEN`.
+**Decision area:** Section 16, supplier credit notes, supplier debit notes,
+recipient acceptance, and return reconciliation.
+**Exact question:** When must a recipient reverse ITC for a supplier credit
+note, when may additional ITC be claimed for a debit note, what evidence and
+return period control the entry, and how are disputes/partial acceptance
+handled?
+**Why needed:** Supplier issuance and recipient tax treatment are separate
+events; a received document is not automatically an accepted ITC adjustment.
+**Current project direction:** Receive and preserve every note; match and
+review it; post only the accepted eligible amount; retain reversal/additional
+ITC evidence; never delete the original purchase or ITC snapshot.
+**Unresolved:** Effective date, return-period mechanics, GSTR-2B/portal
+matching, blocked-credit interaction, partial allocations, and reclaim rules.
+**Scenario:** A recipient receives a credit note for taxable 200 and tax 36,
+accepts only 150/27, and disputes the balance. Decide the reversal, supplier
+reconciliation, and audit state.
+**Reviewer role:** Qualified GST reviewer; accounting/finance owner.
+**Approval evidence:** Written ITC matrix, evidence samples, return
+reconciliation procedure, and partial-acceptance examples.
+**Dependencies:** Q-08, Q-11, Q-12, Q-17, Q-18.
+
+### Q-20 — Note numbering, original references, and allocation
+
+**Priority/status:** P0 — `OWNER SCOPE APPROVED; ACCOUNTING/PORTAL CONTRACT OPEN`.
+**Decision area:** Rule 53(1A), original-document references, one-to-many
+allocation, and immutable numbering.
+**Exact question:** What note number series, date, original invoice fields,
+line/quantity/value allocations, and multi-invoice rules are required for
+each note type and reporting channel?
+**Why needed:** A note that cannot be reconciled to exact original lines is not
+safe to post or report.
+**Current project direction:** Tenant-scoped unique note numbers; one
+immutable note header; explicit allocation rows; no over-allocation; partial
+acceptance supported only with preserved accepted/rejected splits.
+**Unresolved:** Portal support for multi-invoice notes, line-level quantity
+rules, amended note numbering, cancellation/reissue behavior, and
+cross-period allocations.
+**Scenario:** One credit note reduces two finalized invoices and three lines,
+with one line partially rejected by the recipient. Decide allocation storage,
+reporting payload, and remaining eligible balance.
+**Reviewer role:** Qualified GST reviewer; accounting/finance owner; product
+owner for numbering.
+**Approval evidence:** Rule/portal field matrix, sample payloads, numbering
+policy, and allocation reconciliation examples.
+**Dependencies:** Q-11, Q-13, Q-17.
+
+### Q-21 — Note accounting, inventory, and ledger treatment
+
+**Priority/status:** P0 — `ACCOUNTING POLICY OPEN`.
+**Decision area:** Supplier/customer ledgers, inventory returns, valuation,
+tax components, and commercial adjustments.
+**Exact question:** What accounts and stock events are posted for each
+statutory credit/debit note, physical return, commercial adjustment, buyer
+claim, and internal correction?
+**Why needed:** A note is not a generic negative invoice, and a goods return is
+not proof that a GST note was issued.
+**Current project direction:** Additive postings from the accepted note
+snapshot; preserve original postings; keep physical return and tax note
+events linked but separate; do not treat procurement rate or a commercial
+adjustment as approved GST/inventory valuation.
+**Unresolved:** Account mapping, inventory cost/ITC allocation, cess,
+discount/freight allocation, round-off precedence, and timing of ledger
+posting relative to reporting/IRP acknowledgement.
+**Scenario:** A returned batch is accepted, the supplier issues a partial
+credit note, and the recipient has already paid the invoice. Decide stock,
+payable, ITC, and cash/ledger effects.
+**Reviewer role:** Accounting/finance owner; qualified GST reviewer for tax
+effects.
+**Approval evidence:** Journal templates, valuation policy, account mapping,
+and balanced debit/credit examples.
+**Dependencies:** Q-07, Q-08, Q-12, Q-17, Q-19.
+
+### Q-22 — Return reporting and e-invoice/IRN applicability
+
+**Priority/status:** P0 — `PRIMARY PORTAL/IRP CONTRACT NOT VERIFIED`.
+**Decision area:** Rule 59 reporting, return category, IRP note type, IRN
+state, cancellation, and retry.
+**Exact question:** Which note types and taxpayers require return reporting
+and/or e-invoice submission, which document type and original references are
+required, and when may local accounting post or reconcile?
+**Why needed:** Saving a local note is not statutory reporting or IRP
+acceptance.
+**Current project direction:** Explicit reporting and IRP state machines;
+idempotent payloads; immutable attempts/responses; unresolved required
+submission blocks statutory-final success.
+**Unresolved:** Current thresholds, effective dates, note document codes,
+portal categories, amendment/cancellation rules, and response semantics.
+**Scenario:** An eligible B2B credit note is accepted locally but IRP rejects
+the payload after a timeout. Decide retry identity, accounting state,
+reporting state, and user-visible outcome.
+**Reviewer role:** Qualified GST reviewer; e-invoice/portal owner; engineering
+owner for idempotency.
+**Approval evidence:** Current portal/IRP schema, applicability matrix,
+accepted/rejected payload samples, and retry/reconciliation procedure.
+**Dependencies:** Q-10, Q-11, Q-17, Q-20.
+
+### Q-23 — Statutory note versus commercial or internal adjustment
+
+**Priority/status:** P0 — `PRODUCT CLASSIFICATION APPROVED IN PRINCIPLE;
+ACCOUNTING POLICY OPEN`.
+**Decision area:** Document taxonomy and fail-closed classification.
+**Exact question:** How does the product distinguish a GST note, commercial
+credit/debit, goods return, buyer debit claim, and internal journal
+correction, and which permissions/actions are available for each?
+**Why needed:** A generic credit/debit label can create an unsupported tax
+effect or hide a missing supplier-issued document.
+**Current project direction:** Separate document types, permissions, audit,
+ledger, inventory, ITC, reporting, and acceptance states.
+**Unresolved:** UI labels, approval authority, dispute lifecycle, return
+linkage, and migration treatment for historic generic ledger entries.
+**Scenario:** A customer requests a price concession with no statutory
+condition, while a separate defective-product return is approved. Decide
+which event is commercial and which may become a GST credit note.
+**Reviewer role:** Product owner; accounting/finance owner; qualified GST
+reviewer for tax classification.
+**Approval evidence:** Taxonomy matrix, action/permission matrix, and sample
+audit trails.
+**Dependencies:** Q-12, Q-17, Q-21.
+
+### Q-24 — Historical immutability and correction
+
+**Priority/status:** P0 — `ENGINEERING CONTRACT APPROVED; RUNTIME/PROFESSIONAL
+ACCEPTANCE OPEN`.
+**Decision area:** Finalized source history, note corrections, amendments,
+printing, and reconciliation.
+**Exact question:** How must original invoices, notes, tax snapshots, ledger
+entries, and report/IRP responses remain immutable when a note is rejected,
+amended, cancelled, or corrected?
+**Why needed:** Recomputing a historical invoice from current masters or
+overwriting an accepted note destroys audit evidence.
+**Current project direction:** Append-only note/correction events; original
+documents and accepted snapshots remain unchanged; corrections use a new
+linked record.
+**Unresolved:** Cancellation versus replacement policy, print disclosures,
+reporting reconciliation, recovery after partial failure, and retention.
+**Scenario:** A finalized note contains an incorrect allocation and must be
+corrected after reporting. Decide whether to cancel, issue a replacement, or
+create a correction note and how the original remains visible.
+**Reviewer role:** Accounting/finance owner; qualified GST reviewer; security/
+database owner for enforcement.
+**Approval evidence:** State transition matrix, immutable schema/triggers or
+service guards, isolated runtime evidence, and print/report examples.
+**Dependencies:** Q-10, Q-11, Q-12, Q-14, Q-17, Q-22.
+
+### Q-25 — Credit/debit-note release gate
+
+**Priority/status:** P0 — `SCOPE APPROVED; IMPLEMENTATION, TEST, RUNTIME,
+INDEPENDENT ACCEPTANCE, AND PRODUCTION GATES OPEN`.
+**Decision area:** Release/go-no-go for T25-12.
+**Exact question:** What evidence is required before supplier issuance and
+recipient-side processing may be called supported, and which subsets remain
+blocked?
+**Why needed:** Current-release scope authorization must not be confused with
+legal confirmation, implementation, or acceptance.
+**Current project direction:** Allow design and controlled implementation work
+only after Q-17 through Q-24 are resolved; keep production and live database
+changes NO-GO until isolated restricted-runtime evidence and independent
+acceptance pass.
+**Unresolved:** Named approvers, source register closure, supported note
+subset, migration/recovery plan, and production authorization.
+**Scenario:** Unit tests pass but the IRP contract, recipient ITC evidence,
+and restricted-role database campaign are missing. Decide whether the feature
+may be enabled.
+**Reviewer role:** Owner/release authority; qualified GST/accounting reviewer;
+engineering/security/database owners.
+**Approval evidence:** Gate matrix, signed professional interpretation,
+isolated evidence, independent acceptance, and explicit production decision.
+**Dependencies:** Q-17 through Q-24.
+
 ## 5. Scenario sheets
 
 ### 5.1 POS and treatment scenarios
@@ -528,6 +780,28 @@ For each scenario, the reviewer must record: seller registration/location, recip
 | Accepted purchase receives a revised supplier invoice | Q-08, Q-12 |
 | Posting request is retried after an uncertain timeout | Q-10, Q-12, Q-14 |
 
+### 5.5 Credit/debit-note integrated scenarios
+
+These scenarios must be answered by the qualified reviewer and accounting
+owner before they become acceptance tests. Each scenario keeps supplier
+issuance, recipient processing, ledger/ITC effects, reporting, and immutable
+history distinct.
+
+| Scenario | Supplier path | Recipient path | Questions exposed |
+|---|---|---|---|
+| Overcharge correction | Issue a value/tax-reducing credit note against a finalized invoice | Match and reverse only the accepted ITC | Q-17, Q-19, Q-20, Q-24 |
+| Goods returned | Record the physical return, then issue the eligible credit note | Confirm quantity/stock receipt and purchase/ITC reduction | Q-17, Q-21, Q-23 |
+| Defective/deficient supply | Issue a partial credit note for the affected line | Accept only the supported quantity/value | Q-17, Q-19, Q-20, Q-21 |
+| Eligible post-supply discount | Collect agreement/linkage and required evidence before reducing tax | Provide reversal/declaration/certificate evidence | Q-18, Q-19 |
+| Commercial discount only | Record a non-tax commercial adjustment | Record settlement with no GST/ITC change | Q-18, Q-23 |
+| Undercharged invoice | Issue a debit note for the positive delta | Accept additional payable and eligible ITC | Q-17, Q-19, Q-21 |
+| Supplementary value | Link additional value to the original supply | Match and accept the additional note | Q-17, Q-20 |
+| Multi-invoice allocation | Allocate one note across two invoices/three lines | Partially accept one allocation | Q-19, Q-20, Q-24 |
+| Missing original reference | Attempt issue/receipt without an unambiguous source | Reject without posting tax or ITC | Q-17, Q-20, Q-23 |
+| Portal/IRP rejection | Retry the same immutable payload after timeout/rejection | Reconcile only the accepted response | Q-10, Q-22, Q-24 |
+| Cross-tenant reference | Attempt to reference another tenant's invoice | Reject under tenant isolation | Q-14, Q-20, Q-25 |
+| Reported-note correction | Correct a note after reporting | Reconcile original, correction, and ITC history | Q-17, Q-22, Q-24 |
+
 ## 6. Dependency map
 
 ```text
@@ -546,6 +820,14 @@ Q-04 + Q-06 + Q-10 + Q-11 ── Q-13 transaction-time snapshots
 Q-08 + Q-10 + Q-12 ── Q-14 security/database acceptance
 Q-14 + Q-11 ── Q-15 schema rollout authorization
 Q-01..Q-15 ── Q-16 release gate authorization
+
+Q-17 statutory note grounds/timing ─┬─ Q-18 discount evidence
+                                   ├─ Q-19 recipient ITC
+                                   ├─ Q-20 numbering/allocation
+                                   └─ Q-22 reporting/IRP
+Q-20 + Q-21 ── Q-23 document taxonomy
+Q-10 + Q-11 + Q-12 + Q-22 ── Q-24 immutable correction
+Q-17..Q-24 ── Q-25 credit/debit-note release gate
 ```
 
 ## 7. Source register and limitations
@@ -553,8 +835,14 @@ Q-01..Q-15 ── Q-16 release gate authorization
 | Source | Use | Verification/limitation |
 |---|---|---|
 | [CGST Act, India Code](https://www.indiacode.nic.in/handle/123456789/7771?sam_handle=123456789/2489) | Supply, valuation, invoice, composition, ITC/correction framework | Official indexed text was accessible; reviewer must check consolidated amendments and effective dates before relying on a provision. |
+| CGST Act §§2(37), 2(38), 15(3), 16, 34 | Credit/debit-note definitions, valuation discounts, recipient ITC, and statutory correction grounds | Current CBIC consolidated pages were rechecked for the contract. Section 34(1) credit-note and Section 34(3) debit-note directions are corrected; Finance Act 2026 Section 15 commencement remains in source conflict, and transitional treatment/portal behavior remain qualified-review gates. |
 | [IGST Act, India Code](https://www.indiacode.nic.in/handle/123456789/2159?sam_handle=123456789/1362) | Inter-/intra-State and POS framework | India Code handle was identified but direct retrieval returned 403; alternate official [CBIC Act PDF](https://cbic-gst.gov.in/htdocs-cbec/gst/igst-act.pdf) was located. Current consolidated text/effective amendments remain `NOT VERIFIED` by direct retrieval. |
 | [CGST Rules, CBIC PDF](https://cbic-gst.gov.in/pdf/cgst-rules-30122017.pdf) | Invoice particulars and procedural rules | Accessible official PDF; dated copy and later amendments must be rechecked. |
+| CGST Rules Rules 53(1A) and 59 | Credit/debit-note particulars, original-document references, and return reporting shape | Current CBIC consolidated Rule 53(1A) and Rule 59 pages were rechecked for the contract. Portal fields, effective reporting behavior, and professional application remain qualified-review gates. |
+| [CBIC Circular 251/08/2025-GST](https://taxinformation.cbic.gov.in/view-pdf/1003287/ENG/Circulars) | Commercial/financial credit-note and discount treatment, including separate promotional services | Official circular source was rechecked (dated 2025-09-12). It distinguishes commercial settlement from a statutory GST reduction; the contract does not infer ITC reversal or onward promotional supply from issuance alone. |
+| [CBIC Circular 253/10/2025-GST](https://taxinformation.cbic.gov.in/view-pdf/1003292/ENG/Circulars) | Withdrawal status of the earlier Circular 212 evidence procedure | Official source was rechecked. Circular 253 withdraws Circular 212's prescribed CA/CMA certificate/recipient-undertaking procedure; it does not repeal substantive Section 15/34 conditions. |
+| Finance Act 2025, Section 34(2), and [Notification 16/2025-Central Tax](https://taxinformation.cbic.gov.in/view-pdf/1010466/ENG/Notifications) | Credit-note timing/condition amendment and commencement | Notification dated 2025-09-17 appoints 2025-10-01 for the specified Finance Act 2025 provisions. Transitional treatment, portal mapping, and qualified application remain open. |
+| [Finance Act 2026 and Notification 03/2026-Central Tax](https://taxinformation.cbic.gov.in/view-pdf/1010780/ENG/Notifications) | Section 15(3)(b) amendment commencement | Notification dated 2026-10-26 appoints 2026-11-01 for Sections 153-155, while the current consolidated Section 15 page retains a “yet to be notified” footnote. This source conflict is an explicit effective-dated legal-rule gate. |
 | [CBIC Composition FAQ](https://cbic-gst.gov.in/pdf/faq-manual/faq-composition-levy-revised.pdf) | Composition orientation only | FAQ is guidance, not a substitute for current Act/Rules and professional advice. |
 | [CBIC Circular 90/09/2019-GST](https://cbic-gst.gov.in/pdf/circular-cgst-90.pdf) | Invoice/POS clarification context | Circular is historical and amendment-sensitive; verify current applicability. |
 | [Circular No. 209/3/2024-GST, dated 2024-06-26](https://gstcouncil.gov.in/sites/default/files/2024-09/circular-no-209-03-2024.pdf) | “Clarification on the provisions of clause (ca) of section 10(1) of the Integrated Goods and Services Tax Act, 2017 relating to place of supply of goods to unregistered persons” | Official GST Council PDF and title verified; supports Q-02 and the 2023-10-01 effective-date check. It does not resolve every POS scenario or approve Pharmnos policy. |
@@ -579,8 +867,10 @@ No source in this register approves Pharmnos’ product policy, engineering impl
 | Reference | Issuing authority and date | Relevant provision/entry and effective date | Current status and decision supported |
 |---|---|---|---|
 | Central Goods and Services Tax Act, 2017 | Parliament of India; consolidated India Code text | Section 15 valuation/discounts; section 31 invoice/document framework; applicable dates depend on each provision/amendment | Operative Act subject to amendments; supports Q-01, Q-07, Q-08, Q-11, Q-13 but does not choose Pharmnos policy. |
+| Central Goods and Services Tax Act, 2017, §§2(37), 2(38), 15(3), 16, 34 | Parliament of India; current CBIC consolidated pages rechecked 2026-11-02 | Credit/debit-note definitions, discount conditions, recipient ITC, and correction grounds/timing | Supports Q-17 through Q-24. Section 34(1) credit-note and Section 34(3) debit-note directions are verified; Finance Act 2026 Section 15 commencement conflicts with the consolidated footnote, and transitional treatment/portal behavior remain qualified-review gates. |
 | Integrated Goods and Services Tax Act, 2017 | Parliament of India; India Code handle and CBIC Act PDF | Sections 7–8; section 10(1)(a), 10(1)(b), and 10(1)(ca); amendment/effective-date history must be checked for the transaction date | Official source locations identified, but current consolidated text was not directly retrievable in this review; `NOT VERIFIED` for current status; supports Q-01, Q-02, Q-05, Q-09. |
 | Central Goods and Services Tax Rules, 2017, rule 46 | Ministry of Finance/CBIC; official CBIC PDF dated 2017-12-30, amended thereafter | Invoice particulars including classification/POS fields as applicable; current effective requirements require amendment review | Operative rules subject to amendments; supports Q-04 and Q-11, but the retrieved dated PDF is not itself a current consolidated guarantee. |
+| Central Goods and Services Tax Rules, 2017, Rules 53(1A) and 59 | Ministry of Finance/CBIC; current consolidated pages rechecked 2026-11-02 | Credit/debit-note particulars, original-document references, and return reporting categories | Supports Q-17, Q-20, and Q-22. Portal schema, effective reporting behavior, and professional application remain qualified-review gates. |
 | Notification No. 78/2020-Central Tax | Ministry of Finance/CBIC; 2020-10-15 | HSN/SAC invoice particulars; effective 2021-04-01 per the official guidance, subject to later amendments | Official notification; current applicability and amendments require revalidation; supports Q-04 only. |
 | Notification No. 1/2017-Central Tax (Rate) | Ministry of Finance/CBIC; 2017-06-28 | Central-tax goods-rate schedules and entries; effective from the GST commencement framework, subject to amendments | Original rate notification, amended over time; supports rate-governance research in Q-06, not a universal HSN 3004 rate. |
 | Notification No. 1/2017-Integrated Tax (Rate) | Ministry of Finance/CBIC; 2017-06-28 | Integrated-tax goods-rate schedules and entries; current entry/effective date must be checked against amendments | Official index located, but the complete current entry/amendment chain for the Pharmnos product scope was not verified; Q-05/Q-06 remain `NOT VERIFIED`. |
@@ -593,6 +883,11 @@ No source in this register approves Pharmnos’ product policy, engineering impl
 | Revised FAQ on Composition Levy | CBIC; publication/revision date not established from the retrieved page | Composition-scheme orientation and procedure | Official guidance source, but exact revision date/current status and legal completeness were not established; supports Q-01 only as orientation. `NOT VERIFIED` as a current legal authority. |
 | Circular No. 105/24/2019-GST | CBIC; 2019-06-28 | Secondary/post-supply discount guidance | Withdrawn ab initio by Circular No. 112/31/2019-GST; not operative and not used as authority. |
 | Circular No. 112/31/2019-GST | CBIC; 2019-10-03 | Withdraws Circular No. 105/24/2019-GST ab initio | Operative withdrawal notice; supports the source-status correction in Q-07. |
+| Circular No. 212/06/2024-GST | CBIC/GST Council; 2024 | Earlier Section 15(3)(b)(ii) post-supply discount evidence procedure | Withdrawn by Circular 253/10/2025-GST. Its prescribed CA/CMA certificate/recipient-undertaking procedure is not a mandatory current-release workflow; substantive statutory conditions remain separate gates. |
+| Circular No. 251/08/2025-GST | CBIC; 2025-09-12 | Commercial/financial credit-note and discount treatment, including separately contracted promotional services | Official source rechecked; supports the distinct commercial-adjustment taxonomy in Q-18/Q-23. Professional fact-pattern review remains required. |
+| Circular No. 253/10/2025-GST | CBIC; 2025-10-01 | Withdrawal of Circular 212 evidence procedure | Official source rechecked; confirms withdrawal without repealing substantive Section 15/34 conditions. |
+| Finance Act 2025, Section 34(2), and Notification 16/2025-Central Tax | Parliament/CBIC; notification 2025-09-17 | Credit-note timing/condition amendment and commencement on 2025-10-01 | Commencement source verified; transitional treatment, portal mapping, and qualified application remain open. |
+| Finance Act 2026, Sections 153-155, and Notification 03/2026-Central Tax | Parliament/CBIC; notification 2026-10-26 | Section 15(3)(b) amendment commencement on 2026-11-01 | Conflicts with the current consolidated Section 15 footnote; effective ruleset, transition behavior, and portal synchronization remain explicit Q-18/Q-25 gates. |
 
 The current Central, Integrated, and State/UT rate entries, conditions, amendments, supersession, withdrawal, and effective dates are not fully verified for the Pharmnos product catalogue. Q-06 therefore remains `BLOCKED — SOURCE RESEARCH INCOMPLETE` until a qualified reviewer approves the rule catalogue and source revision evidence.
 
@@ -640,6 +935,15 @@ Status after review:
 | Q-14 | P0 | Security and tenant evidence | `PASS — SCOPED` | Security/database reviewer + owner |
 | Q-15 | P0 | Rollout authorization | `PASS — SCOPED` | Database/security + business owner |
 | Q-16 | P0 | Release gate authorization | AWAITING RELEASE AUTHORIZATION; PRODUCTION AND GST RELEASE NOT AUTHORIZED | Authorized business owner + release owners |
+| Q-17 | P0 | Credit/debit-note grounds and timing | `CURRENT-RELEASE SCOPE APPROVED; PRIMARY-SOURCE AND PROFESSIONAL CONFIRMATION OPEN` | GST reviewer + accounting owner |
+| Q-18 | P0 | Post-supply discount evidence | `WORKING BASELINE RECORDED; CURRENT EVIDENCE/THRESHOLD MECHANICS OPEN` | GST reviewer + accounting owner |
+| Q-19 | P0 | Recipient ITC reversal/additional ITC | `OPEN — PROFESSIONAL INTERPRETATION AND OPERATIONAL CONTROL` | GST reviewer + accounting owner |
+| Q-20 | P0 | Note numbering and allocations | `OPEN — ACCOUNTING/PORTAL CONTRACT` | GST reviewer + accounting/product owner |
+| Q-21 | P0 | Note accounting/inventory/ledger | `OPEN — ACCOUNTING POLICY` | Accounting owner + GST reviewer |
+| Q-22 | P0 | Return reporting and IRP/IRN | `NOT VERIFIED — PRIMARY PORTAL/IRP CONTRACT` | GST reviewer + portal owner |
+| Q-23 | P0 | Statutory versus commercial/internal adjustment | `OPEN — TAXONOMY AND PERMISSIONS` | Product/accounting owner + GST reviewer |
+| Q-24 | P0 | Historical immutability/correction | `ENGINEERING CONTRACT RECORDED; RUNTIME/PROFESSIONAL ACCEPTANCE OPEN` | GST reviewer + accounting + engineering |
+| Q-25 | P0 | Credit/debit-note release gate | `SCOPE APPROVED; IMPLEMENTATION/TEST/RUNTIME/ACCEPTANCE/PRODUCTION OPEN` | Owner/release authority + reviewers |
 
 ## 10. Required traceability
 
@@ -915,6 +1219,15 @@ inventing reviewer metadata. That confirmation does not close BD-01 through
 BD-16, approve DGM-OD-01 through DGM-OD-14 for implementation, approve
 EC-01 through EC-14, authorize migrations, authorize database access,
 authorize test/E2E execution, authorize a pilot, or authorize production.
+
+T25-12 credit/debit-note scope is now recorded as current-release scope
+approved for supplier issuance and recipient-side processing. Q-17 through
+Q-25 remain open gates covering primary legal sources, professional
+interpretation, recipient ITC evidence, accounting treatment, note
+numbering/allocation, reporting/IRP, immutability, implementation, restricted
+runtime evidence, independent acceptance, and production authorization. No
+current source or repository evidence supports calling the workflow
+implemented or GST compliant.
 
 **Final status: `OWNER DECISIONS RECORDED — ISOLATED Q-GATES PASS; GST WORK
 REMAINS UNAUTHORIZED`**

@@ -1077,7 +1077,7 @@ Impact:
 ## Working phase crosswalk (29a) — Project-wide MANDATORY numbering P1…P7
 
 > ⚠️ **Phase numbering convention clarification (read this before planning):**
-> The 6 phases above (Phase 0…Phase 5) are the original PRD suggested phases written during Phase 0 planning. **For day-to-day work, commit messages, vault notes, status updates, TODO lists, and AI planning prompts — USE THE 7 WORKING PHASES P1…P7 BELOW exclusively.** The 6 PRD phases above remain for historical-reference / coverage-area mapping only; never re-use Phase 0…Phase 5 in conversation. All 7 working phases live-tracked in `PHASE_TRACKER.md` at project root (central source of truth, current phase indicator, % complete, last updated date).
+> The 6 phases above (Phase 0…Phase 5) are the original PRD suggested phases written during Phase 0 planning. **For day-to-day work, commit messages, vault notes, status updates, TODO lists, and AI planning prompts — USE THE 7 WORKING PHASES P1…P7 BELOW exclusively.** The 6 PRD phases above remain for historical-reference / coverage-area mapping only; never re-use Phase 0…Phase 5 in conversation. All 7 working phases are tracked in `.obsidian-vault/PHASE_TRACKER.md` (central source of truth, current phase indicator, % complete, last updated date).
 
 | Working Phase | Title (day-to-day name) | Status (as of 2026-09-30) | PRD §29 phase area covered |
 |---|---|---|---|

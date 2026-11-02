@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+    assertRowDeletionSafe,
     cleanupRunOwnedFixtures,
     createFixtureManifest,
     recordFixtureIdentifiers,
@@ -118,4 +119,18 @@ test("rejects post-cleanup verification failure", async () => {
         cleanup({ verifyCompletion: async () => { throw new Error("records remain"); } }),
         /records remain/,
     );
+});
+
+test("rejects row-level deletion of immutable financial history", async () => {
+    await assert.rejects(
+        cleanup({ resources: [{ resourceType: "purchase_gst_accounting_decisions", id: "immutable-decision", runId }] }),
+        /prohibited for immutable financial history/,
+    );
+});
+
+test("allows row-level deletion of mutable fixtures only", () => {
+    assert.doesNotThrow(() => assertRowDeletionSafe([
+        { resourceType: "tenants", id: "tenant-owned", runId },
+        { resourceType: "users", id: "user-owned", runId },
+    ]));
 });

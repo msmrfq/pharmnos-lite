@@ -1,0 +1,341 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - list [ref=e8]:
+        - listitem [ref=e9] [cursor=pointer]:
+          - link "Skip to Main Content" [ref=e10]:
+            - /url: javascript:void(0)
+        - listitem [ref=e11] [cursor=pointer]:
+          - generic [ref=e12]: 
+        - listitem [ref=e13] [cursor=pointer]:
+          - text: A
+          - superscript [ref=e14]: +
+        - listitem [ref=e15] [cursor=pointer]:
+          - text: A
+          - superscript [ref=e16]: "-"
+      - generic [ref=e19]:
+        - link [ref=e20] [cursor=pointer]:
+          - /url: //www.gst.gov.in/
+          - img "Goods and Services Tax Home" [ref=e21]
+        - heading [level=1] [ref=e22]:
+          - link "Goods and Services Tax Government of India, States and Union Territories" [ref=e23] [cursor=pointer]:
+            - /url: //www.gst.gov.in/
+            - text: Goods and Services TaxGovernment of India, States and Union Territories
+        - list [ref=e24]:
+          - listitem [ref=e25]:
+            - link "Register" [ref=e26] [cursor=pointer]:
+              - /url: //reg.gst.gov.in/registration
+          - listitem [ref=e27]:
+            - link "Multi-State Registration" [ref=e28] [cursor=pointer]:
+              - /url: //reg.gst.gov.in/registration/msr
+          - listitem [ref=e29]:
+            - link "Login" [ref=e30] [cursor=pointer]:
+              - /url: //services.gst.gov.in/services/login
+    - navigation [ref=e209]:
+      - list [ref=e212]:
+        - listitem [ref=e213]:
+          - link "Home" [ref=e214] [cursor=pointer]:
+            - /url: //www.gst.gov.in/
+        - listitem [ref=e215]:
+          - button "Services" [ref=e216] [cursor=pointer]
+        - listitem [ref=e218]:
+          - link "GST Law" [ref=e219] [cursor=pointer]:
+            - /url: //services.gst.gov.in/services/gstlaw/gstlawlist
+        - listitem [ref=e220]:
+          - button "Downloads" [ref=e221] [cursor=pointer]
+        - listitem [ref=e223]:
+          - button "Search Taxpayer" [ref=e224] [cursor=pointer]
+        - listitem [ref=e226]:
+          - button "Help and Taxpayer Facilities" [ref=e227] [cursor=pointer]
+        - listitem [ref=e228]:
+          - link "e-Invoice" [ref=e229] [cursor=pointer]:
+            - /url: //einvoice.gst.gov.in/einvoice/dashboard
+        - listitem [ref=e230]:
+          - link "News and Updates" [ref=e231] [cursor=pointer]:
+            - /url: //services.gst.gov.in/services/advisory/advisoryandreleases
+  - generic [ref=e35]:
+    - list [ref=e38]:
+      - listitem [ref=e39]:
+        - link "Home" [ref=e40] [cursor=pointer]:
+          - /url: //www.gst.gov.in/
+      - listitem [ref=e41]:
+        - text: 
+        - link "Help and Taxpayer Facilities" [ref=e42] [cursor=pointer]:
+          - /url: //services.gst.gov.in/services/HelpandTaxpayer/HelpandTaxpayerfacilities
+      - listitem [ref=e43]:
+        - text: 
+        - link "GST Knowledge Portal" [ref=e44] [cursor=pointer]:
+          - /url: //www.gst.gov.in/help/helpmodules
+      - listitem [ref=e45]: Returns
+    - generic [ref=e47]:
+      - heading "File Returns" [level=4] [ref=e50]
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - heading [level=4] [ref=e56]:
+            - generic [ref=e57] [cursor=pointer]:
+              - text: Quarterly Return and Monthly Payments (QRMP) Scheme
+              - generic [aria-hidden] [ref=e58]: 
+          - text:        
+        - generic [ref=e59]:
+          - heading [level=4] [ref=e61]:
+            - generic [ref=e62] [cursor=pointer]:
+              - text: Preparing & Filing Form GSTR-1 and e-Invoice QR Code Verifier Mobile App
+              - generic [aria-hidden] [ref=e63]: 
+          - text:          
+        - generic [ref=e64]:
+          - heading [level=4] [ref=e66]:
+            - generic [ref=e67] [cursor=pointer]:
+              - text: Preparing & Filing Form GSTR-1A
+              - generic [aria-hidden] [ref=e68]: 
+          - text:  
+        - generic [ref=e69]:
+          - heading [level=4] [ref=e71]:
+            - generic [ref=e72] [cursor=pointer]:
+              - text: Communication between Recipient and Supplier Taxpayers
+              - generic [aria-hidden] [ref=e73]: 
+          - text:  
+        - generic [ref=e74]:
+          - heading [level=4] [ref=e76]:
+            - generic [ref=e77] [cursor=pointer]:
+              - text: Unblocking of EWB Generation
+              - generic [aria-hidden] [ref=e78]: 
+          - text:  
+        - generic [ref=e79]:
+          - heading [level=4] [ref=e81]:
+            - generic [ref=e82] [cursor=pointer]:
+              - text: Viewing Form GSTR-2A
+              - generic [aria-hidden] [ref=e83]: 
+          - text:  
+        - generic [ref=e84]:
+          - heading [level=4] [ref=e86]:
+            - generic [ref=e87] [cursor=pointer]:
+              - text: Viewing Form GSTR-2B
+              - generic [aria-hidden] [ref=e88]: 
+          - text:  
+        - generic [ref=e89]:
+          - heading [level=4] [ref=e91]:
+            - generic [ref=e92] [cursor=pointer]:
+              - text: Viewing Form GSTR-3A
+              - generic [aria-hidden] [ref=e93]: 
+          - text:  
+        - generic [ref=e94]:
+          - heading [level=4] [ref=e96]:
+            - generic [ref=e97] [cursor=pointer]:
+              - text: Preparing & Filing Form GSTR-3B
+              - generic [aria-hidden] [ref=e98]: 
+          - text:      
+        - generic [ref=e99]:
+          - heading [level=4] [ref=e101]:
+            - generic [ref=e102] [cursor=pointer]:
+              - text: Preparing & Filing of Quarterly Statement Form GST CMP-08, Quarterly Form GSTR-4 & Annual Form GSTR-4
+              - generic [aria-hidden] [ref=e103]: 
+          - text:        
+        - generic [ref=e104]:
+          - heading [level=4] [ref=e106]:
+            - generic [ref=e107] [cursor=pointer]:
+              - text: Viewing Form GSTR-4A
+              - generic [aria-hidden] [ref=e108]: 
+          - text:  
+        - generic [ref=e109]:
+          - heading [level=4] [ref=e111]:
+            - generic [ref=e112] [cursor=pointer]:
+              - text: Preparing & Filing Form GSTR-5
+              - generic [aria-hidden] [ref=e113]: 
+          - text:  
+        - generic [ref=e114]:
+          - heading [level=4] [ref=e116]:
+            - generic [ref=e117] [cursor=pointer]:
+              - text: Preparing & Filing Form GSTR-5A
+              - generic [aria-hidden] [ref=e118]: 
+          - text:  
+        - generic [ref=e119]:
+          - heading [level=4] [ref=e121]:
+            - generic [ref=e122] [cursor=pointer]:
+              - text: Preparing & Filing Form GSTR-6 and Viewing Form GSTR-6A
+              - generic [aria-hidden] [ref=e123]: 
+          - text:    
+        - generic [ref=e124]:
+          - heading [level=4] [ref=e126]:
+            - generic [ref=e127] [cursor=pointer]:
+              - text: Preparing & Filing Form GSTR-7 and Viewing Form GSTR-7A
+              - generic [aria-hidden] [ref=e128]: 
+          - text:    
+        - generic [ref=e129]:
+          - heading [level=4] [ref=e131]:
+            - generic [ref=e132] [cursor=pointer]:
+              - text: Preparing & Filing Form GSTR-8
+              - generic [aria-hidden] [ref=e133]: 
+          - text:  
+        - generic [ref=e134]:
+          - heading [level=4] [ref=e136]:
+            - generic [ref=e137] [cursor=pointer]:
+              - text: Preparing & Filing of Annual Return - Form GSTR-9, Form GSTR-9A and Form GSTR-9C
+              - generic [aria-hidden] [ref=e138]: 
+          - text:        
+        - generic [ref=e139]:
+          - heading [level=4] [ref=e141]:
+            - generic [ref=e142] [cursor=pointer]:
+              - text: Preparing & Filing Form GSTR-10
+              - generic [aria-hidden] [ref=e143]: 
+          - text:  
+        - generic [ref=e144]:
+          - heading [level=4] [ref=e146]:
+            - generic [ref=e147] [cursor=pointer]:
+              - text: Preparing & Filing Form GSTR-11
+              - generic [aria-hidden] [ref=e148]: 
+          - text:  
+        - generic [ref=e149]:
+          - heading [level=4] [ref=e151]:
+            - generic [ref=e152] [cursor=pointer]:
+              - text: Preparing & Filing Form GST SRM-I
+              - generic [aria-hidden] [ref=e153]: 
+          - text:  
+        - generic [ref=e154]:
+          - heading [level=4] [ref=e156]:
+            - generic [ref=e157] [cursor=pointer]:
+              - text: Preparing & Filing Form GST SRM-II
+              - generic [aria-hidden] [ref=e158]: 
+          - text:  
+        - generic [ref=e159]:
+          - heading [level=4] [ref=e161]:
+            - generic [ref=e162] [cursor=pointer]:
+              - text: Application for Unbarring Returns
+              - generic [aria-hidden] [ref=e163]: 
+          - text:  
+        - generic [ref=e164]:
+          - heading [level=4] [ref=e166]:
+            - generic [ref=e167] [cursor=pointer]:
+              - text: Return Compliance with liability mismatch (DRC-01B)
+              - generic [aria-hidden] [ref=e168]: 
+          - text:  
+        - generic [ref=e169]:
+          - heading [level=4] [ref=e171]:
+            - generic [ref=e172] [cursor=pointer]:
+              - text: Return Compliance with ITC mismatch (DRC-01C)
+              - generic [aria-hidden] [ref=e173]: 
+          - text:  
+        - heading [level=4] [ref=e176]:
+          - generic [ref=e177] [cursor=pointer]:
+            - text: Navigating the Returns Dashboard
+            - generic [aria-hidden] [ref=e178]: 
+        - generic [ref=e181]:
+          - generic [ref=e182]:
+            - paragraph [ref=e183]:
+              - link [ref=e184] [cursor=pointer]:
+                - /url: //tutorial.gst.gov.in/cbt/returns/viewandtrackreturns/index.html
+                - img "Video" [ref=e185]
+            - paragraph [ref=e186]: 00:08:51
+          - generic [ref=e187]:
+            - heading "Training Kit:Viewing and Tracking Returns" [level=4] [ref=e188]
+            - paragraph [ref=e189]: You can view and track returns filed on the GST Portal. Watch this training kit to know complete process of viewing and tracking returns.
+        - generic [ref=e190]:
+          - heading [level=4] [ref=e192]:
+            - generic [ref=e193] [cursor=pointer]:
+              - text: Tracking Return Status
+              - generic [aria-hidden] [ref=e194]: 
+          - text:  
+        - generic [ref=e195]:
+          - heading [level=4] [ref=e197]:
+            - generic [ref=e198] [cursor=pointer]:
+              - text: Viewing e-Filed Returns
+              - generic [aria-hidden] [ref=e199]: 
+          - text:  
+        - generic [ref=e200]:
+          - heading [level=4] [ref=e202]:
+            - generic [ref=e203] [cursor=pointer]:
+              - text: Invoice Management System (IMS)
+              - generic [aria-hidden] [ref=e204]: 
+          - text:  
+  - contentinfo [ref=e232]:
+    - generic "Expand/Collapse Footer" [ref=e206] [cursor=pointer]: 
+    - generic [ref=e234]:
+      - generic [ref=e237]:
+        - generic [ref=e238]:
+          - link "About GST" [ref=e239] [cursor=pointer]:
+            - /url: //www.gst.gov.in/about/gst/history
+          - list [ref=e240]:
+            - listitem [ref=e241]:
+              - link "GST Council Structure" [ref=e242] [cursor=pointer]:
+                - /url: //www.gst.gov.in/about/gst/council
+            - listitem [ref=e243]:
+              - link "GST History" [ref=e244] [cursor=pointer]:
+                - /url: //www.gst.gov.in/about/gst/history
+        - generic [ref=e245]:
+          - link "Website Policies" [ref=e246] [cursor=pointer]:
+            - /url: //www.gst.gov.in/policies/website
+          - list [ref=e247]:
+            - listitem [ref=e248]:
+              - link "Website Policy" [ref=e249] [cursor=pointer]:
+                - /url: //www.gst.gov.in/policies/website
+            - listitem [ref=e250]:
+              - link "Terms and Conditions" [ref=e251] [cursor=pointer]:
+                - /url: //www.gst.gov.in/policies/termsandconditions
+            - listitem [ref=e252]:
+              - link "Hyperlink Policy" [ref=e253] [cursor=pointer]:
+                - /url: //www.gst.gov.in/policies/hyperlink
+            - listitem [ref=e254]:
+              - link "Disclaimer" [ref=e255] [cursor=pointer]:
+                - /url: //www.gst.gov.in/policies/disclaimer
+        - generic [ref=e256]:
+          - link "Related Sites" [ref=e257] [cursor=pointer]:
+            - /url: //www.gst.gov.in/help/relatedsites
+          - list [ref=e258]:
+            - listitem [ref=e259]:
+              - link "Central Board of Indirect Taxes and Customs" [ref=e260] [cursor=pointer]:
+                - /url: http://www.cbic.gov.in/
+            - listitem [ref=e261]:
+              - link "State Tax Websites" [ref=e262] [cursor=pointer]:
+                - /url: //www.gst.gov.in/help/statevat
+            - listitem [ref=e263]:
+              - link "National Portal" [ref=e264] [cursor=pointer]:
+                - /url: https://www.india.gov.in/
+        - generic [ref=e265]:
+          - link "Help and Taxpayer Facilities" [ref=e266] [cursor=pointer]:
+            - /url: //services.gst.gov.in/services/HelpandTaxpayer/HelpandTaxpayerfacilities
+          - list [ref=e267]:
+            - listitem [ref=e268]:
+              - link "System Requirements" [ref=e269] [cursor=pointer]:
+                - /url: //www.gst.gov.in/system/
+            - listitem [ref=e270]:
+              - link "GST Knowledge Portal" [ref=e271] [cursor=pointer]:
+                - /url: //www.gst.gov.in/help/helpmodules/
+            - listitem [ref=e272]:
+              - link "GST Media" [ref=e273] [cursor=pointer]:
+                - /url: https://www.youtube.com/c/GoodsandServicesTaxNetwork
+            - listitem [ref=e274]:
+              - link "Site Map" [ref=e275] [cursor=pointer]:
+                - /url: //services.gst.gov.in/services/sitemap
+            - listitem [ref=e276]:
+              - link "Grievance Nodal Officers" [ref=e277] [cursor=pointer]:
+                - /url: //services.gst.gov.in/services/grievanceNodalOfficer
+            - listitem [ref=e278]:
+              - link "Free Accounting and Billing Services" [ref=e279] [cursor=pointer]:
+                - /url: https://gstn.org.in/empaneled-companies
+            - listitem [ref=e280]:
+              - link "GST Suvidha Providers" [ref=e281] [cursor=pointer]:
+                - /url: https://gstn.org.in/gsp-ecosystem
+        - generic [ref=e282]:
+          - link "Contact Us" [ref=e283] [cursor=pointer]:
+            - /url: //www.gst.gov.in/contact
+          - list [ref=e284]:
+            - listitem [ref=e285]:
+              - generic [ref=e286]: "Help Desk Number: 1800-103-4786"
+            - listitem [ref=e287]:
+              - generic [ref=e288]: "Log/Track Your Issue:"
+              - link "Grievance Redressal Portal for GST" [ref=e289] [cursor=pointer]:
+                - /url: https://selfservice.gstsystem.in/
+            - listitem [ref=e290]:
+              - link "Facebook" [ref=e291] [cursor=pointer]:
+                - /url: //www.facebook.com/Goods-and-Services-Tax-1674179706229522/?fref=ts
+              - link "Youtube" [ref=e294] [cursor=pointer]:
+                - /url: //www.youtube.com/channel/UCFYpOk92qurlO5t-Z_y-bOQ
+              - link "Twitter" [ref=e297] [cursor=pointer]:
+                - /url: //twitter.com/Infosys_GSTN
+              - link "Linkedin" [ref=e300] [cursor=pointer]:
+                - /url: //www.linkedin.com/company/gstn-official/about/?viewAsMember=true
+      - generic [ref=e306]:
+        - paragraph [ref=e307]: © 2026-27 Goods and Services Tax Network
+        - paragraph [ref=e308]: Site Last Updated on 28-10-2026
+        - paragraph [ref=e309]: Designed & Developed by GSTN
+      - paragraph [ref=e314]: Site best viewed at 1024 x 768 resolution in Microsoft Edge, Google Chrome 49+, Firefox 45+ and Safari 6+
+  - text: 

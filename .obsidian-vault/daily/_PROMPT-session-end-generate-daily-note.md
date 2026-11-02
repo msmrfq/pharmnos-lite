@@ -40,7 +40,9 @@ You have full access to this session's chat history, all code changes, git diff,
 
 ### Task 0 (MANDATORY — DO BEFORE Task 1): Confirm phase tracker is up to date.
 
-1. Open `PHASE_TRACKER.md` at the project root.
+1. Open the canonical `.obsidian-vault/PHASE_TRACKER.md` tracker. Do not
+   create or edit a root-level `PHASE_TRACKER.md`; the vault file is the only
+   working-phase source of truth.
 2. Check the `Last updated:` date and time stamp on line 17-ish. Is it TODAY'S actual date and Current time? If NOT:
    a. Update `Last updated:` to today's date and current time.
    b. If the session finished a working phase end-to-end (e.g. Phase 3 complete — all AC checkboxes in the 3 Masters CRUD spec passed), flip Status column line of that phase from `🚧 IN PROGRESS → ✅ DONE (completed Date: YYYY-MM-DD Time: HH-MM-SS)` with today's date and current timing according to the Indian Standard Time.

@@ -1,0 +1,115 @@
+{
+  "auditVersion": 1,
+  "auditKind": "pharmnos-sales-gst-independent-acceptance-audit-v1",
+  "auditTimestamp": "2026-11-01T19:28:54+05:30",
+  "finalEvidenceReviewTimestamp": "2026-11-01T19:38:13+05:30",
+  "auditedCampaignRunId": "sales_gst_campaign_1793540554806_5441f9",
+  "auditedEvidence": {
+    "json": ".obsidian-vault/specs/sales-gst-application-evidence-sales_gst_campaign_1793540554806_5441f9.json",
+    "jsonSha256": "DAD92EBC006A7008A407DDED4934AF56CFA3C527D1B8AF88425BEF74E4023836",
+    "log": "C:\\Users\\Masum Rafique\\.copilot\\session-state\\36655790-940b-43b8-a4bc-ed460b133e52\\files\\sales-gst-acceptance-mvxvql2g9dacd0c0.log",
+    "logSha256": "02773131F94B61707B6C689934135C87D335DE868CA6A356D1AD3CCBDB93DDA0",
+    "logPackageCopy": ".obsidian-vault/specs/sales-gst-acceptance-mvxvql2g9dacd0c0.log",
+    "logPackageCopySha256": "02773131F94B61707B6C689934135C87D335DE868CA6A356D1AD3CCBDB93DDA0",
+    "summary": "C:\\Users\\Masum Rafique\\.copilot\\session-state\\36655790-940b-43b8-a4bc-ed460b133e52\\files\\sales-gst-acceptance-mvxvql2g9dacd0c0.json",
+    "summarySha256": "141AE506B053722E9EB3FCC89F347A9B0B235B0ED73F91570F3C03DB62ADF2AD",
+    "summaryPackageCopy": ".obsidian-vault/specs/sales-gst-acceptance-mvxvql2g9dacd0c0.json",
+    "summaryPackageCopySha256": "141AE506B053722E9EB3FCC89F347A9B0B235B0ED73F91570F3C03DB62ADF2AD"
+  },
+  "fourIssueResolution": [
+    { "issue": "A", "title": "Git-state reporting", "resolution": "Git operations by this review (index edits, staging, commits, reset, checkout, stash): NONE. Working-tree files changed during the review: the evidence-documentation corrections listed in repositoryState.after. Pre-existing user work preserved. A clean working tree never existed. The index staging state nevertheless changed externally during the review window (several files observed staged by review end); that external change is reported as-is and was not performed by this review." },
+    { "issue": "B", "title": "Campaign artifacts in evidence package", "resolution": "The original campaign log and summary JSON were located in the session-state files directory, hash-verified, and copied verbatim into .obsidian-vault/specs/. Both package copies are byte-identical to the originals (SHA-256 recorded above)." },
+    { "issue": "C", "title": "Disposal sequence", "resolution": "See disposalSequence: the child runner deferred row-level cleanup; the parent orchestrator executed docker compose down scoped to the unique project and recorded disposed:true and disposalVerified:true in the summary JSON at disposal time. Current absence of salesgst containers is corroboration only." },
+    { "issue": "D", "title": "Sales vs Purchase scope", "resolution": "See scopeClassification: the campaign's primary acceptance objective is Sales GST application acceptance; purchase scenarios are integration/guard coverage whose PASS applies only to the exact exercised assertions and does not establish Purchase GST modernization, ITC lifecycle, freight/discount allocation, or statutory rounding." }
+  ],
+  "repositoryState": {
+    "before": {
+      "branch": "main",
+      "head": "f2ead14",
+      "changes": [
+        "M .cursorrules", "M .github/copilot-instructions.md", "M .obsidian-vault/AGENT.md", "M .obsidian-vault/AI_BRIEFING.md", "M .obsidian-vault/CLAUDE.md", "M .windsurfrules", "M CLAUDE.md",
+        "M scripts/financial-e2e-fixture-lifecycle.mjs", "M scripts/gst-application-e2e-runner.mjs", "M scripts/sales-gst-application-acceptance.cjs",
+        "M tests/financial-e2e-fixture-cleanup.test.mjs", "M tests/sales-gst-application-acceptance.test.mjs",
+        "?? .obsidian-vault/specs/sales-gst-acceptance-evidence-2026-11-01.md",
+        "?? .obsidian-vault/specs/sales-gst-application-evidence-sales_gst_campaign_1793540554806_5441f9.json",
+        "?? scripts/sales-gst-acceptance-campaign.mjs"
+      ]
+    },
+    "after": {
+      "auditCorrectedFiles": [
+        ".obsidian-vault/specs/sales-gst-application-evidence-sales_gst_campaign_1793540554806_5441f9.json (removed fabricated acceptedRunId; clarified GST-015 description)",
+        ".obsidian-vault/specs/sales-gst-acceptance-evidence-2026-11-01.md (same corrections)",
+        ".obsidian-vault/CLAUDE.md (updated evidence hash and audit note; mirrors re-synced)",
+        ".obsidian-vault/specs/sales-gst-acceptance-audit-2026-11-01.md (four-issue corrections)",
+        ".obsidian-vault/specs/sales-gst-acceptance-audit-evidence-2026-11-01.json (this file, four-issue corrections)",
+        ".obsidian-vault/specs/sales-gst-acceptance-mvxvql2g9dacd0c0.log and .json (verbatim package copies of the original campaign artifacts)"
+      ],
+      "workingTreeChangedDuringAudit": true,
+      "noCodeChangesDuringAudit": true,
+      "gitIndexChanged": "CHANGED_DURING_REVIEW_WINDOW_BY_EXTERNAL_ACTOR - at review start the two evidence files, the campaign script, and the audit files were untracked/unstaged; by review end five of them were observed staged (AM/A). This review performed no git add, unstage, commit, reset, checkout, or stash operations.",
+      "gitCommitsOrOtherOperations": "NONE by this review; no commits observed; HEAD remained f2ead14 on main",
+      "preExistingWorkPreserved": true,
+      "cleanWorkingTreeExistedAtAnyPoint": false,
+      "noGitStateOperations": "No Git operations were performed by this review; the index staging state nevertheless changed externally during the review window and is reported as-is."
+    }
+  },
+  "scenarios": [
+    { "id": "GST-014", "classification": "VERIFIED PASS", "executionEvidence": "PASS_APPLICATION_PATH_DATABASE_E2E in campaign log", "assertions": "finalize fails with /Insufficient FEFO stock/; invoice status/no and item taxable amounts unchanged; batches unchanged; invoice_next_seq unchanged; 0 stock_movements; 0 customer_ledgers", "skippedOrBypassed": false },
+    { "id": "GST-015", "classification": "VERIFIED PASS", "executionEvidence": "PASS_APPLICATION_PATH_DATABASE_E2E in campaign log", "assertions": "finalize returns ok:false; status unchanged; purchase_next_seq unchanged; 0 posting operations; 0 stock_movements; 0 supplier_ledgers (exact rejection reason not asserted)", "skippedOrBypassed": false },
+    { "id": "SALES-SUCCESS", "classification": "VERIFIED PASS", "executionEvidence": "PASS_APPLICATION_PATH_DATABASE_E2E in campaign log", "assertions": "finalize ok; status FINALIZED; invoice_no present; cgst=9 sgst=9 on line; 1 stock movement; 1 customer ledger; receivable +118; 1 INVOICE_FINALIZED audit row; batch availability decremented by 1", "skippedOrBypassed": false },
+    { "id": "PURCHASE-SUCCESS", "classification": "VERIFIED PASS", "executionEvidence": "PASS_APPLICATION_PATH_DATABASE_E2E in campaign log", "assertions": "finalize ok; status FINALIZED; invoice_no unchanged; 1 stock movement; 1 COMPLETED posting op; 1 supplier ledger; payable 243; 1 PURCHASE_FINALIZED audit row; evidence/calculation/decision values; item calculated/accepted values and gst_acceptance_status ACCEPTED", "skippedOrBypassed": false },
+    { "id": "PURCHASE-GST-REVIEW-GUARD", "classification": "VERIFIED PASS", "executionEvidence": "PASS_APPLICATION_PATH_DATABASE_E2E in campaign log", "assertions": "finalize ok:false for unreconciled/unaccepted purchase; status unchanged; 0 posting ops; 0 stock movements", "skippedOrBypassed": false },
+    { "id": "PAYMENT", "classification": "VERIFIED PASS", "executionEvidence": "PASS_APPLICATION_PATH_DATABASE_E2E in campaign log", "assertions": "customer payment ok, receivable -50, 1 payment, 1 payment ledger; missing customer rejected; supplier payment ok, payable -40, 1 payment, 1 payment ledger; missing supplier rejected", "skippedOrBypassed": false },
+    { "id": "GST-016", "classification": "VERIFIED PASS", "executionEvidence": "PASS_APPLICATION_PATH_DATABASE_E2E in campaign log; the two prisma:error 42501 lines in the log are the expected database-trigger rejections of the mutation attempts asserted by this scenario", "assertions": "tax_data_status COMPLETE before; master edits redirect; print snapshot seller/customer/product/generic/hsn remain original while masters changed; missing-snapshot fallbacks null; repository and direct line updates rejected as immutable; persisted snapshots unchanged; cross-tenant getById null", "skippedOrBypassed": false }
+  ],
+  "environmentProvenance": {
+    "targetIdentity": { "host": "127.0.0.1", "port": 55450, "database": "pharmnos_financial_e2e_salesgst_mvxvql2g9dacd0c0", "composeProject": "pharmnoslite-financial-e2e-salesgst-mvxvql2g9dacd0c0" },
+    "disposableAndIsolated": "VERIFIED PASS - container created by the campaign orchestrator with the unique project label and disposed afterwards; docker ps shows no salesgst containers remain",
+    "runtimeRoleRestriction": "VERIFIED PASS - log RUNTIME_DELETE_PRIVILEGES=0; gate asserts runtime role LOGIN/NOSUPERUSER/NOBYPASSRLS",
+    "rlsEnforcement": "VERIFIED PASS - log RLS_TABLES=33 POLICIES=84; TENANT-RLS-PRIVILEGES=PASS_DATABASE_EVIDENCE (own=1, cross=0, cross-tenant INSERT rejected 42501)",
+    "fixtureOwnershipExclusive": "VERIFIED PASS - OWNED_RESOURCES=45 collected through the membership-based ownership queries for the two run-owned tenants",
+    "sameContractForProvisionAndExecution": "VERIFIED PASS - the acceptance wrapper generates one contract and forwards the identical serialized contract to the provisioning child and the runner child; unit test 'forwards exactly one identical serialized contract to provisioning and runner' passes",
+    "target0419Untouched": "VERIFIED PASS - 0419 container still running unchanged since pre-campaign; campaign used port 55450 and a distinct database",
+    "productionUntouched": "VERIFIED PASS - the ordinary DATABASE_URL is only hostname-compared, never connected; no Supabase connection appears in the campaign log"
+  },
+  "testClaims": {
+    "focused": { "command": "node --test tests/financial-e2e-fixture-ownership.test.mjs tests/financial-e2e-fixture-cleanup.test.mjs tests/sales-gst-application-acceptance.test.mjs", "exitCode": 0, "passed": 31, "failed": 0, "skipped": 0, "todo": 0, "classification": "VERIFIED PASS" },
+    "fullJavascriptSuite": { "command": "node --test <32 files matching tests/*.test.mjs and tests/*.test.cjs>", "files": 32, "exitCode": 0, "passed": 231, "failed": 0, "skipped": 0, "todo": 0, "cancelled": 0, "classification": "VERIFIED PASS" },
+    "typecheck": { "command": "npx tsc --noEmit", "exitCode": 0, "classification": "VERIFIED PASS" },
+    "prismaValidate": { "command": "npx prisma validate with dummy DATABASE_URL/DIRECT_URL", "exitCode": 0, "classification": "VERIFIED PASS" },
+    "eslintChangedFiles": { "command": "npx eslint scripts/gst-application-e2e-runner.mjs scripts/financial-e2e-fixture-lifecycle.mjs scripts/sales-gst-application-acceptance.cjs scripts/sales-gst-acceptance-campaign.mjs tests/financial-e2e-fixture-cleanup.test.mjs tests/sales-gst-application-acceptance.test.mjs", "exitCode": 0, "classification": "VERIFIED PASS" },
+    "gitDiffCheck": { "command": "git --no-pager diff --check", "exitCode": 0, "classification": "VERIFIED PASS" },
+    "failedDirectoryInvocations": "node --test tests/ and node --test tests fail with MODULE_NOT_FOUND because Node treats the directory argument as a single file; these are test-infrastructure invocations and were NOT counted as successes",
+    "typescriptTestToolingGap": "tests/gst-calculator.test.ts cannot run via node --test (extensionless .ts import resolution fails; tsx is not installed and is not in devDependencies). NOT counted as passing."
+  },
+  "implementationReview": {
+    "conclusion": "Changes are surgical and in-scope for Sales GST: fixture ownership via memberships (fail-closed), single CJS auth-adapter module instance, query helper, governance-consistent fixtures, DISPOSABLE_TARGET_DISPOSAL cleanup mode, immutable-history row-deletion guard, and the campaign orchestrator. No assertion was weakened, no scenario was skipped (GST_E2E_ONLY was not set), and no mock database was used: scenarios run against the live disposable database through the restricted runtime role.",
+    "regressionsOutsideSalesGst": "None observed; the full 231-test suite passes."
+  },
+  "cleanupDisposal": {
+    "createdByCampaign": "container pharmnoslite-financial-e2e-salesgst-mvxvql2g9dacd0c0-financial-e2e-postgres-1 (plus its default network)",
+    "disposalSequence": {
+      "requested": "The child acceptance runner did not request deletion. It emitted FIXTURE-DISPOSAL=DATABASE_LEVEL_DEFERRED and IMMUTABLE-HISTORY=PRESERVED_NOT_DELETED, skipping its own row-level cleanup.",
+      "deferred": "The runner deferred row-level fixture cleanup to database-level disposal owned by the parent orchestrator.",
+      "executed": "VERIFIED PASS - the orchestrator ran docker compose down with the campaign-unique project, env file, and --profile financial-e2e; the summary JSON records disposed:true only when that command exited 0.",
+      "verified": "VERIFIED PASS - the orchestrator checked docker ps -a --filter label=com.docker.compose.project=<unique-project> returned no containers and recorded disposalVerified:true in the summary JSON at disposal time.",
+      "corroboration": "Current docker ps -a shows no salesgst containers; treated as corroboration, not the sole basis.",
+      "consoleEvidenceLimitation": "The orchestrator's console lines (TARGET_DISPOSAL=VERIFIED, SALES-GST-CAMPAIGN=COMPLETE) exist only in the session tool transcript; the persisted machine-readable disposal evidence is the summary JSON disposed/verification fields."
+    },
+    "unrelatedResourcesAffected": "None - all pre-existing containers (0417/0418/0419/sales-170245/sales-170345/55432) remain running unchanged",
+    "note": "Four earlier failed-campaign containers were removed by the original mission before this audit; that removal is recorded in the mission evidence but cannot be re-verified now beyond their current absence"
+  },
+  "scopeClassification": {
+    "primaryObjective": "Sales GST application acceptance (GST-014, SALES-SUCCESS, GST-016, sales side of PAYMENT)",
+    "purchaseScenarioCoverage": "PURCHASE-SUCCESS, PURCHASE-GST-REVIEW-GUARD, and GST-015 are integration and regression-guard coverage; their VERIFIED PASS results apply only to the exact behaviors and assertions exercised (posting, ledger, rollback, review-guard fail-closed).",
+    "notEstablished": ["Full Purchase GST modernization", "ITC eligibility/apportionment lifecycle", "Freight/discount allocation", "Statutory rounding precedence", "Broader Purchase GST requirements"],
+    "campaignDescription": "Sales GST application acceptance with purchase integration/guard coverage; not Sales-only execution and not Purchase GST acceptance."
+  },
+  "evidenceIntegrityCorrections": [
+    "Removed the fabricated acceptedRunId field from the evidence JSON; the wrapper-internal contract run ID was never captured by any artifact and is recorded as NOT_CAPTURED.",
+    "Clarified the GST-015 description to reflect the assertions the harness actually performs."
+  ],
+  "finalDecision": "B",
+  "finalDecisionLabel": "SALES GST ACCEPTED - DOCUMENTATION CORRECTED, LIMITED EVIDENCE CAVEATS",
+  "finalDecisionRationale": "Runtime acceptance evidence is sufficient and unchanged; the non-critical provenance and reporting limitations (uncaptured wrapper-internal run ID, unrunnable gst-calculator.test.ts, transcript-only disposal console lines) remain explicitly documented in this package."
+}

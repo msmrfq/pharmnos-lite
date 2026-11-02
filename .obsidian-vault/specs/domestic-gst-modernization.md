@@ -37,6 +37,7 @@ subjects:
 | Document | Responsibility |
 |---|---|
 | [GST Decision Closure and Engineering Contract Approval](./gst-decision-closure-and-engineering-contract-approval.md) | Owner decisions, engineering contracts, authorization boundaries, unresolved decisions, validation gates, and approval records |
+| [GST Credit and Debit Note Engineering Contract](./gst-credit-debit-note-engineering-contract.md) | Detailed current-release supplier issuance, recipient processing, commercial adjustment, return, accounting, reporting, IRP, permission, state, scenario, and CDN-01-CDN-27 acceptance contract |
 | [GST Accounting Decision Question Pack](./gst-accounting-decision-question-pack.md) | GST professional questions, statutory/accounting decisions, professional review records, and clarification evidence |
 | [Purchase GST Persistence and Workflow Design](./purchase-gst-persistence-design.md) | Purchase-side GST persistence, relationships, workflow, and accounting acceptance design |
 | [GST Schema Rollout Design Review](./gst-schema-rollout-design-review.md) | Schema, migration, rollout, compatibility, security, and database-integrity design review |
@@ -75,6 +76,11 @@ operations beyond the applicable control gates.
   validation work. It does not replace professional/legal/accounting review,
   database rollout controls, independent security approval, or production
   go/no-go approval.
+- **Credit/debit-note scope:** GST credit notes and debit notes are
+  **current-release requirements** for both supplier issuance and
+  recipient-side processing. This scope approval does not claim that the
+  workflows, schema, reporting, e-invoicing, tests, runtime evidence,
+  independent acceptance, or production authorization exist.
 
 Supporting documents must be read whenever a task touches their designated
 subject. This hierarchy changes document navigation and ownership only; it
@@ -368,7 +374,12 @@ GST percentage.
 
 ### 5.3 Precision, rounding, and aggregation
 
-The approved calculation rule must explicitly define:
+The detailed T25 engineering contract is recorded in
+[`0009-gst-precision-rounding-engineering-contract.md`](../decisions/0009-gst-precision-rounding-engineering-contract.md)
+and records T25-12 as current-release scope approved for supplier issuance and
+recipient-side processing; implementation, test, runtime, independent
+acceptance, and professional confirmation remain separate gates. The proposed calculation rule
+defines:
 
 1. taxable-value precision;
 2. component-rate calculation precision;
@@ -378,11 +389,14 @@ The approved calculation rule must explicitly define:
 6. tax-inclusive extraction behavior;
 7. persistence precision and display precision.
 
-The current sales service uses numeric values and two-decimal rounding for
-ordinary calculations. This is existing behavior, not approval of a new
-statutory precision policy. Purchase evidence must preserve original source
-representations separately from parsed/calculated values as required by the
-purchase persistence design.
+The shared calculator now uses exact coefficient/scale decimal arithmetic,
+explicit `HALF_UP` representation, preserved intermediate precision, and
+independently calculated tax components. The isolated Section 170
+nearest-rupee helper is not automatically applied to intermediate calculations
+or invoice totals. Engineering tests demonstrate these behaviors, but they do not constitute
+qualified GST/accounting confirmation or production acceptance.
+Purchase evidence must preserve original source representations separately from
+parsed/calculated values as required by the purchase persistence design.
 
 ## 6. Product-level GST
 
@@ -577,7 +591,10 @@ Do not:
 - product-level GST with mixed rates;
 - tax-inclusive and tax-exclusive modes;
 - invoice persistence and printing;
-- sales and purchase regression validation.
+- sales and purchase regression validation;
+- GST credit-note and debit-note requirements for supplier issuance and
+  recipient-side processing, subject to the design and evidence gates in
+  §12.1.
 
 ### Deferred
 
@@ -589,12 +606,311 @@ Do not:
 - e-invoice and e-way bill;
 - GSTR filing;
 - ITC reconciliation;
-- credit/debit notes and returns;
+- physical goods-return inventory workflow, replacement logistics, and
+  unrelated internal adjustments;
 - multiple GST registrations;
 - other exceptional statutory workflows.
 
 The eight-option dropdown is a product-design control, not evidence that
 deferred categories are enabled.
+
+Credit/debit notes are not deferred product scope. They are current-release
+requirements whose implementation and acceptance remain blocked until the
+statutory, accounting, schema, reporting, e-invoice, and isolated-runtime
+gates in §12.1 close.
+
+## 12.1 Credit and debit notes: legal, accounting, and engineering specification
+
+### 12.1.1 Scope and status
+
+GST credit notes and debit notes are approved current-release product scope
+for both:
+
+1. **supplier issuance** for an original sale or other outward supply; and
+2. **recipient-side processing** for a note received against an inward
+   purchase, including accounting treatment, tax/ITC evidence, reporting
+   state, and immutable linkage to the original document.
+
+This is a scope decision, not a claim that the workflow is implemented. At the
+time of this specification:
+
+- no dedicated statutory credit/debit-note model or end-to-end action is
+  verified in the repository;
+- no note allocation, recipient ITC-reversal, reporting, IRP/IRN, retry, or
+  note-specific permission contract is verified;
+- no isolated runtime acceptance evidence exists for supplier issuance or
+  recipient processing;
+- legal, accounting, and professional confirmation gates remain open where
+  the source register below identifies them as unresolved.
+
+The detailed implementation-ready contract is maintained in the [GST Credit
+and Debit Note Engineering Contract](./gst-credit-debit-note-engineering-contract.md).
+Its CDN-01-CDN-27 denominator is separate from the DGM-T25 matrix. It records
+contract coverage only; implementation, runtime verification, independent
+acceptance, and production authorization remain open.
+
+Physical inventory return logistics, replacement shipments, buyer-initiated
+commercial claims, and internal accounting corrections are separate concepts.
+They must not be silently represented as a GST credit/debit note.
+
+### 12.1.2 Legal baseline and effective-date gates
+
+The implementation must be based on the current consolidated CGST Act, CGST
+Rules, applicable notifications/circulars, and the current GST portal/IRP
+contracts. The following provisions form the verified source baseline for the
+contract; effective-date conflicts, professional application, portal
+behavior, implementation, and acceptance remain separate gates:
+
+| Source | Working requirement |
+|---|---|
+| CGST Act §2(37) | A **credit note** is the supplier's document for reducing the taxable value and/or tax charged in an original tax invoice, subject to the statutory conditions and reporting time limit. |
+| CGST Act §2(38) | A **debit note** is the supplier's document for increasing the taxable value and/or tax charged in an original tax invoice; a supplementary invoice is treated within the same statutory concept where applicable. |
+| CGST Act §15(3)(a) | A discount recorded before or at the time of supply and duly linked to the relevant invoices may be excluded from transaction value. |
+| CGST Act §15(3)(b) | The applicable post-supply-discount rule is effective-dated. The current CBIC consolidated page and the Finance Act 2026 commencement notification are not synchronized; the product must select an approved ruleset for the note date and fail closed while the conflict is unresolved. A commercial discount alone is not a GST reduction. |
+| CGST Act §16 | Recipient input-tax-credit eligibility, documentation, receipt, payment, return filing, and reversal/reclaim controls must be kept separate from supplier note issuance. The note workflow must not manufacture ITC eligibility. |
+| CGST Act §34(1) | A supplier may issue one or more **credit notes** where the original taxable value or tax exceeds the amount payable, goods are returned, goods/services are deficient, or an applicable Section 15(3)(b) discount is given, subject to the statutory document and reporting rules. |
+| CGST Act §34(3) | A supplier shall issue one or more **debit notes** where the original taxable value or tax is less than the taxable value or tax payable, subject to the statutory document and reporting rules. |
+| CGST Act §34(2) and §34(4) | Credit-note reporting, recipient communication, tax adjustment, and the applicable cut-off must be enforced from the current law and portal contract, not from a stale hard-coded date. |
+| CGST Rules Rule 53(1A) | A debit/credit note must carry the prescribed particulars, including supplier/recipient identity and GSTIN where applicable, a consecutive unique serial number, date, original invoice references, description/value/tax details, and signature/e-signature requirements. |
+| CGST Rules Rule 59 | Credit/debit notes must be reported in the appropriate outward-supply return data with the required original-document references and classification. Reporting a commercial adjustment as a statutory note is prohibited. |
+| Circular 251/08/2025-GST and Circular 253/10/2025-GST | Circular 251 distinguishes commercial/financial discounts from statutory tax reductions and separately contracted promotional services. Circular 253 withdrew Circular 212/06/2024-GST's prescribed evidence procedure; the substantive statutory conditions remain separate evidence gates. |
+| Finance Act 2025 and Notification 16/2025-Central Tax | Notification 16/2025-Central Tax dated 2025-09-17 appoints 2025-10-01 for the specified Finance Act 2025 provisions, including the Section 34(2) amendment represented in the current Section 34 page. The Central Tax notification must not be confused with a Central Tax (Rate) notification. |
+| Finance Act 2026 and Notification 03/2026-Central Tax | Notification 03/2026-Central Tax dated 2026-10-26 appoints 2026-11-01 for Sections 153-155. The current consolidated Section 15 page still carries a “yet to be notified” footnote, so the exact effective ruleset and portal synchronization remain a qualified review gate. |
+
+The detailed source register, conflict resolution rule, and effective-dated
+implementation contract are in the [GST Credit and Debit Note Engineering
+Contract](./gst-credit-debit-note-engineering-contract.md) and the [GST
+Accounting Decision Question Pack](./gst-accounting-decision-question-pack.md).
+Until the applicable source version and evidence policy are approved, the
+affected operation must fail closed rather than use an assumed date, assumed
+evidence threshold, or assumed portal category.
+
+### 12.1.3 Document taxonomy and classification rules
+
+Every adjustment must be classified before it reaches accounting or tax
+reporting:
+
+| Class | Purpose | GST effect | Required handling |
+|---|---|---|---|
+| Statutory GST credit note | Supplier reduces value/tax for an eligible §34(1) reason | May reduce supplier output tax when statutory conditions and reporting/evidence gates pass | Dedicated note document, original-invoice allocation, tax-component snapshot, reporting state, and immutable audit |
+| Statutory GST debit note | Supplier increases value/tax for an eligible §34(3) reason | Increases supplier output tax and recipient tax/ITC only through a valid document and eligible reporting | Dedicated note document, original-invoice allocation, positive tax components, reporting state, and immutable audit |
+| Commercial credit/debit adjustment | Commercial settlement with no GST-value change | No GST tax reduction/increase by itself | Separate commercial document/ledger adjustment; must not appear as a GST note |
+| Goods return | Physical movement of goods back to the supplier | May support a GST credit note, but the stock movement and note are separate events | Inventory return transaction plus statutory note only when the legal/document conditions are met |
+| Buyer debit claim | Recipient's claim or dispute against a supplier | Not automatically a supplier GST debit note | Workflow for dispute/evidence; supplier-issued debit note is required for supplier tax increase |
+| Internal accounting correction | Correction of an internal posting or mapping error | No retrospective alteration of a finalized statutory document | Append-only correcting journal with reason and approval; no GST note unless the legal trigger exists |
+
+The UI, service layer, and persistence layer must preserve this distinction.
+Selecting “credit note” or “debit note” must not be a generic shortcut for
+changing a finalized invoice total.
+
+### 12.1.4 Statutory grounds and conditions
+
+The following matrix is the minimum reason model for the first release. A
+reason is not sufficient by itself; the note must also pass document,
+allocation, reporting, evidence, and authorization checks.
+
+| Note | Statutory ground | Supplier-side condition | Recipient-side effect |
+|---|---|---|---|
+| Credit note | Original taxable value or tax charged exceeds the correct amount | Original invoice and affected line(s) identified; correction reason and calculation preserved | Reduce purchase value/ITC only for the accepted amount; retain supplier note and reversal evidence |
+| Credit note | Goods returned | Return quantity, batch/serial where applicable, receipt/acceptance, and original allocation preserved | Reverse the corresponding purchase/stock effect and eligible ITC; do not infer a return from a note alone |
+| Credit note | Goods or services deficient/defective | Deficiency/defect evidence, affected quantity/value, approval, and original allocation preserved | Reduce the affected purchase/service value and ITC; retain evidence |
+| Credit note | Eligible post-supply discount | Agreement and invoice linkage satisfy §15(3)(b); recipient reversal/declaration or certificate evidence is collected as required | Reverse the relevant ITC and record evidence before accepting supplier tax reduction |
+| Debit note | Original taxable value or tax charged is undercharged | Original invoice and affected line(s) identified; positive correction reason and calculation preserved | Increase purchase liability/value and claim additional ITC only when the note and §16 conditions are satisfied |
+| Debit note | Supplementary value/tax for a completed supply | Evidence that the additional value/tax relates to the original supply and is not a new unrelated supply | Add the accepted amount to the original purchase allocation and retain the note as a separate document |
+
+No reason may be used to bypass a missing original reference, a missing
+recipient membership, an invalid tax component, an unresolved reporting state,
+or a required evidence/approval gate.
+
+### 12.1.5 Immutable note data contract
+
+The note must be an additive, append-only document. Finalizing a note must
+never rewrite the original invoice, original purchase, original line
+quantities, original tax snapshot, or historical ledger entry.
+
+The future note record must retain at least:
+
+- tenant, issuer, recipient, and authenticated actor identifiers;
+- note type (`CREDIT_NOTE` or `DEBIT_NOTE`) and statutory reason;
+- a unique tenant-scoped note number, issue date, supply date/context, and
+  currency;
+- original document type, ID, number, date, and one-or-many allocation rows;
+- allocated original line IDs, product/batch references where applicable,
+  quantity, taxable value, discount basis, and reason evidence;
+- per-allocation and aggregate CGST, SGST, UTGST, IGST, cess, taxable, and
+  gross values, using the approved decimal/rounding contract;
+- whether the adjustment is tax-exclusive or tax-inclusive and the exact
+  calculation snapshot used;
+- recipient ITC eligibility/reversal status and supporting evidence metadata;
+- approval history, actor, timestamps, rejection reason, and immutable
+  state transitions;
+- reporting period, return section/category, submission attempt and response
+  metadata, and reconciliation state;
+- e-invoice applicability decision, IRP submission state, IRN, signed QR
+  evidence, cancellation state, and failure reason where applicable;
+- idempotency key and payload hash for every external submission or retry;
+- created/issued/finalized timestamps and an append-only audit trail.
+
+An allocation may not exceed the remaining eligible value or quantity of the
+referenced original line. A note may reference multiple original invoices
+only when the allocation table preserves each invoice/line split and the
+reporting contract supports that shape. A note with an ambiguous or missing
+allocation must be rejected.
+
+### 12.1.6 Supplier issuance lifecycle
+
+The supplier-side lifecycle must be explicit:
+
+1. **Draft**: capture note type, statutory reason, original document(s), and
+   proposed allocations; no tax or ledger effect is posted.
+2. **Validate**: verify tenant access, original finalization, remaining
+   unadjusted value/quantity, tax treatment, GSTIN/state facts, decimal
+   arithmetic, number uniqueness, and required evidence.
+3. **Approve**: require the configured authority for the note reason and
+   record the approval decision without mutating the original document.
+4. **Issue**: assign the immutable note number/date and freeze the accepted
+   statutory snapshot.
+5. **Report/submit**: submit to the applicable return or IRP pathway, with
+   idempotent retries and explicit failure states.
+6. **Post**: create the additive sales/receivable/output-tax ledger effect
+   exactly once from the accepted note snapshot.
+7. **Reconcile**: match portal/IRP responses and recipient acknowledgement or
+   evidence, then retain all attempts and responses.
+
+Failure at any required step must leave the note in an explicit recoverable
+state. It must not present a success-shaped response or partially reduce the
+original invoice.
+
+### 12.1.7 Recipient-side processing lifecycle
+
+The recipient-side lifecycle must be separate from supplier issuance:
+
+1. **Receive** the supplier note and preserve the source number, date,
+   original-document references, tax components, and supplied evidence.
+2. **Match** the supplier, tenant, original purchase, GSTIN, tax period, and
+   allocation against local records; reject cross-tenant or ambiguous matches.
+3. **Classify** the note as statutory, commercial, return-related, buyer claim,
+   or internal correction.
+4. **Review** quantity/value/defect/discount evidence and record an explicit
+   acceptance, partial acceptance, or rejection.
+5. **Reverse or add ITC** only for the accepted statutory amount and only under
+   the applicable §16/evidence rules. A supplier note must not silently
+   delete the recipient's original ITC or inventory history.
+6. **Post** an additive purchase/payable/inventory/tax adjustment from the
+   accepted note snapshot.
+7. **Reconcile** recipient return data, supplier communication, and portal
+   data, retaining discrepancies for review.
+
+The recipient must be able to process a supplier-issued note even when the
+note is not yet locally accepted, without confusing receipt with acceptance or
+ITC reversal.
+
+### 12.1.8 Accounting and ledger contract
+
+Illustrative postings below use an 18% rate only to explain mechanics; the
+rate, state component, and statutory rounding must come from the approved
+transaction facts and GST rule catalog.
+
+| Event | Supplier-side illustrative effect | Recipient-side illustrative effect |
+|---|---|---|
+| Credit note for taxable value 100 and tax 18 | Debit sales returns/discount adjustment 100; debit output GST 18; credit receivable 118 | Debit supplier payable 118; credit purchase/inventory/expense 100; credit input GST 18 |
+| Debit note for taxable value 100 and tax 18 | Credit sales/other taxable income 100; credit output GST 18; debit receivable 118 | Debit purchase/inventory/expense 100; debit input GST 18; credit supplier payable 118 |
+| Commercial discount without §15(3)(b) GST conditions | Record commercial adjustment only; do not reduce output GST | Record commercial adjustment only; do not reverse or claim ITC solely from it |
+
+The actual account mapping must be configured and professionally confirmed.
+Ledger amounts, invoice totals, note totals, tax components, and audit
+payloads must all derive from the same accepted decimal snapshot. A retry or
+concurrent finalization must produce one financial effect and one immutable
+note identity.
+
+### 12.1.9 Reporting and e-invoice contract
+
+The implementation must not treat a note as complete merely because it was
+saved locally:
+
+- determine whether the note is reportable, in which return period and
+  category, and whether an amendment/correction path applies;
+- preserve original invoice references in the format required by the return
+  and portal contract;
+- determine e-invoice applicability from current official thresholds,
+  taxpayer type, transaction type, and effective dates;
+- use the correct IRP document type and note-specific fields where applicable;
+- persist IRN, signed response, QR evidence, submission request hash, response,
+  retry count, and cancellation status;
+- do not post a final statutory success when IRP/return submission is
+  required but has failed or remains unresolved;
+- support reconciliation of local note, return data, IRP data, and recipient
+  evidence without rewriting the original note snapshot.
+
+Exact note document types, portal categories, amendment rules, applicability
+thresholds, and the current Section 34(2) timing must be confirmed from
+authoritative current sources before implementation.
+
+### 12.1.10 Worked examples
+
+These are engineering examples, not tax advice. The 18% rate is illustrative.
+The acceptance tests must use an approved rate catalog and explicit
+rounding mode.
+
+| ID | Fact pattern | Calculation and required outcome |
+|---|---|---|
+| `CN-01` | Invoice taxable value 1,000, tax 180; the correct value was 800 | Issue a credit note for taxable 200, tax 36, gross 236. Preserve the original invoice and allocate the reduction to the affected line(s). |
+| `CN-02` | Ten units at taxable 100 each are returned and accepted | Credit note taxable 1,000, tax 180, gross 1,180; separately record receipt of ten returned units and link the accepted return evidence. |
+| `CN-03` | A defective service line worth 500 is accepted at a 20% reduction | Credit note taxable 100, tax 18, gross 118; retain defect/deficiency evidence and the approval for the affected line. |
+| `CN-04` | An invoice includes a post-supply discount of 100; agreement and invoice linkage exist; recipient ITC is 18 | Do not reduce tax until the required recipient reversal/declaration or certificate evidence is accepted. Then issue the eligible 100/18/118 credit note and retain the evidence. |
+| `DN-01` | Invoice taxable value 1,000, tax 180; the correct value was 1,100 | Issue a debit note for taxable 100, tax 18, gross 118. The recipient may add eligible ITC only after valid receipt and §16 checks. |
+| `DN-02` | Additional taxable value 250 was omitted from a completed supply | Issue a debit note for taxable 250, tax 45, gross 295, linked to the original supply; do not create an unrelated new sale. |
+| `CN-05` | A 100 post-supply discount has no prior agreement or required linkage | Record a commercial adjustment only. Do not issue a GST-reducing credit note or reduce output tax/recipient ITC. |
+| `ALLOC-01` | One note reduces two invoices by 60 and 40 taxable value | Store two allocations, 60/10.80 and 40/7.20 tax. The note total is 100/18/118, with both original references preserved. |
+| `ITC-01` | Recipient received a 200 taxable/36 tax credit note | Match the note, reverse the accepted 36 ITC, and retain the reversal evidence. Do not reverse a disputed or rejected amount. |
+| `RETURN-01` | Goods return is accepted but no note is issued yet | Post the controlled return movement only if inventory policy permits; keep tax/ledger adjustment pending and do not call the return a finalized GST credit note. |
+| `IRP-01` | A note requires e-invoice submission and the IRP rejects it | Keep the note in an explicit submission-failed state, retain the response and idempotency key, and block statutory-final success until corrected and resubmitted. |
+| `HISTORY-01` | A finalized original invoice is later corrected | Add a note and additive ledger/reporting events. The original invoice, tax snapshot, number, and audit history remain unchanged. |
+
+### 12.1.11 Integrated supplier/recipient scenarios
+
+The following scenarios define the minimum cross-surface acceptance set. Each
+scenario requires database evidence, not only a UI assertion.
+
+| ID | Supplier action | Recipient action | Required assertions |
+|---|---|---|---|
+| `CDN-E2E-01` | Issue an overcharge credit note | Receive, match, accept, and reverse accepted ITC | Original invoice immutable; note allocation exact; supplier output tax and recipient ITC effects are equal/opposite; one audit chain |
+| `CDN-E2E-02` | Issue a goods-return credit note | Confirm return quantity and purchase/stock reversal | Return transaction and note are distinct but linked; no duplicate quantity or tax effect |
+| `CDN-E2E-03` | Issue a deficiency/defect credit note | Accept only the affected line/quantity | Partial allocation works; unrelated lines remain unchanged; evidence is mandatory |
+| `CDN-E2E-04` | Issue an eligible §15(3)(b) post-supply discount note | Submit required ITC reversal/declaration/certificate evidence | Supplier tax reduction is blocked until evidence; accepted amount and evidence are immutable |
+| `CDN-E2E-05` | Issue a debit note for undercharged value | Match additional payable and eligible ITC | Positive delta only; original amount is not rewritten; recipient cannot claim before valid note acceptance |
+| `CDN-E2E-06` | Issue a multi-invoice credit note | Allocate it across the matched purchases | Every allocation is explicit; total allocation equals note total; no cross-tenant or over-allocation |
+| `CDN-E2E-07` | Submit a note to the applicable IRP/return path | Reconcile the supplier response | IRN/return state, payload hash, retry, and response are persisted; failed submission is not success |
+| `CDN-E2E-08` | Retry the same note after a timeout | Process only the resulting accepted note | Idempotency prevents duplicate number, ledger, tax, or ITC effects |
+| `CDN-E2E-09` | Partially accept a disputed note | Record accepted and rejected allocations | Accepted and rejected values remain separate; no rejected ITC reversal or supplier tax reduction |
+| `CDN-E2E-10` | Issue a commercial discount without statutory conditions | Record the commercial adjustment | No GST note, output-tax reduction, or ITC reversal is created |
+| `CDN-E2E-11` | Correct a finalized original through a note | Reconcile historical reports and print views | Original documents render from immutable snapshots; note appears as an additive linked event |
+| `CDN-E2E-12` | Attempt a cross-tenant or foreign-supplier reference | Reject the receipt/issue request | Tenant isolation fails closed; no note, ledger, tax, or ITC mutation occurs |
+
+### 12.1.12 Acceptance gates and non-claims
+
+Credit/debit-note work may be marked accepted only when all applicable gates
+pass:
+
+1. current official Act, Rules, notification/circular, portal, and IRP
+   requirements are verified and recorded;
+2. accounting and qualified GST review confirms reason, value, tax, ITC,
+   evidence, and reporting behavior;
+3. schema, permissions, actions, audit, numbering, allocation, and migration
+   design are reviewed without weakening tenant isolation or immutability;
+4. unit and integration tests cover every statutory ground, rejection,
+   rounding, allocation, evidence, retry, and concurrency case;
+5. isolated database runtime tests verify supplier issuance and recipient
+   processing using the restricted runtime role;
+6. independent acceptance reconciles persisted note, invoice, ledger, tax,
+   reporting, IRP, audit, and payload-hash evidence; and
+7. production migration, recovery, rollout, and go/no-go authorization are
+   separately approved.
+
+Until then, the project must say **scope approved; implementation and
+acceptance open**, not “credit/debit notes supported,” “GST compliant,” or
+“ITC reversed.” No source, schema, database, or runtime evidence currently
+closes these gates.
 
 ## 13. Acceptance and traceability matrix
 
@@ -860,7 +1176,7 @@ approved design changes it.
 | New → `DRAFT` | `create_invoice`; valid customer/lines, domestic facts, current source calculation | Existing sales invoice and line rows inside a transaction; no stock/ledger posting | Repeated create requests are not proven idempotent; failure rolls back the transaction |
 | `DRAFT` → `CANCELLED` | `cancel_invoice`; only draft | Status, cancellation actor/time | Repeated cancellation rejected; no financial posting |
 | `DRAFT` → `FINALIZED` | `finalize_invoice`; reload and validate POS, totals, snapshots, stock, and permissions | Existing transactional stock, ledger, sequence, invoice, snapshots, and audit writes | Existing action rejects finalized/non-draft and stock races; durable sales idempotency and concurrent duplicate proof are `BLOCKED` |
-| `FINALIZED` → any other state | No current approved transition | No direct rewrite | Reject; corrections/returns/notes are deferred and must not be invented |
+| `FINALIZED` → any other state | No current implemented transition; note scope is approved separately in §12.1 | No direct rewrite | Reject until the additive note workflow is implemented and accepted; never overwrite original evidence |
 | `CANCELLED` → any other state | No current approved transition | None | Reject |
 
 Preview is non-authoritative. The server recalculates at draft save and
@@ -1010,16 +1326,16 @@ explicitly blocked rather than given an invented expected tax result.
 | `DGM-T07` | Purchase/Regular inter-state | Supplier and recipient differ, complete evidence | IGST expected only after approved purchase POS rule | Blocked PGST-01/legal |
 | `DGM-T08` | Intra-UT | Supported UT facts and approved UTGST policy | CGST/UTGST persistence and invoice display | Blocked UTGST policy |
 | `DGM-T09` | Mixed rates | Two lines with distinct approved rates | Each line has independent taxable/components; invoice aggregates persisted lines | Blocked rate catalog |
-| `DGM-T10` | Exclusive mode | Quantity, price, discount, approved rate | Taxable base follows approved discount order and rounding | Blocked precision policy |
-| `DGM-T11` | Inclusive mode | Inclusive amount, approved rate, same POS | Extracted taxable/GST values reconcile to inclusive total | Blocked extraction/rounding policy |
-| `DGM-T12` | Negative/missing POS | Missing, invalid, contradictory, `96/97/99`, or unsupported code | Calculation/finalization blocked; raw fact and reason retained | Proposed negative contract |
-| `DGM-T13` | GSTIN validation | Missing, malformed, checksum-invalid, state mismatch, effective-date conflict | Correct diagnostic; no prefix-only classification | Blocked checksum/source policy |
+| `DGM-T10` | Exclusive mode | Quantity, price, discount, approved rate | Exact-decimal taxable base and independent components; no premature intermediate rounding | Engineering implementation and focused tests passed; owner/professional acceptance pending |
+| `DGM-T11` | Inclusive mode | Inclusive amount, approved rate, same POS | Purchase workflow remains blocked; isolated Rule 35 extraction helper preserves declared amount and components | Workflow blocked by policy; helper tests are not operational acceptance |
+| `DGM-T12` | Negative/missing POS | Missing, invalid, contradictory, same-UT, or unsupported code | Calculation/finalization blocked; raw fact and reason retained | Demonstrated POS cases pass; `96/97/99` were tested only as unsupported GSTIN prefixes, not POS inputs |
+| `DGM-T13` | GSTIN validation | Supplied GSTIN has exactly 15 characters; optional blank remains valid | Current release does not perform checksum, state-prefix, registration-status, or effective-date verification; no prefix-only classification | `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`; implementation and focused tests passed; runtime and independent acceptance remain separate |
 | `DGM-T14` | Product classification | Missing/conflicting HSN/SAC/rate or exempt/nil/non-GST classification | Block until approved classification/rate evidence exists | Blocked rate catalog |
 | `DGM-T15` | Sales finalization retry | Same draft submitted twice/concurrently | No duplicate stock/ledger/sequence/audit effects; stable idempotent outcome | Blocked sales idempotency design |
 | `DGM-T16` | Purchase finalization retry | Same idempotency key and unchanged payload | Same safe result; changed payload rejected | Existing source contract; runtime blocked |
 | `DGM-T17` | Purchase reconciliation | Declared/calculated equal, missing, invalid, and differing fields | Correct reconciliation state; source evidence unchanged | Existing pure contract; runtime blocked |
 | `DGM-T18` | Unauthorized acceptance | Actor lacks acceptance permission or active membership | Acceptance rejected; no decision/status mutation | Existing source contract; DB proof blocked |
-| `DGM-T19` | Stale purchase revision | Acceptance/posting after evidence/calculation version changes | Conditional update fails; posting effects absent | Proposed; runtime blocked |
+| `DGM-T19` | Stale purchase revision | Evidence correction and posting after current evidence/calculation changes | Correction resets acceptance/decision and increments the GST record version; finalization requires current accepted evidence, calculation, decision, and line snapshots | `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`; current posting safeguards remain; advanced stale acceptance-revision guard is not implemented |
 | `DGM-T20` | Atomic rollback | Inject stock/ledger/sequence failure during sales/purchase finalization | No partial invoice, stock, ledger, sequence, or audit effects | Financial E2E blocked |
 | `DGM-T21` | Tenant isolation | Tenant A attempts read/write of tenant B facts | Zero rows or denied write under ordinary non-BYPASSRLS role | RLS/database execution blocked |
 | `DGM-T22` | Historical reprint | Mutate current master after complete finalization | Print remains snapshot-identical; legacy fallback is disclosed | Runtime/database blocked |
@@ -1029,6 +1345,43 @@ explicitly blocked rather than given an invented expected tax result.
 Preserve existing identifiers such as `GST-001`–`GST-020`, `D-GST-01`–`D-GST-52`,
 `PUR-POS-*`, `SAL-POS-*`, and Financial E2E scenario identifiers. New `DGM-T*`
 IDs supplement rather than replace them.
+
+### 26.1 Current-release scope and engineering evidence
+
+The owner-approved current-release GSTIN decision is limited to exact
+15-character validation when a GSTIN is supplied. Checksum, state-prefix,
+registration-status, and effective-date checks are explicitly deferred to
+Version 2. The implementation and focused tests are present; runtime and
+independent acceptance remain separate statuses. Unsupported prefixes such as
+`96`, `97`, and `99` do not drive POS resolution.
+
+The owner-approved current-release scope defers the advanced stale purchase GST
+acceptance-revision guard to Version 2. The dependency inspection found that
+evidence correction clears the current accounting decision, resets acceptance
+to `NOT_ACCEPTED`, increments `gst_record_version`, and causes finalization to
+require current evidence, calculation, acceptance, and accepted line
+snapshots. Those current-release posting safeguards remain required and are
+not weakened by the deferral. The advanced guard is not implemented or
+independently accepted.
+
+### 26.2 Version 2 deferred-scope register
+
+The following items are approved current-release deferrals, not current-release
+implementation failures:
+
+- **DGM-T13:** retain exactly 15-character GSTIN validation in the current
+  release; defer checksum, state-prefix, registration-status, and effective-date
+  verification to Version 2.
+- **DGM-T19:** retain current purchase evidence, acceptance, authorization,
+  revision, and finalization safeguards; defer advanced stale acceptance-
+  revision protection to Version 2.
+
+The shared exact-decimal implementation and focused arithmetic tests are
+recorded in
+[`0009-gst-precision-rounding-engineering-contract.md`](../decisions/0009-gst-precision-rounding-engineering-contract.md).
+The engineering contract is implemented for the demonstrated calculator paths,
+but DGM-T25 is not independently accepted until the detailed owner decision and
+qualified professional confirmation are recorded.
 
 ## 27. Decision and blocker register
 
@@ -1045,7 +1398,7 @@ IDs supplement rather than replace them.
 | `DGM-B09` | What database role, grants, forced-RLS, immutable triggers, and migration baseline apply? | Rollout review is design-only; live baseline is not durable | Security/Architecture, database owner, Engineering | `BLOCKED`; source SQL is not applied-state proof |
 | `DGM-B10` | How are sales duplicate finalization and recovery handled? | Purchase has idempotency design; sales has transaction but no equivalent durable operation record | Engineering, Security/Architecture | `BLOCKED`; no production claim |
 | `DGM-B11` | How are legacy drafts activated or classified? | PGST-01 prohibits silent conversion and pilot expansion | Product owner, Accounting/GST, Engineering | `BLOCKED`; drafts remain legacy/held |
-| `DGM-B12` | Which corrections, cancellations, reversals, notes, and returns are in scope? | Notes/returns and finalized reversals are deferred | Product owner and Accounting/GST | `DEFERRED`; no new transition may be invented |
+| `DGM-B12` | Which corrections, cancellations, reversals, notes, and returns are in scope? | GST credit/debit notes are current-release requirements for supplier issuance and recipient processing; physical-return logistics and unrelated reversals remain separately gated | Product owner, Accounting/finance, and qualified GST reviewer | `SCOPE APPROVED; IMPLEMENTATION/PROFESSIONAL/RUNTIME GATES OPEN`; no new transition may be invented |
 
 ## 28. Dependency-ordered implementation sequence
 
@@ -1201,7 +1554,7 @@ verified only in part.
 | `DGM-G09` | Calculation precision | Approve decimal representation/storage scale, intermediate arithmetic, discount order, inclusive extraction level, component allocation, line/invoice rounding, and signed round-off. | Accounting/finance; qualified GST reviewer; Engineering | DGM-B06; purchase precision dependencies | Shared authoritative calculator and financial acceptance | Existing numeric arithmetic remains legacy behavior only. | `BLOCKED` |
 | `DGM-G10` | Calculation evidence | Define a deterministic canonical input/output serialization and fingerprint algorithm, including rule/source revision and transaction facts. | Engineering; Security/Architecture; Accounting/finance | Precision contract; treatment/POS/rate contracts | Reproducible calculation records and audit comparison | Store existing source evidence where available; do not claim fingerprints are complete. | `MISSING` |
 | `DGM-G11` | Sales posting | Decide durable idempotency key scope, request-hash semantics, concurrent retry result, recovery after uncertain failure, and duplicate audit/sequence behavior. | Engineering; Security/Architecture | DGM-B10; transaction design | Sales finalization hardening and production claim | Existing transaction and draft/finalized guards remain; duplicate proof is absent. | `BLOCKED` |
-| `DGM-G12` | Sales corrections | Decide whether cancellation, correction, return, credit/debit note, or reversal behavior is in this scope and define immutable history effects. | Product owner; Accounting/finance; qualified GST reviewer | DGM-B12 | Any post-finalization correction workflow | Reject unapproved transitions; no notes or reversals are invented. | `DECIDED` |
+| `DGM-G12` | Sales corrections | Credit/debit notes are in current-release scope; define immutable note allocations, original-document references, recipient evidence, and additive accounting effects. Physical returns and other reversals remain separately gated. | Product owner; Accounting/finance; qualified GST reviewer | DGM-B12 | Any post-finalization correction workflow | Reject unapproved transitions; do not overwrite original documents or invent note effects. | `DECIDED — SCOPE ONLY` |
 | `DGM-G13` | Purchase acceptance | Approve discrepancy materiality/tolerance, accepted-value precedence, evidence timing, authority, delegation, and segregation-of-duties exceptions. | Accounting/finance; qualified GST reviewer; Product owner | PGST-01; PGST-07/08; DGM-B08 | Purchase reconciliation and posting | Preserve declared/calculated/accepted separation; block unresolved or unauthorized acceptance. | `BLOCKED` |
 | `DGM-G14` | Purchase lifecycle | Align the active lifecycle with PGST-01’s pilot/legacy-draft rules and define the exact relationship between invoice status and derived GST/reconciliation statuses. | Product owner; Engineering; Accounting/finance | PGST-01; DGM-B11 | Purchase state implementation and legacy routing | Keep `DRAFT/FINALIZED/CANCELLED`; hold legacy/incomplete drafts. | `BLOCKED` |
 | `DGM-G15` | Historical compatibility | Approve treatment of aggregate-only invoices, missing POS/HSN/GSTIN, stale rates, reopened drafts, and incomplete snapshots, including any permitted fallback wording. | Accounting/finance; qualified GST reviewer; Product owner | DGM-B11; historical evidence | Reprint, reopen, and migration-free compatibility behavior | Read-only legacy display; no fabricated facts or silent recalculation. | `BLOCKED` |

@@ -182,12 +182,22 @@ export function getStateCodeFromGstin(gstin: string | null | undefined): string 
  * - "INTRA": Both states resolved and are the same (intra-state supply, CGST+SGST).
  * - "INTER": Both states resolved and are different (inter-state supply, IGST).
  * - "UNKNOWN": One or both states could not be resolved; caller MUST handle explicitly.
+ *   Same-UT supplies also remain UNKNOWN until an approved UTGST contract exists.
  *   This prevents silent misclassification of tax liability.
  */
 export type PlaceOfSupplyResult =
     | { type: "INTRA" }
     | { type: "INTER" }
-    | { type: "UNKNOWN"; reason: "MISSING_SUPPLIER" | "MISSING_BUYER" | "INVALID_SUPPLIER" | "INVALID_BUYER" | "BOTH_INVALID" };
+    | {
+        type: "UNKNOWN";
+        reason:
+            | "MISSING_SUPPLIER"
+            | "MISSING_BUYER"
+            | "INVALID_SUPPLIER"
+            | "INVALID_BUYER"
+            | "BOTH_INVALID"
+            | "UNSUPPORTED_UTGST";
+    };
 
 export function determinePlaceOfSupply(
     supplierState?: string | null,
@@ -218,6 +228,13 @@ export function determinePlaceOfSupply(
     }
     if (buyerInvalid) {
         return { type: "UNKNOWN", reason: "INVALID_BUYER" };
+    }
+    if (
+        supplier === buyer &&
+        supplier !== null &&
+        INDIAN_UNION_TERRITORIES.some(({ code }) => code === supplier)
+    ) {
+        return { type: "UNKNOWN", reason: "UNSUPPORTED_UTGST" };
     }
 
     return supplier === buyer ? { type: "INTRA" } : { type: "INTER" };

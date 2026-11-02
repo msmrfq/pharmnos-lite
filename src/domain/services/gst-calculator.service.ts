@@ -1,4 +1,10 @@
 import { determinePlaceOfSupply, type PlaceOfSupplyResult } from "@/lib/constants/indian-states";
+import {
+  DECIMAL_CALCULATION_SCALE,
+  Decimal,
+  decimalOrZero,
+  sumDecimals,
+} from "@/lib/decimal";
 
 export type GstPlaceOfSupply = "INTRA" | "INTER";
 
@@ -42,6 +48,12 @@ export type PersistedSalesTaxFacts = {
   line_total: number;
 };
 
+export type SalesLineAmounts = {
+  gross_amount: number;
+  discount_amount: number;
+  taxable_value: number;
+};
+
 export type SalesSnapshotReadiness = {
   sellerName?: string | null;
   sellerState?: string | null;
@@ -62,14 +74,20 @@ export type SalesFinalizationFacts = SalesSnapshotReadiness & {
 };
 
 export function toPersistedSalesTaxFacts(line: GstLineSplit): PersistedSalesTaxFacts {
-  const cess = line.cess_amount ?? 0;
+  const cess = decimalOrZero(line.cess_amount);
+  const gst = sumDecimals([
+    line.cgst_amount,
+    line.sgst_amount,
+    line.igst_amount,
+    cess,
+  ]).round(2, "HALF_UP");
   return {
     taxable_amount: line.taxable_value,
-    gst_amount: round2(line.cgst_amount + line.sgst_amount + line.igst_amount + cess),
+    gst_amount: gst.toNumber(),
     cgst_amount: line.cgst_amount,
     sgst_amount: line.sgst_amount,
     igst_amount: line.igst_amount,
-    cess_amount: cess,
+    cess_amount: cess.toNumber(),
     line_total: line.line_total,
   };
 }
@@ -177,27 +195,43 @@ export type GstConfig = {
 // Re-export the PlaceOfSupplyResult type for callers that need to handle unresolved state
 export type { PlaceOfSupplyResult };
 
-function round(value: number, mode: GstRounding = "HALF_UP"): number {
-  if (mode === "NONE") return value;
-  if (mode === "DOWN") return Math.floor(value * 100) / 100;
-  return Math.round(value * 100) / 100;
+function roundDecimal(value: Decimal, mode: GstRounding = "HALF_UP"): Decimal {
+  return value.round(2, mode);
 }
 
-function round2(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.round(value * 100) / 100;
+function calculateSalesLineAmountsExact(item: SalesGstLineInput): {
+  gross: Decimal;
+  discount_amount: Decimal;
+  taxable_value: Decimal;
+} {
+  const quantity = decimalOrZero(item.quantity);
+  const saleRate = decimalOrZero(item.sale_rate);
+  const discountPct = decimalOrZero(item.trade_discount_pct ?? item.discount_pct);
+  const gross = quantity.multiply(saleRate);
+  const discount = gross.multiply(discountPct).divide(100, DECIMAL_CALCULATION_SCALE);
+  const taxable = gross.subtract(discount);
+  return {
+    gross,
+    discount_amount: discount,
+    taxable_value: taxable.isNegative() ? Decimal.zero() : taxable,
+  };
+}
+
+export function calculateSalesLineAmounts(item: SalesGstLineInput): SalesLineAmounts {
+  const amounts = calculateSalesLineAmountsExact(item);
+  return {
+    gross_amount: amounts.gross.round(2, "HALF_UP").toNumber(),
+    discount_amount: amounts.discount_amount.round(2, "HALF_UP").toNumber(),
+    taxable_value: amounts.taxable_value.toNumber(),
+  };
 }
 
 export function toTaxableGstLine(item: SalesGstLineInput): LineItemTaxable {
-  const quantity = Number(item.quantity ?? 0);
-  const saleRate = Number(item.sale_rate ?? 0);
-  const discountPct = Number(item.trade_discount_pct ?? item.discount_pct ?? 0);
-  const gross = quantity * saleRate;
-  const discount = gross * (discountPct / 100);
+  const amounts = calculateSalesLineAmountsExact(item);
 
   return {
-    taxable_value: Math.max(0, round2(gross - discount)),
-    gst_rate_pct: Number(item.gst_rate ?? 0),
+    taxable_value: amounts.taxable_value.toNumber(),
+    gst_rate_pct: decimalOrZero(item.gst_rate).toNumber(),
   };
 }
 
@@ -205,50 +239,57 @@ export function splitLineGst(
   line: LineItemTaxable,
   cfg: GstConfig,
 ): GstLineSplit {
-  const rate = Math.max(0, Number(line.gst_rate_pct) || 0);
-  const taxable = Number(line.taxable_value) || 0;
+  const inputRate = decimalOrZero(line.gst_rate_pct);
+  const rate = inputRate.isNegative() ? Decimal.zero() : inputRate;
+  const taxable = decimalOrZero(line.taxable_value);
 
-  if (line.is_non_taxable || rate === 0) {
+  if (line.is_non_taxable || rate.isZero()) {
     return {
       line_id: line.line_id,
-      taxable_value: taxable,
+      taxable_value: taxable.toNumber(),
       gst_rate_pct: 0,
       cgst_amount: 0,
       sgst_amount: 0,
       igst_amount: 0,
       cess_amount: 0,
-      line_total: taxable,
+      line_total: taxable.toNumber(),
     };
   }
 
-  const halfRate = rate / 2;
   const rounding = cfg.rounding ?? "HALF_UP";
 
   if (cfg.placeOfSupply === "INTRA") {
-    const cgst = round((taxable * halfRate) / 100, rounding);
-    const sgst = round((taxable * halfRate) / 100, rounding);
+    const halfRate = rate.divide(2, DECIMAL_CALCULATION_SCALE);
+    const componentTax = taxable
+      .multiply(halfRate)
+      .divide(100, DECIMAL_CALCULATION_SCALE);
+    const cgst = roundDecimal(componentTax, rounding);
+    const sgst = roundDecimal(componentTax, rounding);
     return {
       line_id: line.line_id,
-      taxable_value: taxable,
-      gst_rate_pct: rate,
-      cgst_amount: cgst,
-      sgst_amount: sgst,
+      taxable_value: taxable.toNumber(),
+      gst_rate_pct: rate.toNumber(),
+      cgst_amount: cgst.toNumber(),
+      sgst_amount: sgst.toNumber(),
       igst_amount: 0,
       cess_amount: 0,
-      line_total: round(taxable + cgst + sgst, rounding),
+      line_total: roundDecimal(taxable.add(cgst).add(sgst), rounding).toNumber(),
     };
   }
 
-  const igst = round((taxable * rate) / 100, rounding);
+  const igst = roundDecimal(
+    taxable.multiply(rate).divide(100, DECIMAL_CALCULATION_SCALE),
+    rounding,
+  );
   return {
     line_id: line.line_id,
-    taxable_value: taxable,
-    gst_rate_pct: rate,
+    taxable_value: taxable.toNumber(),
+    gst_rate_pct: rate.toNumber(),
     cgst_amount: 0,
     sgst_amount: 0,
-    igst_amount: igst,
+    igst_amount: igst.toNumber(),
     cess_amount: 0,
-    line_total: round(taxable + igst, rounding),
+    line_total: roundDecimal(taxable.add(igst), rounding).toNumber(),
   };
 }
 
@@ -257,28 +298,28 @@ export function calculateGstTotals(
   cfg: GstConfig,
 ): GstTotals {
   const splits = lines.map((l) => splitLineGst(l, cfg));
-  const sumTaxable = splits.reduce((s, l) => s + l.taxable_value, 0);
-  const sumCgst = splits.reduce((s, l) => s + l.cgst_amount, 0);
-  const sumSgst = splits.reduce((s, l) => s + l.sgst_amount, 0);
-  const sumIgst = splits.reduce((s, l) => s + l.igst_amount, 0);
-  const sumCess = splits.reduce((s, l) => s + (l.cess_amount ?? 0), 0);
-  const sumTax = sumCgst + sumSgst + sumIgst + sumCess;
-  const gross = sumTaxable + sumTax;
+  const sumTaxable = sumDecimals(splits.map((line) => line.taxable_value));
+  const sumCgst = sumDecimals(splits.map((line) => line.cgst_amount));
+  const sumSgst = sumDecimals(splits.map((line) => line.sgst_amount));
+  const sumIgst = sumDecimals(splits.map((line) => line.igst_amount));
+  const sumCess = sumDecimals(splits.map((line) => line.cess_amount ?? 0));
+  const sumTax = sumDecimals([sumCgst, sumSgst, sumIgst, sumCess]);
+  const gross = sumTaxable.add(sumTax);
   const rounding = cfg.rounding ?? "HALF_UP";
-  const rounded = round(gross, rounding);
-  const diff = round(rounded - gross, "HALF_UP");
+  const rounded = roundDecimal(gross, rounding);
+  const diff = rounded.subtract(gross).round(2, "HALF_UP");
 
   return {
     lines: splits,
-    total_taxable: round(sumTaxable, "HALF_UP"),
-    total_cgst: round(sumCgst, "HALF_UP"),
-    total_sgst: round(sumSgst, "HALF_UP"),
-    total_igst: round(sumIgst, "HALF_UP"),
-    total_cess: round(sumCess, "HALF_UP"),
-    total_tax: round(sumTax, "HALF_UP"),
-    gross_total: round(gross, "HALF_UP"),
-    round_off_applied: diff,
-    grand_total: round(rounded, "HALF_UP"),
+    total_taxable: sumTaxable.round(2, "HALF_UP").toNumber(),
+    total_cgst: sumCgst.round(2, "HALF_UP").toNumber(),
+    total_sgst: sumSgst.round(2, "HALF_UP").toNumber(),
+    total_igst: sumIgst.round(2, "HALF_UP").toNumber(),
+    total_cess: sumCess.round(2, "HALF_UP").toNumber(),
+    total_tax: sumTax.round(2, "HALF_UP").toNumber(),
+    gross_total: gross.round(2, "HALF_UP").toNumber(),
+    round_off_applied: diff.toNumber(),
+    grand_total: rounded.round(2, "HALF_UP").toNumber(),
     place_of_supply: cfg.placeOfSupply,
     rounding,
   };

@@ -84,6 +84,38 @@ The current source baseline was rechecked before this assessment. The current
 worktree contains pre-existing changes and the untracked active specification;
 none were reverted or overwritten.
 
+### 1.3 Current-release credit/debit-note scope authorization
+
+The owner-approved current-release scope includes both GST credit notes and
+GST debit notes, with both directions evaluated:
+
+| Direction | Current-release scope | Current evidence status |
+|---|---|---|
+| Supplier issuance | Create, review, approve, number, issue, report, and account for a GST credit/debit note linked to original invoice(s) | `SCOPE APPROVED; NOT IMPLEMENTED/TESTED/RUNTIME VERIFIED` |
+| Recipient processing | Receive, validate, accept or dispute, record attributable ITC reversal/additional ITC evidence, report, and post the supplier note without rewriting original purchase evidence | `SCOPE APPROVED; NOT IMPLEMENTED/TESTED/RUNTIME VERIFIED` |
+
+This is an owner/product scope decision only. It does not confirm the legal
+effect of Section 34, Section 15(3), Section 16, Rule 53(1A), Rule 59, current
+e-invoice applicability, current reporting mechanics, or the effective status
+of the Finance (No. 7) Act, 2025 Section 34(2) amendment. Those questions
+remain in the [GST Accounting Decision Question Pack](./gst-accounting-decision-question-pack.md)
+and must receive qualified confirmation before implementation acceptance.
+
+The current repository audit found no note-specific model, allocation,
+recipient ITC-reversal record, reporting state, IRN/IRP state, permission,
+audit event, or action. Generic `CREDIT_NOTE` and `DEBIT_NOTE` ledger types
+are primitives and are not evidence of a supported note workflow. T25-12 is
+therefore a current-release requirement with implementation and acceptance
+gates, not a deferred exclusion or verified pass.
+
+The detailed current-release contract is the [GST Credit and Debit Note
+Engineering Contract](./gst-credit-debit-note-engineering-contract.md). It
+finalizes the business and engineering requirements and the separate
+CDN-01-CDN-27 coverage denominator without changing the owner authorization or
+claiming implementation, runtime verification, independent acceptance, or
+production authorization. This closure artifact continues to own the scope
+authorization and decision status.
+
 ## 2. Evidence standard
 
 Each decision is classified using:
@@ -123,13 +155,13 @@ that prerequisite.
 | `BD-03` | What treatment and evidence apply to Unregistered recipients? | Do not silently convert an unregistered party into Regular. | Approve the permitted transaction direction, identity evidence, invoice wording, POS facts, and accounting consequences separately. Until then, block the workflow. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Qualified GST/accounting reviewer |
 | `BD-04` | What treatment and evidence apply to Consumers? | Consumer is a separate counterparty context, not a POS or tax shortcut. | Approve consumer identity/POS evidence, document behavior, and any applicable accounting/reporting treatment separately. Until then, block the workflow. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Qualified GST/accounting reviewer and authorized business owner |
 | `BD-05` | Which facts determine POS and how is POS confirmed? | Use seller, recipient, dispatch, delivery, transaction, and legally relevant supply facts; allow a system suggestion; require user confirmation; validate before calculation and revalidate at finalization. | Adopt a fact-specific POS resolver. Confirmation is transaction evidence, not proof of legal correctness. Contradictory, unsupported, changed, or incomplete facts block. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Qualified GST reviewer; engineering owner for contract interpretation |
-| `BD-06` | How are GSTIN and registration facts validated? | Preserve raw values; current source performs shape validation only; GSTIN prefixes must not determine POS or treatment. | Approve checksum/status verification source, effective dates, absent/invalid/unverified behavior, mismatch handling, and treatment-specific requirements. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Qualified GST/accounting reviewer |
+| `BD-06` | How are GSTIN and registration facts validated? | Proposed current-release scope is exact 15-character validation when supplied; preserve raw values and never use GSTIN prefixes to determine POS or treatment. | Keep checksum, state-prefix, registration-status, and effective-date verification in Version 2; approve absent/invalid/unverified behavior and any future verification source. | `PENDING — OWNER APPROVAL` | Authorized business owner; qualified GST/accounting reviewer for deferred verification |
 | `BD-07` | When is HSN/SAC mandatory and what exceptions exist? | Product-level classification is required where applicable; exceptions must come from an approved authoritative rule; missing, ambiguous, invalid, or unsupported required classification blocks. | Approve the classification policy and exact exception evidence. Do not invent rates, exemptions, digit counts, or statutory classifications. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Qualified GST reviewer and authorized business owner |
 | `BD-08` | Which rates apply and how are they versioned? | Use centrally governed, effective-dated rules with source revisions and reproducible historical selection. | Name the authoritative source, maintainer, reviewer, effective-date precedence, stale-draft behavior, and historical rule-version retention. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Qualified GST/accounting reviewer; authorized business owner |
 | `BD-09` | Which tax components apply? | Owner direction preserves CGST+SGST for legally applicable intra-state supplies, CGST+UTGST for applicable intra-UT supplies, and IGST for applicable inter-state supplies. | Approve the relevant UT set, component selection rules, POS precedence, and exceptions. Same-UT remains blocked until approved. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Qualified GST/accounting reviewer |
 | `BD-10` | How are discounts allocated and taxed? | Discount must affect taxable value under an approved policy; the active specification requires explicit line-level behavior. | Approve line allocation, order of operations, invoice-level discounts, post-supply treatment, and evidence requirements. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Qualified GST/accounting reviewer |
 | `BD-11` | Are tax-inclusive and tax-exclusive prices supported? | Both modes are specified as target behavior; inclusive extraction must use the approved rate and precision policy. | Approve supported modes, extraction level, component allocation, discount interaction, and failure behavior for ambiguous pricing mode. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Qualified GST/accounting reviewer; engineering owner |
-| `BD-12` | What precision and rounding rules apply? | Preserve source precision and timestamps; define taxable, component, line, invoice, and display precision explicitly. | Approve decimal representation, intermediate arithmetic, line rounding, aggregation, signed round-off, and persistence/display scales. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Accounting/finance owner and qualified GST reviewer |
+| `BD-12` | What precision and rounding rules apply? | Proposed T25 contract uses exact decimal arithmetic, preserved intermediate precision, explicit `HALF_UP`, independent components, and visible commercial round-off. | Approve the detailed matrix in `0009-gst-precision-rounding-engineering-contract.md`, including the Section 170 boundary, e-invoice reconciliation, and persistence/display scales. | `PENDING — OWNER APPROVAL` | Authorized business owner; accounting/finance owner and qualified GST reviewer |
 | `BD-13` | How are purchase values separated and accepted? | Preserve supplier-declared, application-calculated, and accounting-accepted values as separate facts and decisions. | Approve acceptance authority, evidence, delegation, segregation-of-duties rules, accepted-value precedence, and immutable decision records. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Accounting/finance owner; qualified GST reviewer |
 | `BD-14` | What happens when purchase values differ? | Reconciliation must preserve source evidence and block unresolved or unauthorized posting. | Approve materiality/tolerance, review states, resolution evidence, correction/revision behavior, and posting prerequisites. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Accounting/finance owner; qualified GST reviewer |
 | `BD-15` | What must pass before sales finalization? | Server recalculation, validated facts, complete snapshots, totals checks, inventory, ledger, sequence, audit, and atomic transaction behavior are required. | Approve the finalization fact matrix, stale-draft handling, duplicate/concurrent result, and correction/reversal scope. | `PROPOSED — OWNER APPROVAL REQUIRED` | Authorized business owner; accounting/finance and engineering reviewers |
@@ -142,7 +174,9 @@ The following existing decisions remain unchanged:
 - `DGM-OD-01` through `DGM-OD-03`: first-release treatment scope, POS
   selection, and separate Consumer/Unregistered behavior.
 - `DGM-OD-04`: HSN/SAC and effective-dated tax-rate governance.
-- `DGM-OD-05`: discount allocation, inclusive/exclusive pricing, and rounding.
+- `DGM-OD-05`: discount allocation, inclusive/exclusive pricing, and high-level
+  rounding direction; the detailed T25 contract is proposed in
+  `decisions/0009-gst-precision-rounding-engineering-contract.md`.
 - `DGM-OD-06`: separation and authorized acceptance of purchase GST values.
 - `DGM-OD-07`: durable sales finalization idempotency.
 - `DGM-OD-08`: GST-APP-03 Option B `calculation_id` direction.
@@ -156,6 +190,29 @@ The following existing decisions remain unchanged:
 These IDs remain in the active specification exactly once and remain marked
 `DECIDED`. Their dependent statutory, accounting, engineering, database, and
 runtime gates remain open.
+
+### 3.2 Current-release scope decisions
+
+The owner explicitly approved the following scope boundaries in the final
+audit correction instruction. This records scope approval only; implementation,
+runtime verification, and independent acceptance remain separate statuses.
+
+- DGM-T13 is `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`: retain
+  exactly 15-character length-only validation; defer checksum, state-prefix,
+  registration-status, and effective-date checks to Version 2.
+- DGM-T19 is `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`: defer the
+  advanced stale purchase GST acceptance-revision guard while preserving all
+  current purchase-posting safeguards and audit controls. Source inspection
+  confirms the current correction path clears acceptance and the accounting
+  decision, increments the GST record version, and leaves finalization
+  dependent on current accepted evidence and line snapshots.
+- DGM-T25 engineering implementation is present in
+  [`0009-gst-precision-rounding-engineering-contract.md`](../decisions/0009-gst-precision-rounding-engineering-contract.md),
+  but the detailed owner matrix remains `PENDING OWNER APPROVAL`.
+
+The T13/T19 scope decisions do not constitute qualified GST/legal
+confirmation, implementation evidence, runtime verification, or independent
+acceptance. T25 remains pending detailed owner sign-off.
 
 ## 4. Decision paper and consequences
 
@@ -258,6 +315,23 @@ dependency without authorizing implementation.
 | `EC-12` | Tenant isolation, roles, RLS, and integrity | GST-APP-01, GST-APP-02, GST-APP-04, GST-APP-05, GST-APP-06 | Restricted bootstrap/runtime roles, no direct anonymous CRUD, fail-closed forced RLS, guarded finalized/history transitions | Tenant-aware composite keys, policies, grants, triggers, and audit evidence | Applied grants, forced RLS, trigger, and ordinary-role cross-tenant/mutation evidence passed in the disposable target | `PASS — SCOPED` |
 | `EC-13` | Additive, catalog-guarded, repeatable rollout | GST-APP-08, approved schema, live catalog preflight, Option B relation | Stop on conflicts, preserve legacy compatibility, apply idempotently only after explicit authorization, and support rollback | Sanitized metadata baseline, migration ledger, conflict report, and recovery evidence | Committed baseline, repeatability, conflict stop, backup/restore, and comparison passed in disposable targets; partial-failure recovery is not independently verified from retained raw output | `PASS — SCOPED` |
 | `EC-14` | Financial E2E verification and authorization | Approved contracts, disposable target, identity evidence, owned fixtures, cleanup authorization | No live/ordinary target; broader E2E remains separately gated | Durable sanitized evidence for RLS, atomicity, rollback, idempotency, concurrency, history, and financial effects | Q-10/Q-14/Q-15 package passed for the disposable target; broader Financial E2E and release authorization remain separate | `PARTIAL — Q-10/Q-14/Q-15 PASS — SCOPED; BROADER E2E NOT VERIFIED` |
+
+### 6.0 Current T25 engineering evidence
+
+The current campaign implemented the shared exact-decimal boundary in
+[`src/lib/decimal.ts`](../../src/lib/decimal.ts), integrated it into the sales
+and purchase calculators, removed duplicate form arithmetic, and added focused
+precision, component, inclusive-helper, Section 170-isolation, preservation,
+and T13 length-only assertions. Existing PostgreSQL financial fields already
+use `NUMERIC`; no schema change was required.
+
+The focused calculator run passed `294/294` assertions and `pnpm typecheck`
+passed, including explicit evidence for already-rounded two-decimal
+serialization, arithmetic after JavaScript-number conversion, and the
+high-precision number boundary. This is engineering evidence only. The
+detailed owner matrix remains pending, and the Section 170 aggregation
+boundary, e-invoice obligations, and other statutory interpretations require
+qualified professional confirmation.
 
 ### 6.1 Hybrid architecture responsibilities
 
@@ -904,7 +978,11 @@ documentation or evidence.
 
 Stage 1 has a recorded owner-confirmed professional-review status for Q-01
 through Q-09. The five engineering blocker decisions are now owner-approved for
-scoped implementation and isolated validation. SEC-DEC-03, the
+scoped implementation and isolated validation. The current-release
+credit/debit-note scope is owner-approved for supplier issuance and
+recipient-side processing, but its legal interpretation, implementation,
+runtime evidence, independent acceptance, and production authorization remain
+open. SEC-DEC-03, the
 synthetic-fixture contracts, and the FIX-01–FIX-13 manifest remain open until
 their required evidence is produced. Legal/source, HSN/rate catalog,
 historical compatibility, and broader Financial E2E evidence remain open.
@@ -915,9 +993,11 @@ authorization.
 
 **Final status: `Q-10 PASS — SCOPED; Q-14 PASS — SCOPED; Q-15 PASS —
 SCOPED for the disposable local validation target; complete GST Modernization
-scope OWNER-AUTHORIZED for implementation and associated validation by Masum
-Rafique on 2026-10-31 — production migration, production security approval,
-deployment, and GST release remain separately governed and unapproved`.**
+scope, including current-release supplier issuance and recipient processing of
+credit/debit notes, OWNER-AUTHORIZED for implementation and associated
+validation by Masum Rafique — note implementation/acceptance and production
+migration, production security approval, deployment, and GST release remain
+separately governed and unapproved`.**
 
 ## 10. Files and execution record
 

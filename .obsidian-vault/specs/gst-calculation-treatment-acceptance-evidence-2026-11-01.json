@@ -1,0 +1,535 @@
+{
+  "evidenceVersion": 1,
+  "document": {
+    "title": "GST Calculation and Treatment Acceptance",
+    "date": "2026-11-01",
+    "stage": "POST-P7 — PRE-PRODUCTION VALIDATION",
+    "classification": "engineering acceptance evidence; not statutory certification"
+  },
+  "decision": {
+    "outcome": "NOT ACCEPTED",
+    "completion": {
+      "verifiedPass": 22,
+      "verifiedFail": 0,
+      "notVerified": 2,
+      "blockedPolicy": 1,
+      "blockedOwnerApproval": 0,
+      "blockedProfessionalConfirmation": 0,
+      "notApplicable": 0,
+      "totalInScopeCriteria": 25,
+      "percentage": 88
+    },
+    "reason": "Twenty-two engineering criteria have current or retained evidence: 16 current-campaign passes and 6 historical passes. DGM-T13 and DGM-T19 have approved current-release scope boundaries but remain not independently verified; the demonstrated T25 engineering paths are implemented, while DGM-T25 remains blocked by unresolved policy and qualified professional confirmation. T25-12 is current-release scope approved for supplier issuance and recipient-side processing, but no note workflow is implemented. The authoritative contract also keeps Composition, Unregistered, Consumer, UTGST, inclusive workflow, and other unsupported treatments blocked."
+  },
+  "authoritativeContract": {
+    "specification": ".obsidian-vault/specs/domestic-gst-modernization.md",
+    "implementationTracker": ".obsidian-vault/specs/gst-implementation-tracker-2026-10-31.md",
+    "precisionRoundingContract": ".obsidian-vault/decisions/0009-gst-precision-rounding-engineering-contract.md",
+    "approvedPolicies": [
+      ".obsidian-vault/decisions/0003-inventory-gst-valuation-policy.md",
+      ".obsidian-vault/decisions/0004-cess-governance-policy.md",
+      ".obsidian-vault/decisions/0005-inclusive-purchase-pricing-policy.md",
+      ".obsidian-vault/decisions/0006-freight-discount-allocation-policy.md",
+      ".obsidian-vault/decisions/0007-gst-rounding-precision-policy.md",
+      ".obsidian-vault/decisions/0008-purchase-gst-discrepancy-tolerance-policy.md"
+    ],
+    "categories": [
+      {
+        "name": "Registered Business – Regular",
+        "purchaseApplicability": "Conditional after supplier evidence, governed calculation, reconciliation, and accounting acceptance",
+        "salesApplicability": "Conditional after server POS, HSN/SAC/rule resolution, recalculation, snapshots, and finalization guards",
+        "expectedComponents": [
+          "same-state CGST + SGST",
+          "different-state IGST"
+        ],
+        "status": "CONDITIONALLY ENABLED; PARTIALLY VERIFIED"
+      },
+      {
+        "name": "Registered Business – Composition",
+        "purchaseApplicability": "Blocked",
+        "salesApplicability": "Blocked",
+        "expectedComponents": "Not approved; ordinary GST must not be inferred",
+        "status": "VERIFIED BLOCK"
+      },
+      {
+        "name": "Unregistered Business",
+        "purchaseApplicability": "Blocked pending separate policy",
+        "salesApplicability": "Blocked pending separate policy",
+        "expectedComponents": "Not approved; registration must not be inferred",
+        "status": "VERIFIED BLOCK"
+      },
+      {
+        "name": "Consumer",
+        "purchaseApplicability": "Unsupported as a normal supplier role",
+        "salesApplicability": "Blocked pending separate recipient policy",
+        "expectedComponents": "Consumer label cannot determine POS or components",
+        "status": "VERIFIED BLOCK"
+      }
+    ]
+  },
+  "sourceTrace": [
+    {
+      "concern": "treatment",
+      "files": [
+        "src/lib/gst/treatment.ts:3-55",
+        "src/app/_actions/sales.actions.ts:260-268",
+        "src/app/_actions/purchases.actions.ts:1148-1165"
+      ],
+      "finding": "Eight labels are retained; only Regular passes the supported-treatment guard."
+    },
+    {
+      "concern": "state-and-pos",
+      "files": [
+        "src/lib/constants/indian-states.ts:144-244",
+        "src/lib/gst/place-of-supply.ts:7-65"
+      ],
+      "finding": "Names/codes normalize centrally; missing, invalid, and same-UT cases fail closed; valid different regions resolve inter-state."
+    },
+    {
+      "concern": "rule-governance",
+      "files": [
+        "src/lib/gst/rule-governance.ts:15-65",
+        "src/app/_actions/sales.actions.ts:170-225",
+        "src/app/_actions/purchases.actions.ts:132-206"
+      ],
+      "finding": "Classification and rule resolution require active, approved, source-referenced, effective records and reject zero or multiple candidates."
+    },
+    {
+      "concern": "calculation",
+      "files": [
+        "src/lib/decimal.ts",
+        "src/domain/services/gst-calculator.service.ts",
+        "src/domain/services/purchase-calculator.service.ts",
+        "src/domain/services/purchase-gst-reconciliation.service.ts",
+        "src/domain/services/ledger-impact.service.ts",
+        "src/app/_actions/purchases.actions.ts",
+        "tests/gst-calculator.test.ts"
+      ],
+      "finding": "Exact coefficient/scale decimal arithmetic, explicit HALF_UP and isolated Section 170/commercial round-off helpers are implemented and covered by focused tests; owner and qualified professional acceptance remain separate."
+    },
+    {
+      "concern": "finalization-and-snapshots",
+      "files": [
+        "src/app/_actions/sales.actions.ts:454-555",
+        "src/app/_actions/purchases.actions.ts:660-830",
+        "src/app/_actions/purchases.actions.ts:1158-1415",
+        "scripts/gst-application-e2e-runner.mjs:475-965"
+      ],
+      "finding": "Server recalculation, governed snapshots, purchase evidence/reconciliation, treatment/tax-mode guards, retry/conflict handling, finalization stale-operation/single-effect checks, and scoped restricted-runtime database proof are present; the specific DGM-T19 stale purchase GST acceptance-revision rejection is not established, and complete GST modernization acceptance remains outside this evidence."
+    }
+  ],
+  "acceptanceMatrix": [
+    { "id": "DGM-T01", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Eight-label treatment contract", "evidence": ["tests/gst-treatment-contract.test.mjs"] },
+    { "id": "DGM-T02", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Pure Regular sales same-state exclusive calculation", "evidence": ["tests/gst-calculator.test.ts", "src/domain/services/gst-calculator.service.ts"], "assertions": 294, "limitation": "Not a fresh database finalization result" },
+    { "id": "DGM-T03", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Pure Regular sales inter-state exclusive calculation", "evidence": ["tests/gst-calculator.test.ts", "src/domain/services/gst-calculator.service.ts"], "assertions": 294, "limitation": "Complete legal/POS runtime matrix remains unverified" },
+    { "id": "DGM-T04", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Consumer fail-closed guard", "evidence": ["src/lib/gst/treatment.ts", "tests/gst-treatment-contract.test.mjs"], "limitation": "No Consumer calculation is claimed" },
+    { "id": "DGM-T05", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Composition fail-closed guard", "evidence": ["src/lib/gst/treatment.ts", "tests/gst-treatment-contract.test.mjs"], "limitation": "No Composition calculation is claimed" },
+    { "id": "DGM-T06", "result": "VERIFIED PASS — HISTORICAL", "scope": "Historical same-state purchase evidence and line model", "evidence": [".obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793531037977_0975f5.json", "tests/purchase-gst-line-model-contract.test.mjs"], "limitation": "Historical artifact, not a new run" },
+    { "id": "DGM-T07", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Inter-state purchase acceptance", "evidence": ["scripts/gst-application-e2e-runner.mjs", "current-campaign target 0419 output"], "facts": "GJ to MH; accepted IGST 18; CGST/SGST 0; persisted invoice/line/ledger assertions", "limitation": "Seeded rate is test evidence, not statutory approval" },
+    { "id": "DGM-T08", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Same-UT cannot fall back to SGST", "evidence": ["src/lib/constants/indian-states.ts", "src/lib/gst/place-of-supply.ts", "tests/gst-calculator.test.ts", "tests/gst-purchase-pos-contract.test.mjs"] },
+    { "id": "DGM-T09", "result": "VERIFIED PASS — HISTORICAL", "scope": "Historical purchase mixed-rate line independence", "evidence": [".obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793531037977_0975f5.json", "tests/purchase-gst-line-model-contract.test.mjs"], "limitation": "Sales mixed-rate runtime not run" },
+    { "id": "DGM-T10", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Exclusive taxable-value/component arithmetic", "evidence": ["src/lib/decimal.ts", "tests/gst-calculator.test.ts", "src/domain/services/gst-calculator.service.ts"], "assertions": 294, "limitation": "Engineering arithmetic is exact-decimal and explicitly rounded; owner/professional policy acceptance remains separate" },
+    { "id": "DGM-T11", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Inclusive purchase finalization guard and isolated Rule 35 helper", "evidence": ["src/app/_actions/purchases.actions.ts", "src/domain/services/purchase-calculator.service.ts", "tests/gst-calculator.test.ts"], "limitation": "The workflow remains blocked; helper tests are not operational acceptance" },
+    { "id": "DGM-T12", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Demonstrated missing, invalid, contradictory, same-UT, and valid inter-state POS facts", "evidence": ["src/lib/constants/indian-states.ts", "src/lib/gst/place-of-supply.ts", "tests/gst-calculator.test.ts", "tests/gst-purchase-pos-contract.test.mjs"], "covered": ["missing states", "invalid states", "contradictory facts", "recipient/delivery mismatch", "same-UT rejection", "valid inter-state facts"], "limitation": "Values 96/97/99 were tested only as unsupported GSTIN prefixes, not as POS inputs. This verifies the demonstrated fail-closed engineering contract, not legal classification approval" },
+    { "id": "DGM-T13", "result": "NOT VERIFIED", "scopeDecision": "CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED", "scope": "Current-release GSTIN length-only validation", "evidence": ["src/lib/validation/tenant.schemas.ts", "tests/gst-calculator.test.ts", ".obsidian-vault/decisions/0009-gst-precision-rounding-engineering-contract.md"], "implemented": "Exactly 15 supplied characters and optional blank are implemented/tested", "deferredToVersion2": ["checksum verification", "state-prefix verification", "registration-status verification", "effective-date verification"], "limitation": "Scope approval is separate from runtime and independent acceptance; unsupported prefixes do not drive POS resolution" },
+    { "id": "DGM-T14", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Approved HSN/SAC and effective rule governance seams", "evidence": ["src/lib/gst/rule-governance.ts", "tests/gst-rule-governance-contract.test.mjs", "tests/sales-gst-governance-contract.test.mjs"] },
+    { "id": "DGM-T15", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Sales durable retry/idempotency", "evidence": ["src/app/_actions/sales.actions.ts", "scripts/gst-application-e2e-runner.mjs"], "scenarios": ["duplicate retry", "changed-payload conflict", "pre-commit rollback", "single-effect assertions"], "limitation": "Scoped gap-resolution runtime evidence; not a rerun of the separate Sales GST acceptance campaign" },
+    { "id": "DGM-T16", "result": "VERIFIED PASS — HISTORICAL", "scope": "Historical purchase retry/conflict behavior", "evidence": [".obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793531037977_0975f5.json"], "limitation": "Historical target-bound result" },
+    { "id": "DGM-T17", "result": "VERIFIED PASS — HISTORICAL", "scope": "Historical purchase declared/calculated/accepted reconciliation", "evidence": [".obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793531037977_0975f5.json", "tests/purchase-gst-line-model-contract.test.mjs"] },
+    { "id": "DGM-T18", "result": "VERIFIED PASS — HISTORICAL", "scope": "Historical unauthorized purchase acceptance rejection", "evidence": [".obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793531037977_0975f5.json"] },
+    { "id": "DGM-T19", "result": "NOT VERIFIED", "scopeDecision": "CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED", "scope": "Stale purchase GST acceptance revision rejection", "evidence": ["src/app/_actions/purchases.actions.ts", ".obsidian-vault/decisions/0009-gst-precision-rounding-engineering-contract.md", "scripts/gst-application-e2e-runner.mjs", "initial concurrent-acceptance harness attempt"], "currentSafeguardEvidence": "Evidence correction clears acceptance/decision and increments gst_record_version; finalization requires current accepted evidence, calculation, decision, and line snapshots; acceptance requires accept_purchase_gst permission", "deferredToVersion2": ["advanced stale acceptance-revision guard"], "limitation": "The finalization stale-operation race and single-effect posting do not prove the advanced guard. The initial concurrent-acceptance assertion failed because both calls could serialize and succeed, so it was removed; targeted stale acceptance-revision runtime proof and independent acceptance remain unverified" },
+    { "id": "DGM-T20", "result": "VERIFIED PASS — HISTORICAL", "scope": "Existing historical atomic rollback evidence", "evidence": [".obsidian-vault/specs/sales-gst-acceptance-audit-2026-11-01.md", ".obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793531037977_0975f5.json"], "limitation": "Current campaign reran Sales rollback only; combined purchase rollback claim remains historical" },
+    { "id": "DGM-T21", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Restricted-role tenant isolation for this campaign", "evidence": ["scripts/gst-application-e2e-runner.mjs", "current-campaign target 0419 output"], "role": "pharmnos_e2e_runtime; LOGIN; NOSUPERUSER; NOBYPASSRLS", "assertions": ["cross-tenant reads empty/denied", "cross-tenant writes denied"] },
+    { "id": "DGM-T22", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Snapshot-first print and immutable finalized invoice behavior", "evidence": ["scripts/gst-application-e2e-runner.mjs", "tests/gst-calculator.test.ts", ".obsidian-vault/specs/sales-gst-acceptance-audit-2026-11-01.md"], "limitation": "Scoped current runtime proof, not complete historical-data migration acceptance" },
+    { "id": "DGM-T23", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Future categories fail closed", "evidence": ["src/lib/gst/treatment.ts", "tests/gst-treatment-contract.test.mjs"] },
+    { "id": "DGM-T24", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Legacy incomplete purchase draft hold", "evidence": ["src/app/_actions/purchases.actions.ts", "scripts/gst-application-e2e-runner.mjs"], "assertions": ["finalization rejected", "status/revision unchanged", "sequence unchanged", "no posting/stock/ledger rows"] },
+    { "id": "DGM-T25", "result": "BLOCKED — POLICY", "scope": "Precision and rounding policy acceptance", "evidence": [".obsidian-vault/decisions/0007-gst-rounding-precision-policy.md", ".obsidian-vault/decisions/0009-gst-precision-rounding-engineering-contract.md", "src/lib/decimal.ts", "src/domain/services/gst-calculator.service.ts", "src/domain/services/purchase-calculator.service.ts", "tests/gst-calculator.test.ts"], "engineeringImplementation": "IMPLEMENTED for demonstrated calculator paths; credit/debit-note workflow absent", "assertions": 294, "ownerDecision": "T25-12 CURRENT RELEASE SCOPE APPROVED — IMPLEMENTATION/TEST/RUNTIME/ACCEPTANCE UNVERIFIED", "professionalConfirmation": "REQUIRED for Section 170 aggregation, e-invoice obligations, Section 34(2) amendment/effective-date status, ITC-reversal evidence, reporting, and statutory/accounting interpretation", "limitation": "Arithmetic tests and scope approval do not establish legal acceptance, note implementation, or production/runtime verification" }
+  ],
+  "evidenceClassifications": {
+    "VERIFIED PASS — CURRENT CAMPAIGN": "The exact engineering behavior has current-campaign test or runtime evidence.",
+    "VERIFIED PASS — HISTORICAL": "The exact behavior is supported by a retained prior artifact and was not freshly executed in this campaign.",
+    "NOT VERIFIED": "Available evidence is insufficient to close the criterion.",
+    "BLOCKED — POLICY": "Implementation or verification must stop until the required policy contract exists.",
+    "BLOCKED — OWNER APPROVAL": "Acceptance must stop until the detailed owner decision is explicitly recorded.",
+    "BLOCKED — PROFESSIONAL CONFIRMATION": "Acceptance must stop until qualified GST/accounting interpretation is recorded.",
+    "VERIFIED FAIL": "The required behavior was executed and failed.",
+    "NOT APPLICABLE": "The criterion is outside the accepted scope with an explicit reason."
+  },
+  "precisionAndRounding": {
+    "criterion": "DGM-T25",
+    "result": "BLOCKED — OWNER APPROVAL",
+    "policyApproval": "0007 approves preserved intermediate precision, retained components, one versioned precedence, residual invoice adjustments, and Section 170 application where legally applicable; 0009 records the detailed matrix as pending owner approval.",
+    "implementationRequirements": [
+      "Explicit decimal scale",
+      "Explicit rounding mode",
+      "Discount ordering",
+      "Tax-inclusive extraction ordering",
+      "Component versus invoice precedence",
+      "Persistence and display precision boundary"
+    ],
+    "engineeringImplementation": "IMPLEMENTED for the demonstrated calculator paths using coefficient/scale decimal arithmetic, explicit HALF_UP, independent components, separate commercial round-off, and isolated Section 170 helper.",
+    "unitContractVerification": "Current calculator tests pass 294/294 assertions, including midpoint, no-premature-rounding, mixed-rate, component, number-conversion boundaries, inclusive-helper, preservation, and T13 length-only cases.",
+    "ownerDecision": "PENDING OWNER APPROVAL",
+    "professionalConfirmation": "REQUIRED for Section 170 aggregation, e-invoice obligations, and statutory/accounting interpretation.",
+    "financialRuntimeVerification": "Not run for this T25 campaign; no runtime result can close this criterion."
+  },
+  "scopeDecisions": {
+    "DGM-T13": {
+      "currentReleaseDecision": "CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED",
+      "implementation": "IMPLEMENTED AND FOCUSED-TESTED",
+      "version2": [
+        "checksum verification",
+        "state-prefix verification",
+        "registration-status verification",
+        "effective-date verification"
+      ],
+      "ownerApproval": "APPROVED FOR CURRENT-RELEASE SCOPE",
+      "runtimeVerification": "NOT CLAIMED",
+      "independentAcceptance": "NOT VERIFIED",
+      "posPrefixBehavior": "Unsupported prefixes 96, 97, and 99 are not mapped to POS or state codes."
+    },
+    "DGM-T19": {
+      "currentReleaseDecision": "CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED",
+      "implementation": "CURRENT POSTING SAFEGUARDS PRESERVED",
+      "dependencyInspection": "Evidence correction resets acceptance and current accounting decision and increments gst_record_version; finalization requires current accepted evidence, calculation, decision, and line snapshots.",
+      "version2": [
+        "advanced stale purchase GST acceptance-revision protection"
+      ],
+      "ownerApproval": "APPROVED FOR CURRENT-RELEASE SCOPE",
+      "advancedGuardImplementation": "NOT IMPLEMENTED",
+      "runtimeVerification": "TARGETED STALE ACCEPTANCE-REVISION PROOF NOT CLAIMED",
+      "independentAcceptance": "NOT VERIFIED"
+    }
+  },
+  "finalAudit": {
+    "date": "2026-11-02",
+    "sourceChanges": "NONE; documentation and evidence reconciliation only",
+    "t19DependencyInspection": {
+      "classification": "CURRENT SAFEGUARDS PRESERVED; VERSION 2 ADVANCED GUARD DEFERRED",
+      "evidence": [
+        "purchases.actions.ts:680-830",
+        "purchases.actions.ts:865-1104",
+        "purchases.actions.ts:1150-1324"
+      ],
+      "findings": [
+        "Acceptance and resolution require the accept_purchase_gst permission.",
+        "Evidence correction creates a new revision/calculation, clears the current accounting decision, resets acceptance to NOT_ACCEPTED, and increments gst_record_version.",
+        "Finalization requires current evidence/calculation IDs, ACCEPTED status, matching decision references, accepted line snapshots, and aggregate reconciliation.",
+        "The advanced stale purchase GST acceptance-revision guard is not implemented and is Version 2 scope."
+      ],
+      "runtimeVerification": "NOT RUN FOR THIS DOCUMENTATION-ONLY AUDIT"
+    },
+    "t25IntegrationBoundaries": [
+      {
+        "boundary": "Exact decimal values converted to JavaScript number",
+        "classification": "Implemented but not integrated",
+        "evidence": [
+          "src/lib/decimal.ts: Decimal.toNumber",
+          "src/lib/validation/purchases.schemas.ts: decimalFromString",
+          "src/lib/validation/sales.schemas.ts: decimalFromString import",
+          "src/domain/services/gst-calculator.service.ts: persisted sales tax facts and line amounts",
+          "src/domain/services/purchase-calculator.service.ts: line and invoice totals",
+          "src/domain/services/purchase-gst-reconciliation.service.ts: line aggregation",
+          "src/app/_actions/sales.actions.ts: number-shaped persistence values",
+          "src/app/_actions/purchases.actions.ts: accepted/persisted amount conversions",
+          "prisma/schema.prisma: invoice NUMERIC(14,2) and accepted/calculated purchase NUMERIC(20,4) fields",
+          "tests/gst-calculator.test.ts: number-conversion boundary assertions"
+        ],
+        "finding": "Three boundaries are distinct: (1) already-rounded two-decimal values such as 10.12 can serialize through Decimal.toNumber() to the expected number for that value, but this is not a universal losslessness guarantee; (2) arithmetic performed after conversion to JavaScript number retains binary floating-point behavior, demonstrated by 0.1 + 0.2; and (3) high-precision NUMERIC(20,4)-scale values can lose meaningful precision, demonstrated by 99999999999999.9999 becoming 100000000000000. The existing schemas coerce form strings through Number() before the shared Decimal path, and number-shaped service APIs remain."
+      },
+      {
+        "boundary": "Two-decimal invoice/e-invoice representation",
+        "classification": "Implemented and tested",
+        "evidence": [
+          "prisma/schema.prisma",
+          "src/app/billing/[invoiceId]/print/page.tsx",
+          "tests/gst-calculator.test.ts"
+        ],
+        "finding": "Current invoice persistence and print output use two-decimal monetary representation. No e-invoice output surface exists in the current release."
+      },
+      {
+        "boundary": "Invoice tax totals derived from reported item tax amounts",
+        "classification": "Implemented and tested",
+        "evidence": [
+          "src/domain/services/gst-calculator.service.ts",
+          "src/app/_actions/sales.actions.ts",
+          "src/app/_actions/purchases.actions.ts"
+        ],
+        "finding": "Sales totals aggregate line components; purchase finalization reconciles accepted line components to accepted invoice totals before posting. No e-invoice reconciliation output is implemented."
+      },
+      {
+        "boundary": "Rule 35 inclusive extraction in production flow",
+        "classification": "Implemented but not integrated",
+        "evidence": [
+          "src/domain/services/purchase-calculator.service.ts",
+          "src/app/_actions/purchases.actions.ts",
+          "tests/gst-calculator.test.ts"
+        ],
+        "finding": "The exact helper is focused-tested, while inclusive purchase creation/finalization remains fail-closed pending governed policy and workflow integration."
+      },
+      {
+        "boundary": "Commercial Round_Off_Amount separation",
+        "classification": "Implemented and tested",
+        "evidence": [
+          "src/domain/services/purchase-calculator.service.ts",
+          "src/app/_actions/purchases.actions.ts",
+          "src/app/_actions/sales.actions.ts",
+          "prisma/schema.prisma"
+        ],
+        "finding": "round_off is persisted separately and does not alter taxable values or GST components."
+      },
+      {
+        "boundary": "Independent CGST, SGST/UTGST, and IGST",
+        "classification": "Implemented and tested",
+        "evidence": [
+          "src/domain/services/gst-calculator.service.ts",
+          "src/domain/services/purchase-calculator.service.ts",
+          "src/app/_actions/sales.actions.ts",
+          "src/app/_actions/purchases.actions.ts",
+          "prisma/schema.prisma",
+          "tests/gst-calculator.test.ts"
+        ],
+        "finding": "CGST, SGST, and IGST are calculated and persisted independently in supported paths. UTGST remains explicitly unsupported and is not a current-release implementation claim."
+      },
+      {
+        "boundary": "Supplier-declared purchase values and issued sales invoice values",
+        "classification": "Implemented and tested",
+        "evidence": [
+          "src/app/_actions/purchases.actions.ts",
+          "src/app/_actions/sales.actions.ts",
+          "prisma/schema.prisma",
+          "tests/gst-calculator.test.ts"
+        ],
+        "finding": "Purchase declared/calculated/accepted facts and raw source values remain separate; finalized sales values and tax/supply snapshots are persisted. This is not a new T25 database campaign."
+      },
+      {
+        "boundary": "Original credit/debit-note references and adjustments",
+        "classification": "Not implemented / no supported workflow",
+        "evidence": [
+          "prisma/schema.prisma",
+          "src/app/_actions",
+          ".obsidian-vault/specs/domestic-gst-modernization.md: current-release scope requirement; no workflow",
+          ".obsidian-vault/decisions/0009-gst-precision-rounding-engineering-contract.md: T25-12 scope approved; implementation/acceptance unverified"
+        ],
+        "finding": "No credit-note or debit-note calculation/workflow/model exists in the current release. T25-12 is current-release scope approved for supplier issuance and recipient-side processing, so the boundary is classified as not implemented/no supported workflow, not as a verified pass, and no speculative subsystem was added."
+      }
+    ],
+    "ownerApproval": {
+      "t13": "CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED",
+      "t19": "CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED",
+      "t25": "T25-12 CURRENT RELEASE SCOPE APPROVED — IMPLEMENTATION/TEST/RUNTIME/ACCEPTANCE UNVERIFIED"
+    },
+    "professionalConfirmation": "REQUIRED for Section 170 aggregation boundary, e-invoice obligations, Section 34(2) amendment/effective-date status, ITC-reversal evidence, reporting, credit/debit-note representation, and statutory/accounting interpretation",
+    "runtimeVerification": "NO NEW RUNTIME/DATABASE CAMPAIGN; PRIOR TARGET-BOUND EVIDENCE RETAINED",
+    "independentAcceptance": "NOT ACCEPTED"
+  },
+  "databaseVerification": {
+    "classification": "AUTHORIZED_DISPOSABLE_LOOPBACK",
+    "target": {
+      "host": "127.0.0.1",
+      "port": 55435,
+      "database": "pharmnos_financial_e2e_0419",
+      "marker": "pharmnos-financial-e2e",
+      "composeProject": "pharmnoslite-financial-e2e-0419",
+      "composeService": "financial-e2e-postgres",
+      "composeProfile": "financial-e2e"
+    },
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": {
+      "name": "pharmnos_e2e_runtime",
+      "login": true,
+      "superuser": false,
+      "bypassRls": false
+    },
+    "currentCampaign": {
+      "runner": "scripts/gst-application-e2e-runner.mjs",
+      "runMode": "authorized restricted-runtime application path",
+      "result": "PASS",
+      "ownedResourcesReported": 87,
+      "scenarios": [
+        "tenant RLS and restricted privileges",
+        "Sales duplicate retry, changed-payload conflict, and rollback",
+        "inter-state purchase GJ to MH with persisted IGST",
+        "finalization stale-operation race and concurrent single-effect posting (not DGM-T19 acceptance-revision evidence)",
+        "incomplete legacy purchase draft hold",
+        "snapshot immutability and payment regressions"
+      ]
+    },
+    "cleanup": {
+      "status": "DEFERRED",
+      "reason": "Immutable GST financial-history rows were present; row-level deletion was refused by the safety policy.",
+      "deleted": false,
+      "databaseDisposed": false,
+      "historyPreserved": true
+    }
+  },
+  "utgst": {
+    "result": "VERIFIED PASS",
+    "supportedCalculation": false,
+    "change": "Same-UT normalized codes now return UNKNOWN/UNSUPPORTED_UTGST and purchase supply resolution returns an actionable block.",
+    "evidence": [
+      "src/lib/constants/indian-states.ts",
+      "src/lib/gst/place-of-supply.ts",
+      "tests/gst-calculator.test.ts",
+      "tests/gst-purchase-pos-contract.test.mjs"
+    ],
+    "limitation": "No UTGST rate, split, persistence, or invoice presentation was added."
+  },
+  "testRuns": [
+    {
+      "id": "focused-gst-contracts",
+      "command": "pnpm exec node --test .\\tests\\gst-*.test.mjs",
+      "exitCode": 0,
+      "tests": 37,
+      "passed": 37,
+      "failed": 0,
+      "classification": "VERIFIED PASS — CURRENT CAMPAIGN"
+    },
+    {
+      "id": "gst-calculator-typescript",
+      "command": "pnpm test:gst:calculator",
+      "exitCode": 0,
+      "assertionsPassed": 294,
+      "assertionsFailed": 0,
+      "classification": "VERIFIED PASS — CURRENT CAMPAIGN",
+      "runner": "scripts/gst-calculator-test.cjs",
+      "runnerGap": "The documented npx tsx runner is unavailable because tsx is not installed; the repository-supported command uses installed TypeScript and ts-node without adding a dependency."
+    },
+    {
+      "id": "full-javascript-suite",
+      "command": "node --test over every tests\\*.test.mjs file",
+      "exitCode": 0,
+      "tests": 231,
+      "passed": 231,
+      "failed": 0,
+      "classification": "VERIFIED PASS — CURRENT CAMPAIGN"
+    },
+    {
+      "id": "typescript-validation",
+      "command": "pnpm typecheck",
+      "exitCode": 0,
+      "classification": "VERIFIED PASS — CURRENT CAMPAIGN"
+    },
+    {
+      "id": "prisma-validation",
+      "command": "set isolated placeholder DATABASE_URL and DIRECT_URL; pnpm exec prisma validate",
+      "exitCode": 0,
+      "databaseAccess": false,
+      "classification": "VERIFIED PASS — CURRENT CAMPAIGN"
+    },
+    {
+      "id": "changed-file-eslint",
+      "command": "pnpm exec eslint scripts\\gst-application-e2e-runner.mjs scripts\\gst-calculator-test.cjs src\\lib\\constants\\indian-states.ts src\\lib\\gst\\place-of-supply.ts tests\\gst-calculator.test.ts tests\\gst-purchase-pos-contract.test.mjs",
+      "exitCode": 0,
+      "classification": "VERIFIED PASS — CURRENT CAMPAIGN"
+    },
+    {
+      "id": "changed-javascript-syntax",
+      "command": "node --check scripts\\gst-application-e2e-runner.mjs; node --check scripts\\gst-calculator-test.cjs",
+      "exitCode": 0,
+      "classification": "VERIFIED PASS — CURRENT CAMPAIGN"
+    },
+    {
+      "id": "authorized-0419-initial-harness-attempt",
+      "command": "authorized environment wrapper; node --input-type=module - importing scripts/gst-application-e2e-runner.mjs with a concurrent acceptance assertion",
+      "exitCode": 1,
+      "classification": "VERIFIED FAIL",
+      "failure": "The harness assumed concurrent acceptance calls would produce one optimistic-version loser; both calls could serialize and read the current revision, so the assertion failed. No criterion was promoted from this attempt.",
+      "disposition": "Harness assertion removed; the final run retained current-version acceptance and verified the deterministic finalization stale-operation race."
+    },
+    {
+      "id": "authorized-0419-application",
+      "command": "authorized environment wrapper; node --input-type=module - importing scripts/gst-application-e2e-runner.mjs with FINANCIAL_E2E_CLEANUP_MODE=DISPOSABLE_TARGET_DISPOSAL",
+      "exitCode": 0,
+      "classification": "VERIFIED PASS — CURRENT CAMPAIGN",
+      "target": "127.0.0.1:55435/pharmnos_financial_e2e_0419",
+      "runtimeRole": "pharmnos_e2e_runtime",
+      "assertions": [
+        "tenant RLS and restricted privileges",
+        "Sales retry/conflict/rollback",
+        "inter-state purchase IGST persistence",
+        "finalization stale-operation race and single-effect posting (not DGM-T19 acceptance-revision evidence)",
+        "incomplete legacy purchase hold",
+        "snapshot immutability"
+      ],
+      "cleanup": "DEFERRED; immutable history preserved; no rows deleted"
+    },
+    {
+      "id": "diff-check",
+      "command": "git diff --check",
+      "exitCode": 0,
+      "classification": "VERIFIED PASS — CURRENT CAMPAIGN"
+    }
+  ],
+  "historicalEvidence": {
+    "purchase": {
+      "run": "purchase_gst_1793531037977_0975f5",
+      "path": ".obsidian-vault/specs/purchase-gst-application-evidence-purchase_gst_1793531037977_0975f5.json",
+      "use": "Integration/regression evidence only; not full Purchase GST modernization acceptance"
+    },
+    "sales": {
+      "path": ".obsidian-vault/specs/sales-gst-acceptance-audit-2026-11-01.md",
+      "use": "Separate prior Sales GST application-path acceptance; not rerun here"
+    }
+  },
+  "changedFiles": [
+    "src/lib/decimal.ts",
+    "src/domain/services/gst-calculator.service.ts",
+    "src/domain/services/purchase-calculator.service.ts",
+    "src/domain/services/purchase-gst-reconciliation.service.ts",
+    "src/domain/services/ledger-impact.service.ts",
+    "src/app/_actions/sales.actions.ts",
+    "src/app/_actions/purchases.actions.ts",
+    "src/app/billing/new/_form.tsx",
+    "src/app/purchases/new/_form.tsx",
+    "src/lib/validation/tenant.schemas.ts",
+    "tests/gst-calculator.test.ts",
+    ".obsidian-vault/decisions/0009-gst-precision-rounding-engineering-contract.md",
+    ".obsidian-vault/specs/domestic-gst-modernization.md",
+    ".obsidian-vault/specs/gst-decision-closure-and-engineering-contract-approval.md",
+    ".obsidian-vault/specs/gst-calculation-treatment-acceptance-2026-11-01.md",
+    ".obsidian-vault/specs/gst-implementation-tracker-2026-10-31.md",
+    "package.json",
+    "scripts/gst-calculator-test.cjs",
+    "scripts/gst-application-e2e-runner.mjs",
+    "src/lib/constants/indian-states.ts",
+    "src/lib/gst/place-of-supply.ts",
+    "tests/gst-calculator.test.ts",
+    "tests/gst-purchase-pos-contract.test.mjs",
+    ".obsidian-vault/specs/gst-calculation-treatment-acceptance-2026-11-01.md",
+    ".obsidian-vault/specs/gst-calculation-treatment-acceptance-evidence-2026-11-01.json",
+    ".obsidian-vault/specs/gst-implementation-tracker-2026-10-31.md",
+    ".obsidian-vault/CLAUDE.md",
+    "CLAUDE.md",
+    ".cursorrules",
+    ".windsurfrules",
+    ".github/copilot-instructions.md",
+    ".obsidian-vault/AGENT.md",
+    ".obsidian-vault/AI_BRIEFING.md"
+  ],
+  "safety": {
+    "productionOrLiveSupabaseAccessed": false,
+    "existingDatabasesModified": false,
+    "authorizedDisposableTargetMutated": true,
+    "authorizedDisposableTargetRowDeletion": false,
+    "containersOrProcessesAltered": false,
+    "migrationsOrProvisioningExecuted": false,
+    "acceptanceCampaignRerun": true,
+    "t25DatabaseAccessed": false,
+    "t25RuntimeTestsExecuted": false,
+    "gitIndexOrCommitStateChanged": false,
+    "unrelatedUserWorkOverwritten": false
+  },
+  "remainingBlockers": [
+    "Composition, Unregistered Business, and Consumer rules and acceptance evidence",
+    "UTGST jurisdiction/rate/component/persistence policy",
+    "Complete legal place-of-supply scenario matrix",
+    "Governed inclusive Rule 35 extraction and residual rounding",
+    "DGM-T13 and DGM-T19 runtime/independent acceptance beyond their approved scope decisions",
+    "Explicit owner approval of the detailed T25 precision/rounding matrix",
+    "Sales mixed-rate runtime evidence",
+    "ITC eligibility/apportionment and accepted-GST inventory valuation lifecycle",
+    "Freight and invoice-wide discount allocation policy/implementation",
+    "Qualified professional confirmation of Section 170 aggregation, e-invoice obligations, and statutory rounding precedence"
+  ]
+}

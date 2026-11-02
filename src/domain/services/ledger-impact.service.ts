@@ -2,6 +2,7 @@ import { LedgerEntryType } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
 import { prisma as defaultPrisma } from "@/lib/db/prisma";
 import type { TenantContext } from "@/lib/db/tenant-context";
+import { Decimal, decimalOrZero } from "@/lib/decimal";
 
 export type CustomerLedgerImpactInput = {
   customer_id: string;
@@ -38,7 +39,7 @@ export type LedgerEntryResult = {
   entry_date: Date;
 };
 
-const round2 = (n: number) => Math.round(Number(n || 0) * 100) / 100;
+const round2 = (n: number) => decimalOrZero(n).round(2, "HALF_UP").toNumber();
 
 async function customerRunningBalance(
   tx: any,
@@ -56,9 +57,14 @@ async function customerRunningBalance(
     select: { debit: true, credit: true, entry_date: true, created_at: true, id: true },
   });
   if (!rows.length) return 0;
-  let bal = 0;
-  for (const r of rows) bal = round2(bal + Number(r.debit) - Number(r.credit));
-  return bal;
+  let bal = Decimal.zero();
+  for (const r of rows) {
+    bal = bal
+      .add(r.debit === null || r.debit === undefined ? 0 : r.debit.toString())
+      .subtract(r.credit === null || r.credit === undefined ? 0 : r.credit.toString())
+      .round(2, "HALF_UP");
+  }
+  return bal.toNumber();
 }
 
 async function supplierRunningBalance(
@@ -77,9 +83,14 @@ async function supplierRunningBalance(
     select: { debit: true, credit: true },
   });
   if (!rows.length) return 0;
-  let bal = 0;
-  for (const r of rows) bal = round2(bal + Number(r.credit) - Number(r.debit));
-  return bal;
+  let bal = Decimal.zero();
+  for (const r of rows) {
+    bal = bal
+      .add(r.credit === null || r.credit === undefined ? 0 : r.credit.toString())
+      .subtract(r.debit === null || r.debit === undefined ? 0 : r.debit.toString())
+      .round(2, "HALF_UP");
+  }
+  return bal.toNumber();
 }
 
 export class LedgerImpactService {
@@ -98,7 +109,7 @@ export class LedgerImpactService {
 
     return this.prisma.$transaction(async (tx: any) => {
       const latestBal = await customerRunningBalance(tx, t.tenantId, input.customer_id, entryDate);
-      const newBal = round2(latestBal + debit - credit);
+      const newBal = decimalOrZero(latestBal).add(debit).subtract(credit).round(2, "HALF_UP").toNumber();
       const row = await tx.customer_ledgers.create({
         data: {
           tenant_id: t.tenantId,
@@ -120,7 +131,7 @@ export class LedgerImpactService {
         const allBal = await customerRunningBalance(tx, t.tenantId, input.customer_id, new Date("2999-12-31"));
         await tx.customers.update({
           where: { id: input.customer_id, tenant_id: t.tenantId },
-          data: { receivable_balance: Math.max(0, round2(allBal)) },
+          data: { receivable_balance: Decimal.from(allBal).compare(0) === 1 ? round2(allBal) : 0 },
         });
       }
 
@@ -150,7 +161,7 @@ export class LedgerImpactService {
 
     return this.prisma.$transaction(async (tx: any) => {
       const latestBal = await supplierRunningBalance(tx, t.tenantId, input.supplier_id, entryDate);
-      const newBal = round2(latestBal + credit - debit);
+      const newBal = decimalOrZero(latestBal).add(credit).subtract(debit).round(2, "HALF_UP").toNumber();
       const row = await tx.supplier_ledgers.create({
         data: {
           tenant_id: t.tenantId,
@@ -177,7 +188,7 @@ export class LedgerImpactService {
         const allBal = await supplierRunningBalance(tx, t.tenantId, input.supplier_id, new Date("2999-12-31"));
         await tx.suppliers.update({
           where: { id: input.supplier_id, tenant_id: t.tenantId },
-          data: { payable_balance: Math.max(0, round2(allBal)) },
+          data: { payable_balance: Decimal.from(allBal).compare(0) === 1 ? round2(allBal) : 0 },
         });
       }
 

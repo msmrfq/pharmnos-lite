@@ -18,6 +18,7 @@ import {
   INDIAN_UNION_TERRITORIES,
   INDIAN_REGIONS,
 } from "../src/lib/constants/indian-states";
+import { resolvePurchaseSupplyFacts } from "../src/lib/gst/place-of-supply";
 
 import {
   gstCalculator,
@@ -41,8 +42,15 @@ import { toBusinessProfileUpdate } from "../src/app/_actions/settings.actions";
 import {
   calculatePurchaseInvoiceTotals,
   calculatePurchaseLineTotals,
+  calculatePurchaseLineTotalsExact,
+  extractInclusivePurchaseLineGst,
+  roundCommercialInvoiceTotal,
 } from "../src/domain/services/purchase-calculator.service";
 import { PurchaseInvoiceLineCreateSchema } from "../src/lib/validation/purchases.schemas";
+import {
+  Decimal,
+  roundSection170NearestRupee,
+} from "../src/lib/decimal";
 
 let passed = 0;
 let failed = 0;
@@ -116,6 +124,64 @@ function assertClose(actual: number, expected: number, tolerance: number, messag
     failed++;
   }
 }
+
+console.log("=== Exact Decimal and Rounding Tests ===\n");
+
+assertEqual(
+  Decimal.from("0.1").add("0.2").toString(),
+  "0.3",
+  "Decimal arithmetic: 0.1 + 0.2 is exact",
+);
+assertEqual(
+  Decimal.from("10.124").toFixed(2),
+  "10.12",
+  "Decimal rounding HALF_UP: below midpoint remains 10.12",
+);
+assertEqual(
+  Decimal.from("10.125").toFixed(2),
+  "10.13",
+  "Decimal rounding HALF_UP: midpoint rounds to 10.13",
+);
+assertEqual(
+  Decimal.from("10.126").toFixed(2),
+  "10.13",
+  "Decimal rounding HALF_UP: above midpoint remains 10.13",
+);
+assertEqual(
+  Decimal.from("1.005").add("0.005").toFixed(2),
+  "1.01",
+  "Decimal arithmetic: intermediate values are not rounded prematurely",
+);
+assertEqual(
+  Decimal.from("10.12").round(2, "HALF_UP").toNumber(),
+  10.12,
+  "Decimal boundary: an already-rounded two-decimal value serializes to its expected number",
+);
+assertEqual(
+  Decimal.from("0.1").toNumber() + Decimal.from("0.2").toNumber(),
+  0.30000000000000004,
+  "JavaScript number boundary: arithmetic after conversion retains binary floating-point behavior",
+);
+assertEqual(
+  Decimal.from("99999999999999.9999").toNumber(),
+  100000000000000,
+  "JavaScript number boundary: high-precision NUMERIC(20,4)-scale values can lose precision",
+);
+assertEqual(
+  roundSection170NearestRupee("10000.49").toFixed(0),
+  "10000",
+  "Section 170 helper: 10000.49 rounds to 10000",
+);
+assertEqual(
+  roundSection170NearestRupee("10000.50").toFixed(0),
+  "10001",
+  "Section 170 helper: 10000.50 rounds to 10001",
+);
+assertEqual(
+  roundCommercialInvoiceTotal(Decimal.from("10000.50")).toFixed(0),
+  "10001",
+  "Commercial round-off: nearest rupee remains a separate operation",
+);
 
 console.log("=== State Normalization Tests ===\n");
 
@@ -195,6 +261,13 @@ assertEqual(getStateCodeFromGstin("27AACXX0000B1ZP!"), null, "getStateCodeFromGs
 assertEqual(getStateCodeFromGstin(" 27aacxx0000b1zp "), "MH", "getStateCodeFromGstin: Valid lowercase input with whitespace");
 assertEqual(getStateCodeFromGstin("00AACXX0000B1ZP"), null, "getStateCodeFromGstin: Unsupported prefix 00");
 assertEqual(getStateCodeFromGstin("39AACXX0000B1ZP"), null, "getStateCodeFromGstin: Unsupported prefix 39");
+for (const prefix of ["96", "97", "99"]) {
+  assertEqual(
+    getStateCodeFromGstin(`${prefix}AACXX0000B1ZP`),
+    null,
+    `getStateCodeFromGstin: Special-purpose prefix ${prefix} remains unknown`,
+  );
+}
 assertEqual(getStateCodeFromGstin(null), null, "getStateCodeFromGstin: null input");
 
 // GSTIN prefixes and standalone state inputs use different validation paths.
@@ -262,6 +335,53 @@ assertEqual(purchaseInvoiceFacts.total_tax, 32.40, "Purchase facts: invoice tax"
 assertEqual(purchaseInvoiceFacts.round_off, -0.40, "Purchase facts: existing whole-unit round-off");
 assertEqual(purchaseInvoiceFacts.net_amount, 212, "Purchase facts: invoice net amount");
 
+const exactPurchaseLineFacts = calculatePurchaseLineTotalsExact({
+  quantity: 3,
+  purchase_rate: "10.005",
+  discount_pct: 0,
+  gst_rate: 18,
+});
+assertEqual(
+  exactPurchaseLineFacts.gross.toString(),
+  "30.015",
+  "Purchase decimal calculation: gross retains internal precision",
+);
+assertEqual(
+  exactPurchaseLineFacts.taxable_value.toString(),
+  "30.015",
+  "Purchase decimal calculation: taxable value is not rounded before tax",
+);
+
+const inclusivePurchaseFacts = extractInclusivePurchaseLineGst(
+  { inclusive_amount: "118", gst_rate: "18" },
+  "INTRA_STATE",
+);
+assertEqual(
+  inclusivePurchaseFacts.supplier_declared_amount.toString(),
+  "118",
+  "Inclusive purchase helper: supplier-declared amount is preserved",
+);
+assertEqual(
+  inclusivePurchaseFacts.taxable_value.toFixed(2),
+  "100.00",
+  "Inclusive purchase helper: Rule 35 taxable extraction",
+);
+assertEqual(
+  inclusivePurchaseFacts.cgst.toFixed(2),
+  "9.00",
+  "Inclusive purchase helper: independent CGST",
+);
+assertEqual(
+  inclusivePurchaseFacts.sgst.toFixed(2),
+  "9.00",
+  "Inclusive purchase helper: independent SGST",
+);
+assertEqual(
+  inclusivePurchaseFacts.gst_amount.toFixed(2),
+  "18.00",
+  "Inclusive purchase helper: extracted GST reconciles to declared amount",
+);
+
 const zeroPurchaseFacts = calculatePurchaseLineTotals({
   quantity: 0,
   purchase_rate: 0,
@@ -288,6 +408,49 @@ const multiLinePurchaseFacts = calculatePurchaseInvoiceTotals([
 assertEqual(multiLinePurchaseFacts.gross_amount, 200.50, "Purchase facts: multi-line gross total");
 assertEqual(multiLinePurchaseFacts.round_off, 0.50, "Purchase facts: positive whole-unit round-off");
 assertEqual(multiLinePurchaseFacts.net_amount, 201, "Purchase facts: rounded multi-line net amount");
+
+const lengthOnlyGstinBase = {
+  businessName: "Pharmnos Lite",
+  state: "MH",
+  invoicePrefix: "INV",
+  purchasePrefix: "PUR",
+  nearExpiryDays: "60",
+};
+assert(
+  businessProfileSchema.safeParse({
+    ...lengthOnlyGstinBase,
+    gstin: "27AACXX0000B1ZP",
+  }).success,
+  "DGM-T13: exactly 15 GSTIN characters are accepted",
+);
+assert(
+  businessProfileSchema.safeParse({
+    ...lengthOnlyGstinBase,
+    gstin: "96AACXX0000B1ZP",
+  }).success,
+  "DGM-T13: unsupported GSTIN prefixes are not used as a current-release length failure",
+);
+assert(
+  !businessProfileSchema.safeParse({
+    ...lengthOnlyGstinBase,
+    gstin: "27AACXX0000B1Z",
+  }).success,
+  "DGM-T13: GSTIN shorter than 15 characters is rejected",
+);
+assert(
+  !businessProfileSchema.safeParse({
+    ...lengthOnlyGstinBase,
+    gstin: "27AACXX0000B1ZP0",
+  }).success,
+  "DGM-T13: GSTIN longer than 15 characters is rejected",
+);
+assert(
+  businessProfileSchema.safeParse({
+    ...lengthOnlyGstinBase,
+    gstin: "",
+  }).success,
+  "DGM-T13: optional blank GSTIN remains allowed",
+);
 
 assert(
   PurchaseInvoiceLineCreateSchema.safeParse({
@@ -349,6 +512,11 @@ assertEqual(determinePlaceOfSupply("InvalidState", "MH").type, "UNKNOWN", "deter
 assertEqual(determinePlaceOfSupply("MH", "InvalidState").type, "UNKNOWN", "determinePlaceOfSupply: Invalid buyer state");
 assertEqual(determinePlaceOfSupply("", "").type, "UNKNOWN", "determinePlaceOfSupply: Both missing");
 assertEqual(determinePlaceOfSupply("InvalidState", "InvalidState2").type, "UNKNOWN", "determinePlaceOfSupply: Both invalid");
+const unsupportedUt = determinePlaceOfSupply("DL", "Delhi");
+assertEqual(unsupportedUt.type, "UNKNOWN", "determinePlaceOfSupply: Same-UT supply is blocked");
+if (unsupportedUt.type === "UNKNOWN") {
+  assertEqual(unsupportedUt.reason, "UNSUPPORTED_UTGST", "determinePlaceOfSupply: Same-UT block reason");
+}
 
 // Test that UNKNOWN results have correct reason
 const missingSupplier = determinePlaceOfSupply("", "MH");
@@ -482,6 +650,38 @@ const multiLineRoundingTotals = calculateGstTotals(
 );
 assertEqual(multiLineRoundingTotals.total_tax, 1.00, "calculateGstTotals multiple 5% INTRA lines: per-line tax rounding");
 assertEqual(multiLineRoundingTotals.grand_total, 21.20, "calculateGstTotals multiple 5% INTRA lines: grand total");
+
+const lowValueTotals = calculateGstTotals(
+  [
+    { taxable_value: 0.99, gst_rate_pct: 18 },
+    { taxable_value: 0.99, gst_rate_pct: 18 },
+    { taxable_value: 0.99, gst_rate_pct: 18 },
+  ],
+  intraConfig,
+);
+assertEqual(lowValueTotals.total_cgst, 0.27, "calculateGstTotals: three ₹0.99 lines preserve CGST components");
+assertEqual(lowValueTotals.total_sgst, 0.27, "calculateGstTotals: three ₹0.99 lines preserve SGST components");
+assertEqual(lowValueTotals.total_tax, 0.54, "calculateGstTotals: item tax amounts reconcile to invoice tax");
+assertEqual(lowValueTotals.grand_total, 3.51, "calculateGstTotals: three ₹0.99 lines grand total");
+
+const mixedRateTotals = calculateGstTotals(
+  [
+    { taxable_value: 100, gst_rate_pct: 5 },
+    { taxable_value: 100, gst_rate_pct: 18 },
+  ],
+  intraConfig,
+);
+assertEqual(mixedRateTotals.total_cgst, 11.50, "calculateGstTotals: mixed rates keep CGST independent");
+assertEqual(mixedRateTotals.total_sgst, 11.50, "calculateGstTotals: mixed rates keep SGST independent");
+assertEqual(mixedRateTotals.total_tax, 23, "calculateGstTotals: mixed rates aggregate reported components");
+
+const independentComponentLine = splitLineGst(
+  { taxable_value: 1.01, gst_rate_pct: 5 },
+  intraConfig,
+);
+assertEqual(independentComponentLine.cgst_amount, 0.03, "splitLineGst: CGST rounds independently");
+assertEqual(independentComponentLine.sgst_amount, 0.03, "splitLineGst: SGST rounds independently");
+assertEqual(independentComponentLine.cgst_amount + independentComponentLine.sgst_amount, 0.06, "splitLineGst: no lump-sum tax split");
 
 const line1: LineItemTaxable = { taxable_value: 1000, gst_rate_pct: 18 };
 const result1 = splitLineGst(line1, intraConfig);
@@ -696,6 +896,56 @@ assertEqual(svcMissingBuyer.type, "UNKNOWN", "GstCalculatorService.detectPlace: 
 if (svcMissingBuyer.type === "UNKNOWN") {
   assertEqual(svcMissingBuyer.reason, "MISSING_BUYER", "GstCalculatorService.detectPlace: Missing buyer - reason");
 }
+
+const purchaseUnsupportedUt = resolvePurchaseSupplyFacts({
+  supplier_state_at_transaction: "DL",
+  recipient_state_at_transaction: "Delhi",
+  delivery_state_at_transaction: "DL",
+  supply_scenario: "INTRA_STATE",
+});
+assertEqual(purchaseUnsupportedUt.ok, false, "Purchase POS: same-UT supply is blocked");
+if (!purchaseUnsupportedUt.ok) {
+  assertEqual(
+    purchaseUnsupportedUt.error,
+    "Intra-UT supply is blocked until an approved UTGST treatment is available.",
+    "Purchase POS: same-UT block reason",
+  );
+}
+const missingPurchasePosFacts = resolvePurchaseSupplyFacts({
+  supplier_state_at_transaction: "",
+  recipient_state_at_transaction: "MH",
+  delivery_state_at_transaction: "MH",
+  supply_scenario: "INTER_STATE",
+});
+assert(!missingPurchasePosFacts.ok, "Purchase POS: missing supplier state is rejected");
+const invalidPurchasePosFacts = resolvePurchaseSupplyFacts({
+  supplier_state_at_transaction: "XX",
+  recipient_state_at_transaction: "MH",
+  delivery_state_at_transaction: "MH",
+  supply_scenario: "INTER_STATE",
+});
+assert(!invalidPurchasePosFacts.ok, "Purchase POS: invalid supplier state is rejected");
+const contradictoryPurchasePosFacts = resolvePurchaseSupplyFacts({
+  supplier_state_at_transaction: "GJ",
+  recipient_state_at_transaction: "MH",
+  delivery_state_at_transaction: "MH",
+  supply_scenario: "INTRA_STATE",
+});
+assert(!contradictoryPurchasePosFacts.ok, "Purchase POS: contradictory scenario is rejected");
+const mismatchedDeliveryPosFacts = resolvePurchaseSupplyFacts({
+  supplier_state_at_transaction: "GJ",
+  recipient_state_at_transaction: "MH",
+  delivery_state_at_transaction: "GJ",
+  supply_scenario: "INTER_STATE",
+});
+assert(!mismatchedDeliveryPosFacts.ok, "Purchase POS: recipient/delivery mismatch is rejected");
+const validInterStatePosFacts = resolvePurchaseSupplyFacts({
+  supplier_state_at_transaction: "GJ",
+  recipient_state_at_transaction: "MH",
+  delivery_state_at_transaction: "MH",
+  supply_scenario: "INTER_STATE",
+});
+assert(validInterStatePosFacts.ok, "Purchase POS: governed inter-state facts are accepted");
 
 console.log("\n=== Summary ===");
 console.log(`Passed: ${passed}`);

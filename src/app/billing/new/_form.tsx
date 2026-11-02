@@ -45,10 +45,15 @@ import { Plus, Trash2, Save, Package, Calendar } from "lucide-react";
 import { createSalesDraftAction } from "@/app/_actions/sales.actions";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
 import type { sales_invoices } from "@prisma/client";
-import { gstCalculator, toTaxableGstLine } from "@/domain/services/gst-calculator.service";
+import {
+  calculateSalesLineAmounts,
+  gstCalculator,
+  toTaxableGstLine,
+} from "@/domain/services/gst-calculator.service";
 import type { PlaceOfSupplyResult } from "@/domain/services/gst-calculator.service";
 import { STATE_CODE_TO_NAME, normalizeState } from "@/lib/constants/indian-states";
 import { GstTreatmentSelect } from "@/components/gst/gst-treatment-select";
+import { sumDecimals } from "@/lib/decimal";
 
 type BatchLite = {
   id: string;
@@ -87,8 +92,6 @@ function fieldError(
   const e = errors?.[field];
   return e && e.length ? e[0] : undefined;
 }
-
-const round2 = (n: number) => (Number.isFinite(n) ? Math.round(n * 100) / 100 : 0);
 
 function emptyLine(): LineRow {
   return {
@@ -286,39 +289,36 @@ export default function BillingNewClientForm({
   }, [businessProfileState, placeOfSupplyState]);
 
   const totals = useMemo(() => {
-    const taxableLines = lines.map((l, _idx) => {
-      const qty = Number(l.quantity ?? 0);
-      const rate = Number(l.sale_rate ?? 0);
-      const discPct = Number(l.trade_discount_pct ?? 0);
-      const gross = round2(qty * rate);
-      const discount_amount = round2(gross * (discPct / 100));
-      const taxable_value = round2(gross - discount_amount);
+    const lineAmounts = lines.map((l) => calculateSalesLineAmounts({
+      quantity: l.quantity,
+      sale_rate: l.sale_rate,
+      trade_discount_pct: l.trade_discount_pct,
+      gst_rate: l.gst_rate,
+    }));
+    const taxableLines = lines.map((l, index) => {
       return {
-        taxable_value,
+        taxable_value: lineAmounts[index]?.taxable_value ?? 0,
         gst_rate_pct: Number(l.gst_rate ?? 0),
       };
     });
     const gstTotals = placeOfSupply.type === "UNKNOWN"
       ? null
       : gstCalculator.computeTotals(taxableLines, { placeOfSupply: placeOfSupply.type });
-    const gross_amount = round2(
-      lines.reduce((s, l) => s + round2(Number(l.quantity ?? 0) * Number(l.sale_rate ?? 0)), 0),
-    );
-    const total_discount = round2(
-      lines.reduce((s, l) => {
-        const g = round2(Number(l.quantity ?? 0) * Number(l.sale_rate ?? 0));
-        return s + round2(g * (Number(l.trade_discount_pct ?? 0) / 100));
-      }, 0),
-    );
-    const net_amount = gstTotals ? round2(gstTotals.grand_total) : null;
+    const gross_amount = sumDecimals(lineAmounts.map((line) => line.gross_amount))
+      .round(2, "HALF_UP")
+      .toNumber();
+    const total_discount = sumDecimals(lineAmounts.map((line) => line.discount_amount))
+      .round(2, "HALF_UP")
+      .toNumber();
+    const net_amount = gstTotals ? gstTotals.grand_total : null;
     return {
       gross_amount,
       total_discount,
-      total_tax: gstTotals ? round2(gstTotals.total_tax) : null,
-      total_cgst: gstTotals ? round2(gstTotals.total_cgst) : null,
-      total_sgst: gstTotals ? round2(gstTotals.total_sgst) : null,
-      total_igst: gstTotals ? round2(gstTotals.total_igst) : null,
-      round_off: gstTotals ? round2(gstTotals.round_off_applied) : null,
+      total_tax: gstTotals ? gstTotals.total_tax : null,
+      total_cgst: gstTotals ? gstTotals.total_cgst : null,
+      total_sgst: gstTotals ? gstTotals.total_sgst : null,
+      total_igst: gstTotals ? gstTotals.total_igst : null,
+      round_off: gstTotals ? gstTotals.round_off_applied : null,
       net_amount,
       gstTotals,
     };
