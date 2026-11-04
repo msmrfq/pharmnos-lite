@@ -97,7 +97,7 @@ function ProductNewForm() {
     setBatches((prev) => prev.map((b) => (b.key === key ? { ...b, ...patch } : b)));
   }, []);
 
-  const formErrors = state.errors ?? {};
+  const formErrors = useMemo(() => state.errors ?? {}, [state.errors]);
   const batchesErrors = useMemo(() => {
     const out: Array<Record<string, string | undefined>> = batches.map(() => ({}));
     for (const [k, v] of Object.entries(formErrors)) {

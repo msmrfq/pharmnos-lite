@@ -3,7 +3,6 @@ import type { PrismaClient } from "@prisma/client";
 import { prisma as defaultPrisma } from "@/lib/db/prisma";
 import type { TenantContext } from "@/lib/db/tenant-context";
 import { Decimal, decimalOrZero } from "@/lib/decimal";
-import { lockCounterpartyBalance } from "@/lib/db/counterparty-lock";
 
 export type CustomerLedgerImpactInput = {
   customer_id: string;
@@ -109,7 +108,6 @@ export class LedgerImpactService {
     const refType = input.reference_type ?? mapLedgerRefType(input.entry_type);
 
     return this.prisma.$transaction(async (tx: any) => {
-      await lockCounterpartyBalance(tx, t.tenantId, "customer", input.customer_id);
       const latestBal = await customerRunningBalance(tx, t.tenantId, input.customer_id, entryDate);
       const newBal = decimalOrZero(latestBal).add(debit).subtract(credit).round(2, "HALF_UP").toNumber();
       const row = await tx.customer_ledgers.create({
@@ -162,7 +160,6 @@ export class LedgerImpactService {
     const refType = input.reference_type ?? mapLedgerRefType(input.entry_type);
 
     return this.prisma.$transaction(async (tx: any) => {
-      await lockCounterpartyBalance(tx, t.tenantId, "supplier", input.supplier_id);
       const latestBal = await supplierRunningBalance(tx, t.tenantId, input.supplier_id, entryDate);
       const newBal = decimalOrZero(latestBal).add(credit).subtract(debit).round(2, "HALF_UP").toNumber();
       const row = await tx.supplier_ledgers.create({

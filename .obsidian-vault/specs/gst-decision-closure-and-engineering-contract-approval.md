@@ -129,7 +129,7 @@ that prerequisite.
 | `BD-09` | Which tax components apply? | Owner direction preserves CGST+SGST for legally applicable intra-state supplies, CGST+UTGST for applicable intra-UT supplies, and IGST for applicable inter-state supplies. | Approve the relevant UT set, component selection rules, POS precedence, and exceptions. Same-UT remains blocked until approved. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Qualified GST/accounting reviewer |
 | `BD-10` | How are discounts allocated and taxed? | Discount must affect taxable value under an approved policy; the active specification requires explicit line-level behavior. | Approve line allocation, order of operations, invoice-level discounts, post-supply treatment, and evidence requirements. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Qualified GST/accounting reviewer |
 | `BD-11` | Are tax-inclusive and tax-exclusive prices supported? | Both modes are specified as target behavior; inclusive extraction must use the approved rate and precision policy. | Approve supported modes, extraction level, component allocation, discount interaction, and failure behavior for ambiguous pricing mode. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Qualified GST/accounting reviewer; engineering owner |
-| `BD-12` | What precision and rounding rules apply? | Proposed T25 contract uses exact decimal arithmetic, preserved intermediate precision, explicit `HALF_UP`, independent components, and visible commercial round-off. | Approve the detailed matrix in `0009-gst-precision-rounding-engineering-contract.md`, including the Section 170 boundary, e-invoice reconciliation, and persistence/display scales. | `PENDING — OWNER APPROVAL` | Authorized business owner; accounting/finance owner and qualified GST reviewer |
+| `BD-12` | What precision and rounding rules apply? | Owner-approved T25 contract uses exact decimal arithmetic, preserved intermediate precision, explicit `HALF_UP`, independent components, and visible commercial round-off; e-invoice and credit/debit-note capabilities remain Version 2 deferrals. | Preserve the detailed matrix in `0009-gst-precision-rounding-engineering-contract.md`; obtain qualified confirmation for the Section 170 boundary, statutory interpretation, and any future e-invoice representation. | `OWNER APPROVED — CURRENT RELEASE SCOPE; PROFESSIONAL CONFIRMATION REQUIRED` | Authorized business owner; accounting/finance owner and qualified GST reviewer |
 | `BD-13` | How are purchase values separated and accepted? | Preserve supplier-declared, application-calculated, and accounting-accepted values as separate facts and decisions. | Approve acceptance authority, evidence, delegation, segregation-of-duties rules, accepted-value precedence, and immutable decision records. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Accounting/finance owner; qualified GST reviewer |
 | `BD-14` | What happens when purchase values differ? | Reconciliation must preserve source evidence and block unresolved or unauthorized posting. | Approve materiality/tolerance, review states, resolution evidence, correction/revision behavior, and posting prerequisites. | `BLOCKED — STATUTORY/ACCOUNTING REVIEW REQUIRED` | Accounting/finance owner; qualified GST reviewer |
 | `BD-15` | What must pass before sales finalization? | Server recalculation, validated facts, complete snapshots, totals checks, inventory, ledger, sequence, audit, and atomic transaction behavior are required. | Approve the finalization fact matrix, stale-draft handling, duplicate/concurrent result, and correction/reversal scope. | `PROPOSED — OWNER APPROVAL REQUIRED` | Authorized business owner; accounting/finance and engineering reviewers |
@@ -143,7 +143,8 @@ The following existing decisions remain unchanged:
   selection, and separate Consumer/Unregistered behavior.
 - `DGM-OD-04`: HSN/SAC and effective-dated tax-rate governance.
 - `DGM-OD-05`: discount allocation, inclusive/exclusive pricing, and high-level
-  rounding direction; the detailed T25 contract is proposed in
+  rounding direction; the detailed T25 contract is approved for the
+  demonstrated current-release engineering scope in
   `decisions/0009-gst-precision-rounding-engineering-contract.md`.
 - `DGM-OD-06`: separation and authorized acceptance of purchase GST values.
 - `DGM-OD-07`: durable sales finalization idempotency.
@@ -168,19 +169,28 @@ runtime verification, and independent acceptance remain separate statuses.
 - DGM-T13 is `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`: retain
   exactly 15-character length-only validation; defer checksum, state-prefix,
   registration-status, and effective-date checks to Version 2.
-- DGM-T19 is `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`: defer the
-  advanced stale purchase GST acceptance-revision guard while preserving all
-  current purchase-posting safeguards and audit controls. Source inspection
-  confirms the current correction path clears acceptance and the accounting
-  decision, increments the GST record version, and leaves finalization
-  dependent on current accepted evidence and line snapshots.
+- DGM-T19 was previously recorded as `CURRENT RELEASE SCOPE APPROVED — VERSION 2
+  DEFERRED`. The owner-directed T19 resolution now implements the reviewed-
+  revision guard in the current engineering path while preserving all current
+  purchase-posting safeguards and audit controls. Acceptance, discrepancy
+  resolution, and correction require the current record version, evidence
+  revision, and calculation ID; correction uses an optimistic guarded parent
+  update and rolls back child writes on a stale revision. Finalization remains
+  dependent on current accepted evidence and line snapshots. Focused source
+  evidence exists; runtime verification and independent acceptance remain
+  separate and unclaimed.
 - DGM-T25 engineering implementation is present in
-  [`0009-gst-precision-rounding-engineering-contract.md`](../decisions/0009-gst-precision-rounding-engineering-contract.md),
-  but the detailed owner matrix remains `PENDING OWNER APPROVAL`.
+  [`0009-gst-precision-rounding-engineering-contract.md`](../decisions/0009-gst-precision-rounding-engineering-contract.md).
+  The current-release engineering scope is owner-approved; e-invoice output
+  and credit/debit-note workflows remain Version 2 deferrals. Runtime and
+  independent acceptance remain separate, and qualified professional
+  confirmation is still required for statutory boundaries.
 
-The T13/T19 scope decisions do not constitute qualified GST/legal
-confirmation, implementation evidence, runtime verification, or independent
-acceptance. T25 remains pending detailed owner sign-off.
+The T13/T19 scope and resolution decisions do not constitute qualified GST/legal
+confirmation, runtime verification, or independent acceptance. T25 current-
+release engineering scope is owner-approved with Version 2 deferrals; runtime
+verification, independent acceptance, and qualified professional confirmation
+remain open.
 
 ## 4. Decision paper and consequences
 
@@ -297,9 +307,9 @@ The focused calculator run passed `294/294` assertions and `pnpm typecheck`
 passed, including explicit evidence for already-rounded two-decimal
 serialization, arithmetic after JavaScript-number conversion, and the
 high-precision number boundary. This is engineering evidence only. The
-detailed owner matrix remains pending, and the Section 170 aggregation
-boundary, e-invoice obligations, and other statutory interpretations require
-qualified professional confirmation.
+Section 170 aggregation boundary, e-invoice obligations, and other statutory
+interpretations require qualified professional confirmation; runtime and
+independent acceptance remain unverified.
 
 ### 6.1 Hybrid architecture responsibilities
 

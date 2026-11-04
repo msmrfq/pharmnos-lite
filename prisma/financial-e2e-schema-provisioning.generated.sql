@@ -3,7 +3,7 @@
 CREATE TYPE "SystemRole" AS ENUM ('ADMIN', 'BILLING', 'INVENTORY', 'MANAGER');
 
 -- CreateEnum
-CREATE TYPE "PermissionAction" AS ENUM ('manage_users', 'manage_roles', 'manage_business_profile', 'create_product', 'edit_product', 'view_product', 'manage_hsn_catalog', 'approve_hsn_catalog', 'approve_gst_rates', 'create_customer', 'edit_customer', 'view_customer', 'create_supplier', 'edit_supplier', 'view_supplier', 'create_purchase', 'edit_purchase', 'view_purchase', 'accept_purchase_gst', 'finalize_purchase', 'create_invoice', 'edit_invoice', 'view_invoice', 'finalize_invoice', 'cancel_invoice', 'view_inventory', 'adjust_stock', 'manage_batches', 'view_customer_ledger', 'view_supplier_ledger', 'view_reports', 'view_audit_log', 'create_gst_note_draft', 'edit_gst_note_draft', 'view_gst_note', 'receive_gst_note', 'review_gst_note', 'approve_gst_note', 'issue_gst_note', 'amend_gst_note', 'cancel_gst_note', 'post_gst_note_accounting', 'review_recipient_itc', 'record_recipient_itc_reversal', 'approve_supplier_output_tax_adjustment', 'authorize_gst_note_return', 'receive_gst_note_return', 'inspect_gst_note_return', 'post_gst_note_stock', 'prepare_gst_note_reporting', 'record_gst_note_return_evidence', 'review_gst_note_reporting_discrepancy', 'record_gst_note_irp_evidence', 'submit_gst_note_reporting', 'retry_gst_note_reporting', 'reconcile_gst_note_reporting', 'submit_gst_note_irp', 'retry_gst_note_irp', 'reconcile_gst_note_irp', 'view_gst_note_compliance', 'manage_gst_note_configuration', 'view_commercial_adjustment', 'create_commercial_adjustment', 'approve_commercial_adjustment', 'post_commercial_adjustment');
+CREATE TYPE "PermissionAction" AS ENUM ('manage_users', 'manage_roles', 'manage_business_profile', 'create_product', 'edit_product', 'view_product', 'manage_hsn_catalog', 'approve_hsn_catalog', 'approve_gst_rates', 'create_customer', 'edit_customer', 'view_customer', 'create_supplier', 'edit_supplier', 'view_supplier', 'create_purchase', 'edit_purchase', 'view_purchase', 'accept_purchase_gst', 'finalize_purchase', 'create_invoice', 'edit_invoice', 'view_invoice', 'finalize_invoice', 'cancel_invoice', 'view_inventory', 'adjust_stock', 'manage_batches', 'view_customer_ledger', 'view_supplier_ledger', 'view_reports', 'view_audit_log');
 
 -- CreateEnum
 CREATE TYPE "InvoiceStatus" AS ENUM ('DRAFT', 'FINALIZED', 'CANCELLED');
@@ -16,15 +16,6 @@ CREATE TYPE "PurchaseGstReconciliationStatus" AS ENUM ('NOT_RECONCILED', 'MATCHE
 
 -- CreateEnum
 CREATE TYPE "PurchaseGstAccountingAcceptanceStatus" AS ENUM ('NOT_ACCEPTED', 'ACCEPTED');
-
--- CreateEnum
-CREATE TYPE "InventoryValuationDecisionStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'SUPERSEDED', 'REVERSED');
-
--- CreateEnum
-CREATE TYPE "InventoryValuationAccountingStatus" AS ENUM ('NOT_APPLICABLE', 'PENDING_POLICY', 'POSTED', 'REVERSED');
-
--- CreateEnum
-CREATE TYPE "InventoryValuationAdjustmentKind" AS ENUM ('CORRECTION', 'REVERSAL');
 
 -- CreateEnum
 CREATE TYPE "PurchaseGstEvidenceRevisionKind" AS ENUM ('INITIAL', 'CORRECTION');
@@ -45,7 +36,7 @@ CREATE TYPE "StockMovementType" AS ENUM ('PURCHASE_IN', 'SALE_OUT', 'ADJUSTMENT_
 CREATE TYPE "ScheduleClass" AS ENUM ('H', 'H1', 'X', 'SCHEDULE_H', 'SCHEDULE_H1', 'SCHEDULE_X', 'OTC', 'OTHER');
 
 -- CreateEnum
-CREATE TYPE "AuditEventType" AS ENUM ('AUTH_LOGIN', 'AUTH_LOGOUT', 'USER_INVITED', 'USER_ROLE_CHANGED', 'BUSINESS_PROFILE_UPDATED', 'INVOICE_CREATED', 'INVOICE_FINALIZED', 'INVOICE_CANCELLED', 'PURCHASE_CREATED', 'PURCHASE_FINALIZED', 'STOCK_ADJUSTED', 'PRICE_UPDATED', 'PRODUCT_CREATED', 'PRODUCT_UPDATED', 'CUSTOMER_DEACTIVATED', 'SUPPLIER_DEACTIVATED', 'GST_NOTE_EVENT', 'GST_NOTE_RETURN_EVENT', 'COMMERCIAL_ADJUSTMENT_EVENT');
+CREATE TYPE "AuditEventType" AS ENUM ('AUTH_LOGIN', 'AUTH_LOGOUT', 'USER_INVITED', 'USER_ROLE_CHANGED', 'BUSINESS_PROFILE_UPDATED', 'INVOICE_CREATED', 'INVOICE_FINALIZED', 'INVOICE_CANCELLED', 'PURCHASE_CREATED', 'PURCHASE_FINALIZED', 'STOCK_ADJUSTED', 'PRICE_UPDATED', 'PRODUCT_CREATED', 'PRODUCT_UPDATED', 'CUSTOMER_DEACTIVATED', 'SUPPLIER_DEACTIVATED');
 
 -- CreateEnum
 CREATE TYPE "LedgerEntryType" AS ENUM ('INVOICE', 'PAYMENT_RECEIVED', 'CREDIT_NOTE', 'PURCHASE', 'PAYMENT_MADE', 'DEBIT_NOTE', 'OPENING_BALANCE');
@@ -419,55 +410,6 @@ CREATE TABLE "purchase_invoice_items" (
 );
 
 -- CreateTable
-CREATE TABLE "inventory_valuation_decisions" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "purchase_invoice_id" TEXT NOT NULL,
-    "purchase_invoice_item_id" TEXT NOT NULL,
-    "product_batch_id" TEXT NOT NULL,
-    "stock_movement_id" TEXT,
-    "status" "InventoryValuationDecisionStatus" NOT NULL DEFAULT 'PENDING',
-    "accounting_status" "InventoryValuationAccountingStatus" NOT NULL DEFAULT 'PENDING_POLICY',
-    "eligibility_status" TEXT NOT NULL,
-    "accepted_taxable_value" DECIMAL(20,4) NOT NULL,
-    "accepted_gst" DECIMAL(20,4) NOT NULL,
-    "recoverable_itc" DECIMAL(65,30),
-    "non_recoverable_gst" DECIMAL(65,30),
-    "direct_acquisition_cost" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "inventory_acquisition_cost" DECIMAL(65,30),
-    "policy_version" TEXT NOT NULL,
-    "decision_reference" TEXT NOT NULL,
-    "rationale" TEXT NOT NULL,
-    "idempotency_key" TEXT NOT NULL,
-    "request_payload_hash" TEXT NOT NULL,
-    "supersedes_decision_id" TEXT,
-    "decided_by_membership_id" TEXT NOT NULL,
-    "decided_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "inventory_valuation_decisions_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "inventory_valuation_adjustments" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "prior_decision_id" TEXT NOT NULL,
-    "resulting_decision_id" TEXT NOT NULL,
-    "adjustment_kind" "InventoryValuationAdjustmentKind" NOT NULL,
-    "recoverable_itc_delta" DECIMAL(20,4) NOT NULL,
-    "non_recoverable_gst_delta" DECIMAL(20,4) NOT NULL,
-    "inventory_cost_delta" DECIMAL(20,4) NOT NULL,
-    "reason" TEXT NOT NULL,
-    "idempotency_key" TEXT NOT NULL,
-    "request_payload_hash" TEXT NOT NULL,
-    "adjusted_by_membership_id" TEXT NOT NULL,
-    "adjusted_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "inventory_valuation_adjustments_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "purchase_gst_evidence_revisions" (
     "id" TEXT NOT NULL,
     "tenant_id" TEXT NOT NULL,
@@ -790,7 +732,6 @@ CREATE TABLE "audit_logs" (
     "tenant_id" TEXT NOT NULL,
     "event_type" "AuditEventType" NOT NULL,
     "actor_id" TEXT,
-    "note_event_id" TEXT,
     "target_type" TEXT,
     "target_id" TEXT,
     "metadata" JSONB,
@@ -799,435 +740,6 @@ CREATE TABLE "audit_logs" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_adjustment_notes" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "document_class" TEXT NOT NULL DEFAULT 'STATUTORY_GST',
-    "direction" TEXT NOT NULL,
-    "source_class" TEXT NOT NULL,
-    "note_type" TEXT NOT NULL,
-    "reason_code" TEXT NOT NULL,
-    "note_number" TEXT,
-    "financial_year" TEXT,
-    "issue_date" TIMESTAMP(3),
-    "reporting_period" TEXT,
-    "issuer_customer_id" TEXT,
-    "recipient_customer_id" TEXT,
-    "issuer_supplier_id" TEXT,
-    "recipient_supplier_id" TEXT,
-    "status" TEXT NOT NULL DEFAULT 'DRAFT',
-    "communication_status" TEXT NOT NULL DEFAULT 'NOT_REQUIRED',
-    "return_reporting_status" TEXT NOT NULL DEFAULT 'NOT_REQUIRED',
-    "irp_status" TEXT NOT NULL DEFAULT 'NOT_REQUIRED',
-    "irn_status" TEXT NOT NULL DEFAULT 'NOT_GENERATED',
-    "accounting_status" TEXT NOT NULL DEFAULT 'NOT_REQUIRED',
-    "settlement_status" TEXT NOT NULL DEFAULT 'OPEN',
-    "section34_declaration_window_status" TEXT NOT NULL DEFAULT 'NOT_APPLICABLE',
-    "current_output_tax_review_id" TEXT,
-    "current_itc_review_id" TEXT,
-    "calculation_version" TEXT,
-    "rounding_version" TEXT,
-    "rounding_mode" TEXT,
-    "calculation_scale" INTEGER,
-    "tax_component_scale" INTEGER,
-    "taxable_value" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "cgst" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "sgst" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "utgst" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "igst" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "cess" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "gross_effect" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "deadline" TIMESTAMP(3),
-    "issuer_snapshot" JSONB,
-    "recipient_snapshot" JSONB,
-    "source_snapshot" JSONB,
-    "tax_snapshot" JSONB,
-    "request_payload_hash" TEXT,
-    "idempotency_key" TEXT,
-    "metadata" JSONB,
-    "created_by_membership_id" TEXT,
-    "issued_by_membership_id" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "gst_adjustment_notes_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_adjustment_note_lines" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "note_id" TEXT NOT NULL,
-    "line_number" INTEGER NOT NULL,
-    "source_class" TEXT NOT NULL,
-    "product_id" TEXT,
-    "product_name_snapshot" TEXT,
-    "generic_name_snapshot" TEXT,
-    "hsn_sac_snapshot" TEXT,
-    "batch_no_snapshot" TEXT,
-    "quantity" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "unit_value" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "tax_rate" DECIMAL(7,4) NOT NULL DEFAULT 0,
-    "taxable_value" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "cgst" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "sgst" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "utgst" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "igst" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "cess" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "gross_effect" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "calculation_hash" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "gst_adjustment_note_lines_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_adjustment_note_source_documents" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "note_id" TEXT NOT NULL,
-    "source_class" TEXT NOT NULL,
-    "source_kind" TEXT NOT NULL,
-    "sales_invoice_id" TEXT,
-    "purchase_invoice_id" TEXT,
-    "original_number" TEXT NOT NULL,
-    "original_date" TIMESTAMP(3) NOT NULL,
-    "source_status" TEXT NOT NULL,
-    "source_hash" TEXT NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "gst_adjustment_note_source_documents_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_adjustment_note_source_allocations" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "note_id" TEXT NOT NULL,
-    "note_line_id" TEXT NOT NULL,
-    "source_document_id" TEXT NOT NULL,
-    "source_class" TEXT NOT NULL,
-    "sales_invoice_id" TEXT,
-    "sales_invoice_item_id" TEXT,
-    "purchase_invoice_id" TEXT,
-    "purchase_invoice_item_id" TEXT,
-    "allocation_basis" TEXT NOT NULL,
-    "basis_evidence" JSONB,
-    "quantity" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "taxable_value" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "cgst" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "sgst" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "utgst" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "igst" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "cess" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "gross_effect" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "remaining_before" JSONB,
-    "remaining_after" JSONB,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "gst_adjustment_note_source_allocations_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_note_posting_operations" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "note_id" TEXT NOT NULL,
-    "operation_type" TEXT NOT NULL,
-    "idempotency_key" TEXT NOT NULL,
-    "request_payload_hash" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'PROCESSING',
-    "result_reference" TEXT,
-    "failure_reason" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "gst_note_posting_operations_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_note_posting_lines" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "operation_id" TEXT NOT NULL,
-    "line_number" INTEGER NOT NULL,
-    "account_code" TEXT NOT NULL,
-    "side" TEXT NOT NULL,
-    "tax_head" TEXT,
-    "amount" DECIMAL(20,4) NOT NULL,
-    "reference_type" TEXT,
-    "reference_id" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "gst_note_posting_lines_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_adjustment_note_events" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "note_id" TEXT NOT NULL,
-    "sequence_no" INTEGER NOT NULL,
-    "event_type" TEXT NOT NULL,
-    "state_dimension" TEXT NOT NULL,
-    "from_state" TEXT,
-    "to_state" TEXT,
-    "actor_membership_id" TEXT,
-    "idempotency_key" TEXT,
-    "payload_hash" TEXT,
-    "payload" JSONB,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "gst_adjustment_note_events_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "commercial_adjustments" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "note_id" TEXT,
-    "source_class" TEXT NOT NULL,
-    "adjustment_type" TEXT NOT NULL,
-    "effect" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'DRAFT',
-    "amount" DECIMAL(20,4) NOT NULL,
-    "currency" TEXT NOT NULL DEFAULT 'INR',
-    "reason" TEXT NOT NULL,
-    "agreement_reference" TEXT,
-    "source_document_reference" TEXT,
-    "customer_id" TEXT,
-    "supplier_id" TEXT,
-    "evidence" JSONB,
-    "idempotency_key" TEXT,
-    "request_payload_hash" TEXT,
-    "created_by" TEXT,
-    "approved_by" TEXT,
-    "approved_at" TIMESTAMP(3),
-    "approval_idempotency_key" TEXT,
-    "approval_payload_hash" TEXT,
-    "posted_at" TIMESTAMP(3),
-    "posting_reference" TEXT,
-    "posting_idempotency_key" TEXT,
-    "posting_payload_hash" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "commercial_adjustments_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_note_number_series" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "direction" TEXT NOT NULL,
-    "source_class" TEXT NOT NULL,
-    "note_type" TEXT NOT NULL,
-    "financial_year" TEXT NOT NULL,
-    "prefix" TEXT NOT NULL,
-    "next_sequence" INTEGER NOT NULL DEFAULT 1,
-    "is_active" BOOLEAN NOT NULL DEFAULT true,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "gst_note_number_series_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_note_configuration_versions" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "version" TEXT NOT NULL,
-    "effective_from" TIMESTAMP(3) NOT NULL,
-    "effective_to" TIMESTAMP(3),
-    "status" TEXT NOT NULL DEFAULT 'DRAFT',
-    "calculation_version" TEXT,
-    "rounding_version" TEXT,
-    "configuration" JSONB NOT NULL,
-    "created_by" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "gst_note_configuration_versions_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_adjustment_note_output_tax_reviews" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "note_id" TEXT NOT NULL,
-    "revision_no" INTEGER NOT NULL,
-    "status" TEXT NOT NULL,
-    "legal_basis" TEXT,
-    "deadline" TIMESTAMP(3),
-    "incidence_passed" BOOLEAN,
-    "tax_reduction_eligible" BOOLEAN,
-    "itc_availed_status" TEXT,
-    "declaration_status" TEXT,
-    "evidence" JSONB,
-    "decision_reason" TEXT,
-    "reviewed_by_membership_id" TEXT,
-    "idempotency_key" TEXT,
-    "request_payload_hash" TEXT,
-    "reviewed_at" TIMESTAMP(3),
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "gst_adjustment_note_output_tax_reviews_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_adjustment_note_itc_reviews" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "note_id" TEXT NOT NULL,
-    "revision_no" INTEGER NOT NULL,
-    "revision_state" TEXT NOT NULL DEFAULT 'CURRENT',
-    "progress_state" TEXT NOT NULL DEFAULT 'NOT_STARTED',
-    "eligibility_state" TEXT NOT NULL DEFAULT 'NOT_ASSESSED',
-    "outcome_state" TEXT NOT NULL DEFAULT 'PENDING',
-    "legal_state" TEXT NOT NULL DEFAULT 'LEGAL_CONFIRMATION_PENDING',
-    "supersedes_review_id" TEXT,
-    "evidence" JSONB,
-    "decision_reason" TEXT,
-    "reviewed_by_membership_id" TEXT,
-    "idempotency_key" TEXT,
-    "request_payload_hash" TEXT,
-    "reviewed_at" TIMESTAMP(3),
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "gst_adjustment_note_itc_reviews_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_adjustment_note_itc_allocations" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "itc_review_id" TEXT NOT NULL,
-    "source_document_id" TEXT NOT NULL,
-    "purchase_invoice_id" TEXT NOT NULL,
-    "purchase_invoice_item_id" TEXT NOT NULL,
-    "tax_head" TEXT NOT NULL,
-    "amount_availed" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "amount_reversed" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "amount_claimed" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "outcome_state" TEXT NOT NULL,
-    "evidence" JSONB,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "gst_adjustment_note_itc_allocations_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "physical_returns" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "note_id" TEXT,
-    "source_class" TEXT NOT NULL,
-    "source_document_id" TEXT,
-    "source_line_id" TEXT,
-    "product_id" TEXT,
-    "batch_id" TEXT,
-    "requested_quantity" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "received_quantity" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "accepted_quantity" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "rejected_quantity" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "status" TEXT NOT NULL DEFAULT 'REQUESTED',
-    "inspection_outcome" TEXT,
-    "inspection_reason" TEXT,
-    "inspection_actor_membership_id" TEXT,
-    "stock_destination" TEXT,
-    "carrying_value" DECIMAL(20,4),
-    "carrying_value_basis" TEXT,
-    "valuation_policy_version" TEXT,
-    "valuation_status" TEXT NOT NULL DEFAULT 'PENDING',
-    "evidence" JSONB,
-    "idempotency_key" TEXT,
-    "request_payload_hash" TEXT,
-    "created_by_membership_id" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "physical_returns_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "physical_return_events" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "physical_return_id" TEXT NOT NULL,
-    "sequence_no" INTEGER NOT NULL,
-    "event_type" TEXT NOT NULL,
-    "from_state" TEXT,
-    "to_state" TEXT NOT NULL,
-    "accepted_quantity" DECIMAL(20,4),
-    "evidence" JSONB,
-    "actor_membership_id" TEXT,
-    "idempotency_key" TEXT,
-    "payload_hash" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "physical_return_events_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_adjustment_note_return_links" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "note_id" TEXT NOT NULL,
-    "physical_return_id" TEXT NOT NULL,
-    "stock_movement_id" TEXT,
-    "accepted_quantity" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "valuation_policy_version" TEXT,
-    "posting_status" TEXT NOT NULL DEFAULT 'PENDING',
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "gst_adjustment_note_return_links_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_adjustment_note_reporting_attempts" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "note_id" TEXT NOT NULL,
-    "provider" TEXT NOT NULL DEFAULT 'MANUAL_EVIDENCE',
-    "category" TEXT NOT NULL,
-    "status" TEXT NOT NULL,
-    "reporting_period" TEXT NOT NULL,
-    "original_reference" TEXT,
-    "external_reference" TEXT,
-    "filing_date" TIMESTAMP(3),
-    "evidence_source" TEXT,
-    "attempt_no" INTEGER NOT NULL DEFAULT 1,
-    "payload" JSONB NOT NULL,
-    "payload_hash" TEXT NOT NULL,
-    "response" JSONB,
-    "error_message" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "gst_adjustment_note_reporting_attempts_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gst_adjustment_note_irp_attempts" (
-    "id" TEXT NOT NULL,
-    "tenant_id" TEXT NOT NULL,
-    "note_id" TEXT NOT NULL,
-    "applicability" TEXT NOT NULL,
-    "rule_version" TEXT,
-    "document_type" TEXT,
-    "endpoint" TEXT,
-    "attempt_no" INTEGER NOT NULL DEFAULT 1,
-    "status" TEXT NOT NULL,
-    "payload" JSONB NOT NULL,
-    "payload_hash" TEXT NOT NULL,
-    "irn" TEXT,
-    "acknowledgement" JSONB,
-    "cancellation_state" TEXT,
-    "error_message" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "gst_adjustment_note_irp_attempts_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -1282,9 +794,6 @@ CREATE INDEX "products_tenant_id_is_active_idx" ON "products"("tenant_id", "is_a
 CREATE UNIQUE INDEX "products_tenant_id_sku_key" ON "products"("tenant_id", "sku");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "products_tenant_id_id_key" ON "products"("tenant_id", "id");
-
--- CreateIndex
 CREATE INDEX "product_batches_tenant_id_idx" ON "product_batches"("tenant_id");
 
 -- CreateIndex
@@ -1297,9 +806,6 @@ CREATE INDEX "product_batches_tenant_id_available_qty_idx" ON "product_batches"(
 CREATE UNIQUE INDEX "product_batches_tenant_id_product_id_batch_no_key" ON "product_batches"("tenant_id", "product_id", "batch_no");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "product_batches_tenant_id_id_key" ON "product_batches"("tenant_id", "id");
-
--- CreateIndex
 CREATE INDEX "customers_tenant_id_idx" ON "customers"("tenant_id");
 
 -- CreateIndex
@@ -1309,9 +815,6 @@ CREATE INDEX "customers_tenant_id_business_name_idx" ON "customers"("tenant_id",
 CREATE UNIQUE INDEX "customers_tenant_id_code_key" ON "customers"("tenant_id", "code");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "customers_tenant_id_id_key" ON "customers"("tenant_id", "id");
-
--- CreateIndex
 CREATE INDEX "suppliers_tenant_id_idx" ON "suppliers"("tenant_id");
 
 -- CreateIndex
@@ -1319,9 +822,6 @@ CREATE INDEX "suppliers_tenant_id_business_name_idx" ON "suppliers"("tenant_id",
 
 -- CreateIndex
 CREATE UNIQUE INDEX "suppliers_tenant_id_code_key" ON "suppliers"("tenant_id", "code");
-
--- CreateIndex
-CREATE UNIQUE INDEX "suppliers_tenant_id_id_key" ON "suppliers"("tenant_id", "id");
 
 -- CreateIndex
 CREATE INDEX "purchase_invoices_tenant_id_idx" ON "purchase_invoices"("tenant_id");
@@ -1399,34 +899,10 @@ CREATE INDEX "purchase_invoice_items_purchase_id_idx" ON "purchase_invoice_items
 CREATE INDEX "purchase_invoice_items_product_id_idx" ON "purchase_invoice_items"("product_id");
 
 -- CreateIndex
+CREATE INDEX "purchase_invoice_items_accepted_decision_idx" ON "purchase_invoice_items"("tenant_id", "purchase_id", "accepted_decision_id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "purchase_invoice_items_tenant_id_purchase_id_id_key" ON "purchase_invoice_items"("tenant_id", "purchase_id", "id");
-
--- CreateIndex
-CREATE INDEX "inventory_valuation_decisions_tenant_id_purchase_invoice_id_idx" ON "inventory_valuation_decisions"("tenant_id", "purchase_invoice_id", "purchase_invoice_item_id");
-
--- CreateIndex
-CREATE INDEX "inventory_valuation_decisions_tenant_id_product_batch_id_cr_idx" ON "inventory_valuation_decisions"("tenant_id", "product_batch_id", "created_at");
-
--- CreateIndex
-CREATE INDEX "inventory_valuation_decisions_tenant_id_status_created_at_idx" ON "inventory_valuation_decisions"("tenant_id", "status", "created_at");
-
--- CreateIndex
-CREATE UNIQUE INDEX "inventory_valuation_decisions_tenant_id_id_key" ON "inventory_valuation_decisions"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "inventory_valuation_decision_idempotency_key" ON "inventory_valuation_decisions"("tenant_id", "idempotency_key");
-
--- CreateIndex
-CREATE INDEX "inventory_valuation_adjustments_tenant_id_prior_decision_id_idx" ON "inventory_valuation_adjustments"("tenant_id", "prior_decision_id");
-
--- CreateIndex
-CREATE INDEX "inventory_valuation_adjustments_tenant_id_resulting_decisio_idx" ON "inventory_valuation_adjustments"("tenant_id", "resulting_decision_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "inventory_valuation_adjustments_tenant_id_id_key" ON "inventory_valuation_adjustments"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "inventory_valuation_adjustment_idempotency_key" ON "inventory_valuation_adjustments"("tenant_id", "idempotency_key");
 
 -- CreateIndex
 CREATE INDEX "purchase_gst_evidence_captured_at_idx" ON "purchase_gst_evidence_revisions"("tenant_id", "purchase_invoice_id", "captured_at");
@@ -1540,12 +1016,6 @@ CREATE INDEX "sales_invoice_items_product_id_idx" ON "sales_invoice_items"("prod
 CREATE INDEX "sales_invoice_items_batch_id_idx" ON "sales_invoice_items"("batch_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "sales_invoice_items_tenant_id_invoice_id_id_key" ON "sales_invoice_items"("tenant_id", "invoice_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "sales_invoice_items_tenant_id_id_key" ON "sales_invoice_items"("tenant_id", "id");
-
--- CreateIndex
 CREATE INDEX "payments_tenant_id_idx" ON "payments"("tenant_id");
 
 -- CreateIndex
@@ -1571,9 +1041,6 @@ CREATE INDEX "stock_movements_tenant_id_movement_type_idx" ON "stock_movements"(
 
 -- CreateIndex
 CREATE INDEX "stock_movements_tenant_id_created_at_idx" ON "stock_movements"("tenant_id", "created_at");
-
--- CreateIndex
-CREATE UNIQUE INDEX "stock_movements_tenant_id_id_key" ON "stock_movements"("tenant_id", "id");
 
 -- CreateIndex
 CREATE INDEX "customer_ledgers_tenant_id_idx" ON "customer_ledgers"("tenant_id");
@@ -1604,228 +1071,6 @@ CREATE INDEX "audit_logs_tenant_id_created_at_idx" ON "audit_logs"("tenant_id", 
 
 -- CreateIndex
 CREATE INDEX "audit_logs_tenant_id_actor_id_idx" ON "audit_logs"("tenant_id", "actor_id");
-
--- CreateIndex
-CREATE INDEX "audit_logs_tenant_id_note_event_id_idx" ON "audit_logs"("tenant_id", "note_event_id");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_notes_tenant_id_status_created_at_idx" ON "gst_adjustment_notes"("tenant_id", "status", "created_at");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_notes_tenant_id_source_class_direction_idx" ON "gst_adjustment_notes"("tenant_id", "source_class", "direction");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_notes_tenant_id_current_output_tax_review_id_idx" ON "gst_adjustment_notes"("tenant_id", "current_output_tax_review_id");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_notes_tenant_id_current_itc_review_id_idx" ON "gst_adjustment_notes"("tenant_id", "current_itc_review_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_notes_tenant_id_id_key" ON "gst_adjustment_notes"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_notes_tenant_id_note_number_financial_year_key" ON "gst_adjustment_notes"("tenant_id", "note_number", "financial_year");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_notes_tenant_id_idempotency_key_key" ON "gst_adjustment_notes"("tenant_id", "idempotency_key");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_lines_tenant_id_note_id_line_number_idx" ON "gst_adjustment_note_lines"("tenant_id", "note_id", "line_number");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_lines_tenant_id_note_id_id_key" ON "gst_adjustment_note_lines"("tenant_id", "note_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_lines_tenant_id_note_id_line_number_key" ON "gst_adjustment_note_lines"("tenant_id", "note_id", "line_number");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_source_documents_tenant_id_sales_invoic_idx" ON "gst_adjustment_note_source_documents"("tenant_id", "sales_invoice_id");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_source_documents_tenant_id_purchase_inv_idx" ON "gst_adjustment_note_source_documents"("tenant_id", "purchase_invoice_id");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_source_documents_tenant_id_note_id_idx" ON "gst_adjustment_note_source_documents"("tenant_id", "note_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_source_documents_tenant_id_id_key" ON "gst_adjustment_note_source_documents"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_source_documents_tenant_id_note_id_sour_key" ON "gst_adjustment_note_source_documents"("tenant_id", "note_id", "source_kind", "sales_invoice_id", "purchase_invoice_id");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_source_allocations_tenant_id_source_doc_idx" ON "gst_adjustment_note_source_allocations"("tenant_id", "source_document_id");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_source_allocations_tenant_id_sales_invo_idx" ON "gst_adjustment_note_source_allocations"("tenant_id", "sales_invoice_id", "sales_invoice_item_id");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_source_allocations_tenant_id_purchase_i_idx" ON "gst_adjustment_note_source_allocations"("tenant_id", "purchase_invoice_id", "purchase_invoice_item_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_source_allocations_tenant_id_id_key" ON "gst_adjustment_note_source_allocations"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_source_allocations_tenant_id_note_id_sa_key" ON "gst_adjustment_note_source_allocations"("tenant_id", "note_id", "sales_invoice_item_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_source_allocations_tenant_id_note_id_pu_key" ON "gst_adjustment_note_source_allocations"("tenant_id", "note_id", "purchase_invoice_item_id");
-
--- CreateIndex
-CREATE INDEX "gst_note_posting_operations_tenant_id_note_id_status_idx" ON "gst_note_posting_operations"("tenant_id", "note_id", "status");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_note_posting_operations_tenant_id_id_key" ON "gst_note_posting_operations"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_note_posting_operations_tenant_id_operation_type_idempo_key" ON "gst_note_posting_operations"("tenant_id", "operation_type", "idempotency_key");
-
--- CreateIndex
-CREATE INDEX "gst_note_posting_lines_tenant_id_operation_id_idx" ON "gst_note_posting_lines"("tenant_id", "operation_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_note_posting_lines_tenant_id_id_key" ON "gst_note_posting_lines"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_note_posting_lines_tenant_id_operation_id_line_number_key" ON "gst_note_posting_lines"("tenant_id", "operation_id", "line_number");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_events_tenant_id_note_id_created_at_idx" ON "gst_adjustment_note_events"("tenant_id", "note_id", "created_at");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_events_tenant_id_actor_membership_id_idx" ON "gst_adjustment_note_events"("tenant_id", "actor_membership_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_events_tenant_id_id_key" ON "gst_adjustment_note_events"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_events_tenant_id_note_id_sequence_no_key" ON "gst_adjustment_note_events"("tenant_id", "note_id", "sequence_no");
-
--- CreateIndex
-CREATE INDEX "commercial_adjustments_tenant_id_note_id_idx" ON "commercial_adjustments"("tenant_id", "note_id");
-
--- CreateIndex
-CREATE INDEX "commercial_adjustments_tenant_id_status_idx" ON "commercial_adjustments"("tenant_id", "status");
-
--- CreateIndex
-CREATE INDEX "commercial_adjustments_tenant_id_customer_id_idx" ON "commercial_adjustments"("tenant_id", "customer_id");
-
--- CreateIndex
-CREATE INDEX "commercial_adjustments_tenant_id_supplier_id_idx" ON "commercial_adjustments"("tenant_id", "supplier_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "commercial_adjustments_tenant_id_id_key" ON "commercial_adjustments"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "commercial_adjustments_tenant_id_idempotency_key_key" ON "commercial_adjustments"("tenant_id", "idempotency_key");
-
--- CreateIndex
-CREATE INDEX "gst_note_number_series_tenant_id_is_active_idx" ON "gst_note_number_series"("tenant_id", "is_active");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_note_number_series_tenant_id_id_key" ON "gst_note_number_series"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_note_number_series_tenant_id_direction_source_class_not_key" ON "gst_note_number_series"("tenant_id", "direction", "source_class", "note_type", "financial_year");
-
--- CreateIndex
-CREATE INDEX "gst_note_configuration_versions_tenant_id_effective_from_ef_idx" ON "gst_note_configuration_versions"("tenant_id", "effective_from", "effective_to");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_note_configuration_versions_tenant_id_id_key" ON "gst_note_configuration_versions"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_note_configuration_versions_tenant_id_version_key" ON "gst_note_configuration_versions"("tenant_id", "version");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_output_tax_reviews_tenant_id_note_id_st_idx" ON "gst_adjustment_note_output_tax_reviews"("tenant_id", "note_id", "status");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_output_tax_reviews_tenant_id_id_key" ON "gst_adjustment_note_output_tax_reviews"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_output_tax_reviews_tenant_id_note_id_re_key" ON "gst_adjustment_note_output_tax_reviews"("tenant_id", "note_id", "revision_no");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_output_tax_reviews_tenant_id_note_id_id_key" ON "gst_adjustment_note_output_tax_reviews"("tenant_id", "note_id", "idempotency_key");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_itc_reviews_tenant_id_note_id_revision__idx" ON "gst_adjustment_note_itc_reviews"("tenant_id", "note_id", "revision_state");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_itc_reviews_tenant_id_outcome_state_idx" ON "gst_adjustment_note_itc_reviews"("tenant_id", "outcome_state");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_itc_reviews_tenant_id_id_key" ON "gst_adjustment_note_itc_reviews"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_itc_reviews_tenant_id_note_id_revision__key" ON "gst_adjustment_note_itc_reviews"("tenant_id", "note_id", "revision_no");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_itc_reviews_tenant_id_note_id_idempoten_key" ON "gst_adjustment_note_itc_reviews"("tenant_id", "note_id", "idempotency_key");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_itc_allocations_tenant_id_source_docume_idx" ON "gst_adjustment_note_itc_allocations"("tenant_id", "source_document_id", "purchase_invoice_item_id", "tax_head");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_itc_allocations_tenant_id_id_key" ON "gst_adjustment_note_itc_allocations"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_itc_allocations_tenant_id_itc_review_id_key" ON "gst_adjustment_note_itc_allocations"("tenant_id", "itc_review_id", "source_document_id", "purchase_invoice_item_id", "tax_head");
-
--- CreateIndex
-CREATE INDEX "physical_returns_tenant_id_note_id_status_idx" ON "physical_returns"("tenant_id", "note_id", "status");
-
--- CreateIndex
-CREATE INDEX "physical_returns_tenant_id_source_document_id_source_line_i_idx" ON "physical_returns"("tenant_id", "source_document_id", "source_line_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "physical_returns_tenant_id_id_key" ON "physical_returns"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "physical_returns_tenant_id_idempotency_key_key" ON "physical_returns"("tenant_id", "idempotency_key");
-
--- CreateIndex
-CREATE INDEX "physical_return_events_tenant_id_physical_return_id_created_idx" ON "physical_return_events"("tenant_id", "physical_return_id", "created_at");
-
--- CreateIndex
-CREATE UNIQUE INDEX "physical_return_events_tenant_id_id_key" ON "physical_return_events"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "physical_return_events_tenant_id_physical_return_id_sequenc_key" ON "physical_return_events"("tenant_id", "physical_return_id", "sequence_no");
-
--- CreateIndex
-CREATE UNIQUE INDEX "physical_return_events_tenant_id_physical_return_id_idempot_key" ON "physical_return_events"("tenant_id", "physical_return_id", "idempotency_key");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_return_links_tenant_id_physical_return__idx" ON "gst_adjustment_note_return_links"("tenant_id", "physical_return_id", "posting_status");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_return_links_tenant_id_id_key" ON "gst_adjustment_note_return_links"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_return_links_tenant_id_note_id_physical_key" ON "gst_adjustment_note_return_links"("tenant_id", "note_id", "physical_return_id");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_reporting_attempts_tenant_id_note_id_st_idx" ON "gst_adjustment_note_reporting_attempts"("tenant_id", "note_id", "status");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_reporting_attempts_tenant_id_reporting__idx" ON "gst_adjustment_note_reporting_attempts"("tenant_id", "reporting_period", "category");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_reporting_attempts_tenant_id_id_key" ON "gst_adjustment_note_reporting_attempts"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_reporting_attempts_tenant_id_note_id_pr_key" ON "gst_adjustment_note_reporting_attempts"("tenant_id", "note_id", "provider", "payload_hash");
-
--- CreateIndex
-CREATE INDEX "gst_adjustment_note_irp_attempts_tenant_id_note_id_status_idx" ON "gst_adjustment_note_irp_attempts"("tenant_id", "note_id", "status");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_irp_attempts_tenant_id_id_key" ON "gst_adjustment_note_irp_attempts"("tenant_id", "id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gst_adjustment_note_irp_attempts_tenant_id_note_id_payload__key" ON "gst_adjustment_note_irp_attempts"("tenant_id", "note_id", "payload_hash");
 
 -- AddForeignKey
 ALTER TABLE "memberships" ADD CONSTRAINT "memberships_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1919,39 +1164,6 @@ ALTER TABLE "purchase_invoice_items" ADD CONSTRAINT "purchase_line_acceptance_ac
 
 -- AddForeignKey
 ALTER TABLE "purchase_invoice_items" ADD CONSTRAINT "purchase_line_acceptance_decision_fkey" FOREIGN KEY ("tenant_id", "purchase_id", "accepted_decision_id") REFERENCES "purchase_gst_accounting_decisions"("tenant_id", "purchase_invoice_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "inventory_valuation_decisions" ADD CONSTRAINT "inventory_valuation_decisions_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "inventory_valuation_decisions" ADD CONSTRAINT "inventory_valuation_decisions_purchase_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id") REFERENCES "purchase_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "inventory_valuation_decisions" ADD CONSTRAINT "inventory_valuation_decisions_purchase_item_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id", "purchase_invoice_item_id") REFERENCES "purchase_invoice_items"("tenant_id", "purchase_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "inventory_valuation_decisions" ADD CONSTRAINT "inventory_valuation_decisions_batch_fkey" FOREIGN KEY ("tenant_id", "product_batch_id") REFERENCES "product_batches"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "inventory_valuation_decisions" ADD CONSTRAINT "inventory_valuation_decisions_movement_fkey" FOREIGN KEY ("tenant_id", "stock_movement_id") REFERENCES "stock_movements"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "inventory_valuation_decisions" ADD CONSTRAINT "inventory_valuation_decisions_tenant_id_decided_by_members_fkey" FOREIGN KEY ("tenant_id", "decided_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "inventory_valuation_decisions" ADD CONSTRAINT "inventory_valuation_decisions_tenant_id_supersedes_decisio_fkey" FOREIGN KEY ("tenant_id", "supersedes_decision_id") REFERENCES "inventory_valuation_decisions"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "inventory_valuation_adjustments" ADD CONSTRAINT "inventory_valuation_adjustments_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "inventory_valuation_adjustments" ADD CONSTRAINT "inventory_valuation_adjustments_tenant_id_prior_decision_i_fkey" FOREIGN KEY ("tenant_id", "prior_decision_id") REFERENCES "inventory_valuation_decisions"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "inventory_valuation_adjustments" ADD CONSTRAINT "inventory_valuation_adjustments_tenant_id_resulting_decisi_fkey" FOREIGN KEY ("tenant_id", "resulting_decision_id") REFERENCES "inventory_valuation_decisions"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "inventory_valuation_adjustments" ADD CONSTRAINT "inventory_valuation_adjustments_tenant_id_adjusted_by_memb_fkey" FOREIGN KEY ("tenant_id", "adjusted_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "purchase_gst_evidence_revisions" ADD CONSTRAINT "purchase_gst_evidence_purchase_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id") REFERENCES "purchase_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -2073,189 +1285,6 @@ ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_tenant_id_fkey" FOREIGN KEY 
 -- AddForeignKey
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_actor_id_fkey" FOREIGN KEY ("actor_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_tenant_id_note_event_id_fkey" FOREIGN KEY ("tenant_id", "note_event_id") REFERENCES "gst_adjustment_note_events"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_notes" ADD CONSTRAINT "gst_adjustment_notes_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_notes" ADD CONSTRAINT "gst_adjustment_notes_tenant_id_issuer_customer_id_fkey" FOREIGN KEY ("tenant_id", "issuer_customer_id") REFERENCES "customers"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_notes" ADD CONSTRAINT "gst_adjustment_notes_tenant_id_recipient_customer_id_fkey" FOREIGN KEY ("tenant_id", "recipient_customer_id") REFERENCES "customers"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_notes" ADD CONSTRAINT "gst_adjustment_notes_tenant_id_issuer_supplier_id_fkey" FOREIGN KEY ("tenant_id", "issuer_supplier_id") REFERENCES "suppliers"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_notes" ADD CONSTRAINT "gst_adjustment_notes_tenant_id_recipient_supplier_id_fkey" FOREIGN KEY ("tenant_id", "recipient_supplier_id") REFERENCES "suppliers"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_notes" ADD CONSTRAINT "gst_adjustment_notes_tenant_id_created_by_membership_id_fkey" FOREIGN KEY ("tenant_id", "created_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_notes" ADD CONSTRAINT "gst_adjustment_notes_tenant_id_issued_by_membership_id_fkey" FOREIGN KEY ("tenant_id", "issued_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_lines" ADD CONSTRAINT "gst_adjustment_note_lines_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_lines" ADD CONSTRAINT "gst_adjustment_note_lines_tenant_id_note_id_fkey" FOREIGN KEY ("tenant_id", "note_id") REFERENCES "gst_adjustment_notes"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_source_documents" ADD CONSTRAINT "gst_adjustment_note_source_documents_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_source_documents" ADD CONSTRAINT "gst_adjustment_note_source_documents_tenant_id_note_id_fkey" FOREIGN KEY ("tenant_id", "note_id") REFERENCES "gst_adjustment_notes"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_source_documents" ADD CONSTRAINT "gst_adjustment_note_source_documents_tenant_id_sales_invoi_fkey" FOREIGN KEY ("tenant_id", "sales_invoice_id") REFERENCES "sales_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_source_documents" ADD CONSTRAINT "gst_adjustment_note_source_documents_tenant_id_purchase_in_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id") REFERENCES "purchase_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_source_allocations" ADD CONSTRAINT "gst_adjustment_note_source_allocations_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_source_allocations" ADD CONSTRAINT "gst_adjustment_note_source_allocations_tenant_id_note_id_fkey" FOREIGN KEY ("tenant_id", "note_id") REFERENCES "gst_adjustment_notes"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_source_allocations" ADD CONSTRAINT "gst_adjustment_note_source_allocations_tenant_id_note_id_n_fkey" FOREIGN KEY ("tenant_id", "note_id", "note_line_id") REFERENCES "gst_adjustment_note_lines"("tenant_id", "note_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_source_allocations" ADD CONSTRAINT "gst_adjustment_note_source_allocations_tenant_id_source_do_fkey" FOREIGN KEY ("tenant_id", "source_document_id") REFERENCES "gst_adjustment_note_source_documents"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_source_allocations" ADD CONSTRAINT "gst_adjustment_note_source_allocations_tenant_id_sales_inv_fkey" FOREIGN KEY ("tenant_id", "sales_invoice_id", "sales_invoice_item_id") REFERENCES "sales_invoice_items"("tenant_id", "invoice_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_source_allocations" ADD CONSTRAINT "gst_adjustment_note_source_allocations_tenant_id_purchase__fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id", "purchase_invoice_item_id") REFERENCES "purchase_invoice_items"("tenant_id", "purchase_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_note_posting_operations" ADD CONSTRAINT "gst_note_posting_operations_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_note_posting_operations" ADD CONSTRAINT "gst_note_posting_operations_tenant_id_note_id_fkey" FOREIGN KEY ("tenant_id", "note_id") REFERENCES "gst_adjustment_notes"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_note_posting_lines" ADD CONSTRAINT "gst_note_posting_lines_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_note_posting_lines" ADD CONSTRAINT "gst_note_posting_lines_tenant_id_operation_id_fkey" FOREIGN KEY ("tenant_id", "operation_id") REFERENCES "gst_note_posting_operations"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_events" ADD CONSTRAINT "gst_adjustment_note_events_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_events" ADD CONSTRAINT "gst_adjustment_note_events_tenant_id_note_id_fkey" FOREIGN KEY ("tenant_id", "note_id") REFERENCES "gst_adjustment_notes"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_events" ADD CONSTRAINT "gst_adjustment_note_events_tenant_id_actor_membership_id_fkey" FOREIGN KEY ("tenant_id", "actor_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "commercial_adjustments" ADD CONSTRAINT "commercial_adjustments_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "commercial_adjustments" ADD CONSTRAINT "commercial_adjustments_tenant_id_note_id_fkey" FOREIGN KEY ("tenant_id", "note_id") REFERENCES "gst_adjustment_notes"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "commercial_adjustments" ADD CONSTRAINT "commercial_adjustments_tenant_id_customer_id_fkey" FOREIGN KEY ("tenant_id", "customer_id") REFERENCES "customers"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "commercial_adjustments" ADD CONSTRAINT "commercial_adjustments_tenant_id_supplier_id_fkey" FOREIGN KEY ("tenant_id", "supplier_id") REFERENCES "suppliers"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_note_number_series" ADD CONSTRAINT "gst_note_number_series_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_note_configuration_versions" ADD CONSTRAINT "gst_note_configuration_versions_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_output_tax_reviews" ADD CONSTRAINT "gst_adjustment_note_output_tax_reviews_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_output_tax_reviews" ADD CONSTRAINT "gst_adjustment_note_output_tax_reviews_tenant_id_note_id_fkey" FOREIGN KEY ("tenant_id", "note_id") REFERENCES "gst_adjustment_notes"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_output_tax_reviews" ADD CONSTRAINT "gst_adjustment_note_output_tax_reviews_tenant_id_reviewed__fkey" FOREIGN KEY ("tenant_id", "reviewed_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_itc_reviews" ADD CONSTRAINT "gst_adjustment_note_itc_reviews_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_itc_reviews" ADD CONSTRAINT "gst_adjustment_note_itc_reviews_tenant_id_note_id_fkey" FOREIGN KEY ("tenant_id", "note_id") REFERENCES "gst_adjustment_notes"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_itc_reviews" ADD CONSTRAINT "gst_adjustment_note_itc_reviews_tenant_id_reviewed_by_memb_fkey" FOREIGN KEY ("tenant_id", "reviewed_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_itc_reviews" ADD CONSTRAINT "gst_adjustment_note_itc_reviews_tenant_id_supersedes_revie_fkey" FOREIGN KEY ("tenant_id", "supersedes_review_id") REFERENCES "gst_adjustment_note_itc_reviews"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_itc_allocations" ADD CONSTRAINT "gst_adjustment_note_itc_allocations_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_itc_allocations" ADD CONSTRAINT "gst_adjustment_note_itc_allocations_tenant_id_itc_review_i_fkey" FOREIGN KEY ("tenant_id", "itc_review_id") REFERENCES "gst_adjustment_note_itc_reviews"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_itc_allocations" ADD CONSTRAINT "gst_adjustment_note_itc_allocations_tenant_id_source_docum_fkey" FOREIGN KEY ("tenant_id", "source_document_id") REFERENCES "gst_adjustment_note_source_documents"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_itc_allocations" ADD CONSTRAINT "gst_adjustment_note_itc_allocations_tenant_id_purchase_inv_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id", "purchase_invoice_item_id") REFERENCES "purchase_invoice_items"("tenant_id", "purchase_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "physical_returns" ADD CONSTRAINT "physical_returns_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "physical_returns" ADD CONSTRAINT "physical_returns_tenant_id_note_id_fkey" FOREIGN KEY ("tenant_id", "note_id") REFERENCES "gst_adjustment_notes"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "physical_returns" ADD CONSTRAINT "physical_returns_tenant_id_product_id_fkey" FOREIGN KEY ("tenant_id", "product_id") REFERENCES "products"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "physical_returns" ADD CONSTRAINT "physical_returns_tenant_id_batch_id_fkey" FOREIGN KEY ("tenant_id", "batch_id") REFERENCES "product_batches"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "physical_returns" ADD CONSTRAINT "physical_returns_tenant_id_created_by_membership_id_fkey" FOREIGN KEY ("tenant_id", "created_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "physical_returns" ADD CONSTRAINT "physical_returns_tenant_id_inspection_actor_membership_id_fkey" FOREIGN KEY ("tenant_id", "inspection_actor_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "physical_return_events" ADD CONSTRAINT "physical_return_events_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "physical_return_events" ADD CONSTRAINT "physical_return_events_tenant_id_physical_return_id_fkey" FOREIGN KEY ("tenant_id", "physical_return_id") REFERENCES "physical_returns"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "physical_return_events" ADD CONSTRAINT "physical_return_events_tenant_id_actor_membership_id_fkey" FOREIGN KEY ("tenant_id", "actor_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_return_links" ADD CONSTRAINT "gst_adjustment_note_return_links_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_return_links" ADD CONSTRAINT "gst_adjustment_note_return_links_tenant_id_note_id_fkey" FOREIGN KEY ("tenant_id", "note_id") REFERENCES "gst_adjustment_notes"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_return_links" ADD CONSTRAINT "gst_adjustment_note_return_links_tenant_id_physical_return_fkey" FOREIGN KEY ("tenant_id", "physical_return_id") REFERENCES "physical_returns"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_return_links" ADD CONSTRAINT "gst_adjustment_note_return_links_tenant_id_stock_movement__fkey" FOREIGN KEY ("tenant_id", "stock_movement_id") REFERENCES "stock_movements"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_reporting_attempts" ADD CONSTRAINT "gst_adjustment_note_reporting_attempts_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_reporting_attempts" ADD CONSTRAINT "gst_adjustment_note_reporting_attempts_tenant_id_note_id_fkey" FOREIGN KEY ("tenant_id", "note_id") REFERENCES "gst_adjustment_notes"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_irp_attempts" ADD CONSTRAINT "gst_adjustment_note_irp_attempts_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gst_adjustment_note_irp_attempts" ADD CONSTRAINT "gst_adjustment_note_irp_attempts_tenant_id_note_id_fkey" FOREIGN KEY ("tenant_id", "note_id") REFERENCES "gst_adjustment_notes"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
 -- HSN/SAC governance integrity controls. These are part of the executable
 -- baseline so a fresh disposable database does not depend on a later migration.
 CREATE EXTENSION IF NOT EXISTS btree_gist;
@@ -2352,183 +1381,90 @@ BEGIN
 END;
 $grant$;
 
--- GST credit/debit note integrity controls from additive migrations.
-ALTER TABLE "gst_adjustment_notes"
-  ADD CONSTRAINT "gst_adjustment_notes_direction_party_check"
-    CHECK (
-      (
-        "direction" = 'SUPPLIER_ISSUED' AND "source_class" = 'SALES' AND
-        "issuer_customer_id" IS NULL AND "recipient_customer_id" IS NOT NULL AND
-        "issuer_supplier_id" IS NULL AND "recipient_supplier_id" IS NULL
-      )
-      OR
-      (
-        "direction" = 'RECIPIENT_RECEIVED' AND "source_class" = 'PURCHASE' AND
-        "issuer_customer_id" IS NULL AND "recipient_customer_id" IS NULL AND
-        "issuer_supplier_id" IS NOT NULL AND "recipient_supplier_id" IS NULL
-      )
-    );
-ALTER TABLE "gst_adjustment_note_lines"
-  ADD CONSTRAINT "gst_adjustment_note_lines_source_class_check"
-    CHECK ("source_class" IN ('SALES', 'PURCHASE')),
-  ADD CONSTRAINT "gst_adjustment_note_lines_amounts_nonnegative_check"
-    CHECK ("quantity" >= 0 AND "unit_value" >= 0 AND "taxable_value" >= 0 AND
-      "cgst" >= 0 AND "sgst" >= 0 AND "utgst" >= 0 AND "igst" >= 0 AND
-      "cess" >= 0 AND "gross_effect" >= 0);
-ALTER TABLE "gst_adjustment_note_source_documents"
-  ADD CONSTRAINT "gst_adjustment_note_source_documents_source_class_check"
-    CHECK (
-      ("source_class" = 'SALES' AND "source_kind" = 'SALES_INVOICE' AND
-        "sales_invoice_id" IS NOT NULL AND "purchase_invoice_id" IS NULL)
-      OR
-      ("source_class" = 'PURCHASE' AND "source_kind" = 'PURCHASE_INVOICE' AND
-        "purchase_invoice_id" IS NOT NULL AND "sales_invoice_id" IS NULL)
-    );
-ALTER TABLE "gst_adjustment_note_source_allocations"
-  ADD CONSTRAINT "gst_adjustment_note_source_allocations_source_class_check"
-    CHECK (
-      ("source_class" = 'SALES' AND "sales_invoice_id" IS NOT NULL AND
-        "sales_invoice_item_id" IS NOT NULL AND "purchase_invoice_id" IS NULL AND
-        "purchase_invoice_item_id" IS NULL)
-      OR
-      ("source_class" = 'PURCHASE' AND "purchase_invoice_id" IS NOT NULL AND
-        "purchase_invoice_item_id" IS NOT NULL AND "sales_invoice_id" IS NULL AND
-        "sales_invoice_item_id" IS NULL)
-    ),
-  ADD CONSTRAINT "gst_adjustment_note_source_allocations_amounts_nonnegative_check"
-    CHECK ("quantity" >= 0 AND "taxable_value" >= 0 AND "cgst" >= 0 AND
-      "sgst" >= 0 AND "utgst" >= 0 AND "igst" >= 0 AND "cess" >= 0 AND
-      "gross_effect" >= 0);
-ALTER TABLE "gst_note_posting_lines"
-  ADD CONSTRAINT "gst_note_posting_lines_side_check"
-    CHECK ("side" IN ('DEBIT', 'CREDIT')),
-  ADD CONSTRAINT "gst_note_posting_lines_amount_positive_check"
-    CHECK ("amount" > 0);
-ALTER TABLE "commercial_adjustments"
-  ADD CONSTRAINT "commercial_adjustments_source_class_check"
-    CHECK ("source_class" IN ('SALES', 'PURCHASE')),
-  ADD CONSTRAINT "commercial_adjustments_effect_check"
-    CHECK ("effect" IN ('CREDIT', 'DEBIT')),
-  ADD CONSTRAINT "commercial_adjustments_party_check"
-    CHECK (
-      ("source_class" = 'SALES' AND "customer_id" IS NOT NULL AND "supplier_id" IS NULL)
-      OR ("source_class" = 'PURCHASE' AND "supplier_id" IS NOT NULL AND "customer_id" IS NULL)
-    ),
-  ADD CONSTRAINT "commercial_adjustments_amount_positive_check"
-    CHECK ("amount" > 0);
+CREATE TYPE "InventoryValuationDecisionStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'SUPERSEDED', 'REVERSED');
+CREATE TYPE "InventoryValuationAccountingStatus" AS ENUM ('NOT_APPLICABLE', 'PENDING_POLICY', 'POSTED', 'REVERSED');
+CREATE TYPE "InventoryValuationAdjustmentKind" AS ENUM ('CORRECTION', 'REVERSAL');
 
-CREATE OR REPLACE FUNCTION "reject_gst_note_history_mutation"()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = pg_catalog, public
-AS $$
-BEGIN
-  RAISE EXCEPTION 'GST note history is append-only: % on % is not allowed',
-    TG_OP, TG_TABLE_NAME;
-END;
-$$;
-CREATE TRIGGER "gst_adjustment_note_source_documents_immutable"
-  BEFORE UPDATE OR DELETE ON "gst_adjustment_note_source_documents"
-  FOR EACH ROW EXECUTE FUNCTION "reject_gst_note_history_mutation"();
-CREATE TRIGGER "gst_adjustment_note_source_allocations_immutable"
-  BEFORE UPDATE OR DELETE ON "gst_adjustment_note_source_allocations"
-  FOR EACH ROW EXECUTE FUNCTION "reject_gst_note_history_mutation"();
-CREATE TRIGGER "gst_note_posting_lines_immutable"
-  BEFORE UPDATE OR DELETE ON "gst_note_posting_lines"
-  FOR EACH ROW EXECUTE FUNCTION "reject_gst_note_history_mutation"();
-CREATE TRIGGER "gst_adjustment_note_events_immutable"
-  BEFORE UPDATE OR DELETE ON "gst_adjustment_note_events"
-  FOR EACH ROW EXECUTE FUNCTION "reject_gst_note_history_mutation"();
+ALTER TABLE "product_batches"
+  ADD CONSTRAINT "product_batches_tenant_id_id_key" UNIQUE ("tenant_id", "id");
+ALTER TABLE "stock_movements"
+  ADD CONSTRAINT "stock_movements_tenant_id_id_key" UNIQUE ("tenant_id", "id");
 
-CREATE UNIQUE INDEX "gst_adjustment_notes_tenant_note_number_fy_not_null_key"
-  ON "gst_adjustment_notes"("tenant_id", "note_number", "financial_year")
-  WHERE "note_number" IS NOT NULL AND "financial_year" IS NOT NULL;
-CREATE UNIQUE INDEX "gst_adjustment_notes_tenant_idempotency_not_null_key"
-  ON "gst_adjustment_notes"("tenant_id", "idempotency_key")
-  WHERE "idempotency_key" IS NOT NULL;
-CREATE UNIQUE INDEX "commercial_adjustments_tenant_idempotency_not_null_key"
-  ON "commercial_adjustments"("tenant_id", "idempotency_key")
-  WHERE "idempotency_key" IS NOT NULL;
-CREATE UNIQUE INDEX "gst_adjustment_note_source_documents_sales_source_unique_key"
-  ON "gst_adjustment_note_source_documents"("tenant_id", "note_id", "source_kind", "sales_invoice_id")
-  WHERE "sales_invoice_id" IS NOT NULL;
-CREATE UNIQUE INDEX "gst_adjustment_note_source_documents_purchase_source_unique_key"
-  ON "gst_adjustment_note_source_documents"("tenant_id", "note_id", "source_kind", "purchase_invoice_id")
-  WHERE "purchase_invoice_id" IS NOT NULL;
-CREATE UNIQUE INDEX "gst_adjustment_note_source_allocations_sales_line_unique_key"
-  ON "gst_adjustment_note_source_allocations"("tenant_id", "note_id", "sales_invoice_id", "sales_invoice_item_id")
-  WHERE "sales_invoice_id" IS NOT NULL AND "sales_invoice_item_id" IS NOT NULL;
-CREATE UNIQUE INDEX "gst_adjustment_note_source_allocations_purchase_line_unique_key"
-  ON "gst_adjustment_note_source_allocations"("tenant_id", "note_id", "purchase_invoice_id", "purchase_invoice_item_id")
-  WHERE "purchase_invoice_id" IS NOT NULL AND "purchase_invoice_item_id" IS NOT NULL;
+CREATE TABLE "inventory_valuation_decisions" (
+  "id" TEXT NOT NULL,
+  "tenant_id" TEXT NOT NULL,
+  "purchase_invoice_id" TEXT NOT NULL,
+  "purchase_invoice_item_id" TEXT NOT NULL,
+  "product_batch_id" TEXT NOT NULL,
+  "stock_movement_id" TEXT,
+  "status" "InventoryValuationDecisionStatus" NOT NULL DEFAULT 'PENDING',
+  "accounting_status" "InventoryValuationAccountingStatus" NOT NULL DEFAULT 'PENDING_POLICY',
+  "eligibility_status" TEXT NOT NULL,
+  "accepted_taxable_value" DECIMAL(20,4) NOT NULL,
+  "accepted_gst" DECIMAL(20,4) NOT NULL,
+  "recoverable_itc" DECIMAL(20,4),
+  "non_recoverable_gst" DECIMAL(20,4),
+  "direct_acquisition_cost" DECIMAL(20,4) NOT NULL DEFAULT 0,
+  "inventory_acquisition_cost" DECIMAL(20,4),
+  "policy_version" TEXT NOT NULL,
+  "decision_reference" TEXT NOT NULL,
+  "rationale" TEXT NOT NULL,
+  "idempotency_key" TEXT NOT NULL,
+  "request_payload_hash" TEXT NOT NULL,
+  "supersedes_decision_id" TEXT,
+  "decided_by_membership_id" TEXT NOT NULL,
+  "decided_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "inventory_valuation_decisions_pkey" PRIMARY KEY ("id")
+);
 
-ALTER TABLE "gst_adjustment_note_itc_allocations"
-  ADD CONSTRAINT "gst_adjustment_note_itc_allocations_amounts_nonnegative_check"
-    CHECK ("amount_availed" >= 0 AND "amount_reversed" >= 0 AND "amount_claimed" >= 0),
-  ADD CONSTRAINT "gst_adjustment_note_itc_allocations_tax_head_check"
-    CHECK ("tax_head" IN ('CGST', 'SGST', 'UTGST', 'IGST', 'CESS'));
-CREATE TRIGGER "gst_adjustment_note_output_tax_reviews_immutable"
-  BEFORE UPDATE OR DELETE ON "gst_adjustment_note_output_tax_reviews"
-  FOR EACH ROW EXECUTE FUNCTION "reject_gst_note_history_mutation"();
-CREATE OR REPLACE FUNCTION "allow_gst_note_itc_review_supersession"()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = pg_catalog, public
-AS $$
-BEGIN
-  IF TG_OP = 'UPDATE'
-     AND OLD.revision_state = 'CURRENT'
-     AND NEW.revision_state = 'SUPERSEDED'
-     AND NEW.tenant_id = OLD.tenant_id
-     AND NEW.id = OLD.id
-     AND NEW.note_id = OLD.note_id
-     AND NEW.revision_no = OLD.revision_no
-     AND NEW.progress_state = OLD.progress_state
-     AND NEW.eligibility_state = OLD.eligibility_state
-     AND NEW.outcome_state = OLD.outcome_state
-     AND NEW.legal_state = OLD.legal_state
-     AND NEW.supersedes_review_id IS NOT DISTINCT FROM OLD.supersedes_review_id
-     AND NEW.evidence IS NOT DISTINCT FROM OLD.evidence
-     AND NEW.decision_reason IS NOT DISTINCT FROM OLD.decision_reason
-     AND NEW.reviewed_by_membership_id IS NOT DISTINCT FROM OLD.reviewed_by_membership_id
-     AND NEW.reviewed_at IS NOT DISTINCT FROM OLD.reviewed_at
-     AND NEW.created_at = OLD.created_at
-  THEN
-    RETURN NEW;
-  END IF;
-  RAISE EXCEPTION 'GST note ITC review history is append-only: % is not allowed', TG_OP;
-END;
-$$;
-CREATE TRIGGER "gst_adjustment_note_itc_reviews_supersession"
-  BEFORE UPDATE OR DELETE ON "gst_adjustment_note_itc_reviews"
-  FOR EACH ROW EXECUTE FUNCTION "allow_gst_note_itc_review_supersession"();
-CREATE TRIGGER "gst_adjustment_note_itc_allocations_immutable"
-  BEFORE UPDATE OR DELETE ON "gst_adjustment_note_itc_allocations"
-  FOR EACH ROW EXECUTE FUNCTION "reject_gst_note_history_mutation"();
+CREATE TABLE "inventory_valuation_adjustments" (
+  "id" TEXT NOT NULL,
+  "tenant_id" TEXT NOT NULL,
+  "prior_decision_id" TEXT NOT NULL,
+  "resulting_decision_id" TEXT NOT NULL,
+  "adjustment_kind" "InventoryValuationAdjustmentKind" NOT NULL,
+  "recoverable_itc_delta" DECIMAL(20,4) NOT NULL,
+  "non_recoverable_gst_delta" DECIMAL(20,4) NOT NULL,
+  "inventory_cost_delta" DECIMAL(20,4) NOT NULL,
+  "reason" TEXT NOT NULL,
+  "idempotency_key" TEXT NOT NULL,
+  "request_payload_hash" TEXT NOT NULL,
+  "adjusted_by_membership_id" TEXT NOT NULL,
+  "adjusted_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "inventory_valuation_adjustments_pkey" PRIMARY KEY ("id")
+);
 
-ALTER TABLE "physical_returns"
-  ADD CONSTRAINT "physical_returns_quantities_nonnegative_check"
-    CHECK ("requested_quantity" >= 0 AND "received_quantity" >= 0 AND
-      "accepted_quantity" >= 0 AND "rejected_quantity" >= 0 AND
-      "received_quantity" <= "requested_quantity" AND
-      "accepted_quantity" + "rejected_quantity" <= "received_quantity");
-CREATE TRIGGER "physical_return_events_immutable"
-  BEFORE UPDATE OR DELETE ON "physical_return_events"
-  FOR EACH ROW EXECUTE FUNCTION "reject_gst_note_history_mutation"();
-CREATE TRIGGER "gst_adjustment_note_return_links_immutable"
-  BEFORE UPDATE OR DELETE ON "gst_adjustment_note_return_links"
-  FOR EACH ROW EXECUTE FUNCTION "reject_gst_note_history_mutation"();
-CREATE TRIGGER "gst_adjustment_note_reporting_attempts_immutable"
-  BEFORE UPDATE OR DELETE ON "gst_adjustment_note_reporting_attempts"
-  FOR EACH ROW EXECUTE FUNCTION "reject_gst_note_history_mutation"();
-CREATE TRIGGER "gst_adjustment_note_irp_attempts_immutable"
-  BEFORE UPDATE OR DELETE ON "gst_adjustment_note_irp_attempts"
-  FOR EACH ROW EXECUTE FUNCTION "reject_gst_note_history_mutation"();
+CREATE UNIQUE INDEX "inventory_valuation_decision_tenant_idempotency_key"
+  ON "inventory_valuation_decisions"("tenant_id", "idempotency_key");
+CREATE UNIQUE INDEX "inventory_valuation_adjustment_tenant_idempotency_key"
+  ON "inventory_valuation_adjustments"("tenant_id", "idempotency_key");
+CREATE UNIQUE INDEX "inventory_valuation_decisions_tenant_id_key"
+  ON "inventory_valuation_decisions"("tenant_id", "id");
+CREATE UNIQUE INDEX "inventory_valuation_adjustments_tenant_id_key"
+  ON "inventory_valuation_adjustments"("tenant_id", "id");
+CREATE INDEX "inventory_valuation_decisions_target_idx"
+  ON "inventory_valuation_decisions"("tenant_id", "purchase_invoice_id", "purchase_invoice_item_id");
+CREATE INDEX "inventory_valuation_decisions_batch_created_idx"
+  ON "inventory_valuation_decisions"("tenant_id", "product_batch_id", "created_at");
+CREATE INDEX "inventory_valuation_decisions_status_created_idx"
+  ON "inventory_valuation_decisions"("tenant_id", "status", "created_at");
+CREATE INDEX "inventory_valuation_adjustments_prior_idx"
+  ON "inventory_valuation_adjustments"("tenant_id", "prior_decision_id");
+CREATE INDEX "inventory_valuation_adjustments_resulting_idx"
+  ON "inventory_valuation_adjustments"("tenant_id", "resulting_decision_id");
 
-CREATE UNIQUE INDEX "commercial_adjustments_tenant_id_posting_idempotency_key_key"
-  ON "commercial_adjustments"("tenant_id", "posting_idempotency_key")
-  WHERE "posting_idempotency_key" IS NOT NULL;
-CREATE UNIQUE INDEX "commercial_adjustments_tenant_id_approval_idempotency_key_key"
-  ON "commercial_adjustments"("tenant_id", "approval_idempotency_key")
-  WHERE "approval_idempotency_key" IS NOT NULL;
+ALTER TABLE "inventory_valuation_decisions"
+  ADD CONSTRAINT "inventory_valuation_decisions_tenant_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT "inventory_valuation_decisions_purchase_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id") REFERENCES "purchase_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT "inventory_valuation_decisions_purchase_item_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id", "purchase_invoice_item_id") REFERENCES "purchase_invoice_items"("tenant_id", "purchase_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT "inventory_valuation_decisions_batch_fkey" FOREIGN KEY ("tenant_id", "product_batch_id") REFERENCES "product_batches"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT "inventory_valuation_decisions_movement_fkey" FOREIGN KEY ("tenant_id", "stock_movement_id") REFERENCES "stock_movements"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT "inventory_valuation_decisions_actor_fkey" FOREIGN KEY ("tenant_id", "decided_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT "inventory_valuation_decisions_supersedes_fkey" FOREIGN KEY ("tenant_id", "supersedes_decision_id") REFERENCES "inventory_valuation_decisions"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
+ALTER TABLE "inventory_valuation_adjustments"
+  ADD CONSTRAINT "inventory_valuation_adjustments_tenant_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT "inventory_valuation_adjustments_prior_fkey" FOREIGN KEY ("tenant_id", "prior_decision_id") REFERENCES "inventory_valuation_decisions"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT "inventory_valuation_adjustments_resulting_fkey" FOREIGN KEY ("tenant_id", "resulting_decision_id") REFERENCES "inventory_valuation_decisions"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT "inventory_valuation_adjustments_actor_fkey" FOREIGN KEY ("tenant_id", "adjusted_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;

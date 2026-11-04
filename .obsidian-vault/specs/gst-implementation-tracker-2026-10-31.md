@@ -10,16 +10,65 @@ This tracker records the current engineering implementation state. It does
 not replace the active master specification, professional review, independent
 security acceptance, migration authorization, or production approval.
 
+## Q17 obsolete GST-note target cleanup — 2026-11-04 08-08-22 IST
+
+The six local Q17 PostgreSQL targets previously observed on ports 55461–55466
+were individually correlated with the rollback-era GST credit/debit-note
+campaign evidence in commit `2506510`. Read-only catalog checks found the
+GST-note schema and populated test fixtures in every target; the tenant and
+user IDs were campaign-scoped, there were no non-probe database sessions, and
+the targets had no bind mounts or named volumes. Current scripts, tests,
+source, Prisma files, and configuration contained no exact target references.
+
+The exact six containers and their six one-container Compose networks were
+removed after the user-authorized cleanup decision. The retained operator-owned
+GST-note target on port 55460 was not touched. All six candidate ports and
+resource IDs are now absent, and the pre-existing Git status was byte-for-byte
+unchanged by the Docker cleanup. The intentional documentation changes for
+this result are listed in the daily log. Full evidence and per-target
+identities are recorded in
+[`q17-obsolete-target-cleanup-2026-11-04.md`](./q17-obsolete-target-cleanup-2026-11-04.md).
+
+This cleanup changes no T13, T19, or T25 scope decision and does not claim
+GST credit/debit-note support in the current release.
+
+## Consolidated current-release verification campaign — 2026-11-04 07-50-04 IST
+
+The campaign completed its safe repository baseline and regression gates, but
+target-bound runtime verification could not start. The immutable disposable
+target contract was not supplied; the required preflight failed closed with
+`FINANCIAL_E2E_TARGET_CONTRACT is required`. Read-only process inspection found
+six disposable Q17 targets on ports 55461–55466, so no target was selected by
+similarity. No database connection, migration, provisioning, fixture write,
+cleanup, container lifecycle operation, or acceptance rerun was performed.
+
+- DGM-T13, DGM-T19, and DGM-T25 runtime verification: **BLOCKED** by the
+  missing exact target contract.
+- DGM-T13, DGM-T19, and DGM-T25 independent acceptance: **INSUFFICIENT
+  EVIDENCE**; implementation and automated tests do not substitute for
+  target-bound runtime evidence or independent review.
+- `pnpm test:gst:calculator`: **294/294 passed**.
+- `pnpm exec node --test .\tests\gst-*.test.mjs`: **37/37 passed**.
+- `pnpm exec node --test .\tests\financial-e2e-target-contract.test.mjs .\tests\purchase-gst-revision-safety-contract.test.mjs`: **8/8 passed**.
+- `pnpm exec node --test .\tests\*.test.mjs`: **232/232 passed**.
+- `pnpm typecheck`, safe-placeholder Prisma validation, changed-file ESLint,
+  changed-file JavaScript syntax checks, and `git diff --check`: **passed**.
+- No demonstrated source defect was identified in the approved current-release
+  scope, so no application code was changed. The reconciled evidence remains
+  **22/25 evidence-supported criteria**, with DGM-T13, DGM-T19, and DGM-T25
+  not verified for target-bound runtime and independent acceptance.
+
 ## GST calculation, treatment, and T25 engineering campaign — 2026-11-02 15-45-12 IST
 
 This section supersedes the earlier blocked application-path attempt below for
 the current acceptance status.
 
 - The reconciled matrix remains **22/25 evidence-supported criteria (88%)**:
-  16 current-campaign passes, 6 historical passes, 2 independent acceptance
-  criteria (`DGM-T13` and `DGM-T19`) remain `NOT VERIFIED`, 1 criterion
-  remains pending owner approval (`DGM-T25`), and 0 verified failures. The
-  final decision remains **NOT ACCEPTED**.
+  16 current-campaign passes, 6 historical passes, and 3 current-scope
+  criteria (`DGM-T13`, `DGM-T19`, and `DGM-T25`) remain `NOT VERIFIED` for
+  target-bound runtime and independent acceptance. There are 0 verified
+  failures and 0 owner-approval blockers. The final decision remains
+  **NOT ACCEPTED**.
 - The T25 engineering contract is implemented in
   `src/lib/decimal.ts`, the sales and purchase calculators, the relevant
   server/form calculation boundaries, and focused calculator tests. The
@@ -28,19 +77,22 @@ the current acceptance status.
 - DGM-T13 is `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`: current
   release validation remains exactly 15 supplied GSTIN characters, with
   checksum, state-prefix, registration-status, and effective-date checks
-  deferred to Version 2. DGM-T19 is also `CURRENT RELEASE SCOPE APPROVED —
-  VERSION 2 DEFERRED`: current acceptance-reset, authorization, revision, and
-  finalization safeguards remain, while the advanced stale
-  acceptance-revision guard is not implemented. Scope approval is not counted
-  as implementation, runtime verification, or independent acceptance.
+  deferred to Version 2. DGM-T19 was previously recorded as `CURRENT RELEASE
+  SCOPE APPROVED — VERSION 2 DEFERRED`; the owner-directed resolution now
+  implements the reviewed-revision guard in the current engineering path.
+  Acceptance, discrepancy resolution, and correction are bound to the current
+  record version, evidence revision, and calculation ID, with guarded
+  correction rollback. Focused source evidence is present, while runtime
+  verification and independent acceptance remain separate. Scope approval and
+  source implementation are not counted as runtime or independent acceptance.
 - Focused implementation evidence also covers HALF_UP midpoint behavior,
   no-premature-rounding arithmetic, mixed rates, independent GST components,
   inclusive Rule 35 extraction as an isolated helper, Section 170 helper
   isolation, commercial round-off separation, supplier-value preservation, and
   T13 length-only validation, plus the distinct JavaScript-number conversion
   boundaries. No credit/debit-note or e-invoice calculation implementation is
-  claimed; credit/debit-note absence is `Not implemented / no supported
-  workflow`, not a verified pass or an owner-approved T25-12 exclusion.
+  claimed; those capabilities are owner-approved Version 2 deferrals and
+  remain `Not implemented / no supported workflow`, not verified passes.
 - The prior authorized target was
   `127.0.0.1:55435/pharmnos_financial_e2e_0419`, marker
   `pharmnos-financial-e2e`, Compose project
@@ -60,17 +112,37 @@ the current acceptance status.
 - The supported TypeScript runner closes the prior tooling reproducibility gap
   without adding a dependency. The E2E changes are harness-only; no schema,
   migration, RLS policy, permission, rate, or deferred treatment was enabled.
-- The detailed T25 matrix is recorded as `PENDING OWNER APPROVAL` in
-  `decisions/0009-gst-precision-rounding-engineering-contract.md`. Section 170
-  aggregation, e-invoice obligations, and other statutory interpretations
-  remain subject to qualified professional confirmation. GST Stage 1 remains
-  **IN PROGRESS** and Production/Live Supabase remains **NO-GO**.
+- The detailed T25 matrix is owner-approved for the current engineering scope
+  in `decisions/0009-gst-precision-rounding-engineering-contract.md`; e-invoice
+  output and credit/debit-note workflows remain Version 2 deferrals. Section
+  170 aggregation and other statutory interpretations remain subject to
+  qualified professional confirmation. T13/T19/T25 runtime and independent
+  acceptance remain open. GST Stage 1 remains **IN PROGRESS** and
+  Production/Live Supabase remains **NO-GO**.
 - The final T25 integration audit found no demonstrated defect requiring source
   changes: the inclusive Rule 35 helper remains intentionally isolated, the
   supported invoice boundary remains two-decimal, JavaScript-number conversion
   limits are documented without a universal losslessness claim, and
   credit/debit-note and e-invoice surfaces have no supported workflow in the
   current release.
+
+## DGM-T19 revision-safety resolution — 2026-11-04
+
+- `PurchaseGstRevisionGuardSchema` now requires the reviewed GST record version,
+  evidence revision ID, and calculation ID for acceptance, discrepancy
+  resolution, and correction.
+- Acceptance and resolution reject stale or already-decided revisions before
+  recording accounting decisions. Correction writes the new evidence tree
+  inside the transaction and uses an optimistic guarded parent update, so a
+  stale correction rolls back its child writes.
+- The purchase action UI and the restricted-runtime harness now submit the
+  reviewed revision tokens.
+- Focused T19 contract coverage passed `2/2`, `pnpm typecheck` passed,
+  `pnpm test:gst:calculator` passed `294/294`, changed-file ESLint passed, and
+  `git diff --check` passed.
+- No disposable database campaign was run for this source-level resolution.
+  DGM-T19 runtime verification and independent acceptance remain `NOT
+  VERIFIED`; the 25-criterion completion count remains `22/25`.
 
 ## Sales GST application-path acceptance attempt — 2026-11-01 16-53-48 IST
 

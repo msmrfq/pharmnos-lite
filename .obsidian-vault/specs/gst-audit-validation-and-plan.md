@@ -748,7 +748,7 @@ ALTER TABLE purchase_invoices ADD COLUMN is_rcm BOOLEAN DEFAULT FALSE;
 | E-Invoice / IRN integration | Only mandatory for >₹5Cr turnover; not MVP |
 | E-Way Bill integration | Only for inter-state >₹50k; can be manual initially |
 | RCM flag & liability | Rare in pharma wholesale; handle manually |
-| Credit/Debit notes with GST adjustment | Not in current scope; returns handled separately |
+| Credit/Debit notes with GST adjustment | Not in current scope; return and other exceptional workflows are also deferred |
 | ITC reconciliation (GSTR-2A/2B) | Requires GSTN API access; post-MVP |
 | Multi-GSTIN per tenant | Single GSTIN per tenant is MVP scope |
 | GSTIN checksum validation | Format validation sufficient for MVP; checksum adds UX friction |

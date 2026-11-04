@@ -1,7 +1,7 @@
 ---
 title: GST precision and rounding engineering contract
 date: 2026-11-01
-status: PENDING OWNER APPROVAL
+status: OWNER APPROVED — CURRENT RELEASE SCOPE WITH VERSION 2 DEFERRALS
 ---
 
 # GST Precision and Rounding Engineering Contract
@@ -13,29 +13,33 @@ The owner-approved high-level direction in
 requires preserved intermediate precision, retained tax components, explicit
 precedence, and separate invoice adjustments. The existing calculator paths
 used JavaScript binary floating-point arithmetic and rounded intermediate
-values. This record defines the detailed engineering contract proposed for
-implementation; the broader GST modernization authorization is not approval of
-this detailed matrix.
+values. The latest owner instruction approves the demonstrated T25 engineering
+scope for current-release verification and independent acceptance, while
+keeping unsupported or deferred capabilities in Version 2. This record does
+not assert qualified professional confirmation, production approval, or
+acceptance evidence.
 
-## Proposed owner decision matrix
+## Owner decision matrix
 
 | ID | Proposed decision | Status |
 |---|---|---|
-| `T25-01` | Use exact decimal arithmetic for financial and GST calculations. | `PENDING OWNER APPROVAL` |
-| `T25-02` | Maintain at least six decimal places internally, with additional precision where required. | `PENDING OWNER APPROVAL` |
-| `T25-03` | Do not round intermediate calculations prematurely. | `PENDING OWNER APPROVAL` |
-| `T25-04` | Use an explicitly defined `HALF_UP` convention for ordinary two-decimal representation. | `PENDING OWNER APPROVAL` |
-| `T25-05` | Represent applicable e-invoice item monetary fields to two decimal places where the governing schema requires it. | `PENDING OWNER APPROVAL` |
-| `T25-06` | Derive invoice tax totals by summing reported item tax amounts where the applicable e-invoice contract requires that reconciliation. | `PENDING OWNER APPROVAL` |
-| `T25-07` | Keep Section 170 nearest-rupee statutory rounding separate and invoke it only at the legally applicable boundary. | `PENDING OWNER APPROVAL` |
-| `T25-08` | Keep commercial invoice-total adjustment in a separate visible `Round_Off_Amount` field; never use it to alter taxable value or GST amounts. | `PENDING OWNER APPROVAL` |
-| `T25-09` | Preserve supplier-declared purchase amounts independently from Pharmnos Lite calculated values. | `PENDING OWNER APPROVAL` |
-| `T25-10` | Preserve exact sales calculations and issued invoice values. | `PENDING OWNER APPROVAL` |
-| `T25-11` | Calculate and preserve CGST, SGST/UTGST, and IGST independently. | `PENDING OWNER APPROVAL` |
-| `T25-12` | Preserve original credit/debit note references and adjustment values; never overwrite original financial evidence. | `PENDING OWNER APPROVAL` |
+| `T25-01` | Use exact decimal arithmetic for financial and GST calculations. | `OWNER APPROVED — CURRENT RELEASE` |
+| `T25-02` | Maintain at least six decimal places internally, with additional precision where required. | `OWNER APPROVED — CURRENT RELEASE` |
+| `T25-03` | Do not round intermediate calculations prematurely. | `OWNER APPROVED — CURRENT RELEASE` |
+| `T25-04` | Use an explicitly defined `HALF_UP` convention for ordinary two-decimal representation. | `OWNER APPROVED — CURRENT RELEASE` |
+| `T25-05` | Represent applicable e-invoice item monetary fields to two decimal places where the governing schema requires it. | `OWNER APPROVED — VERSION 2 DEFERRED` |
+| `T25-06` | Derive invoice tax totals by summing reported item tax amounts where the applicable e-invoice contract requires that reconciliation. | `OWNER APPROVED — VERSION 2 DEFERRED` |
+| `T25-07` | Keep Section 170 nearest-rupee statutory rounding separate and invoke it only at the legally applicable boundary. | `OWNER APPROVED — CURRENT ENGINEERING BOUNDARY; PROFESSIONAL CONFIRMATION REQUIRED` |
+| `T25-08` | Keep commercial invoice-total adjustment in a separate visible `Round_Off_Amount` field; never use it to alter taxable value or GST amounts. | `OWNER APPROVED — CURRENT RELEASE` |
+| `T25-09` | Preserve supplier-declared purchase amounts independently from Pharmnos Lite calculated values. | `OWNER APPROVED — CURRENT RELEASE` |
+| `T25-10` | Preserve exact sales calculations and issued invoice values. | `OWNER APPROVED — CURRENT RELEASE` |
+| `T25-11` | Calculate and preserve CGST, SGST/UTGST, and IGST independently. | `OWNER APPROVED — CURRENT RELEASE` |
+| `T25-12` | Preserve original credit/debit note references and adjustment values; never overwrite original financial evidence. | `OWNER APPROVED — VERSION 2 DEFERRED` |
 
-No owner approval, signature, approval date, or qualified professional
-confirmation for this detailed matrix is asserted by this record.
+Owner approval is recorded from the latest owner instruction in the current
+session. This is scope and engineering authorization only; it is not qualified
+professional confirmation, runtime verification, independent acceptance, or
+production approval.
 
 ## Engineering contract
 
@@ -69,9 +73,9 @@ confirmation for this detailed matrix is asserted by this record.
 - Supplier-declared purchase raw values, calculated values, accepted values,
   finalized sales snapshots, and immutable audit records remain separate.
 - No credit-note, debit-note, or e-invoice calculation surface exists in the
-  current application path. T25-12 remains pending detailed owner approval, so
-  this absence is classified as `Not implemented / no supported workflow`, not
-  as an owner-approved current-release exclusion or verified pass. Any future
+  current application path. T25-05, T25-06, and T25-12 are approved Version 2
+  deferrals; their current-release absence remains
+  `Not implemented / no supported workflow`, not a verified pass. Any future
   implementation must preserve original references and adjustment values.
 
 ## DGM-T13 current-release scope
@@ -85,16 +89,28 @@ are not mapped to POS or state codes by this decision. The implementation and
 focused tests exist; runtime verification and independent acceptance remain
 separate statuses.
 
-## DGM-T19 current-release scope
+## DGM-T19 current-release scope and resolution
 
-Advanced stale purchase GST acceptance-revision protection is
-`CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`. The current code-path
-inspection found that evidence correction resets the current accounting decision
-and acceptance status, increments the GST record version, and finalization
-requires current evidence, calculation, accounting decision, accepted line
-snapshots, and an accepted status. Those current posting safeguards remain in
-place. The advanced stale-revision guard was not added and is not independently
-accepted.
+The approved T19 scope remains `CURRENT RELEASE SCOPE APPROVED — VERSION 2
+DEFERRED`. The owner-directed resolution implements the reviewed-revision guard
+in the current engineering path while retaining broader stale-operation
+behavior as a Version 2 boundary:
+
+- acceptance and discrepancy resolution require the submitted record version,
+  evidence revision ID, and calculation ID to match the current purchase;
+- correction requires the same revision tokens and uses an optimistic guarded
+  parent update, so child evidence, calculation, line, and event writes roll
+  back when the reviewed revision becomes stale;
+- acceptance, resolution, and correction preserve authorization checks and
+  reject already-recorded decisions; and
+- finalization continues to require the current accepted evidence, calculation,
+  accounting decision, accepted line snapshots, and optimistic record version.
+
+The focused T19 contract test and typecheck cover the source wiring. No
+database/runtime campaign or independent acceptance is claimed here. Any
+broader stale-operation behavior outside these reviewed revision tokens remains
+outside the resolved current-release boundary and requires a separate scope
+decision.
 
 ## Professional confirmation reservation
 
@@ -109,6 +125,6 @@ acceptance or production readiness.
 The calculator and form paths can use one exact-decimal implementation without
 changing the PostgreSQL schema or enabling unsupported treatments. Purchase GST
 reconciliation, accepted-value posting totals, and ledger balances use the same
-decimal boundary. Until the owner approves this detailed matrix and qualified
-professional confirmation is recorded where required, DGM-T25 remains not
-independently accepted and GST Stage 1 remains open.
+decimal boundary. Until target-bound runtime evidence, independent acceptance,
+and qualified professional confirmation are recorded where required, DGM-T25
+remains not independently accepted and GST Stage 1 remains open.

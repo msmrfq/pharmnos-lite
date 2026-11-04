@@ -1,0 +1,9 @@
+[    4770ms] [WARNING] VIDEOJS: WARN: A plugin named "qualityLevels" already exists. You may want to avoid re-registering plugins! @ https://lustery.com/frontend/build/20261104010002/_next/static/chunks/9cb54ea0-3ebd5c1ceb2d7b83.js:0
+[    4935ms] [WARNING] Reset window.dataLayer @ https://lustery.com/frontend/build/20261104010002/_next/static/chunks/app/(lustery)/layout-d809848bacd727b1.js:0
+[    5102ms] [WARNING] VIDEOJS: WARN: videojs.mergeOptions is deprecated and will be removed in 9.0; please use videojs.obj.merge instead. @ https://lustery.com/frontend/build/20261104010002/_next/static/chunks/9cb54ea0-3ebd5c1ceb2d7b83.js:0
+[    5215ms] [WARNING] Reset window.dataLayer @ https://lustery.com/frontend/build/20261104010002/_next/static/chunks/app/(lustery)/layout-d809848bacd727b1.js:0
+[    5230ms] [LOG] --- FIRST LOAD --- @ https://lustery.com/frontend/build/20261104010002/_next/static/chunks/app/layout-9445f26db4fac254.js:0
+[    5232ms] [INFO] ----- ROUTE CHANGED ----- /video/tease-me-touch-me-taste-me?w=2090.gac @ https://lustery.com/frontend/build/20261104010002/_next/static/chunks/app/layout-9445f26db4fac254.js:0
+[    6687ms] [LOG] VIDEOJS : vjs_video_1551 : spriteThumbnails: connection.downlink < 1.5 @ https://lustery.com/frontend/build/20261104010002/_next/static/chunks/9cb54ea0-3ebd5c1ceb2d7b83.js:0
+[    9381ms] [LOG] Enabling session replay for /video/tease-me-touch-me-taste-me @ https://lustery.com/frontend/build/20261104010002/_next/static/chunks/491.33603c0a80a3dcfa.js:13
+[   15575ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://lustery.com/couples-club.txt?_rsc=1ozeq:0

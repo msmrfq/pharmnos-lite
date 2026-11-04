@@ -370,8 +370,9 @@ GST percentage.
 
 The detailed T25 engineering contract is recorded in
 [`0009-gst-precision-rounding-engineering-contract.md`](../decisions/0009-gst-precision-rounding-engineering-contract.md)
-and remains pending explicit owner approval. The proposed calculation rule
-defines:
+and is owner-approved for the demonstrated current-release engineering scope.
+E-invoice output, credit/debit-note workflows, and other unsupported
+capabilities remain Version 2 deferrals. The approved calculation rule defines:
 
 1. taxable-value precision;
 2. component-rate calculation precision;
@@ -385,8 +386,9 @@ The shared calculator now uses exact coefficient/scale decimal arithmetic,
 explicit `HALF_UP` representation, preserved intermediate precision, and
 independently calculated tax components. The isolated Section 170
 nearest-rupee helper is not automatically applied to intermediate calculations
-or invoice totals. Engineering tests demonstrate these behaviors, but they do
-not constitute owner approval or qualified GST/accounting confirmation.
+or invoice totals. Engineering tests demonstrate these behaviors, but they do not constitute
+qualified GST/accounting confirmation, runtime verification, or independent
+acceptance.
 Purchase evidence must preserve original source representations separately from
 parsed/calculated values as required by the purchase persistence design.
 
@@ -1025,7 +1027,7 @@ explicitly blocked rather than given an invented expected tax result.
 | `DGM-T16` | Purchase finalization retry | Same idempotency key and unchanged payload | Same safe result; changed payload rejected | Existing source contract; runtime blocked |
 | `DGM-T17` | Purchase reconciliation | Declared/calculated equal, missing, invalid, and differing fields | Correct reconciliation state; source evidence unchanged | Existing pure contract; runtime blocked |
 | `DGM-T18` | Unauthorized acceptance | Actor lacks acceptance permission or active membership | Acceptance rejected; no decision/status mutation | Existing source contract; DB proof blocked |
-| `DGM-T19` | Stale purchase revision | Evidence correction and posting after current evidence/calculation changes | Correction resets acceptance/decision and increments the GST record version; finalization requires current accepted evidence, calculation, decision, and line snapshots | `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`; current posting safeguards remain; advanced stale acceptance-revision guard is not implemented |
+| `DGM-T19` | Stale purchase revision | Evidence correction and posting after current evidence/calculation changes | Acceptance, discrepancy resolution, and correction require the reviewed record version, evidence revision, and calculation ID; stale correction child writes roll back; finalization requires current accepted evidence, calculation, decision, and line snapshots | `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`; current reviewed-revision guard is implemented and focused-tested; runtime and independent acceptance remain separate |
 | `DGM-T20` | Atomic rollback | Inject stock/ledger/sequence failure during sales/purchase finalization | No partial invoice, stock, ledger, sequence, or audit effects | Financial E2E blocked |
 | `DGM-T21` | Tenant isolation | Tenant A attempts read/write of tenant B facts | Zero rows or denied write under ordinary non-BYPASSRLS role | RLS/database execution blocked |
 | `DGM-T22` | Historical reprint | Mutate current master after complete finalization | Print remains snapshot-identical; legacy fallback is disclosed | Runtime/database blocked |
@@ -1045,14 +1047,16 @@ Version 2. The implementation and focused tests are present; runtime and
 independent acceptance remain separate statuses. Unsupported prefixes such as
 `96`, `97`, and `99` do not drive POS resolution.
 
-The owner-approved current-release scope defers the advanced stale purchase GST
-acceptance-revision guard to Version 2. The dependency inspection found that
-evidence correction clears the current accounting decision, resets acceptance
-to `NOT_ACCEPTED`, increments `gst_record_version`, and causes finalization to
-require current evidence, calculation, acceptance, and accepted line
-snapshots. Those current-release posting safeguards remain required and are
-not weakened by the deferral. The advanced guard is not implemented or
-independently accepted.
+The approved T19 scope remains `CURRENT RELEASE SCOPE APPROVED — VERSION 2
+DEFERRED`. The owner-directed T19 resolution implements the reviewed-revision
+guard in the current engineering path. Acceptance, discrepancy resolution, and
+correction require the current record version, evidence revision, and
+calculation ID; correction rolls back its child writes if the guarded parent
+update loses the revision race. Existing authorization, acceptance-reset,
+reconciliation, and finalization safeguards remain required. Focused source
+tests pass, but runtime verification and independent acceptance remain separate
+and are not claimed. Broader stale-operation behavior outside the reviewed
+revision tokens remains a Version 2 boundary.
 
 ### 26.2 Version 2 deferred-scope register
 
@@ -1062,16 +1066,21 @@ implementation failures:
 - **DGM-T13:** retain exactly 15-character GSTIN validation in the current
   release; defer checksum, state-prefix, registration-status, and effective-date
   verification to Version 2.
-- **DGM-T19:** retain current purchase evidence, acceptance, authorization,
-  revision, and finalization safeguards; defer advanced stale acceptance-
-  revision protection to Version 2.
+- **DGM-T19:** retain `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`.
+  The reviewed-revision guard is implemented and focused-tested in the current
+  engineering path. Runtime verification and independent acceptance remain
+  open; broader stale-operation behavior outside the reviewed revision tokens
+  is not enabled.
 
 The shared exact-decimal implementation and focused arithmetic tests are
 recorded in
 [`0009-gst-precision-rounding-engineering-contract.md`](../decisions/0009-gst-precision-rounding-engineering-contract.md).
 The engineering contract is implemented for the demonstrated calculator paths,
-but DGM-T25 is not independently accepted until the detailed owner decision and
-qualified professional confirmation are recorded.
+and the latest owner instruction approves the current scope with e-invoice and
+credit/debit-note capabilities deferred to Version 2. DGM-T25 remains not
+verified until target-bound runtime/database verification and independent
+acceptance are recorded; qualified professional confirmation remains required
+for statutory boundaries.
 
 ## 27. Decision and blocker register
 
@@ -1082,7 +1091,7 @@ qualified professional confirmation are recorded.
 | `DGM-B03` | What is the authoritative HSN/SAC/rate source and maintainer? | No approved catalog/source found in inspected repository | Product owner, Accounting/GST, qualified GST professional | `BLOCKED`; no guessed rate or classification |
 | `DGM-B04` | What checksum/verification/effective-date rules apply to GSTIN? | Shape validation exists; checksum/government verification absent | Accounting/GST and qualified GST professional | `BLOCKED` for workflows requiring verified status |
 | `DGM-B05` | Which legal POS rules cover bill-to/ship-to, third dispatch, and delivery mismatch? | Existing source handles narrow state comparison only | Qualified GST professional and Accounting/GST | `BLOCKED`; no prefix/billing fallback |
-| `DGM-B06` | What precision, rounding, discount, and inclusive extraction policy applies? | Existing sales two-decimal behavior; purchase design preserves legacy behavior; no complete approved policy | Accounting/GST and qualified GST professional | `BLOCKED`; current arithmetic remains legacy behavior only |
+| `DGM-B06` | What precision, rounding, discount, and inclusive extraction policy applies? | Current exact-decimal and preservation engineering boundary is owner-approved; inclusive workflow, Section 170 aggregation, and statutory/e-invoice interpretations remain unresolved | Accounting/GST and qualified GST professional | `PARTIALLY RESOLVED`; supported engineering paths may be verified, while unresolved statutory or deferred workflows remain blocked |
 | `DGM-B07` | What domestic treatment field and transaction snapshot representation is approved? | No verified persisted treatment field | Product owner, Engineering, database owner | `BLOCKED`; no migration design may be inferred |
 | `DGM-B08` | What is the final acceptance/posting authority and segregation-of-duties matrix? | PGST-01 records separation direction but formal policy is pending | Product owner, Accounting/GST, Security/Architecture | `BLOCKED`; unauthorized acceptance/posting must fail |
 | `DGM-B09` | What database role, grants, forced-RLS, immutable triggers, and migration baseline apply? | Rollout review is design-only; live baseline is not durable | Security/Architecture, database owner, Engineering | `BLOCKED`; source SQL is not applied-state proof |
@@ -1241,7 +1250,7 @@ verified only in part.
 | `DGM-G06` | UTGST | Decide the applicable UT set, component split, persistence, display, and validation rules. | Qualified GST reviewer; Accounting/finance | DGM-B02; POS approval | Intra-UT calculation and invoice posting | Same-UT remains blocked; no UTGST is calculated. | `BLOCKED` |
 | `DGM-G07` | GSTIN | Decide checksum algorithm/source, verification source, effective dates, mismatch handling, and whether unverifiable values are acceptable by treatment. | Qualified GST reviewer; Accounting/finance | DGM-B04; verification evidence | Registration-dependent validation and acceptance | Shape validation only; preserve raw values and block where verification is required. | `BLOCKED` |
 | `DGM-G08` | HSN/SAC and rates | Approve classification granularity, exempt/nil/non-GST behavior, authoritative rate source, maintainer, reviewer, effective-date policy, and stale-draft behavior. | Qualified GST reviewer; Accounting/finance; Product owner | DGM-B03; rate catalog evidence | Rate resolver, mixed-rate workflow, and finalization | Preserve existing line rates; no guessed defaults or statutory claims. | `BLOCKED` |
-| `DGM-G09` | Calculation precision | Approve decimal representation/storage scale, intermediate arithmetic, discount order, inclusive extraction level, component allocation, line/invoice rounding, and signed round-off. | Accounting/finance; qualified GST reviewer; Engineering | DGM-B06; purchase precision dependencies | Shared authoritative calculator and financial acceptance | Existing numeric arithmetic remains legacy behavior only. | `BLOCKED` |
+| `DGM-G09` | Calculation precision | Approve decimal representation/storage scale, intermediate arithmetic, discount order, inclusive extraction level, component allocation, line/invoice rounding, and signed round-off. | Accounting/finance; qualified GST reviewer; Engineering | DGM-B06; purchase precision dependencies | Shared authoritative calculator and financial acceptance | Exact-decimal arithmetic and preservation are implemented for the demonstrated paths; inclusive workflow, statutory boundaries, runtime verification, and independent acceptance remain open or deferred. | `PARTIALLY RESOLVED` |
 | `DGM-G10` | Calculation evidence | Define a deterministic canonical input/output serialization and fingerprint algorithm, including rule/source revision and transaction facts. | Engineering; Security/Architecture; Accounting/finance | Precision contract; treatment/POS/rate contracts | Reproducible calculation records and audit comparison | Store existing source evidence where available; do not claim fingerprints are complete. | `MISSING` |
 | `DGM-G11` | Sales posting | Decide durable idempotency key scope, request-hash semantics, concurrent retry result, recovery after uncertain failure, and duplicate audit/sequence behavior. | Engineering; Security/Architecture | DGM-B10; transaction design | Sales finalization hardening and production claim | Existing transaction and draft/finalized guards remain; duplicate proof is absent. | `BLOCKED` |
 | `DGM-G12` | Sales corrections | Decide whether cancellation, correction, return, credit/debit note, or reversal behavior is in this scope and define immutable history effects. | Product owner; Accounting/finance; qualified GST reviewer | DGM-B12 | Any post-finalization correction workflow | Reject unapproved transitions; no notes or reversals are invented. | `DECIDED` |

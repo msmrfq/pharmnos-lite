@@ -11,7 +11,7 @@
 
 **Working phase numbering (PROJECT-WIDE MANDATORY):** We use 7 working phases P1…P7. The PRD `.obsidian-vault/prd-technical-architecture.md §29 Suggested Development Phases` originally proposed 6 phases (Phase 0…Phase 5). The crosswalk column below maps every working phase to its corresponding PRD coverage area so we never confuse the two. **Always use P1…P7 working phase numbers in all notes, bugs, specs, decisions, retro, TODO lists, and commit messages going forward.** Do NOT use PRD numbering in day-to-day work.
 
-**Last updated:** `Date: 2026-11-02  Time: 15-57-54 (IST)`
+**Last updated:** `Date: 2026-11-04  Time: 07-50-04 (IST)`
 
 N.B: ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. 
 
@@ -144,17 +144,20 @@ tasks and statuses live in Layer A; no underlying task is duplicated.
   captured sales supply facts, purchase supplier-evidence reconciliation,
   persisted tax components, immutable finalized-invoice facts, and explicit
   versioned/auditable rules.
-- **Completed evidence:** current gap-resolution evidence records 23/25
-  engineering criteria, including authorized 0419 restricted-runtime
+- **Completed evidence:** current gap-resolution evidence records 22/25
+  evidence-supported criteria, including authorized 0419 restricted-runtime
   inter-state purchase, POS-negative, Sales retry, stale-revision,
   tenant-isolation, and legacy-hold scenarios. This evidence does not
   establish database rollout or production readiness.
-- **Current blockers:** DGM-T13 length-only validation and DGM-T19 current
-  safeguards are scope-approved with Version 2 deferrals; their independent
-  acceptance/runtime evidence remains separate and is not claimed. DGM-T25
-  precision/rounding remains blocked until detailed owner approval and exact
-  precedence are recorded; broader statutory/accounting policies and qualified
-  GST review remain open.
+- **Current blockers:** DGM-T13 remains
+  `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`; its implementation
+  and focused tests pass, but runtime and independent acceptance remain open.
+  DGM-T19 retains the same approved Version 2 scope decision while its
+  reviewed-revision guard is implemented and focused-tested; targeted runtime
+  and independent acceptance remain open. DGM-T25 current engineering scope is
+  owner-approved with e-invoice and credit/debit-note capabilities deferred to
+  Version 2; runtime/independent acceptance and qualified GST review remain
+  open.
 - **Exit criterion:** approved requirements are implemented and verified with
   the required isolated evidence, without treating local tests as live
   validation.

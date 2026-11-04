@@ -172,7 +172,16 @@ export type PurchaseInvoiceCreateInput = z.infer<typeof PurchaseInvoiceCreateSch
   lines: PurchaseInvoiceLineCreateInput[];
 };
 
-export const PurchaseGstAcceptanceSchema = z.object({
+const PurchaseGstRevisionGuardSchema = z.object({
+  expected_gst_record_version: z
+    .string()
+    .regex(/^\d+$/, "Refresh the purchase before recording a GST decision.")
+    .transform(Number),
+  expected_gst_evidence_revision_id: z.string().trim().min(1),
+  expected_gst_calculation_id: z.string().trim().min(1),
+});
+
+export const PurchaseGstAcceptanceSchema = PurchaseGstRevisionGuardSchema.extend({
   decision_reference: z.string().trim().min(1).max(100),
   rationale: z.string().trim().min(1).max(1000),
   accepted_value_source: z.enum(["SUPPLIER_DECLARED", "APPLICATION_CALCULATED", "EXPLICIT_DECISION"]),
@@ -189,7 +198,7 @@ export const PurchaseGstResolutionLineSchema = z.object({
   line_reason: z.string().trim().min(1).max(500),
 });
 
-export const PurchaseGstResolutionSchema = z.object({
+export const PurchaseGstResolutionSchema = PurchaseGstRevisionGuardSchema.extend({
   decision_reference: z.string().trim().min(1).max(100),
   decision: z.string().trim().min(1).max(500),
   rationale: z.string().trim().min(1).max(1000),
@@ -202,6 +211,10 @@ export const PurchaseGstResolutionSchema = z.object({
   accepted_invoice_total: decimalFromStringOptional,
   accepted_round_off: decimalFromStringOptional,
 });
+
+export const PurchaseGstCorrectionSchema = PurchaseGstRevisionGuardSchema.extend({
+  correction_reason: z.string().trim().min(1).max(1000),
+}).passthrough();
 
 export const StockAdjustmentSchema = z.object({
   product_id: z.string().min(1, "Product is required"),

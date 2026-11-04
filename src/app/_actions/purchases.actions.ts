@@ -7,7 +7,14 @@ import { prisma, assertPostgresConfigured } from "@/lib/db/prisma";
 import { establishTenantContext, requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
 import { Prisma } from "@prisma/client";
-import type { purchase_invoices, InvoiceStatus, StockMovementType, LedgerEntryType, PermissionAction } from "@prisma/client";
+import type {
+  purchase_invoices,
+  InvoiceStatus,
+  StockMovementType,
+  LedgerEntryType,
+  PermissionAction,
+  PurchaseGstReconciliationStatus,
+} from "@prisma/client";
 import {
   calculatePurchaseInvoiceTotals,
   calculatePurchaseLineGst,
@@ -27,6 +34,7 @@ import {
   PurchaseInvoiceCreateSchema,
   PurchaseInvoiceLineCreateSchema,
   PurchaseGstAcceptanceSchema,
+  PurchaseGstCorrectionSchema,
   PurchaseGstResolutionLineSchema,
   PurchaseGstResolutionSchema,
   StockAdjustmentSchema,
@@ -131,6 +139,27 @@ function decimalOrNull(value: unknown): string | null {
     if (value === null || value === undefined || value === "") return null;
     return Decimal.tryFrom(String(value))?.toString() ?? null;
   }
+
+function assertPurchaseGstRevisionCurrent(
+  purchase: {
+    gst_record_version: number;
+    current_gst_evidence_revision_id: string | null;
+    current_gst_calculation_id: string | null;
+  },
+  expected: {
+    expected_gst_record_version: number;
+    expected_gst_evidence_revision_id: string;
+    expected_gst_calculation_id: string;
+  },
+): void {
+  if (
+    purchase.gst_record_version !== expected.expected_gst_record_version ||
+    purchase.current_gst_evidence_revision_id !== expected.expected_gst_evidence_revision_id ||
+    purchase.current_gst_calculation_id !== expected.expected_gst_calculation_id
+  ) {
+    throw new Error("Purchase GST revision is stale; refresh before retrying.");
+  }
+}
 
   function requestHash(value: unknown): string {
     return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -278,6 +307,10 @@ async function persistPurchaseGstEvidence(
       revisionNumber?: number;
       supersedesRevisionId?: string;
       correctionReason?: string;
+      expectedRecordVersion?: number;
+      expectedCurrentEvidenceRevisionId?: string;
+      expectedCurrentCalculationId?: string;
+      fromStatus?: PurchaseGstReconciliationStatus;
     },
   ) {
     const declared = purchaseGstEvidenceFromData(data);
@@ -348,7 +381,9 @@ async function persistPurchaseGstEvidence(
         event_kind: options?.supersedesRevisionId
           ? "CORRECTED"
           : reconciliation.status === "MATCHED" ? "MATCHED" : "DISCREPANCY_REQUIRES_REVIEW",
-        from_status: options?.supersedesRevisionId ? "DISCREPANCY_REQUIRES_REVIEW" : "NOT_RECONCILED",
+        from_status: options?.supersedesRevisionId
+          ? options.fromStatus ?? "DISCREPANCY_REQUIRES_REVIEW"
+          : "NOT_RECONCILED",
         to_status: reconciliation.status,
         operation: "purchase_gst_reconciliation",
         idempotency_key: `purchase:${purchaseId}:gst:${evidence.id}`,
@@ -461,8 +496,19 @@ async function persistPurchaseGstEvidence(
         },
       });
     }
-    await tx.purchase_invoices.update({
-      where: { id: purchaseId, tenant_id: tenantId },
+    const updated = await tx.purchase_invoices.updateMany({
+      where: {
+        id: purchaseId,
+        tenant_id: tenantId,
+        ...(options?.expectedRecordVersion === undefined
+          ? {}
+          : {
+              status: __PurchaseStatusDRAFT,
+              gst_record_version: options.expectedRecordVersion,
+              current_gst_evidence_revision_id: options.expectedCurrentEvidenceRevisionId,
+              current_gst_calculation_id: options.expectedCurrentCalculationId,
+            }),
+      },
       data: {
         current_gst_evidence_revision_id: evidence.id,
         current_gst_calculation_id: calculation.id,
@@ -472,6 +518,9 @@ async function persistPurchaseGstEvidence(
         gst_record_version: { increment: 1 },
       },
     });
+    if (options?.expectedRecordVersion !== undefined && updated.count !== 1) {
+      throw new Error("Purchase GST revision changed while the correction was being recorded; retry.");
+    }
     return { evidence, calculation, event, reconciliation };
 }
 
@@ -686,6 +735,13 @@ export async function acceptPurchaseGstAction(
       if (!purchase || purchase.status !== __PurchaseStatusDRAFT) {
         throw new Error("Only an existing draft purchase can receive GST acceptance.");
       }
+      assertPurchaseGstRevisionCurrent(purchase, parsed.data);
+      if (
+        purchase.gst_accounting_acceptance_status !== "NOT_ACCEPTED" ||
+        purchase.current_gst_accounting_decision_id !== null
+      ) {
+        throw new Error("GST accounting acceptance is already recorded; refresh before retrying.");
+      }
       if (!purchase.current_gst_evidence_revision_id || !purchase.current_gst_calculation_id) {
         throw new Error("Supplier GST evidence and application calculation are required before acceptance.");
       }
@@ -797,6 +853,10 @@ export async function acceptPurchaseGstAction(
         where: {
           id: purchase.id,
           tenant_id: ctx.tenantId,
+          status: __PurchaseStatusDRAFT,
+          gst_reconciliation_status: "MATCHED",
+          gst_accounting_acceptance_status: "NOT_ACCEPTED",
+          current_gst_accounting_decision_id: null,
           gst_record_version: purchase.gst_record_version,
           current_gst_evidence_revision_id: evidence.id,
           current_gst_calculation_id: calculation.id,
@@ -867,6 +927,13 @@ export async function resolvePurchaseGstDiscrepancyAction(
       await establishTenantContext(tx, ctx);
       const purchase = await tx.purchase_invoices.findUnique({ where: { id: purchaseId, tenant_id: ctx.tenantId } });
       if (!purchase || purchase.status !== __PurchaseStatusDRAFT) throw new Error("Only an existing draft purchase can be resolved.");
+      assertPurchaseGstRevisionCurrent(purchase, parsed.data);
+      if (
+        purchase.gst_accounting_acceptance_status !== "NOT_ACCEPTED" ||
+        purchase.current_gst_accounting_decision_id !== null
+      ) {
+        throw new Error("GST accounting acceptance is already recorded; refresh before retrying.");
+      }
       if (!purchase.current_gst_evidence_revision_id || !purchase.current_gst_calculation_id) throw new Error("Current GST evidence and calculation are required.");
       if (purchase.gst_reconciliation_status !== "DISCREPANCY_REQUIRES_REVIEW") throw new Error("Only a review-required GST discrepancy can be resolved.");
       const evidence = await tx.purchase_gst_evidence_revisions.findFirst({ where: { tenant_id: ctx.tenantId, purchase_invoice_id: purchase.id, id: purchase.current_gst_evidence_revision_id } });
@@ -1074,13 +1141,26 @@ export async function correctPurchaseGstEvidenceAction(
     assertPostgresConfigured("correctPurchaseGstEvidenceAction");
     const ctx = await requireServerTenantContext();
     requirePermission(ctx, "accept_purchase_gst" as PermissionAction);
-    const data = formDataToPurchaseObject(formData);
-    if (!String(data.correction_reason ?? "").trim()) return { ok: false, message: "Correction reason is required.", errors: undefined };
+    const parsed = PurchaseGstCorrectionSchema.safeParse(formDataToPurchaseObject(formData));
+    if (!parsed.success) {
+      return {
+        ok: false,
+        message: "A current GST revision and correction reason are required.",
+        errors: flattenFieldErrors(parsed.error.flatten().fieldErrors),
+      };
+    }
+    const data = {
+      ...parsed.data,
+      lines: parseIndexedPurchaseLinesFromFormData(formData),
+    };
     const result = await prisma.$transaction(async (tx) => {
       await establishTenantContext(tx, ctx);
       const purchase = await tx.purchase_invoices.findUnique({ where: { id: purchaseId, tenant_id: ctx.tenantId } });
       if (!purchase || purchase.status !== __PurchaseStatusDRAFT) throw new Error("Only a draft purchase can be corrected.");
-      if (!purchase.current_gst_evidence_revision_id) throw new Error("Current GST evidence is required.");
+      assertPurchaseGstRevisionCurrent(purchase, data);
+      if (!purchase.current_gst_evidence_revision_id || !purchase.current_gst_calculation_id) {
+        throw new Error("Current GST evidence and calculation are required.");
+      }
       const current = await tx.purchase_gst_evidence_revisions.findFirst({ where: { tenant_id: ctx.tenantId, purchase_invoice_id: purchase.id, id: purchase.current_gst_evidence_revision_id } });
       if (!current) throw new Error("Current GST evidence could not be loaded.");
       const nextRevision = await tx.purchase_gst_evidence_revisions.count({ where: { tenant_id: ctx.tenantId, purchase_invoice_id: purchase.id } }) + 1;
@@ -1095,7 +1175,15 @@ export async function correctPurchaseGstEvidenceAction(
         total_tax: Number(purchase.total_tax),
         round_off: Number(purchase.round_off),
         net_amount: Number(purchase.net_amount),
-      }, governedLines, { revisionNumber: nextRevision, supersedesRevisionId: current.id, correctionReason: String(data.correction_reason).trim() });
+      }, governedLines, {
+        revisionNumber: nextRevision,
+        supersedesRevisionId: current.id,
+        correctionReason: data.correction_reason,
+        expectedRecordVersion: data.expected_gst_record_version,
+        expectedCurrentEvidenceRevisionId: data.expected_gst_evidence_revision_id,
+        expectedCurrentCalculationId: data.expected_gst_calculation_id,
+        fromStatus: purchase.gst_reconciliation_status,
+      });
       return { id: purchase.id };
     });
     revalidatePath("/purchases");

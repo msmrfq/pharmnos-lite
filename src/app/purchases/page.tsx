@@ -200,6 +200,9 @@ export default async function PurchasesPage({
                                 invoiceNo={p.invoice_no || ""}
                                 gstReconciliationStatus={p.gst_reconciliation_status ?? "NOT_RECONCILED"}
                                 gstAcceptanceStatus={p.gst_accounting_acceptance_status ?? "NOT_ACCEPTED"}
+                                gstRecordVersion={p.gst_record_version ?? 0}
+                                currentGstEvidenceRevisionId={p.current_gst_evidence_revision_id ?? null}
+                                currentGstCalculationId={p.current_gst_calculation_id ?? null}
                               />
                             )}
                           </TableCell>

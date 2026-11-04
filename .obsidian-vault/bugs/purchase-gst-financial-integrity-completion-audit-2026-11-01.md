@@ -13,6 +13,25 @@ This report is an engineering completion audit, not a separate professional
 GST review or independent acceptance. The prior restricted-role runtime
 campaign remains the independent evidence source for transactional behavior.
 
+## Explicitly deferred functionality boundary
+
+The following functionality is outside the supported current-release purchase
+GST workflow and is not implemented or accepted by this audit:
+
+- Imports and exports.
+- SEZ and deemed exports.
+- UIN transactions.
+- Reverse Charge Mechanism (RCM).
+- E-invoicing and e-way bills.
+- GST return filing.
+- ITC reconciliation.
+- Credit/debit notes and exceptional workflows.
+- Multiple GST registrations.
+
+These boundaries remain fail-closed. Any historical planning, backlog, or
+capability-audit references describe future or excluded scope only; they are
+not implementation, runtime-verification, or independent-acceptance evidence.
+
 ## Baseline classification
 
 ### Implemented and verified
@@ -49,7 +68,7 @@ campaign remains the independent evidence source for transactional behavior.
 - Governed cess catalog/rule/effective-period/credit-utilization model.
 - Rule 35 inclusive extraction with mixed-rate residual reconciliation.
 - Freight taxable-value and inventory-cost allocation workflow.
-- Linked post-supply credit/debit note workflow.
+- Post-supply credit/debit-note workflow remains unsupported in the current release.
 - Versioned statutory rounding precedence and precision evidence model.
 
 ### Blocked by missing policy detail

@@ -294,6 +294,22 @@ function formDataFromEntries(entries) {
   return form;
 }
 
+async function gstRevisionFields(purchaseId) {
+  const state = await purchaseState(purchaseId);
+  if (!state?.current_gst_evidence_revision_id || !state.current_gst_calculation_id) {
+    throw new Error(`Purchase ${purchaseId} has no current GST revision.`);
+  }
+  return [
+    ["expected_gst_record_version", state.gst_record_version],
+    ["expected_gst_evidence_revision_id", state.current_gst_evidence_revision_id],
+    ["expected_gst_calculation_id", state.current_gst_calculation_id],
+  ];
+}
+
+async function gstRevisionFormData(purchaseId, entries) {
+  return formDataFromEntries([...entries, ...(await gstRevisionFields(purchaseId))]);
+}
+
 class ApplicationFormData {
   constructor() {
     this.values = new Map();
@@ -360,9 +376,9 @@ async function createMatchedPurchase(suffix) {
 
 async function createAndAcceptMatchedPurchase(suffix) {
   const purchaseId = await createMatchedPurchase(suffix);
-  const acceptance = await invoke(ids.externalUserA, () => acceptPurchaseGstAction(
+  const acceptance = await invoke(ids.externalUserA, async () => acceptPurchaseGstAction(
     purchaseId,
-    formDataFromEntries([
+    await gstRevisionFormData(purchaseId, [
       ["decision_reference", `${run}-${suffix}-ACCEPT`],
       ["rationale", "Concurrent application-path validation."],
       ["accepted_value_source", "APPLICATION_CALCULATED"],
@@ -653,11 +669,11 @@ async function main() {
     ids.externalUserA,
     matchedPurchase,
     "Matched GST is explicitly accepted from application-calculated values",
-    () => acceptPurchaseGstAction(matchedPurchase, formDataFromEntries([
+    () => gstRevisionFormData(matchedPurchase, [
       ["decision_reference", `${run}-ACCEPT-001`],
       ["rationale", "Calculated values match supplier declaration."],
       ["accepted_value_source", "APPLICATION_CALCULATED"],
-    ])),
+    ]).then((form) => acceptPurchaseGstAction(matchedPurchase, form)),
     ({ actual }) => actual?.ok === true && actual.data?.id === matchedPurchase,
   );
   await runTest(
@@ -666,11 +682,11 @@ async function main() {
     ids.externalUserB,
     matchedPurchase,
     "Cross-tenant unauthorized acceptance is rejected without mutation",
-    () => acceptPurchaseGstAction(matchedPurchase, formDataFromEntries([
+    () => gstRevisionFormData(matchedPurchase, [
       ["decision_reference", `${run}-UNAUTHORIZED`],
       ["rationale", "Unauthorized"],
       ["accepted_value_source", "APPLICATION_CALCULATED"],
-    ])),
+    ]).then((form) => acceptPurchaseGstAction(matchedPurchase, form)),
     ({ actual, before, after }) => actual?.ok === false &&
       (String(actual.message).includes("authorized") ||
        String(actual.message).includes("no active tenant membership")) &&
@@ -742,6 +758,7 @@ async function main() {
   );
 
   const concurrentAcceptancePurchase = await createMatchedPurchase("SUP-CONCURRENT-ACCEPTANCE-BASE");
+  const concurrentAcceptanceRevisionFields = await gstRevisionFields(concurrentAcceptancePurchase);
   const acceptanceConcurrent = await recordConcurrentTest(
     "accept_concurrent_same_purchase",
     concurrentAcceptancePurchase,
@@ -751,11 +768,13 @@ async function main() {
         ["decision_reference", `${run}-CONCURRENT-ACCEPT`],
         ["rationale", "Concurrent acceptance validation."],
         ["accepted_value_source", "APPLICATION_CALCULATED"],
+        ...concurrentAcceptanceRevisionFields,
       ])),
       () => acceptPurchaseGstAction(concurrentAcceptancePurchase, formDataFromEntries([
         ["decision_reference", `${run}-CONCURRENT-ACCEPT`],
         ["rationale", "Concurrent acceptance validation."],
         ["accepted_value_source", "APPLICATION_CALCULATED"],
+        ...concurrentAcceptanceRevisionFields,
       ])),
     ],
     ({ outcomes, after }) => outcomes.filter(({ result }) => result?.ok === true).length === 1 &&
@@ -842,6 +861,7 @@ async function main() {
       ["decision_reference", `${run}-DISCREPANCY-ACCEPT`],
       ["rationale", "Must use explicit resolution."],
       ["accepted_value_source", "APPLICATION_CALCULATED"],
+      ...discrepancyRevisionFields,
     ])),
     ({ actual, before, after }) => actual?.ok === false &&
       String(actual.message).includes("matched") &&
@@ -849,6 +869,7 @@ async function main() {
       before?.gst_accounting_acceptance_status === after?.gst_accounting_acceptance_status,
   );
   const discrepancyItems = await itemState(discrepancyPurchase);
+  const discrepancyRevisionFields = await gstRevisionFields(discrepancyPurchase);
   const resolutionEntries = [
     ["decision_reference", `${run}-RESOLVE-001`],
     ["decision", "Accept explicitly documented line values"],
@@ -879,6 +900,7 @@ async function main() {
     ["gst_lines[1].accepted_cess", "0"],
     ["gst_lines[1].accepted_line_total", "96.80"],
     ["gst_lines[1].line_reason", "Explicitly accepted line taxable value per accounting review."],
+    ...discrepancyRevisionFields,
   );
   const resolutionForm = formDataFromEntries(resolutionEntries);
   const resolutionResult = await runTest(

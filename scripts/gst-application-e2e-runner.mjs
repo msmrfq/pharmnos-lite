@@ -649,6 +649,9 @@ async function main() {
       decision_reference: `E2E-INTER-${fixture.tenant.slice(-8)}`,
       rationale: "Current campaign inter-state application-calculated acceptance.",
       accepted_value_source: "APPLICATION_CALCULATED",
+      expected_gst_record_version: interPurchase.gst_record_version,
+      expected_gst_evidence_revision_id: interPurchase.current_gst_evidence_revision_id,
+      expected_gst_calculation_id: interPurchase.current_gst_calculation_id,
     });
     const interAcceptance = await acceptPurchaseGstAction(interPurchase.id, interAcceptanceForm);
     assert.equal(interAcceptance.ok, true, interAcceptance.message ?? "Inter-state acceptance failed.");
@@ -701,6 +704,9 @@ async function main() {
       decision_reference: `E2E-REVISION-${fixture.tenant.slice(-8)}`,
       rationale: "Current campaign revision acceptance.",
       accepted_value_source: "APPLICATION_CALCULATED",
+      expected_gst_record_version: revisionPurchase.gst_record_version,
+      expected_gst_evidence_revision_id: revisionPurchase.current_gst_evidence_revision_id,
+      expected_gst_calculation_id: revisionPurchase.current_gst_calculation_id,
     });
     const revisionAcceptance = await acceptPurchaseGstAction(revisionPurchase.id, revisionAcceptanceForm);
     assert.equal(revisionAcceptance.ok, true, revisionAcceptance.message ?? "Revision acceptance failed.");

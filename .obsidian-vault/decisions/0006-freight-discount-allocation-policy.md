@@ -15,7 +15,10 @@ Apply Section 15 and relevant rules for GST valuation, preserve freight and supp
 ## Engineering requirements
 - Preserve freight, discount, tax, and inventory-cost components separately.
 - Do not infer proportional allocation without an approved allocation workflow.
-- Do not rewrite finalized invoices for post-supply discounts; use linked credit/debit note workflows.
+- Do not rewrite finalized invoices for post-supply discounts; a separately
+  approved, future linked credit/debit note workflow would be required.
+- Until that workflow is implemented and independently accepted, block
+  post-supply discount cases.
 - Block unsupported allocation cases.
 
 ## Approval

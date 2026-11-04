@@ -20,6 +20,9 @@ type Props = {
   invoiceNo: string;
   gstReconciliationStatus: string;
   gstAcceptanceStatus: string;
+  gstRecordVersion: number;
+  currentGstEvidenceRevisionId: string | null;
+  currentGstCalculationId: string | null;
 };
 
 export default function PurchaseActionsCell({
@@ -28,14 +31,25 @@ export default function PurchaseActionsCell({
   invoiceNo,
   gstReconciliationStatus,
   gstAcceptanceStatus,
+  gstRecordVersion,
+  currentGstEvidenceRevisionId,
+  currentGstCalculationId,
 }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [finalizePending, startFinalize] = useTransition();
   const [cancelPending, startCancel] = useTransition();
   const isDraft = status === "DRAFT";
-  const canAcceptGst = isDraft && gstReconciliationStatus === "MATCHED" && gstAcceptanceStatus !== "ACCEPTED";
-  const canResolveGst = isDraft && gstReconciliationStatus === "DISCREPANCY_REQUIRES_REVIEW" && gstAcceptanceStatus !== "ACCEPTED";
+  const hasCurrentGstRevision = Boolean(currentGstEvidenceRevisionId && currentGstCalculationId);
+  const canAcceptGst = isDraft && hasCurrentGstRevision && gstReconciliationStatus === "MATCHED" && gstAcceptanceStatus !== "ACCEPTED";
+  const canResolveGst = isDraft && hasCurrentGstRevision && gstReconciliationStatus === "DISCREPANCY_REQUIRES_REVIEW" && gstAcceptanceStatus !== "ACCEPTED";
+
+  const appendCurrentGstRevision = (formData: FormData) => {
+    if (!currentGstEvidenceRevisionId || !currentGstCalculationId) return;
+    formData.set("expected_gst_record_version", String(gstRecordVersion));
+    formData.set("expected_gst_evidence_revision_id", currentGstEvidenceRevisionId);
+    formData.set("expected_gst_calculation_id", currentGstCalculationId);
+  };
 
   const onAcceptGst = async () => {
     if (!canAcceptGst) return;
@@ -49,6 +63,7 @@ export default function PurchaseActionsCell({
     formData.set("decision_reference", decisionReference);
     formData.set("rationale", rationale);
     formData.set("accepted_value_source", source);
+    appendCurrentGstRevision(formData);
     startFinalize(async () => {
       const result = await acceptPurchaseGstAction(purchaseId, formData);
       if (result.ok) {
@@ -73,6 +88,7 @@ export default function PurchaseActionsCell({
     formData.set("decision", decision);
     formData.set("rationale", rationale);
     formData.set("accepted_value_source", source);
+    appendCurrentGstRevision(formData);
     for (const field of ["taxable_value", "cgst", "sgst", "igst", "cess", "invoice_total", "round_off"]) {
       const value = window.prompt(`Accepted ${field}`);
       if (!value?.trim()) return;
