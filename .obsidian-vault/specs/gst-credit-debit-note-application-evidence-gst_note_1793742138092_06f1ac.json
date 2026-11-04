@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "campaignRunId": "gst_note_1793742138092_06f1ac",
+  "status": "FAILED",
+  "target": {
+    "contractRunId": "gst_note_q17_20261104_0251",
+    "host": "127.0.0.1",
+    "port": 55461,
+    "databaseName": "pharmnos_financial_e2e_q17_20261104_0251",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "marker": "pharmnos-financial-e2e",
+    "composeProject": "pharmnoslite-financial-e2e-q17-20261104-0251",
+    "composeService": "financial-e2e-postgres",
+    "schemaArtifactHash": "4223fad6d6091a75357320b508b91450909466d6b3fdf249c320d55e2492e0f2"
+  },
+  "startedAt": "2026-11-03T21:42:18.093Z",
+  "preflight": {
+    "identity": {
+      "database_name": "pharmnos_financial_e2e_q17_20261104_0251",
+      "current_user_name": "pharmnos_e2e",
+      "session_user_name": "pharmnos_e2e",
+      "application_name": "pharmnos-financial-e2e",
+      "environment_marker": "pharmnos-financial-e2e"
+    },
+    "runtimeRole": {
+      "rolcanlogin": true,
+      "rolsuper": false,
+      "rolbypassrls": false
+    },
+    "catalog": {
+      "rlsTables": 51,
+      "policies": 126,
+      "triggers": 39,
+      "runtimeDeleteGrants": 0,
+      "noteTables": 18,
+      "noteRlsTables": 18
+    },
+    "compose": {
+      "containers": [
+        {
+          "id": "e876aeb44fef",
+          "name": "pharmnoslite-financial-e2e-q17-20261104-0251-financial-e2e-postgres-1",
+          "service": "financial-e2e-postgres",
+          "project": "pharmnoslite-financial-e2e-q17-20261104-0251"
+        }
+      ]
+    },
+    "runtimeEndpoint": {
+      "host": "127.0.0.1",
+      "port": 55461,
+      "databaseName": "pharmnos_financial_e2e_q17_20261104_0251",
+      "role": "pharmnos_e2e_runtime"
+    }
+  },
+  "fixture": {
+    "campaignRunId": "gst_note_1793742138092_06f1ac",
+    "tenants": [
+      "gst_note_1793742138092_06f1ac_tenant_a_bd27c0",
+      "gst_note_1793742138092_06f1ac_tenant_b_2d2d61"
+    ],
+    "users": [
+      "gst_note_1793742138092_06f1ac_user_a_05194d",
+      "gst_note_1793742138092_06f1ac_user_a_reviewer_b0d7e9",
+      "gst_note_1793742138092_06f1ac_user_a_issuer_437e9d",
+      "gst_note_1793742138092_06f1ac_user_a_approver_9a565c",
+      "gst_note_1793742138092_06f1ac_user_a_note_approver_f6aad6",
+      "gst_note_1793742138092_06f1ac_user_b_ae955f",
+      "gst_note_1793742138092_06f1ac_restricted_user_ae6f59"
+    ],
+    "memberships": [
+      "gst_note_1793742138092_06f1ac_membership_a_361098",
+      "gst_note_1793742138092_06f1ac_membership_a_reviewer_a52244",
+      "gst_note_1793742138092_06f1ac_membership_a_issuer_473832",
+      "gst_note_1793742138092_06f1ac_membership_a_approver_05a740",
+      "gst_note_1793742138092_06f1ac_membership_a_note_approver_dedf35",
+      "gst_note_1793742138092_06f1ac_membership_b_bffc09",
+      "gst_note_1793742138092_06f1ac_membership_restricted_d1ce5e"
+    ],
+    "sourceSales": {
+      "full": "gst_note_1793742138092_06f1ac_sales_full_d4da0a",
+      "partial": "gst_note_1793742138092_06f1ac_sales_partial_228585",
+      "deficiency": "gst_note_1793742138092_06f1ac_sales_deficiency_461939",
+      "debit": "gst_note_1793742138092_06f1ac_sales_debit_c7c47c",
+      "post_supply_discount": "gst_note_1793742138092_06f1ac_sales_post_supply_discount_3a5442",
+      "q17_tax_reduction": "gst_note_1793742138092_06f1ac_sales_q17_tax_reduction_3f2d12",
+      "concurrent_1": "gst_note_1793742138092_06f1ac_sales_concurrent_1_ebd923",
+      "concurrent_2": "gst_note_1793742138092_06f1ac_sales_concurrent_2_d17c31",
+      "multi_1": "gst_note_1793742138092_06f1ac_sales_multi_1_02b202",
+      "multi_2": "gst_note_1793742138092_06f1ac_sales_multi_2_38f58f",
+      "late": "gst_note_1793742138092_06f1ac_sales_late_e9fe39",
+      "rollback": "gst_note_1793742138092_06f1ac_sales_rollback_5c83e8",
+      "restricted": "gst_note_1793742138092_06f1ac_sales_restricted_214738"
+    },
+    "sourcePurchases": {
+      "primary": "gst_note_1793742138092_06f1ac_purchase_primary_39bf31",
+      "pending": "gst_note_1793742138092_06f1ac_purchase_pending_a4ce80",
+      "tenant_b": "gst_note_1793742138092_06f1ac_purchase_tenant_b_97a6ef"
+    }
+  },
+  "scenarioCoverage": {
+    "required": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
+      "M",
+      "N",
+      "O",
+      "P",
+      "Q"
+    ],
+    "declared": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
+      "P",
+      "Q"
+    ],
+    "missing": [
+      "E",
+      "F",
+      "M",
+      "N",
+      "O"
+    ],
+    "executionScope": "Q17_CURRENT_BUILD",
+    "excludedFromExecution": [
+      "E",
+      "F",
+      "M",
+      "N",
+      "O"
+    ]
+  },
+  "scenarios": [
+    {
+      "name": "Q17 amended discount qualifies without prior agreement or invoice linkage",
+      "status": "PASS",
+      "noteId": "cmw17r9c9000310dmpmv1y3lw",
+      "recipientItcReversalEvidence": "gst_note_1793742138092_06f1ac:recipient-itc-reversal"
+    },
+    {
+      "name": "Q17 supplier reference alone cannot reduce output tax",
+      "status": "PASS_EXPECTED_FAILURE",
+      "error": "A supplier-entered recipient ITC reversal reference is insufficient for output-tax reduction."
+    },
+    {
+      "name": "Q17 output-tax reduction requires independently reviewed recipient reversal evidence",
+      "status": "PASS",
+      "noteId": "cmw17ra3i001z10dm4h08b3ud",
+      "outputTaxAdjustmentCount": 1,
+      "outputTaxComponentCount": 2,
+      "outputTaxPostingLineCount": 4
+    }
+  ],
+  "security": null,
+  "cleanup": {
+    "status": "NOT_ATTEMPTED",
+    "reason": "GST note event/history tables are immutable; target disposal requires separate explicit operator authorization."
+  },
+  "failure": {
+    "message": "Q17 missing recipient ITC reversal evidence returned an unexpected error."
+  },
+  "finishedAt": "2026-11-03T21:42:22.299Z"
+}

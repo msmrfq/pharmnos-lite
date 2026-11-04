@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "campaignRunId": "gst_note_1793741831869_d5ee18",
+  "status": "FAILED",
+  "target": {
+    "contractRunId": "gst_note_q17_20261104_0251",
+    "host": "127.0.0.1",
+    "port": 55461,
+    "databaseName": "pharmnos_financial_e2e_q17_20261104_0251",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "marker": "pharmnos-financial-e2e",
+    "composeProject": "pharmnoslite-financial-e2e-q17-20261104-0251",
+    "composeService": "financial-e2e-postgres",
+    "schemaArtifactHash": "4223fad6d6091a75357320b508b91450909466d6b3fdf249c320d55e2492e0f2"
+  },
+  "startedAt": "2026-11-03T21:37:11.870Z",
+  "preflight": {
+    "identity": {
+      "database_name": "pharmnos_financial_e2e_q17_20261104_0251",
+      "current_user_name": "pharmnos_e2e",
+      "session_user_name": "pharmnos_e2e",
+      "application_name": "pharmnos-financial-e2e",
+      "environment_marker": "pharmnos-financial-e2e"
+    },
+    "runtimeRole": {
+      "rolcanlogin": true,
+      "rolsuper": false,
+      "rolbypassrls": false
+    },
+    "catalog": {
+      "rlsTables": 51,
+      "policies": 126,
+      "triggers": 39,
+      "runtimeDeleteGrants": 0,
+      "noteTables": 18,
+      "noteRlsTables": 18
+    },
+    "compose": {
+      "containers": [
+        {
+          "id": "e876aeb44fef",
+          "name": "pharmnoslite-financial-e2e-q17-20261104-0251-financial-e2e-postgres-1",
+          "service": "financial-e2e-postgres",
+          "project": "pharmnoslite-financial-e2e-q17-20261104-0251"
+        }
+      ]
+    },
+    "runtimeEndpoint": {
+      "host": "127.0.0.1",
+      "port": 55461,
+      "databaseName": "pharmnos_financial_e2e_q17_20261104_0251",
+      "role": "pharmnos_e2e_runtime"
+    }
+  },
+  "fixture": {
+    "campaignRunId": "gst_note_1793741831869_d5ee18",
+    "tenants": [
+      "gst_note_1793741831869_d5ee18_tenant_a_c1f61d",
+      "gst_note_1793741831869_d5ee18_tenant_b_52025f"
+    ],
+    "users": [
+      "gst_note_1793741831869_d5ee18_user_a_ef1e98",
+      "gst_note_1793741831869_d5ee18_user_a_reviewer_ae79a0",
+      "gst_note_1793741831869_d5ee18_user_a_issuer_c3c6be",
+      "gst_note_1793741831869_d5ee18_user_a_approver_040e64",
+      "gst_note_1793741831869_d5ee18_user_a_note_approver_8b522d",
+      "gst_note_1793741831869_d5ee18_user_b_39bb99",
+      "gst_note_1793741831869_d5ee18_restricted_user_c53f4c"
+    ],
+    "memberships": [
+      "gst_note_1793741831869_d5ee18_membership_a_940d31",
+      "gst_note_1793741831869_d5ee18_membership_a_reviewer_9a4ccc",
+      "gst_note_1793741831869_d5ee18_membership_a_issuer_52a334",
+      "gst_note_1793741831869_d5ee18_membership_a_approver_6c2486",
+      "gst_note_1793741831869_d5ee18_membership_a_note_approver_74366b",
+      "gst_note_1793741831869_d5ee18_membership_b_051622",
+      "gst_note_1793741831869_d5ee18_membership_restricted_8a86d0"
+    ],
+    "sourceSales": {
+      "full": "gst_note_1793741831869_d5ee18_sales_full_16b1ba",
+      "partial": "gst_note_1793741831869_d5ee18_sales_partial_321f14",
+      "deficiency": "gst_note_1793741831869_d5ee18_sales_deficiency_a909cc",
+      "debit": "gst_note_1793741831869_d5ee18_sales_debit_ea1b63",
+      "post_supply_discount": "gst_note_1793741831869_d5ee18_sales_post_supply_discount_43fad7",
+      "q17_tax_reduction": "gst_note_1793741831869_d5ee18_sales_q17_tax_reduction_2ae36f",
+      "concurrent_1": "gst_note_1793741831869_d5ee18_sales_concurrent_1_b82459",
+      "concurrent_2": "gst_note_1793741831869_d5ee18_sales_concurrent_2_f4cce8",
+      "multi_1": "gst_note_1793741831869_d5ee18_sales_multi_1_05bb75",
+      "multi_2": "gst_note_1793741831869_d5ee18_sales_multi_2_2531f0",
+      "late": "gst_note_1793741831869_d5ee18_sales_late_c55810",
+      "rollback": "gst_note_1793741831869_d5ee18_sales_rollback_f45240",
+      "restricted": "gst_note_1793741831869_d5ee18_sales_restricted_9baccd"
+    },
+    "sourcePurchases": {
+      "primary": "gst_note_1793741831869_d5ee18_purchase_primary_9963f3",
+      "pending": "gst_note_1793741831869_d5ee18_purchase_pending_289a53",
+      "tenant_b": "gst_note_1793741831869_d5ee18_purchase_tenant_b_d7fa93"
+    }
+  },
+  "scenarioCoverage": {
+    "required": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
+      "M",
+      "N",
+      "O",
+      "P",
+      "Q"
+    ],
+    "declared": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
+      "P",
+      "Q"
+    ],
+    "missing": [
+      "E",
+      "F",
+      "M",
+      "N",
+      "O"
+    ],
+    "executionScope": "Q17_CURRENT_BUILD",
+    "excludedFromExecution": [
+      "E",
+      "F",
+      "M",
+      "N",
+      "O"
+    ]
+  },
+  "scenarios": [],
+  "security": null,
+  "cleanup": {
+    "status": "NOT_ATTEMPTED",
+    "reason": "GST note event/history tables are immutable; target disposal requires separate explicit operator authorization."
+  },
+  "failure": {
+    "message": "Only approved supplier-issued notes can be issued."
+  },
+  "finishedAt": "2026-11-03T21:37:14.131Z"
+}

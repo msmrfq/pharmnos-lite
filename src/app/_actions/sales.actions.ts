@@ -36,6 +36,7 @@ import {
   resolveApprovedGstRule,
 } from "@/lib/gst/rule-governance";
 import { decimalOrZero, sumDecimals } from "@/lib/decimal";
+import { lockCounterpartyBalance } from "@/lib/db/counterparty-lock";
 
 const __SalesStatusDRAFT: InvoiceStatus = "DRAFT";
 const __SalesStatusFINALIZED: InvoiceStatus = "FINALIZED";
@@ -662,7 +663,13 @@ export async function finalizeSalesInvoiceAction(
         },
       });
 
-      const balanceBefore = Number(cust.receivable_balance ?? 0);
+      await lockCounterpartyBalance(tx, ctx.tenantId, "customer", cust.id);
+      const currentCustomer = await tx.customers.findUnique({
+        where: { id: cust.id, tenant_id: ctx.tenantId },
+        select: { receivable_balance: true },
+      });
+      if (!currentCustomer) throw new Error("Customer not found.");
+      const balanceBefore = Number(currentCustomer.receivable_balance ?? 0);
       const debit = serverGst.grand_total;
       const balanceAfter = decimalOrZero(balanceBefore).add(debit).round(2, "HALF_UP").toNumber();
 
@@ -782,6 +789,7 @@ export async function createCustomerPaymentAction(
     const entryDate = data.entry_date ?? new Date();
 
     const result = await prisma.$transaction(async (tx) => {
+      await lockCounterpartyBalance(tx, ctx.tenantId, "customer", data.customer_id);
       const cust = await tx.customers.findUnique({
         where: { id: data.customer_id, tenant_id: ctx.tenantId },
         select: { receivable_balance: true },
@@ -876,6 +884,7 @@ export async function createSupplierPaymentAction(
     const entryDate = data.entry_date ?? new Date();
 
     const result = await prisma.$transaction(async (tx) => {
+      await lockCounterpartyBalance(tx, ctx.tenantId, "supplier", data.supplier_id);
       const sup = await tx.suppliers.findUnique({
         where: { id: data.supplier_id, tenant_id: ctx.tenantId },
         select: { payable_balance: true },

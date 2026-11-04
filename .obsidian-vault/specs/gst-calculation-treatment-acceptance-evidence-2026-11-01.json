@@ -12,14 +12,14 @@
       "verifiedPass": 22,
       "verifiedFail": 0,
       "notVerified": 2,
-      "blockedPolicy": 1,
-      "blockedOwnerApproval": 0,
+      "blockedPolicy": 0,
+      "blockedOwnerApproval": 1,
       "blockedProfessionalConfirmation": 0,
       "notApplicable": 0,
       "totalInScopeCriteria": 25,
       "percentage": 88
     },
-    "reason": "Twenty-two engineering criteria have current or retained evidence: 16 current-campaign passes and 6 historical passes. DGM-T13 and DGM-T19 have approved current-release scope boundaries but remain not independently verified; the demonstrated T25 engineering paths are implemented, while DGM-T25 remains blocked by unresolved policy and qualified professional confirmation. T25-12 is current-release scope approved for supplier issuance and recipient-side processing, but no note workflow is implemented. The authoritative contract also keeps Composition, Unregistered, Consumer, UTGST, inclusive workflow, and other unsupported treatments blocked."
+    "reason": "Twenty-two engineering criteria have current or retained evidence: 16 current-campaign passes and 6 historical passes. DGM-T13 and DGM-T19 have approved current-release scope boundaries but remain not independently verified; the detailed T25 engineering contract is implemented, but DGM-T25 remains blocked pending owner approval and qualified professional confirmation of reserved statutory boundaries. The authoritative contract also keeps Composition, Unregistered, Consumer, UTGST, inclusive workflow, and other unsupported treatments blocked."
   },
   "authoritativeContract": {
     "specification": ".obsidian-vault/specs/domestic-gst-modernization.md",
@@ -143,7 +143,7 @@
     { "id": "DGM-T22", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Snapshot-first print and immutable finalized invoice behavior", "evidence": ["scripts/gst-application-e2e-runner.mjs", "tests/gst-calculator.test.ts", ".obsidian-vault/specs/sales-gst-acceptance-audit-2026-11-01.md"], "limitation": "Scoped current runtime proof, not complete historical-data migration acceptance" },
     { "id": "DGM-T23", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Future categories fail closed", "evidence": ["src/lib/gst/treatment.ts", "tests/gst-treatment-contract.test.mjs"] },
     { "id": "DGM-T24", "result": "VERIFIED PASS — CURRENT CAMPAIGN", "scope": "Legacy incomplete purchase draft hold", "evidence": ["src/app/_actions/purchases.actions.ts", "scripts/gst-application-e2e-runner.mjs"], "assertions": ["finalization rejected", "status/revision unchanged", "sequence unchanged", "no posting/stock/ledger rows"] },
-    { "id": "DGM-T25", "result": "BLOCKED — POLICY", "scope": "Precision and rounding policy acceptance", "evidence": [".obsidian-vault/decisions/0007-gst-rounding-precision-policy.md", ".obsidian-vault/decisions/0009-gst-precision-rounding-engineering-contract.md", "src/lib/decimal.ts", "src/domain/services/gst-calculator.service.ts", "src/domain/services/purchase-calculator.service.ts", "tests/gst-calculator.test.ts"], "engineeringImplementation": "IMPLEMENTED for demonstrated calculator paths; credit/debit-note workflow absent", "assertions": 294, "ownerDecision": "T25-12 CURRENT RELEASE SCOPE APPROVED — IMPLEMENTATION/TEST/RUNTIME/ACCEPTANCE UNVERIFIED", "professionalConfirmation": "REQUIRED for Section 170 aggregation, e-invoice obligations, Section 34(2) amendment/effective-date status, ITC-reversal evidence, reporting, and statutory/accounting interpretation", "limitation": "Arithmetic tests and scope approval do not establish legal acceptance, note implementation, or production/runtime verification" }
+    { "id": "DGM-T25", "result": "BLOCKED — OWNER APPROVAL", "scope": "Precision and rounding policy acceptance", "evidence": [".obsidian-vault/decisions/0007-gst-rounding-precision-policy.md", ".obsidian-vault/decisions/0009-gst-precision-rounding-engineering-contract.md", "src/lib/decimal.ts", "src/domain/services/gst-calculator.service.ts", "src/domain/services/purchase-calculator.service.ts", "tests/gst-calculator.test.ts"], "engineeringImplementation": "IMPLEMENTED for demonstrated calculator paths", "assertions": 294, "ownerDecision": "PENDING OWNER APPROVAL", "professionalConfirmation": "REQUIRED for Section 170 aggregation, e-invoice obligations, and statutory/accounting interpretation", "limitation": "Arithmetic tests do not establish legal acceptance or production/runtime verification" }
   ],
   "evidenceClassifications": {
     "VERIFIED PASS — CURRENT CAMPAIGN": "The exact engineering behavior has current-campaign test or runtime evidence.",
@@ -308,18 +308,18 @@
         "evidence": [
           "prisma/schema.prisma",
           "src/app/_actions",
-          ".obsidian-vault/specs/domestic-gst-modernization.md: current-release scope requirement; no workflow",
-          ".obsidian-vault/decisions/0009-gst-precision-rounding-engineering-contract.md: T25-12 scope approved; implementation/acceptance unverified"
+          ".obsidian-vault/specs/domestic-gst-modernization.md: deferred product scope only",
+          ".obsidian-vault/decisions/0009-gst-precision-rounding-engineering-contract.md: T25-12 remains pending owner approval"
         ],
-        "finding": "No credit-note or debit-note calculation/workflow/model exists in the current release. T25-12 is current-release scope approved for supplier issuance and recipient-side processing, so the boundary is classified as not implemented/no supported workflow, not as a verified pass, and no speculative subsystem was added."
+        "finding": "No credit-note or debit-note calculation/workflow/model exists in the current release. The master specification lists credit/debit notes and returns as deferred product scope, but no explicit owner approval of a T25-12 current-release exclusion was found; therefore the boundary is classified as not implemented/no supported workflow, not as a verified pass, and no speculative subsystem was added."
       }
     ],
     "ownerApproval": {
       "t13": "CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED",
       "t19": "CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED",
-      "t25": "T25-12 CURRENT RELEASE SCOPE APPROVED — IMPLEMENTATION/TEST/RUNTIME/ACCEPTANCE UNVERIFIED"
+      "t25": "PENDING DETAILED OWNER SIGN-OFF"
     },
-    "professionalConfirmation": "REQUIRED for Section 170 aggregation boundary, e-invoice obligations, Section 34(2) amendment/effective-date status, ITC-reversal evidence, reporting, credit/debit-note representation, and statutory/accounting interpretation",
+    "professionalConfirmation": "REQUIRED for Section 170 aggregation boundary, e-invoice obligations, and statutory/accounting interpretation",
     "runtimeVerification": "NO NEW RUNTIME/DATABASE CAMPAIGN; PRIOR TARGET-BOUND EVIDENCE RETAINED",
     "independentAcceptance": "NOT ACCEPTED"
   },

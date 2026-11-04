@@ -1,30 +1,30 @@
 {
   "manifestVersion": 1,
-  "packageVersion": "0.1.0",
+  "packageVersion": "0.2.0",
   "approved": true,
   "status": "APPROVED_EXECUTABLE_LOCAL_ONLY",
   "sourceSchema": {
     "path": "prisma/schema.prisma",
     "generation": "prisma migrate diff --from-empty",
-    "sha256": "a4c2d9e2eadf25b58728b3dcb9b7274278d08dd948aab2da16e1999dd543368d"
+    "sha256": "25c85ee113f675d1783d7c55487178501dc5c1edcc0ba3678bea7f588e4385ae"
   },
   "artifacts": [
     {
       "order": 1,
       "path": "prisma/financial-e2e-schema-provisioning.generated.sql",
-      "sha256": "508e0122b95496466544b4b508a50b18a326b7f4a43b6f6a5849232291a8bea5",
+      "sha256": "04befcf34db181eb525aeaa82487b121a2137ee63407d5158264422146146d23",
       "classification": "executable"
     },
     {
       "order": 2,
       "path": "prisma/financial-e2e-security-controls.review.sql",
-      "sha256": "88af752140aab6bffa6a71ed613f7456adf93c493a05691674025efdadc596c0",
+      "sha256": "ef4cab90da8b66253510dcf08d61aac5f29a440650ea3d4db9fb5afe5209deb9",
       "classification": "executable"
     },
     {
       "order": 3,
       "path": "prisma/financial-e2e-rls-policies.review.sql",
-      "sha256": "327339cdee28392964fc336d4177ffe01475959a78f5fadba372742e967d8b8b",
+      "sha256": "4afed9fb9df2cdca2b3e7bb4170035f7ab4433648694dee0744aaba2c0a927bc",
       "classification": "executable"
     },
     {
@@ -42,7 +42,7 @@
     {
       "order": 6,
       "path": "scripts/financial-e2e-provisioning-static-guard.mjs",
-      "sha256": "d3fd847a8d900e27eeadc1b5369817fff3d3ff823a7f8df51767e64c42ba9f52",
+      "sha256": "16b2f871f468822d2a5c979222337542432f77787f26d8719678c58e86c1e4bb",
       "classification": "executable"
     },
     {
@@ -55,6 +55,42 @@
       "order": 8,
       "path": "prisma/migrations/0011_inventory_valuation_decision_history/migration.sql",
       "sha256": "d7148f60b6cfb2493af7c8a5216778de80acd7c8e17127350daa7231fffab768",
+      "classification": "executable"
+    },
+    {
+      "order": 9,
+      "path": "prisma/migrations/0012_gst_credit_debit_note_foundation/migration.sql",
+      "sha256": "a73c4f6cf96df3ade46b8569b54f88ed935c108ded80cc1201926fc7ee0e48bd",
+      "classification": "executable"
+    },
+    {
+      "order": 10,
+      "path": "prisma/migrations/0013_gst_credit_debit_note_reviews/migration.sql",
+      "sha256": "68bcff252f1f8ab6571aa89aa0b5d40e545237cfe2978542feb75445e5cf9a52",
+      "classification": "executable"
+    },
+    {
+      "order": 11,
+      "path": "prisma/migrations/0014_gst_credit_debit_note_returns/migration.sql",
+      "sha256": "75a83f091a72d3f57eb46614e297c7fb7adbccf10ad7925ec50f6066d3227be9",
+      "classification": "executable"
+    },
+    {
+      "order": 12,
+      "path": "prisma/migrations/0015_gst_credit_debit_note_reporting/migration.sql",
+      "sha256": "a7505da5c9a954834ad5fb6511ea611abe6b43c264f97ad0cc76a6831fac3e8f",
+      "classification": "executable"
+    },
+    {
+      "order": 13,
+      "path": "prisma/migrations/0016_gst_note_itc_posting_revisions/migration.sql",
+      "sha256": "5132720147753b64a9b5dec50f57495013319c7d984e37382fec21dc8f38fd2e",
+      "classification": "executable"
+    },
+    {
+      "order": 14,
+      "path": "prisma/migrations/0017_gst_note_posting_evidence/migration.sql",
+      "sha256": "e74d869afa6f651f5cc0486fc4c7ceadfd3f5c50fc549ff138d17ce38c9f7a18",
       "classification": "executable"
     }
   ],

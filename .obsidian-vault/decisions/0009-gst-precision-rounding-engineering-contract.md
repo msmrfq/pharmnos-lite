@@ -1,7 +1,7 @@
 ---
 title: GST precision and rounding engineering contract
 date: 2026-11-01
-status: OWNER AUTHORIZED - CURRENT-RELEASE SCOPE; IMPLEMENTATION AND ACCEPTANCE UNVERIFIED
+status: PENDING OWNER APPROVAL
 ---
 
 # GST Precision and Rounding Engineering Contract
@@ -14,9 +14,8 @@ requires preserved intermediate precision, retained tax components, explicit
 precedence, and separate invoice adjustments. The existing calculator paths
 used JavaScript binary floating-point arithmetic and rounded intermediate
 values. This record defines the detailed engineering contract proposed for
-implementation. The broader GST Modernization authorization is not, by
-itself, professional/legal confirmation, runtime evidence, or production
-approval of this detailed matrix.
+implementation; the broader GST modernization authorization is not approval of
+this detailed matrix.
 
 ## Proposed owner decision matrix
 
@@ -33,24 +32,10 @@ approval of this detailed matrix.
 | `T25-09` | Preserve supplier-declared purchase amounts independently from Pharmnos Lite calculated values. | `PENDING OWNER APPROVAL` |
 | `T25-10` | Preserve exact sales calculations and issued invoice values. | `PENDING OWNER APPROVAL` |
 | `T25-11` | Calculate and preserve CGST, SGST/UTGST, and IGST independently. | `PENDING OWNER APPROVAL` |
-| `T25-12` | Preserve original credit/debit note references and adjustment values; support supplier issuance and recipient-side processing in the current release; never overwrite original financial evidence. | `CURRENT RELEASE SCOPE APPROVED — IMPLEMENTATION/TEST/RUNTIME/ACCEPTANCE UNVERIFIED` |
+| `T25-12` | Preserve original credit/debit note references and adjustment values; never overwrite original financial evidence. | `PENDING OWNER APPROVAL` |
 
-The owner-approved current-release scope for T25-12 is recorded in the
-[GST Decision Closure and Engineering Contract Approval](../specs/gst-decision-closure-and-engineering-contract-approval.md)
-record on 2026-11-02 (IST). This scope authorization does not assert a
-qualified professional interpretation of Section 34, Section 15(3), ITC
-reversal, reporting, or e-invoicing obligations. The other detailed T25
-entries retain their individually recorded status until their remaining
-owner, accounting, and professional gates are closed.
-
-The detailed current-release note implementation contract is now maintained in
-the [GST Credit and Debit Note Engineering
-Contract](../specs/gst-credit-debit-note-engineering-contract.md). T25-12
-remains the precision/rounding decision's scope reference; the canonical note
-contract owns the supplier/recipient workflows, data model requirements,
-independent state machines, permissions, scenarios, and CDN-01-CDN-27
-acceptance denominator. CDN-01-CDN-27 must not be added to or used to
-reinterpret the DGM-T25 denominator.
+No owner approval, signature, approval date, or qualified professional
+confirmation for this detailed matrix is asserted by this record.
 
 ## Engineering contract
 
@@ -84,46 +69,10 @@ reinterpret the DGM-T25 denominator.
 - Supplier-declared purchase raw values, calculated values, accepted values,
   finalized sales snapshots, and immutable audit records remain separate.
 - No credit-note, debit-note, or e-invoice calculation surface exists in the
-  current application path. T25-12 is a current-release requirement, so this
-  absence is classified as `Not implemented / no supported workflow`, not as a
-  verified pass. Any future implementation must preserve original references
-  and adjustment values and must support both supplier issuance and
-  recipient-side processing without overwriting original invoice evidence.
-
-### T25-12 current-release note contract
-
-The required scope covers two distinct directions:
-
-1. **Supplier issuance:** create, review, approve, number, issue, report, and
-   account for a GST credit note or debit note linked to one or more original
-   invoices.
-2. **Recipient processing:** receive a supplier note, validate its original
-   references and tax components, record acceptance or dispute, reverse or
-   increase attributable ITC where the approved policy requires it, and post
-   the resulting accounting effect without rewriting the original purchase or
-   invoice evidence.
-
-The implementation must keep these concepts separate:
-
-- statutory GST credit/debit notes under Section 34;
-- commercial credit/debit adjustments that do not reduce or increase GST;
-- goods returns and replacement movements;
-- recipient ITC reversal or additional-ITC evidence;
-- internal accounting corrections that do not create a statutory note.
-
-Every note must preserve the original document identity, allocation basis,
-taxable value, CGST, SGST/UTGST, IGST, cess, reason/ground, document date,
-issue/reporting state, source evidence, actor, and immutable calculation
-snapshot. A note may create additive adjustment, ledger, stock, ITC, audit,
-reporting, or IRP evidence, but it must not edit the original finalized
-amounts or snapshots.
-
-The canonical note contract records the implementation-ready product boundary,
-but qualified review must still resolve the statutory interpretation,
-Section 34(2) amendment/effective-date status, recipient evidence standard,
-reporting period mechanics, and e-invoice applicability before any workflow is
-enabled. Engineering arithmetic and persistence tests, when eventually
-implemented, must be reported separately from those legal conclusions.
+  current application path. T25-12 remains pending detailed owner approval, so
+  this absence is classified as `Not implemented / no supported workflow`, not
+  as an owner-approved current-release exclusion or verified pass. Any future
+  implementation must preserve original references and adjustment values.
 
 ## DGM-T13 current-release scope
 

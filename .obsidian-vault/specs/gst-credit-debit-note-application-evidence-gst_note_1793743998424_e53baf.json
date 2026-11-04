@@ -1,0 +1,272 @@
+{
+  "version": 1,
+  "campaignRunId": "gst_note_1793743998424_e53baf",
+  "status": "FAILED",
+  "target": {
+    "contractRunId": "gst_note_q17_20261104_034122_44072c",
+    "host": "127.0.0.1",
+    "port": 55464,
+    "databaseName": "pharmnos_financial_e2e_q17_q17_20261104_034122_44072c",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "marker": "pharmnos-financial-e2e",
+    "composeProject": "pharmnoslite-financial-e2e-q17-q17_20261104_034122_44072c",
+    "composeService": "financial-e2e-postgres",
+    "schemaArtifactHash": "4223fad6d6091a75357320b508b91450909466d6b3fdf249c320d55e2492e0f2"
+  },
+  "startedAt": "2026-11-03T22:13:18.425Z",
+  "preflight": {
+    "identity": {
+      "database_name": "pharmnos_financial_e2e_q17_q17_20261104_034122_44072c",
+      "current_user_name": "pharmnos_e2e",
+      "session_user_name": "pharmnos_e2e",
+      "application_name": "pharmnos-financial-e2e",
+      "environment_marker": "pharmnos-financial-e2e"
+    },
+    "runtimeRole": {
+      "rolcanlogin": true,
+      "rolsuper": false,
+      "rolbypassrls": false
+    },
+    "catalog": {
+      "rlsTables": 51,
+      "policies": 126,
+      "triggers": 39,
+      "runtimeDeleteGrants": 0,
+      "noteTables": 18,
+      "noteRlsTables": 18
+    },
+    "compose": {
+      "containers": [
+        {
+          "id": "07c063ac5a9c",
+          "name": "pharmnoslite-financial-e2e-q17-q17_20261104_034122_44072c-financial-e2e-postgres-1",
+          "service": "financial-e2e-postgres",
+          "project": "pharmnoslite-financial-e2e-q17-q17_20261104_034122_44072c"
+        }
+      ]
+    },
+    "runtimeEndpoint": {
+      "host": "127.0.0.1",
+      "port": 55464,
+      "databaseName": "pharmnos_financial_e2e_q17_q17_20261104_034122_44072c",
+      "role": "pharmnos_e2e_runtime"
+    }
+  },
+  "fixture": {
+    "campaignRunId": "gst_note_1793743998424_e53baf",
+    "tenants": [
+      "gst_note_1793743998424_e53baf_tenant_a_fa8646",
+      "gst_note_1793743998424_e53baf_tenant_b_43866b"
+    ],
+    "users": [
+      "gst_note_1793743998424_e53baf_user_a_23a4a3",
+      "gst_note_1793743998424_e53baf_user_a_reviewer_422f87",
+      "gst_note_1793743998424_e53baf_user_a_issuer_790ac0",
+      "gst_note_1793743998424_e53baf_user_a_approver_d82c39",
+      "gst_note_1793743998424_e53baf_user_a_note_approver_0be506",
+      "gst_note_1793743998424_e53baf_user_b_676ff6",
+      "gst_note_1793743998424_e53baf_restricted_user_76a7d4"
+    ],
+    "memberships": [
+      "gst_note_1793743998424_e53baf_membership_a_d14296",
+      "gst_note_1793743998424_e53baf_membership_a_reviewer_88019f",
+      "gst_note_1793743998424_e53baf_membership_a_issuer_295beb",
+      "gst_note_1793743998424_e53baf_membership_a_approver_e2d7dc",
+      "gst_note_1793743998424_e53baf_membership_a_note_approver_04443f",
+      "gst_note_1793743998424_e53baf_membership_b_b27e3f",
+      "gst_note_1793743998424_e53baf_membership_restricted_0c7012"
+    ],
+    "sourceSales": {
+      "full": "gst_note_1793743998424_e53baf_sales_full_3d0426",
+      "partial": "gst_note_1793743998424_e53baf_sales_partial_285584",
+      "deficiency": "gst_note_1793743998424_e53baf_sales_deficiency_3d1288",
+      "debit": "gst_note_1793743998424_e53baf_sales_debit_023e50",
+      "post_supply_discount": "gst_note_1793743998424_e53baf_sales_post_supply_discount_d7ed5a",
+      "q17_tax_reduction": "gst_note_1793743998424_e53baf_sales_q17_tax_reduction_155430",
+      "concurrent_1": "gst_note_1793743998424_e53baf_sales_concurrent_1_22db85",
+      "concurrent_2": "gst_note_1793743998424_e53baf_sales_concurrent_2_4f699b",
+      "multi_1": "gst_note_1793743998424_e53baf_sales_multi_1_631b5d",
+      "multi_2": "gst_note_1793743998424_e53baf_sales_multi_2_9658d5",
+      "late": "gst_note_1793743998424_e53baf_sales_late_e6fbc0",
+      "rollback": "gst_note_1793743998424_e53baf_sales_rollback_a1e24a",
+      "restricted": "gst_note_1793743998424_e53baf_sales_restricted_38899c"
+    },
+    "sourcePurchases": {
+      "primary": "gst_note_1793743998424_e53baf_purchase_primary_b0d07f",
+      "pending": "gst_note_1793743998424_e53baf_purchase_pending_fcd3d4",
+      "tenant_b": "gst_note_1793743998424_e53baf_purchase_tenant_b_8559a6"
+    }
+  },
+  "scenarioCoverage": {
+    "required": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
+      "M",
+      "N",
+      "O",
+      "P",
+      "Q"
+    ],
+    "declared": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
+      "P",
+      "Q"
+    ],
+    "missing": [
+      "E",
+      "F",
+      "M",
+      "N",
+      "O"
+    ],
+    "executionScope": "Q17_CURRENT_BUILD",
+    "excludedFromExecution": [
+      "E",
+      "F",
+      "M",
+      "N",
+      "O"
+    ]
+  },
+  "scenarios": [
+    {
+      "name": "Q17 amended discount qualifies without prior agreement or invoice linkage",
+      "status": "PASS",
+      "noteId": "cmw18v42y0003n5qq52f9hbnd",
+      "recipientItcReversalEvidence": "gst_note_1793743998424_e53baf:recipient-itc-reversal"
+    },
+    {
+      "name": "Q17 supplier reference alone cannot reduce output tax",
+      "status": "PASS_EXPECTED_FAILURE",
+      "error": "A supplier-entered recipient ITC reversal reference is insufficient for output-tax reduction."
+    },
+    {
+      "name": "Q17 output-tax reduction requires independently reviewed recipient reversal evidence",
+      "status": "PASS",
+      "noteId": "cmw18v4ey001zn5qqc2pp61zg",
+      "outputTaxAdjustmentCount": 1,
+      "outputTaxComponentCount": 2,
+      "outputTaxPostingLineCount": 4
+    },
+    {
+      "name": "Q17 missing recipient ITC reversal evidence blocks tax reduction review",
+      "status": "PASS_EXPECTED_FAILURE",
+      "error": "Qualifying post-supply discounts require independently reviewed recipient ITC reversal evidence before output-tax reduction."
+    },
+    {
+      "name": "Q17 expired Section 34 deadline",
+      "status": "PASS_EXPECTED_FAILURE",
+      "error": "Qualifying post-supply discounts cannot use an expired Section 34 reporting deadline."
+    },
+    {
+      "name": "Q duplicate payload conflict",
+      "status": "PASS_EXPECTED_FAILURE",
+      "error": "GST note idempotency key was already used with a different payload."
+    },
+    {
+      "name": "Q issued note different request conflict",
+      "status": "PASS_EXPECTED_FAILURE",
+      "error": "The supplier-issued note has already been issued with a different request."
+    },
+    {
+      "name": "A full sales return and supplier-issued credit note",
+      "status": "PASS",
+      "noteId": "cmw18v53t0055n5qqvgmmfwov",
+      "noteNumber": "CN-202627-00003",
+      "accountingPostingCount": 1,
+      "customerLedgerCredit": "1180.00"
+    },
+    {
+      "name": "J reporting rejection and explicit filed-return evidence",
+      "status": "PASS",
+      "noteId": "cmw18v53t0055n5qqvgmmfwov",
+      "reportingStatuses": [
+        "DECLARATION_READY",
+        "DECLARED_IN_RETURN"
+      ],
+      "irpStatus": "REJECTED",
+      "outputTaxAdjustmentCount": 1
+    },
+    {
+      "name": "A physical return is separate and posts accepted stock once",
+      "status": "RESTOCKED",
+      "returnId": "cmw18v56t005nn5qqi1hcux26",
+      "acceptedQuantity": "10.0000",
+      "stockMovements": 1,
+      "noteLinks": 1,
+      "availableQuantityAfterReturn": 20
+    },
+    {
+      "name": "B cumulative source allocation cap",
+      "status": "PASS_EXPECTED_FAILURE",
+      "error": "quantity allocation exceeds the remaining source amount."
+    },
+    {
+      "name": "B partial sales allocation preserves remaining source capacity",
+      "status": "PASS",
+      "noteId": "cmw18v65y009zn5qqy37fln5s",
+      "allocatedQuantity": "1",
+      "allocatedTaxable": "200.0000"
+    },
+    {
+      "name": "C deficiency note does not create physical stock movement",
+      "status": "PASS",
+      "noteId": "cmw18v6n700bvn5qq5x35fwun",
+      "stockMovements": 0
+    },
+    {
+      "name": "G supplier debit note posts local liability independently of delayed external evidence",
+      "status": "PASS",
+      "noteId": "cmw18v74700dpn5qqvk5ur30m",
+      "customerLedgerDebit": "118.00"
+    },
+    {
+      "name": "G concurrent numbering reserves distinct tenant-local numbers",
+      "status": "PASS",
+      "noteIds": [
+        "cmw18v7ln00g3n5qq105acmp2",
+        "cmw18v7mq00gfn5qq5h1htlvm"
+      ],
+      "noteNumbers": [
+        "CN-202627-00006",
+        "CN-202627-00007"
+      ]
+    },
+    {
+      "name": "D commercial discounts remain GST-unchanged and separately approved",
+      "status": "PASS",
+      "adjustmentId": "cmw18v87g00jpn5qqmb3kepp6",
+      "ledgerCredit": "50.00",
+      "statutoryNoteRows": 0
+    }
+  ],
+  "security": null,
+  "cleanup": {
+    "status": "NOT_ATTEMPTED",
+    "reason": "GST note event/history tables are immutable; target disposal requires separate explicit operator authorization."
+  },
+  "failure": {
+    "message": "L ITC reversal cannot exceed availed amount returned an unexpected error."
+  },
+  "finishedAt": "2026-11-03T22:13:25.697Z"
+}

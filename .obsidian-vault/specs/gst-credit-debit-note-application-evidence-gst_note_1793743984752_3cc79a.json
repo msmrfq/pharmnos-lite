@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "campaignRunId": "gst_note_1793743984752_3cc79a",
+  "status": "BLOCKED",
+  "target": null,
+  "startedAt": "2026-11-03T22:13:04.753Z",
+  "preflight": null,
+  "fixture": null,
+  "scenarioCoverage": {
+    "required": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
+      "M",
+      "N",
+      "O",
+      "P",
+      "Q"
+    ],
+    "declared": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
+      "P",
+      "Q"
+    ],
+    "missing": [
+      "E",
+      "F",
+      "M",
+      "N",
+      "O"
+    ],
+    "executionScope": "Q17_CURRENT_BUILD",
+    "excludedFromExecution": [
+      "E",
+      "F",
+      "M",
+      "N",
+      "O"
+    ]
+  },
+  "scenarios": [],
+  "security": null,
+  "cleanup": {
+    "status": "NOT_ATTEMPTED",
+    "reason": "GST note event/history tables are immutable; target disposal requires separate explicit operator authorization."
+  },
+  "failure": {
+    "message": "Unexpected token '﻿', \"﻿{\r\n    \"v\"... is not valid JSON"
+  },
+  "finishedAt": "2026-11-03T22:13:04.919Z"
+}

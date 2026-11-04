@@ -10,52 +10,6 @@ This tracker records the current engineering implementation state. It does
 not replace the active master specification, professional review, independent
 security acceptance, migration authorization, or production approval.
 
-## Credit/debit-note contract finalization and repository audit — 2026-11-02 21-11-19 IST
-
-This is a documentation-only requirements and source-audit record. No
-application code, Prisma model, migration, database, container, process, or
-Git history was changed for this workstream.
-
-- Owner-approved scope includes **GST credit notes and debit notes in the
-  current release**, with both **supplier issuance** and **recipient-side
-  processing**. The scope decision is not professional/legal confirmation,
-  implementation authorization, runtime verification, independent acceptance,
-  or production approval.
-- The statutory baseline requires separate treatment for Sections 2(37),
-  2(38), 15(3)(a)/(b), 16, 34(1)-(4), Rule 53(1A), and Rule 59. The
-  contract rechecked official Section 34, Rule 53(1A), Rule 59, Circular
-  251/08/2025-GST, and Circular 253/10/2025-GST sources. Circular 253
-  withdrew Circular 212/06/2024-GST's prescribed evidence procedure; it did
-  not remove the substantive statutory ITC/output-tax conditions.
-- Notification 16/2025-Central Tax is recorded as the 2025-10-01 commencement
-  notification for the specified Finance Act 2025 provisions. Notification
-  03/2026-Central Tax appoints 2026-11-01 for Finance Act 2026 Sections
-  153-155, while the current consolidated Section 15 page retains a
-  “yet-to-be-notified” footnote. This source synchronization conflict is an
-  explicit effective-dated legal-rule and qualified-review gate; the product
-  must fail closed rather than choose a date silently.
-- The finalized implementation-ready business and engineering contract,
-  including supplier/recipient workflows, commercial-adjustment separation,
-  state machines, permissions, worked scenarios, and CDN-01-CDN-27 acceptance
-  matrix, is recorded in
-  [`gst-credit-debit-note-engineering-contract.md`](./gst-credit-debit-note-engineering-contract.md).
-- The master requirements specification remains in
-  [`domestic-gst-modernization.md`](./domestic-gst-modernization.md).
-- The review-only persistence and rollout design is recorded in
-  [`gst-schema-rollout-design-review.md`](./gst-schema-rollout-design-review.md).
-  It proposes note headers, original-invoice allocations, tax components,
-  ITC-reversal evidence, reporting/IRP state, immutable events, tenant keys,
-  and dependency order without changing the schema.
-- Repository audit confirms no note-specific model, allocation model,
-  adjustment history, recipient ITC-reversal model, CDNR/CDNUR reporting
-  workflow, IRN/IRP persistence, note permissions, note audit events, or
-  note action exists. Generic ledger entry types are primitives only; they do
-  not constitute a note workflow.
-- T25-12 is now classified as
-  `CURRENT RELEASE SCOPE APPROVED — IMPLEMENTATION/TEST/RUNTIME/ACCEPTANCE
-  UNVERIFIED`. DGM-T25 remains `BLOCKED — POLICY`; the overall acceptance
-  matrix remains **22/25** and **NOT ACCEPTED**.
-
 ## GST calculation, treatment, and T25 engineering campaign — 2026-11-02 15-45-12 IST
 
 This section supersedes the earlier blocked application-path attempt below for
@@ -64,9 +18,8 @@ the current acceptance status.
 - The reconciled matrix remains **22/25 evidence-supported criteria (88%)**:
   16 current-campaign passes, 6 historical passes, 2 independent acceptance
   criteria (`DGM-T13` and `DGM-T19`) remain `NOT VERIFIED`, 1 criterion
-  remains `BLOCKED — POLICY` (`DGM-T25`), 0 criteria remain pending owner
-  approval, and 0 verified failures. The final decision remains
-  **NOT ACCEPTED**.
+  remains pending owner approval (`DGM-T25`), and 0 verified failures. The
+  final decision remains **NOT ACCEPTED**.
 - The T25 engineering contract is implemented in
   `src/lib/decimal.ts`, the sales and purchase calculators, the relevant
   server/form calculation boundaries, and focused calculator tests. The
@@ -107,20 +60,17 @@ the current acceptance status.
 - The supported TypeScript runner closes the prior tooling reproducibility gap
   without adding a dependency. The E2E changes are harness-only; no schema,
   migration, RLS policy, permission, rate, or deferred treatment was enabled.
-- T25-12 current-release scope is recorded as approved in
-  `decisions/0009-gst-precision-rounding-engineering-contract.md`; the note
-  workflow is not implemented, tested, runtime verified, independently
-  accepted, or production-authorized. Section 170 aggregation, e-invoice
-  obligations, Section 34(2) amendment/effective-date status, recipient
-  evidence, reporting, and other statutory interpretations remain subject to
-  qualified professional confirmation. GST Stage 1 remains **IN PROGRESS** and
-  Production/Live Supabase remains **NO-GO**.
+- The detailed T25 matrix is recorded as `PENDING OWNER APPROVAL` in
+  `decisions/0009-gst-precision-rounding-engineering-contract.md`. Section 170
+  aggregation, e-invoice obligations, and other statutory interpretations
+  remain subject to qualified professional confirmation. GST Stage 1 remains
+  **IN PROGRESS** and Production/Live Supabase remains **NO-GO**.
 - The final T25 integration audit found no demonstrated defect requiring source
   changes: the inclusive Rule 35 helper remains intentionally isolated, the
   supported invoice boundary remains two-decimal, JavaScript-number conversion
   limits are documented without a universal losslessness claim, and
-  credit/debit-note and e-invoice surfaces have no supported workflow despite
-  T25-12 being a current-release requirement.
+  credit/debit-note and e-invoice surfaces have no supported workflow in the
+  current release.
 
 ## Sales GST application-path acceptance attempt — 2026-11-01 16-53-48 IST
 

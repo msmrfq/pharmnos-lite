@@ -1,0 +1,191 @@
+{
+  "version": 1,
+  "campaignRunId": "gst_note_1793742753347_df7914",
+  "status": "FAILED",
+  "target": {
+    "contractRunId": "gst_note_q17_20261104_0251",
+    "host": "127.0.0.1",
+    "port": 55461,
+    "databaseName": "pharmnos_financial_e2e_q17_20261104_0251",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "marker": "pharmnos-financial-e2e",
+    "composeProject": "pharmnoslite-financial-e2e-q17-20261104-0251",
+    "composeService": "financial-e2e-postgres",
+    "schemaArtifactHash": "4223fad6d6091a75357320b508b91450909466d6b3fdf249c320d55e2492e0f2"
+  },
+  "startedAt": "2026-11-03T21:52:33.347Z",
+  "preflight": {
+    "identity": {
+      "database_name": "pharmnos_financial_e2e_q17_20261104_0251",
+      "current_user_name": "pharmnos_e2e",
+      "session_user_name": "pharmnos_e2e",
+      "application_name": "pharmnos-financial-e2e",
+      "environment_marker": "pharmnos-financial-e2e"
+    },
+    "runtimeRole": {
+      "rolcanlogin": true,
+      "rolsuper": false,
+      "rolbypassrls": false
+    },
+    "catalog": {
+      "rlsTables": 51,
+      "policies": 126,
+      "triggers": 39,
+      "runtimeDeleteGrants": 0,
+      "noteTables": 18,
+      "noteRlsTables": 18
+    },
+    "compose": {
+      "containers": [
+        {
+          "id": "e876aeb44fef",
+          "name": "pharmnoslite-financial-e2e-q17-20261104-0251-financial-e2e-postgres-1",
+          "service": "financial-e2e-postgres",
+          "project": "pharmnoslite-financial-e2e-q17-20261104-0251"
+        }
+      ]
+    },
+    "runtimeEndpoint": {
+      "host": "127.0.0.1",
+      "port": 55461,
+      "databaseName": "pharmnos_financial_e2e_q17_20261104_0251",
+      "role": "pharmnos_e2e_runtime"
+    }
+  },
+  "fixture": {
+    "campaignRunId": "gst_note_1793742753347_df7914",
+    "tenants": [
+      "gst_note_1793742753347_df7914_tenant_a_d47e2e",
+      "gst_note_1793742753347_df7914_tenant_b_32f40d"
+    ],
+    "users": [
+      "gst_note_1793742753347_df7914_user_a_506cbb",
+      "gst_note_1793742753347_df7914_user_a_reviewer_d394aa",
+      "gst_note_1793742753347_df7914_user_a_issuer_deea1c",
+      "gst_note_1793742753347_df7914_user_a_approver_24d4b7",
+      "gst_note_1793742753347_df7914_user_a_note_approver_00f9e4",
+      "gst_note_1793742753347_df7914_user_b_d63138",
+      "gst_note_1793742753347_df7914_restricted_user_7812b9"
+    ],
+    "memberships": [
+      "gst_note_1793742753347_df7914_membership_a_f05a4b",
+      "gst_note_1793742753347_df7914_membership_a_reviewer_5bff4e",
+      "gst_note_1793742753347_df7914_membership_a_issuer_62a640",
+      "gst_note_1793742753347_df7914_membership_a_approver_2a17f7",
+      "gst_note_1793742753347_df7914_membership_a_note_approver_47a73c",
+      "gst_note_1793742753347_df7914_membership_b_9b7838",
+      "gst_note_1793742753347_df7914_membership_restricted_9a8b5c"
+    ],
+    "sourceSales": {
+      "full": "gst_note_1793742753347_df7914_sales_full_ac02e0",
+      "partial": "gst_note_1793742753347_df7914_sales_partial_e81224",
+      "deficiency": "gst_note_1793742753347_df7914_sales_deficiency_e9170e",
+      "debit": "gst_note_1793742753347_df7914_sales_debit_fa4797",
+      "post_supply_discount": "gst_note_1793742753347_df7914_sales_post_supply_discount_351a42",
+      "q17_tax_reduction": "gst_note_1793742753347_df7914_sales_q17_tax_reduction_aabcc0",
+      "concurrent_1": "gst_note_1793742753347_df7914_sales_concurrent_1_36a76d",
+      "concurrent_2": "gst_note_1793742753347_df7914_sales_concurrent_2_39c23d",
+      "multi_1": "gst_note_1793742753347_df7914_sales_multi_1_737927",
+      "multi_2": "gst_note_1793742753347_df7914_sales_multi_2_fc9172",
+      "late": "gst_note_1793742753347_df7914_sales_late_f06b5a",
+      "rollback": "gst_note_1793742753347_df7914_sales_rollback_e7c2b8",
+      "restricted": "gst_note_1793742753347_df7914_sales_restricted_774959"
+    },
+    "sourcePurchases": {
+      "primary": "gst_note_1793742753347_df7914_purchase_primary_eb0cfd",
+      "pending": "gst_note_1793742753347_df7914_purchase_pending_d02af3",
+      "tenant_b": "gst_note_1793742753347_df7914_purchase_tenant_b_f8300c"
+    }
+  },
+  "scenarioCoverage": {
+    "required": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
+      "M",
+      "N",
+      "O",
+      "P",
+      "Q"
+    ],
+    "declared": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
+      "P",
+      "Q"
+    ],
+    "missing": [
+      "E",
+      "F",
+      "M",
+      "N",
+      "O"
+    ],
+    "executionScope": "Q17_CURRENT_BUILD",
+    "excludedFromExecution": [
+      "E",
+      "F",
+      "M",
+      "N",
+      "O"
+    ]
+  },
+  "scenarios": [
+    {
+      "name": "Q17 amended discount qualifies without prior agreement or invoice linkage",
+      "status": "PASS",
+      "noteId": "cmw184fym0003pax7ydg8t7zs",
+      "recipientItcReversalEvidence": "gst_note_1793742753347_df7914:recipient-itc-reversal"
+    },
+    {
+      "name": "Q17 supplier reference alone cannot reduce output tax",
+      "status": "PASS_EXPECTED_FAILURE",
+      "error": "A supplier-entered recipient ITC reversal reference is insufficient for output-tax reduction."
+    },
+    {
+      "name": "Q17 output-tax reduction requires independently reviewed recipient reversal evidence",
+      "status": "PASS",
+      "noteId": "cmw184gga001zpax7lhkmnefq",
+      "outputTaxAdjustmentCount": 1,
+      "outputTaxComponentCount": 2,
+      "outputTaxPostingLineCount": 4
+    },
+    {
+      "name": "Q17 missing recipient ITC reversal evidence blocks tax reduction review",
+      "status": "PASS_EXPECTED_FAILURE",
+      "error": "Qualifying post-supply discounts require independently reviewed recipient ITC reversal evidence before output-tax reduction."
+    },
+    {
+      "name": "Q17 expired Section 34 deadline",
+      "status": "PASS_EXPECTED_FAILURE",
+      "error": "Qualifying post-supply discounts cannot use an expired Section 34 reporting deadline."
+    }
+  ],
+  "security": null,
+  "cleanup": {
+    "status": "NOT_ATTEMPTED",
+    "reason": "GST note event/history tables are immutable; target disposal requires separate explicit operator authorization."
+  },
+  "failure": {
+    "message": "Q duplicate payload conflict returned an unexpected error."
+  },
+  "finishedAt": "2026-11-03T21:52:37.427Z"
+}

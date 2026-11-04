@@ -84,38 +84,6 @@ The current source baseline was rechecked before this assessment. The current
 worktree contains pre-existing changes and the untracked active specification;
 none were reverted or overwritten.
 
-### 1.3 Current-release credit/debit-note scope authorization
-
-The owner-approved current-release scope includes both GST credit notes and
-GST debit notes, with both directions evaluated:
-
-| Direction | Current-release scope | Current evidence status |
-|---|---|---|
-| Supplier issuance | Create, review, approve, number, issue, report, and account for a GST credit/debit note linked to original invoice(s) | `SCOPE APPROVED; NOT IMPLEMENTED/TESTED/RUNTIME VERIFIED` |
-| Recipient processing | Receive, validate, accept or dispute, record attributable ITC reversal/additional ITC evidence, report, and post the supplier note without rewriting original purchase evidence | `SCOPE APPROVED; NOT IMPLEMENTED/TESTED/RUNTIME VERIFIED` |
-
-This is an owner/product scope decision only. It does not confirm the legal
-effect of Section 34, Section 15(3), Section 16, Rule 53(1A), Rule 59, current
-e-invoice applicability, current reporting mechanics, or the effective status
-of the Finance (No. 7) Act, 2025 Section 34(2) amendment. Those questions
-remain in the [GST Accounting Decision Question Pack](./gst-accounting-decision-question-pack.md)
-and must receive qualified confirmation before implementation acceptance.
-
-The current repository audit found no note-specific model, allocation,
-recipient ITC-reversal record, reporting state, IRN/IRP state, permission,
-audit event, or action. Generic `CREDIT_NOTE` and `DEBIT_NOTE` ledger types
-are primitives and are not evidence of a supported note workflow. T25-12 is
-therefore a current-release requirement with implementation and acceptance
-gates, not a deferred exclusion or verified pass.
-
-The detailed current-release contract is the [GST Credit and Debit Note
-Engineering Contract](./gst-credit-debit-note-engineering-contract.md). It
-finalizes the business and engineering requirements and the separate
-CDN-01-CDN-27 coverage denominator without changing the owner authorization or
-claiming implementation, runtime verification, independent acceptance, or
-production authorization. This closure artifact continues to own the scope
-authorization and decision status.
-
 ## 2. Evidence standard
 
 Each decision is classified using:
@@ -978,11 +946,7 @@ documentation or evidence.
 
 Stage 1 has a recorded owner-confirmed professional-review status for Q-01
 through Q-09. The five engineering blocker decisions are now owner-approved for
-scoped implementation and isolated validation. The current-release
-credit/debit-note scope is owner-approved for supplier issuance and
-recipient-side processing, but its legal interpretation, implementation,
-runtime evidence, independent acceptance, and production authorization remain
-open. SEC-DEC-03, the
+scoped implementation and isolated validation. SEC-DEC-03, the
 synthetic-fixture contracts, and the FIX-01–FIX-13 manifest remain open until
 their required evidence is produced. Legal/source, HSN/rate catalog,
 historical compatibility, and broader Financial E2E evidence remain open.
@@ -993,11 +957,9 @@ authorization.
 
 **Final status: `Q-10 PASS — SCOPED; Q-14 PASS — SCOPED; Q-15 PASS —
 SCOPED for the disposable local validation target; complete GST Modernization
-scope, including current-release supplier issuance and recipient processing of
-credit/debit notes, OWNER-AUTHORIZED for implementation and associated
-validation by Masum Rafique — note implementation/acceptance and production
-migration, production security approval, deployment, and GST release remain
-separately governed and unapproved`.**
+scope OWNER-AUTHORIZED for implementation and associated validation by Masum
+Rafique on 2026-10-31 — production migration, production security approval,
+deployment, and GST release remain separately governed and unapproved`.**
 
 ## 10. Files and execution record
 

@@ -15,7 +15,8 @@ production approval.
 **Stage:** GST calculation and treatment acceptance  
 **Completion:** 22 / 25 evidence-supported criteria (88%); 16 `VERIFIED PASS —
 CURRENT CAMPAIGN`; 6 `VERIFIED PASS — HISTORICAL`; 2 independent acceptance
-criteria remain `NOT VERIFIED`; 1 `BLOCKED — POLICY`; 0 `VERIFIED FAIL`  
+criteria remain `NOT VERIFIED`; 1 `BLOCKED — OWNER APPROVAL`; 0 `VERIFIED
+FAIL`  
 **Done:** The current campaign verified inter-state purchase IGST acceptance,
 the demonstrated POS cases, Sales retry/conflict/rollback behavior,
 restricted-role tenant isolation, and incomplete legacy-draft holds. The
@@ -26,22 +27,17 @@ passed 294/294 focused calculator assertions and preserved fail-closed
 unsupported treatments.  
 **Remaining:** DGM-T13 and DGM-T19 have approved current-release scope
 boundaries, but their independent acceptance statuses remain `NOT VERIFIED`;
-DGM-T25 engineering is implemented for the demonstrated arithmetic boundaries,
-while the remaining detailed precision, statutory, e-invoice, and
-credit/debit-note policy boundaries remain outstanding. T25-12 is
-current-release scope approved for supplier issuance and recipient-side
-processing, but no note workflow or implementation is claimed. Composition,
+DGM-T25 engineering is implemented but its detailed owner decision and
+qualified professional confirmation remain outstanding. Composition,
 Unregistered, Consumer, UTGST, inclusive purchase workflow, and other
 unsupported treatments remain fail-closed.  
-**Blockers:** DGM-T25 remains `BLOCKED — POLICY`. Section 170 aggregation,
-e-invoice obligations, Section 34(2) amendment/effective-date status,
-credit/debit-note recipient evidence, reporting mechanics, and related
-statutory/accounting interpretations require qualified professional
-confirmation. No T13/T19 scope-approval blocker remains.  
-**Next:** Obtain qualified GST/accounting confirmation for the reserved T25
-statutory boundaries, complete the note design and implementation gates, and
-retain T13/T19 Version 2 deferrals. Do not enable unsupported workflows or
-treat T25-12 scope approval as implementation or acceptance.  
+**Blockers:** The detailed T25 matrix is pending owner approval. Section 170
+aggregation, e-invoice obligations, and related statutory/accounting
+interpretations require qualified professional confirmation. No T13/T19
+scope-approval blocker remains.  
+**Next:** Obtain detailed owner approval for T25 and qualified GST/accounting
+confirmation for the reserved statutory boundaries; retain T13/T19
+Version 2 deferrals and do not enable unsupported workflows.  
 **Decision:** **NOT ACCEPTED**
 
 ## 1. Authoritative contract
@@ -59,14 +55,6 @@ approved supporting policies are:
 
 The contract defines four first-phase domestic categories, but it does not
 enable four ordinary calculation paths:
-
-The current-release credit/debit-note contract is maintained separately in the
-[GST Credit and Debit Note Engineering
-Contract](./gst-credit-debit-note-engineering-contract.md). Its
-CDN-01-CDN-27 coverage and implementation/acceptance status are not part of
-the 25-row DGM-T25 denominator below. T25-12 remains a scope reference only:
-no note workflow implementation, runtime evidence, independent acceptance, or
-production authorization is claimed.
 
 | Category | Required facts | Purchase applicability | Sales applicability | Expected components | Contract status |
 |---|---|---|---|---|---|
@@ -142,7 +130,7 @@ blocked policy to an approved operational workflow.
 | DGM-T22 | Snapshot-first historical reprint behavior | `scripts/gst-application-e2e-runner.mjs`; `gst-calculator.test.ts`; prior GST-016 evidence | `VERIFIED PASS — CURRENT CAMPAIGN` | Current run verified persisted snapshots and immutable finalized invoice mutation rejection |
 | DGM-T23 | Overseas/SEZ/Deemed Export/UIN categories fail closed | `treatment.ts` and treatment contract | `VERIFIED PASS — CURRENT CAMPAIGN` | These future categories remain deferred; no calculation is claimed |
 | DGM-T24 | Incomplete legacy purchase draft remains held, not silently posted | `purchases.actions.ts`; `scripts/gst-application-e2e-runner.mjs` | `VERIFIED PASS — CURRENT CAMPAIGN` | Current run rejected finalization and verified no status, revision, sequence, posting, stock, or ledger mutation |
-| DGM-T25 | Precision and rounding policy acceptance | `0007-gst-rounding-precision-policy.md`; `0009-gst-precision-rounding-engineering-contract.md`; `src/lib/decimal.ts`; calculator tests | `BLOCKED — POLICY` | Exact-decimal implementation and focused tests are complete for the demonstrated paths; T25-12 note scope is approved for the current release, but note implementation is absent and Section 170, e-invoice, Section 34(2), reporting, ITC-reversal, and other statutory/accounting boundaries require qualified confirmation |
+| DGM-T25 | Precision and rounding policy acceptance | `0007-gst-rounding-precision-policy.md`; `0009-gst-precision-rounding-engineering-contract.md`; `src/lib/decimal.ts`; calculator tests | `BLOCKED — OWNER APPROVAL` | Exact-decimal implementation and focused tests are complete for the demonstrated paths; the detailed 12-point owner matrix is pending, and Section 170/e-invoice/statutory boundaries require qualified professional confirmation |
 
 ## 4. Purchase acceptance results
 
@@ -224,13 +212,11 @@ not accept UTGST calculation.
 ## 9. Precision and rounding
 
 DGM-T25 engineering implementation is complete for the demonstrated calculator
-boundaries, but the criterion remains `BLOCKED — POLICY` and is not
-independently accepted. T25-12 is current-release scope approved, but no
-credit/debit-note workflow, model, or runtime path exists:
+boundaries, but the criterion remains `BLOCKED — OWNER APPROVAL` and is not
+independently accepted:
 
-- **Owner decision:** T25-12 current-release scope is recorded as
-  `CURRENT RELEASE SCOPE APPROVED — IMPLEMENTATION/TEST/RUNTIME/ACCEPTANCE
-  UNVERIFIED` in
+- **Owner decision:** The detailed 12-point matrix is recorded as
+  `PENDING OWNER APPROVAL` in
   [`0009-gst-precision-rounding-engineering-contract.md`](../decisions/0009-gst-precision-rounding-engineering-contract.md).
 - **Exact arithmetic:** `src/lib/decimal.ts` uses coefficient/scale decimal
   arithmetic; sales and purchase calculators use it without binary
@@ -260,7 +246,7 @@ credit/debit-note workflow, model, or runtime path exists:
 | Commercial `Round_Off_Amount` separation | `Implemented and tested` | Purchase and sales paths persist `round_off` separately; taxable values and GST components are calculated independently and are not changed by the commercial adjustment |
 | Independent CGST, SGST/UTGST, and IGST | `Implemented and tested` | CGST, SGST, and IGST are calculated and persisted independently in the supported sales/purchase paths. UTGST remains explicitly unsupported and is not a current-release implementation claim |
 | Supplier-declared purchase values and issued sales values | `Implemented and tested` | Purchase declared/calculated/accepted facts and raw source values remain separate; finalized sales values and tax/supply snapshots are persisted. This does not replace a fresh database campaign for T25 |
-| Original credit/debit-note references and adjustments | `Not implemented / no supported workflow` | No credit-note or debit-note calculation/workflow/model exists in the current release. T25-12 is current-release scope approved for supplier issuance and recipient-side processing, so absence is not a scope exclusion or verified pass; no speculative subsystem was added |
+| Original credit/debit-note references and adjustments | `Not implemented / no supported workflow` | No credit-note or debit-note calculation/workflow/model exists in the current release. Credit/debit notes are listed as deferred product scope, but no explicit owner approval of a T25-12 current-release exclusion was found; this is not a verified pass and no speculative subsystem was added |
 
 The number-conversion findings are evidence about separate boundaries, not a
 claim that every two-decimal value is universally lossless. The existing
@@ -381,10 +367,8 @@ Root causes addressed:
 No UTGST support, new rate, schema, RLS policy, permission, credit/debit-note
 path, or e-invoice calculation path was added. The acceptance and tracker
 documents are evidence updates, not policy substitutions. The detailed T25
-contract is implemented for the tested calculator paths. T25-12 is
-current-release scope approved, but the note path remains unimplemented and
-the remaining statutory/accounting boundaries require professional
-confirmation.
+contract is implemented for the tested calculator paths but remains pending
+owner approval and professional confirmation.
 
 ## 13. Remaining blockers and non-claims
 
@@ -419,12 +403,9 @@ confirmation.
   present; the advanced stale acceptance-revision guard is not implemented and
   its targeted runtime/independent acceptance is not claimed.
 - **DGM-T25:** exact-decimal engineering is implemented for the demonstrated
-  paths; the integration boundaries are classified in §9.1. T25-12 is
-  current-release scope approved for supplier issuance and recipient-side
-  processing, but no note workflow is implemented or runtime verified.
-  Section 170, e-invoice, Section 34(2), reporting, ITC-reversal, and other
-  statutory/accounting obligations remain subject to qualified professional
-  confirmation.
+  paths; the eight integration boundaries are classified in §9.1. Detailed
+  owner sign-off remains pending, and Section 170/e-invoice/statutory
+  obligations remain subject to qualified professional confirmation.
 - **Runtime verification:** no new runtime/database campaign was run for this
   documentation-only audit; prior restricted-runtime evidence remains
   target-bound and does not close T25.
