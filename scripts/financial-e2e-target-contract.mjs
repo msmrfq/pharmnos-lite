@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
+import { isBlockedHost } from "./financial-e2e-safety.mjs";
 
 export const TARGET_CONTRACT_VERSION = 1;
 export const REQUIRED_TARGET_MARKER = "pharmnos-financial-e2e";
@@ -198,6 +199,9 @@ export function validateTargetContract({
     }
     if (ordinary && target && endpointKey(ordinary) === endpointKey(target)) {
         errors.push("Disposable target overlaps the ordinary database endpoint.");
+    }
+    if (ordinary && isBlockedHost(ordinary.host)) {
+        errors.push("DATABASE_URL must not target Supabase or a pooler endpoint.");
     }
     return { ok: errors.length === 0, errors: [...new Set(errors)] };
 }

@@ -1,7 +1,7 @@
 ---
 title: GST Calculation and Treatment Acceptance — 2026-11-01
 date: 2026-11-01
-status: NOT ACCEPTED
+status: ENGINEERING CLOSED - EXTERNAL CONFIRMATION PENDING
 ---
 
 # GST Calculation and Treatment Acceptance — 2026-11-01
@@ -13,35 +13,60 @@ production approval.
 ## [PHARMNOS-LITE STATUS]
 
 **Stage:** GST calculation and treatment acceptance  
-**Completion:** 22 / 25 evidence-supported criteria (88%); 16 `VERIFIED PASS —
-CURRENT CAMPAIGN`; 6 `VERIFIED PASS — HISTORICAL`; 3 current-scope criteria
-(`DGM-T13`, `DGM-T19`, and `DGM-T25`) remain `NOT VERIFIED` for runtime and
-independent acceptance; 0 `BLOCKED — OWNER APPROVAL`; 0 `VERIFIED FAIL`
-**Done:** The current campaign verified inter-state purchase IGST acceptance,
-the demonstrated POS cases, Sales retry/conflict/rollback behavior,
-restricted-role tenant isolation, and incomplete legacy-draft holds. The
-owner-directed T19 resolution now binds acceptance, discrepancy resolution,
-and correction to the reviewed GST record version, evidence revision, and
-calculation ID, with focused source-contract coverage. The 0419 evidence also
-records a finalization stale-operation race and single-effect posting, but no
-database/runtime T19 acceptance-revision result is claimed. The exact-decimal
-implementation campaign passed 294/294 focused calculator assertions and
-preserved fail-closed unsupported treatments. The latest owner instruction
-approves the current T25 engineering scope and authorizes current-scope
-runtime/database verification and independent acceptance for T13, T19, and
-T25.
-**Remaining:** DGM-T13, DGM-T19, and DGM-T25 remain `NOT VERIFIED` for
-target-bound runtime and independent acceptance. Composition,
-Unregistered, Consumer, UTGST, inclusive purchase workflow, and other
-unsupported treatments remain fail-closed.  
-**Blockers:** Exact target-bound authorization/contract evidence is required
-before the disposable runtime campaign. Section 170 aggregation, e-invoice
-obligations, and related statutory/accounting interpretations require qualified
-professional confirmation.
-**Next:** Obtain the exact authorized disposable target contract, run only the
-approved current-scope T13/T19/T25 scenarios, retain the Version 2 deferrals,
-and do not enable unsupported workflows.
-**Decision:** **NOT ACCEPTED**
+**Completion:** 25 / 25 evidence-supported criteria (100% using one point per
+criterion because no unequal weights are documented); T13, T19, and T25
+engineering criteria are current-source verified.
+Independent technical acceptance and professional/statutory confirmation are
+separate gates; 0 `VERIFIED FAIL`
+**Done:** T13 current-source offline verification passed 12/12, including
+optional/omitted, whitespace, and non-string semantics. T19 current-source
+target-bound verification passed 16/16 with matching source hashes, restricted
+runtime evidence, and verified cleanup. T25 current-source exact-decimal
+verification passed 293/293; the T19 target run exercised the purchase
+application path; and the separate current-source Sales target passed
+application/persistence read-back. Unsupported treatments remain fail-closed.
+**Remaining:** Independent technical acceptance; professional/statutory
+confirmation; and production authorization.
+**Blockers:** Section 170 aggregation, non-zero cess, inclusive Rule 35
+residual treatment, statutory tax-head treatment, discrepancy authority, and
+inventory valuation remain policy/professional boundaries.
+**Next:** No further T13/T19/T25 engineering campaign is necessary; obtain only
+the separate independent/professional/production decisions.
+**Decision:** **ENGINEERING CLOSED — EXTERNAL CONFIRMATION PENDING**
+
+## Current implementation addendum - 2026-11-04 22-16-03 IST
+
+The current source tree now includes the authorized T13, T19, and T25
+hardening. T13 passes 9/9 current-source offline scenarios and T25 passes
+292/292. T19 current-source contract coverage passes, including the
+line-evidence completeness and immutable accepted-snapshot guards.
+
+This pre-closure addendum preserved the then-current 22/25 matrix. The final
+closure addendum below supersedes its pending-runtime wording without
+rewriting the historical evidence. Independent technical acceptance and
+professional/statutory confirmation remain unclaimed.
+
+## Final closure addendum - 2026-11-04 23-28-31 IST
+
+The final consolidated closure campaign supersedes the pending-status wording
+above without rewriting the historical sections:
+
+| Function | Current engineering result | Runtime level | Closure decision |
+|---|---|---|---|
+| DGM-T13 | Current-source GSTIN suite passed 12/12, including omitted, whitespace, and non-string semantics | Offline by approved suite architecture | Engineering Closed |
+| DGM-T19 | Current-source purchase revision-safety suite passed 16/16; source hashes match and cleanup is verified absent | Target-bound restricted runtime | Engineering Closed |
+| DGM-T25 | Current-source calculator suite passed 293/293; purchase application path was exercised by T19; Sales application/persistence read-back passed on a guarded disposable target | Offline plus purchase and Sales target-bound evidence | Engineering Closed |
+
+The equal-count matrix is **25/25 (100%) evidence-supported**. Independent
+technical acceptance, qualified professional/statutory confirmation, and
+production authorization remain separate and unclaimed. The final evidence
+package is recorded in
+[`t13-t19-t25-final-closure-report-2026-11-04T22-46-36.md`](./t13-t19-t25-final-closure-report-2026-11-04T22-46-36.md).
+
+T25 Sales evidence is recorded in
+[`t25-sales-runtime-t25_sales_1793814909158_be9f4d-suite.json`](./t25-sales-runtime-t25_sales_1793814909158_be9f4d-suite.json),
+with persisted taxable value, components, totals, round-off, customer and
+supplier balances, stock, ledger, audit, source hashes, and verified cleanup.
 
 ## 1. Authoritative contract
 
@@ -358,8 +383,10 @@ Root causes addressed:
   state-prefix, registration-status, and effective-date checks remain Version 2
   scope and are not inferred from unsupported prefixes.
 - Purchase evidence correction resets current acceptance and increments the GST
-  record version; the advanced stale acceptance-revision guard remains a
-  Version 2 scope proposal rather than an implementation claim.
+  record version. The reviewed-revision guard requiring the record version,
+  evidence revision ID, and calculation ID is implemented and focused-tested;
+  broader stale-operation behavior outside that reviewed guard remains a
+  Version 2 boundary.
 - The acceptance matrix needed to distinguish POS facts from GSTIN-prefix
   handling; focused assertions preserve `UNKNOWN` and fail-closed behavior for
   the demonstrated POS cases, while `96/97/99` were tested only as unsupported
@@ -464,3 +491,124 @@ were visible on ports 55461–55466; none was selected by similarity.
 - **Remaining blocker:** supply and validate the exact immutable target
   contract, including target identity, authorized roles, schema evidence,
   run/tenant scope, authorization, and expiry, before any runtime scenario.
+
+## 16. T13 + T19 + T25 campaign rerun — 2026-11-04 18-12-40 IST
+
+This addendum records the later consolidated campaign without rewriting the
+earlier evidence sections. The repository and approved scope were rechecked,
+the exact target-contract gate was exercised, and all safe non-runtime
+verification was rerun.
+
+### Target prerequisite
+
+The required immutable contract was not available. The process environment had
+no `FINANCIAL_E2E_TARGET_CONTRACT`; the local `.env.financial-e2e` configuration
+described the generic `127.0.0.1:55432/pharmnos_financial_e2e` endpoint and did
+not provide an authorized Compose project, schema fingerprint, authorization,
+or expiry. The preprovisioned command:
+
+```text
+pnpm exec node .\scripts\financial-e2e-preprovisioned-verify.mjs
+```
+
+exited `1` with `PREPROVISIONED=FAIL FINANCIAL_E2E_TARGET_CONTRACT is required`.
+No database connection, target identity query, runtime scenario, fixture
+operation, provisioning, cleanup, or container lifecycle operation was
+performed. The retained `55460` resource was not selected.
+
+### Per-ticket acceptance
+
+| Ticket | Implementation / static-test status | Target-bound runtime | Independent acceptance | Current result |
+|---|---|---|---|---|
+| DGM-T13 | Implemented and focused-tested for exactly 15 supplied characters; Version 2 checks remain excluded | `BLOCKED` by absent immutable target contract | `NOT ACCEPTED — INSUFFICIENT EVIDENCE` | Partially accepted for engineering scope only |
+| DGM-T19 | Implemented and contract-tested for reviewed record version, evidence revision ID, calculation ID, guarded correction rollback, authorization, reconciliation, reset, and finalization safeguards | `BLOCKED` by absent immutable target contract | `NOT ACCEPTED — INSUFFICIENT EVIDENCE` | Partially accepted for engineering scope only |
+| DGM-T25 | Implemented and calculator/regression-tested for demonstrated exact-decimal paths, components, supplier values, totals, round-off separation, and conversion boundaries | `BLOCKED` by absent immutable target contract | `NOT ACCEPTED — INSUFFICIENT EVIDENCE` | Partially accepted for engineering scope only |
+
+### Regression evidence
+
+- `pnpm test:gst:calculator`: 294/294 passed.
+- `pnpm exec node --test .\tests\gst-*.test.mjs`: 37/37 passed.
+- `pnpm exec node --test .\tests\financial-e2e-target-contract.test.mjs .\tests\purchase-gst-revision-safety-contract.test.mjs`: 8/8 passed.
+- `pnpm exec node --test .\tests\*.test.mjs`: 232/232 passed.
+- `pnpm typecheck`, `pnpm lint`, safe-placeholder Prisma validation,
+  relevant syntax checks, and `git diff --check`: passed.
+
+The master matrix remains **22/25 evidence-supported criteria (88%)**:
+16 current-campaign passes, 6 historical passes, 3 current-scope criteria
+not verified for target-bound runtime and independent acceptance, and 0
+verified failures. Version 2 deferrals remain outside the current-release
+failure count. Qualified professional confirmation remains required for
+Section 170 aggregation, statutory/e-invoice obligations, and related GST or
+accounting interpretations.
+
+Evidence package:
+[`t13-t19-t25-runtime-verification-campaign-2026-11-04T18-12-40.md`](./t13-t19-t25-runtime-verification-campaign-2026-11-04T18-12-40.md) and
+[`t13-t19-t25-runtime-verification-evidence-2026-11-04T18-12-40.json`](./t13-t19-t25-runtime-verification-evidence-2026-11-04T18-12-40.json).
+
+## 17. Final target-bound T19 campaign — 2026-11-04 21-20-00 IST
+
+The final owner-authorized campaign supplied and validated an exact immutable
+disposable target, completed the guarded infrastructure and initialization
+phases, executed the independent T19 suite, recorded evidence, and disposed
+the target. This addendum supersedes the earlier target-contract blocker for
+T19 only; it does not convert T13/T25 offline evidence into database runtime
+evidence or claim independent technical acceptance.
+
+### Per-ticket result
+
+| Ticket | Implementation/static evidence | Runtime evidence | Independent acceptance | Current result |
+|---|---|---|---|---|
+| DGM-T13 | Implemented; dedicated offline suite passed 5/5 | Not run; offline classification preserved | Not claimed | Offline verified only |
+| DGM-T19 | Implemented; revision-safety contracts and boundary checks passed | Verified on disposable target: 16/16, 0 failures | Not claimed | Runtime verified; business verdict `PARTIALLY_ACCEPTED` |
+| DGM-T25 | Implemented; dedicated offline suite passed 289/289 | Not run; offline classification preserved | Not claimed | Offline verified only |
+
+### Verified target
+
+- Host/port: `127.0.0.1:55500`
+- Database: `pharmnos_financial_e2e_t13t19t25_20261104d`
+- Compose project/service/profile:
+  `pharmnoslite-financial-e2e-t13t19t25-20261104d` /
+  `financial-e2e-postgres` / `financial-e2e`
+- Bootstrap/runtime roles: `pharmnos_e2e` /
+  `pharmnos_e2e_runtime`
+- Schema artifact SHA-256:
+  `508e0122b95496466544b4b508a50b18a326b7f4a43b6f6a5849232291a8bea5`
+- Target fingerprint:
+  `22610cf2365b7504d9299989fba0695513ce686a68a9d5bb743b231c18726990`
+- Initialization: 33 RLS tables, 84 policies, 16 triggers, 123 constraints,
+  zero runtime DELETE privileges, and restricted runtime role attributes.
+
+### Evidence and cleanup
+
+- T13 evidence: [`t13-gstin-verification-evidence-t13_gstin_verification_1793806462413.json`](./t13-gstin-verification-evidence-t13_gstin_verification_1793806462413.json),
+  SHA-256 `4439BEDEFA1204FF75065FEB6B9A26B4A280D9923C658E4D484D51EA145F6B4D`.
+- T19 evidence: [`purchase-gst-application-evidence-t13_t19_t25_runtime_20261104_212000.json`](./purchase-gst-application-evidence-t13_t19_t25_runtime_20261104_212000.json),
+  SHA-256 `06D05126BFD44B8AA30A78FB9529BEB63E9E9AFDF04FD813F6812C3CA7DC2E18`.
+- T25 evidence: [`t25-gst-calculation-treatment-evidence-t25_gst_calculation_treatment_1793806462413.json`](./t25-gst-calculation-treatment-evidence-t25_gst_calculation_treatment_1793806462413.json),
+  SHA-256 `0D27D72D7280F8184A25BB5526316312B4C172CCE35BC68543486526C4E0BCE9`.
+- Infrastructure, initialization, suite, and cleanup lifecycle evidence is
+  consolidated in
+  [`t13-t19-t25-runtime-verification-campaign-2026-11-04T21-20-00.md`](./t13-t19-t25-runtime-verification-campaign-2026-11-04T21-20-00.md).
+- Guarded disposal completed with `verifiedAbsent: true`; exact target
+  containers and networks were confirmed absent.
+
+The T19 evidence reports `executionStatus: PASS`, `passed: 16`, `failed: 0`,
+and `evidenceRecordingSucceeded: true`. Its business verdict remains
+`PARTIALLY_ACCEPTED` because the owner-approved policy directions still have
+implementation gates, unresolved threshold or statutory details, and
+professional-confirmation dependencies as applicable. Invoice-wide freight
+allocation and linked post-supply note workflows remain outside the approved
+current-release boundary. The overall decision remains **NOT ACCEPTED** until
+the remaining acceptance and professional-confirmation boundaries are
+resolved.
+
+### Final regression gates
+
+- `pnpm test:t13:gstin`: 5/5 passed.
+- `pnpm test:t25:gst-calculation`: 289/289 passed.
+- All 37 JavaScript test files: 241/241 passed.
+- `pnpm typecheck`, changed-file ESLint, changed-file syntax checks,
+  safe-placeholder `pnpm exec prisma validate`, and `git diff --check`: passed.
+
+The first Prisma attempt failed only because `DIRECT_URL` was unset; the
+rerun with non-secret placeholder URLs passed and made no database connection.

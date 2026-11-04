@@ -1,0 +1,129 @@
+{
+  "evidenceVersion": 1,
+  "campaign": "t13-t19-t25-continuous-closure",
+  "runId": "t13_t19_t25_continuous_closure_20261104_204054",
+  "recordedAt": "2026-11-04T20:40:54+05:30",
+  "classification": "SAFE_NON_RUNTIME_VERIFICATION",
+  "databaseAccessed": false,
+  "targetBound": false,
+  "target": {
+    "contractStatus": "ABSENT",
+    "contractRequired": true,
+    "identityEstablished": false,
+    "dockerReadOnlyInspection": "UNAVAILABLE_DAEMON_NOT_RUNNING",
+    "selectionByPortOrName": false
+  },
+  "preflight": {
+    "command": "pnpm exec node .\\scripts\\financial-e2e-preprovisioned-verify.mjs",
+    "status": "BLOCKED",
+    "exitCode": 1,
+    "result": "PREPROVISIONED=FAIL FINANCIAL_E2E_TARGET_CONTRACT is required."
+  },
+  "suites": [
+    {
+      "function": "DGM-T13",
+      "suite": "t13-gstin-verification",
+      "command": "pnpm test:t13:gstin",
+      "classification": "OFFLINE",
+      "databaseAccessed": false,
+      "targetBound": false,
+      "runId": "t13_gstin_verification_1793804954523",
+      "status": "PASS",
+      "passed": 5,
+      "failed": 0,
+      "total": 5,
+      "evidenceFile": ".obsidian-vault/specs/t13-gstin-verification-evidence-t13_gstin_verification_1793804954523.json",
+      "evidenceSha256": "0CF31897099B368331262E00BDABC822FEE440676ACAEE5359F29841901F4CCB"
+    },
+    {
+      "function": "DGM-T19",
+      "suite": "t19-purchase-gst-revision-safety",
+      "command": "pnpm test:t19:purchase-gst",
+      "classification": "TARGET_BOUND_REQUIRED_BUT_BLOCKED",
+      "databaseAccessed": false,
+      "targetBound": true,
+      "status": "BLOCKED_BEFORE_CONNECTION",
+      "passed": 0,
+      "failed": 0,
+      "total": 0,
+      "gateResult": "FINANCIAL_E2E_TARGET_CONTRACT is required.",
+      "evidenceFile": null
+    },
+    {
+      "function": "DGM-T25",
+      "suite": "t25-gst-calculation-treatment",
+      "command": "pnpm test:t25:gst-calculation",
+      "classification": "OFFLINE",
+      "databaseAccessed": false,
+      "targetBound": false,
+      "runId": "t25_gst_calculation_treatment_1793804954519",
+      "status": "PASS",
+      "passed": 289,
+      "failed": 0,
+      "total": 289,
+      "evidenceFile": ".obsidian-vault/specs/t25-gst-calculation-treatment-evidence-t25_gst_calculation_treatment_1793804954519.json",
+      "evidenceSha256": "3989FF27EEE46621F2AA4E6D434832C02EB1A425CF32DAC63BF499A50C72F26D"
+    }
+  ],
+  "contractVerification": {
+    "command": "pnpm exec node --test .\\tests\\t13-t19-t25-suite-boundary.test.mjs .\\tests\\financial-e2e-target-contract.test.mjs .\\tests\\financial-e2e-target-lifecycle.test.mjs .\\tests\\financial-e2e-compose.test.mjs .\\tests\\purchase-gst-revision-safety-contract.test.mjs",
+    "passed": 26,
+    "failed": 0,
+    "total": 26,
+    "classification": "STATIC_AND_MOCKED_LIFECYCLE_ONLY"
+  },
+  "regressionVerification": [
+    {
+      "command": "pnpm exec node --test .\\tests\\*.test.mjs",
+      "status": "PASS",
+      "passed": 240,
+      "failed": 0,
+      "total": 240
+    },
+    {
+      "command": "pnpm typecheck",
+      "status": "PASS"
+    },
+    {
+      "command": "pnpm lint",
+      "status": "PASS"
+    },
+    {
+      "command": "pnpm exec prisma validate with isolated placeholder DATABASE_URL and DIRECT_URL",
+      "status": "PASS",
+      "databaseAccessed": false
+    },
+    {
+      "command": "node --check on relevant campaign scripts",
+      "status": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "status": "PASS"
+    }
+  ],
+  "acceptance": {
+    "DGM-T13": {
+      "engineering": "VERIFIED_OFFLINE",
+      "targetBoundRuntime": "NOT_VERIFIED",
+      "ownerBusiness": "NOT_ACCEPTED",
+      "independentTechnical": "NOT_ACCEPTED"
+    },
+    "DGM-T19": {
+      "engineering": "VERIFIED_STATIC_ONLY",
+      "targetBoundRuntime": "NOT_VERIFIED",
+      "ownerBusiness": "NOT_ACCEPTED",
+      "independentTechnical": "NOT_ACCEPTED"
+    },
+    "DGM-T25": {
+      "engineering": "VERIFIED_OFFLINE",
+      "targetBoundRuntime": "NOT_VERIFIED",
+      "ownerBusiness": "NOT_ACCEPTED",
+      "independentTechnical": "NOT_ACCEPTED",
+      "professionalConfirmation": "REQUIRED_FOR_STATUTORY_AND_ACCOUNTING_BOUNDARIES"
+    }
+  },
+  "productionAuthorization": "NOT_GRANTED",
+  "credentialsRecorded": false,
+  "mutationsPerformed": false
+}

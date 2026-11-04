@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normalizeState } from "@/lib/constants/indian-states";
+import { GSTIN_FORMAT_MESSAGE, INDIAN_GSTIN_REGEX } from "@/lib/validation/gstin";
 
 export const businessProfileStateSchema = z
   .string()
@@ -32,7 +33,7 @@ export const businessProfileSchema = z.object({
   country: z.string().default("India"),
   gstin: z
     .string()
-    .regex(/^[0-9A-Z]{15}$/, "GSTIN must contain exactly 15 alphanumeric characters")
+    .regex(INDIAN_GSTIN_REGEX, GSTIN_FORMAT_MESSAGE)
     .optional()
     .or(z.literal("")),
   pan: z
@@ -66,7 +67,7 @@ export const onboardingBusinessSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and dashes"),
   gstin: z
     .string()
-    .regex(/^[0-9A-Z]{15}$/, "GSTIN must contain exactly 15 alphanumeric characters")
+    .regex(INDIAN_GSTIN_REGEX, GSTIN_FORMAT_MESSAGE)
     .optional()
     .or(z.literal("")),
   city: z.string().optional(),

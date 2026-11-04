@@ -803,8 +803,11 @@ The HSN catalog acceptance contract additionally requires:
 ## 19. Tax calculation and precision contract
 
 The following is the required calculation order. Numeric examples are
-illustrative only; the precision and statutory rounding policy remain blocked
-until approved.
+illustrative only. The owner-approved T25 engineering boundary covers exact
+decimal arithmetic, preserved intermediate precision, independent components,
+and separate commercial round-off for the demonstrated paths. The legally
+applicable Section 170 boundary, unsupported purchase workflows, and
+professional confirmation remain separate gates.
 
 1. Validate tenant, actor, treatment, transaction direction, dates, source
    revisions, product classification, and required seller/recipient/supply
@@ -834,27 +837,40 @@ until approved.
 
 ### 19.1 Precision decisions
 
-The following are explicit blockers rather than guessed policy:
+The following are engineering and confirmation boundaries, not guessed policy:
 
-- **Representation/storage:** purchase design proposes raw source strings plus
-  parsed `Decimal(20,4)` values; existing sales/purchase monetary fields use
-  narrower Prisma decimals. The final precision/scale must be approved and
-  applied consistently.
-- **Intermediate arithmetic:** authoritative calculation must use a decimal
-  strategy; JavaScript floating-point values must not be the financial source
-  of truth.
-- **Discount order:** current sales behavior is percentage discount before GST;
-  purchase line and fixed-discount semantics require approval.
-- **Inclusive extraction:** choose per-line or invoice-level extraction for
-  mixed rates; per-line is the safer proposed contract but is not approved.
-- **Rounding:** choose component, line-total, invoice-total, and round-off
-  order from an authoritative accounting/GST policy.
+- **Representation/storage:** the T25 contract uses exact-decimal arithmetic
+  for demonstrated paths and preserves source representations where available.
+  Existing service and form boundaries still expose JavaScript `number` values,
+  and PostgreSQL `NUMERIC(20,4)` storage is a separate guarantee. Universal
+  losslessness is not claimed.
+- **Intermediate arithmetic:** the owner-approved engineering contract keeps
+  financial arithmetic on the shared decimal boundary rather than JavaScript
+  binary floating-point operations.
+- **Discount order:** explicit line discounts remain supported where supplied;
+  invoice-wide, unallocated, and post-supply discount cases remain blocked
+  until their governed workflows exist.
+- **Inclusive extraction:** the owner-approved direction requires a distinct
+  Rule 35 extraction path, preserved supplier amounts, mixed-rate
+  reconciliation, and residual adjustments. The purchase workflow remains
+  gated until that implementation and evidence exist.
+- **Rounding:** decisions `0007` and `0009` approve the demonstrated engineering
+  direction, including explicit precedence and separate commercial round-off.
+  The legally applicable Section 170 aggregation boundary and tax-head
+  treatment still require qualified confirmation.
 - **Display:** display precision must not change persisted precision.
 
-Required approval: accounting/GST owner and qualified GST reviewer must provide
-the precision, rounding, inclusive extraction, discount, and adjustment policy.
-Until then, ordinary current sales arithmetic is `EXISTING` behavior only and
-cannot be promoted to the complete modernization contract.
+The owner-approved policy records establish product direction. They do not
+replace implementation evidence, unresolved threshold decisions, or qualified
+professional confirmation.
+
+### 19.2 Current reconciliation boundary
+
+The current T13/T19/T25 scope, policy classifications, Version 2 deferrals,
+and remaining decisions are maintained in the
+[current-release scope baseline](./t13-t19-t25-current-release-scope-baseline-2026-11-04T21-32-19.md).
+That baseline supersedes only the current-status wording in this section. It
+does not rewrite historical acceptance records or expand the approved scope.
 
 ## 20. Sales lifecycle and state contract
 
@@ -1027,7 +1043,7 @@ explicitly blocked rather than given an invented expected tax result.
 | `DGM-T16` | Purchase finalization retry | Same idempotency key and unchanged payload | Same safe result; changed payload rejected | Existing source contract; runtime blocked |
 | `DGM-T17` | Purchase reconciliation | Declared/calculated equal, missing, invalid, and differing fields | Correct reconciliation state; source evidence unchanged | Existing pure contract; runtime blocked |
 | `DGM-T18` | Unauthorized acceptance | Actor lacks acceptance permission or active membership | Acceptance rejected; no decision/status mutation | Existing source contract; DB proof blocked |
-| `DGM-T19` | Stale purchase revision | Evidence correction and posting after current evidence/calculation changes | Acceptance, discrepancy resolution, and correction require the reviewed record version, evidence revision, and calculation ID; stale correction child writes roll back; finalization requires current accepted evidence, calculation, decision, and line snapshots | `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`; current reviewed-revision guard is implemented and focused-tested; runtime and independent acceptance remain separate |
+| `DGM-T19` | Stale purchase revision | Evidence correction and posting after current evidence/calculation changes | Acceptance, discrepancy resolution, and correction require the reviewed record version, evidence revision, and calculation ID; stale correction child writes roll back; finalization requires current accepted evidence, calculation, decision, and line snapshots; acceptance requires complete line evidence and immutable accepted line snapshots | `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`; current guard is implemented and contract-tested; historical target-bound 16/16 evidence predates the latest hardening, so current-source runtime and independent acceptance remain separate |
 | `DGM-T20` | Atomic rollback | Inject stock/ledger/sequence failure during sales/purchase finalization | No partial invoice, stock, ledger, sequence, or audit effects | Financial E2E blocked |
 | `DGM-T21` | Tenant isolation | Tenant A attempts read/write of tenant B facts | Zero rows or denied write under ordinary non-BYPASSRLS role | RLS/database execution blocked |
 | `DGM-T22` | Historical reprint | Mutate current master after complete finalization | Print remains snapshot-identical; legacy fallback is disclosed | Runtime/database blocked |
@@ -1051,12 +1067,16 @@ The approved T19 scope remains `CURRENT RELEASE SCOPE APPROVED — VERSION 2
 DEFERRED`. The owner-directed T19 resolution implements the reviewed-revision
 guard in the current engineering path. Acceptance, discrepancy resolution, and
 correction require the current record version, evidence revision, and
-calculation ID; correction rolls back its child writes if the guarded parent
-update loses the revision race. Existing authorization, acceptance-reset,
-reconciliation, and finalization safeguards remain required. Focused source
-tests pass, but runtime verification and independent acceptance remain separate
-and are not claimed. Broader stale-operation behavior outside the reviewed
-revision tokens remains a Version 2 boundary.
+calculation ID; acceptance also requires complete current line evidence and
+immutable accepted snapshots for every line; correction rolls back its child
+writes if the guarded parent update loses the revision race. Existing
+authorization, acceptance-reset, reconciliation, and finalization safeguards
+remain required. Current source-contract tests pass. The final 2026-11-04
+21-20-00 campaign recorded 16/16 target-bound scenarios for an earlier source
+snapshot; because its source hashes predate this hardening, current-source
+runtime verification remains open. Independent acceptance is separate and is
+not claimed. Broader stale-operation behavior outside the reviewed revision
+tokens remains a Version 2 boundary.
 
 ### 26.2 Version 2 deferred-scope register
 
@@ -1067,10 +1087,10 @@ implementation failures:
   release; defer checksum, state-prefix, registration-status, and effective-date
   verification to Version 2.
 - **DGM-T19:** retain `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`.
-  The reviewed-revision guard is implemented and focused-tested in the current
-  engineering path. Runtime verification and independent acceptance remain
-  open; broader stale-operation behavior outside the reviewed revision tokens
-  is not enabled.
+  The reviewed-revision and line-snapshot guards are implemented and
+  focused-tested. Historical target-bound evidence is retained but current
+  source runtime verification and independent acceptance remain open; broader
+  stale-operation behavior outside the reviewed revision tokens is not enabled.
 
 The shared exact-decimal implementation and focused arithmetic tests are
 recorded in

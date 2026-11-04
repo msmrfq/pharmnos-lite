@@ -25,10 +25,14 @@ function validateResolvedContext(context) {
             "Authenticated tenant context is incomplete.",
         );
     }
-    if (!String(context.tenantId ?? "").trim() || !String(context.userId ?? "").trim()) {
+    if (
+        !String(context.tenantId ?? "").trim() ||
+        !String(context.userId ?? "").trim() ||
+        !String(context.subjectId ?? "").trim()
+    ) {
         throw new FinancialE2eOrchestrationError(
             "INVALID_TENANT_CONTEXT",
-            "Authenticated tenant context must include tenant and user identity.",
+            "Authenticated tenant context must include tenant, user, and subject identity.",
         );
     }
     if (!Array.isArray(context.roles) || !Array.isArray(context.permissions)) {
@@ -79,6 +83,7 @@ export function createApplicationHostedFinancialE2eBoundary({
  *   resolveTenantContext: () => Promise<{
  *     tenantId: string,
  *     userId: string,
+ *     subjectId: string,
  *     membershipId: string,
  *     roles: string[],
  *     permissions: string[],
@@ -86,6 +91,7 @@ export function createApplicationHostedFinancialE2eBoundary({
  *   requirePermission: (context: {
  *     tenantId: string,
  *     userId: string,
+ *     subjectId: string,
  *     membershipId: string,
  *     roles: string[],
  *     permissions: string[],

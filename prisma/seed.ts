@@ -47,6 +47,7 @@ const ROLE_PERMISSION_SETS: Record<SystemRole, PermissionAction[]> = {
     PermissionAction.edit_invoice,
     PermissionAction.view_invoice,
     PermissionAction.finalize_invoice,
+    PermissionAction.create_payment,
     PermissionAction.view_customer_ledger,
     PermissionAction.view_inventory,
   ],

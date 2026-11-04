@@ -1,0 +1,145 @@
+{
+  "evidenceVersion": 1,
+  "campaignId": "t13_t19_t25_runtime_20261104T181240",
+  "startedAt": "2026-11-04T18:12:40+05:30",
+  "stage": "POST-P7 — PRE-PRODUCTION VALIDATION",
+  "scope": [
+    "DGM-T13",
+    "DGM-T19",
+    "DGM-T25"
+  ],
+  "decision": {
+    "outcome": "NOT ACCEPTED",
+    "completion": {
+      "verifiedEvidenceSupportedCriteria": 22,
+      "totalInScopeCriteria": 25,
+      "percentage": 88,
+      "newlyClosedTargetBoundRuntimeCriteria": 0,
+      "newlyClosedIndependentAcceptanceCriteria": 0,
+      "verifiedFailures": 0
+    },
+    "reason": "The non-mutating implementation and regression gates passed, but the exact immutable disposable-target contract was absent. No target-bound runtime or independent acceptance evidence was produced."
+  },
+  "targetGate": {
+    "status": "BLOCKED",
+    "financialE2eTargetContract": "UNSET",
+    "configuredLocalTarget": {
+      "host": "127.0.0.1",
+      "port": 55432,
+      "databaseName": "pharmnos_financial_e2e",
+      "marker": "pharmnos-financial-e2e",
+      "composeProject": "UNSET"
+    },
+    "requiredContractEvidence": [
+      "exact database identity and connection target",
+      "disposable ownership and isolation",
+      "permitted operations and scope",
+      "Compose project/service/profile binding",
+      "schema artifact fingerprint",
+      "authorization time and future expiry"
+    ],
+    "preflight": {
+      "command": "pnpm exec node .\\scripts\\financial-e2e-preprovisioned-verify.mjs",
+      "exitCode": 1,
+      "result": "PREPROVISIONED=FAIL FINANCIAL_E2E_TARGET_CONTRACT is required."
+    },
+    "targetSelected": false,
+    "retained55460Selected": false
+  },
+  "runtime": {
+    "attempted": false,
+    "databaseConnections": 0,
+    "mutations": 0,
+    "migrations": 0,
+    "provisioningOperations": 0,
+    "fixtureOperations": 0,
+    "cleanupOperations": 0,
+    "containerLifecycleOperations": 0,
+    "productionOrLiveSupabaseAccess": false
+  },
+  "verification": [
+    {
+      "command": "pnpm test:gst:calculator",
+      "exitCode": 0,
+      "passed": 294,
+      "failed": 0
+    },
+    {
+      "command": "pnpm exec node --test .\\tests\\gst-*.test.mjs",
+      "exitCode": 0,
+      "passed": 37,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "pnpm exec node --test .\\tests\\financial-e2e-target-contract.test.mjs .\\tests\\purchase-gst-revision-safety-contract.test.mjs",
+      "exitCode": 0,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "pnpm exec node --test .\\tests\\*.test.mjs",
+      "exitCode": 0,
+      "passed": 232,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 0,
+      "result": "passed"
+    },
+    {
+      "command": "pnpm lint",
+      "exitCode": 0,
+      "result": "passed with no warnings or errors"
+    },
+    {
+      "command": "pnpm exec prisma validate with isolated placeholder DATABASE_URL and DIRECT_URL",
+      "exitCode": 0,
+      "result": "schema valid; no database connection"
+    },
+    {
+      "command": "node --check relevant runtime scripts; git diff --check",
+      "exitCode": 0,
+      "result": "passed"
+    }
+  ],
+  "acceptance": {
+    "DGM-T13": {
+      "scope": "Exactly 15 supplied GSTIN characters; Version 2 checks excluded",
+      "implementation": "IMPLEMENTED",
+      "staticTest": "VERIFIED",
+      "runtime": "BLOCKED — TARGET CONTRACT ABSENT",
+      "independentAcceptance": "NOT ACCEPTED — INSUFFICIENT EVIDENCE"
+    },
+    "DGM-T19": {
+      "scope": "Reviewed revision tokens, guarded correction rollback, and approved current safeguards",
+      "implementation": "IMPLEMENTED",
+      "staticTest": "VERIFIED",
+      "runtime": "BLOCKED — TARGET CONTRACT ABSENT",
+      "independentAcceptance": "NOT ACCEPTED — INSUFFICIENT EVIDENCE"
+    },
+    "DGM-T25": {
+      "scope": "Approved demonstrated exact-decimal and treatment engineering paths",
+      "implementation": "IMPLEMENTED",
+      "staticTest": "VERIFIED",
+      "runtime": "BLOCKED — TARGET CONTRACT ABSENT",
+      "independentAcceptance": "NOT ACCEPTED — INSUFFICIENT EVIDENCE",
+      "professionalConfirmation": "REQUIRED for Section 170, e-invoice, and statutory/accounting interpretations"
+    }
+  },
+  "version2Deferrals": [
+    "DGM-T13 checksum, state-prefix, registration-status, and effective-date checks",
+    "DGM-T19 stale-operation behavior outside the reviewed-revision token guard",
+    "DGM-T25 credit/debit-note workflow and e-invoice output"
+  ],
+  "documentation": {
+    "campaignReport": ".obsidian-vault/specs/t13-t19-t25-runtime-verification-campaign-2026-11-04T18-12-40.md",
+    "tracker": ".obsidian-vault/specs/gst-implementation-tracker-2026-10-31.md",
+    "acceptanceRecord": ".obsidian-vault/specs/gst-calculation-treatment-acceptance-2026-11-01.md",
+    "canonicalBriefing": ".obsidian-vault/CLAUDE.md",
+    "dailyLog": ".obsidian-vault/daily/2026-11-04T18-12-40.md"
+  }
+}

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Simple test runner for GST calculator and state normalization
- * Run with: npx tsx tests/gst-calculator.test.ts
+ * T25 GST calculation and treatment suite.
+ * Run with: pnpm test:t25:gst-calculation
  */
 
 import {
@@ -38,6 +38,7 @@ import {
 } from "../src/domain/services/gst-calculator.service";
 import { businessProfileStateSchema } from "../src/lib/validation/tenant.schemas";
 import { businessProfileSchema } from "../src/lib/validation/tenant.schemas";
+import { productEditSchema } from "../src/lib/validation/masters.schemas";
 import { toBusinessProfileUpdate } from "../src/app/_actions/settings.actions";
 import {
   calculatePurchaseInvoiceTotals,
@@ -46,14 +47,29 @@ import {
   extractInclusivePurchaseLineGst,
   roundCommercialInvoiceTotal,
 } from "../src/domain/services/purchase-calculator.service";
-import { PurchaseInvoiceLineCreateSchema } from "../src/lib/validation/purchases.schemas";
+import {
+  PurchaseInvoiceCreateSchema,
+  PurchaseInvoiceLineCreateSchema,
+} from "../src/lib/validation/purchases.schemas";
+import { SalesInvoiceCreateSchema } from "../src/lib/validation/sales.schemas";
 import {
   Decimal,
+  decimalOrZero,
   roundSection170NearestRupee,
 } from "../src/lib/decimal";
 
+type Scenario = {
+  name: string;
+  status: "PASS" | "FAIL";
+};
+
 let passed = 0;
 let failed = 0;
+const scenarios: Scenario[] = [];
+
+function record(name: string, status: Scenario["status"]) {
+  scenarios.push({ name, status });
+}
 
 {
   const finalized = buildInvoicePrintSnapshot(
@@ -97,9 +113,11 @@ function assert(condition: boolean, message: string) {
   if (condition) {
     console.log(`✅ PASS: ${message}`);
     passed++;
+    record(message, "PASS");
   } else {
     console.log(`❌ FAIL: ${message}`);
     failed++;
+    record(message, "FAIL");
   }
 }
 
@@ -108,9 +126,11 @@ function assertEqual(actual: any, expected: any, message: string) {
   if (pass) {
     console.log(`✅ PASS: ${message} (${actual})`);
     passed++;
+    record(message, "PASS");
   } else {
     console.log(`❌ FAIL: ${message} - Expected: ${expected}, Got: ${actual}`);
     failed++;
+    record(message, "FAIL");
   }
 }
 
@@ -119,9 +139,11 @@ function assertClose(actual: number, expected: number, tolerance: number, messag
   if (pass) {
     console.log(`✅ PASS: ${message} (${actual} ≈ ${expected})`);
     passed++;
+    record(message, "PASS");
   } else {
     console.log(`❌ FAIL: ${message} - Expected: ${expected} ± ${tolerance}, Got: ${actual}`);
     failed++;
+    record(message, "FAIL");
   }
 }
 
@@ -156,6 +178,11 @@ assertEqual(
   Decimal.from("10.12").round(2, "HALF_UP").toNumber(),
   10.12,
   "Decimal boundary: an already-rounded two-decimal value serializes to its expected number",
+);
+assertEqual(
+  decimalOrZero({ toString: () => "100.25" }).toString(),
+  "100.25",
+  "Decimal adapter: Prisma Decimal-like values remain exact",
 );
 assertEqual(
   Decimal.from("0.1").toNumber() + Decimal.from("0.2").toNumber(),
@@ -409,49 +436,6 @@ assertEqual(multiLinePurchaseFacts.gross_amount, 200.50, "Purchase facts: multi-
 assertEqual(multiLinePurchaseFacts.round_off, 0.50, "Purchase facts: positive whole-unit round-off");
 assertEqual(multiLinePurchaseFacts.net_amount, 201, "Purchase facts: rounded multi-line net amount");
 
-const lengthOnlyGstinBase = {
-  businessName: "Pharmnos Lite",
-  state: "MH",
-  invoicePrefix: "INV",
-  purchasePrefix: "PUR",
-  nearExpiryDays: "60",
-};
-assert(
-  businessProfileSchema.safeParse({
-    ...lengthOnlyGstinBase,
-    gstin: "27AACXX0000B1ZP",
-  }).success,
-  "DGM-T13: exactly 15 GSTIN characters are accepted",
-);
-assert(
-  businessProfileSchema.safeParse({
-    ...lengthOnlyGstinBase,
-    gstin: "96AACXX0000B1ZP",
-  }).success,
-  "DGM-T13: unsupported GSTIN prefixes are not used as a current-release length failure",
-);
-assert(
-  !businessProfileSchema.safeParse({
-    ...lengthOnlyGstinBase,
-    gstin: "27AACXX0000B1Z",
-  }).success,
-  "DGM-T13: GSTIN shorter than 15 characters is rejected",
-);
-assert(
-  !businessProfileSchema.safeParse({
-    ...lengthOnlyGstinBase,
-    gstin: "27AACXX0000B1ZP0",
-  }).success,
-  "DGM-T13: GSTIN longer than 15 characters is rejected",
-);
-assert(
-  businessProfileSchema.safeParse({
-    ...lengthOnlyGstinBase,
-    gstin: "",
-  }).success,
-  "DGM-T13: optional blank GSTIN remains allowed",
-);
-
 assert(
   PurchaseInvoiceLineCreateSchema.safeParse({
     product_id: "product-1",
@@ -465,6 +449,83 @@ assert(
     sale_rate: "110",
   }).success,
   "Purchase schema: valid line accepted",
+);
+const purchaseSchemaBase = {
+  supplier_id: "supplier-1",
+  gst_treatment: "Registered Business – Regular",
+  tax_mode: "EXCLUSIVE",
+  invoice_date: "2026-11-04",
+  lines: [{
+    product_id: "product-1",
+    batch_no: "BATCH-1",
+    quantity: "1",
+    free_qty: "0",
+    purchase_rate: "100",
+    discount_pct: "0",
+    gst_rate: "18",
+  }],
+};
+const purchaseWithoutEvidence = PurchaseInvoiceCreateSchema.safeParse(purchaseSchemaBase);
+assert(
+  purchaseWithoutEvidence.success &&
+    purchaseWithoutEvidence.data?.declared_taxable_value === null &&
+    purchaseWithoutEvidence.data?.lines?.[0]?.declared_taxable_value === null,
+  "Purchase GST evidence: omitted optional values remain absent",
+);
+const purchaseWithPartialEvidence = PurchaseInvoiceCreateSchema.safeParse({
+  ...purchaseSchemaBase,
+  declared_taxable_value: "125.50",
+  lines: [{
+    ...purchaseSchemaBase.lines[0],
+    declared_taxable_value: "125.50",
+  }],
+});
+assert(
+  purchaseWithPartialEvidence.success &&
+    purchaseWithPartialEvidence.data?.declared_taxable_value === 125.5 &&
+    purchaseWithPartialEvidence.data?.declared_cgst === null &&
+    purchaseWithPartialEvidence.data?.lines?.[0]?.declared_taxable_value === 125.5 &&
+    purchaseWithPartialEvidence.data?.lines?.[0]?.declared_cgst === null,
+  "Purchase GST evidence: partial values preserve supplied fields and absent fields",
+);
+const purchaseWithExplicitZero = PurchaseInvoiceCreateSchema.safeParse({
+  ...purchaseSchemaBase,
+  declared_cgst: "0",
+  lines: [{
+    ...purchaseSchemaBase.lines[0],
+    declared_cgst: "0",
+    declared_line_total: "0",
+  }],
+});
+assert(
+  purchaseWithExplicitZero.success &&
+    purchaseWithExplicitZero.data?.declared_cgst === 0 &&
+    purchaseWithExplicitZero.data?.lines?.[0]?.declared_cgst === 0 &&
+    purchaseWithExplicitZero.data?.lines?.[0]?.declared_line_total === 0,
+  "Purchase GST evidence: explicit numeric zero remains supplied",
+);
+assert(
+  SalesInvoiceCreateSchema.safeParse({
+    customer_id: "customer-1",
+    gst_treatment: "Registered Business – Regular",
+    tax_mode: "EXCLUSIVE",
+    place_of_supply_state: "MH",
+    invoice_date: "2026-11-04",
+    payment_terms_days: "0",
+    is_cash_sale: "false",
+    lines: [{
+      product_id: "product-1",
+      batch_id: "batch-1",
+      batch_no: "BATCH-1",
+      quantity: "1",
+      free_qty: "0",
+      sale_rate: "100",
+      mrp: "100",
+      trade_discount_pct: "0",
+      gst_rate: "18",
+    }],
+  }).success,
+  "Sales schema: valid non-empty line array is accepted",
 );
 assert(
   !PurchaseInvoiceLineCreateSchema.safeParse({
@@ -489,6 +550,40 @@ assert(
     gst_rate: "18",
   }).success,
   "Purchase schema: negative purchase rate rejected",
+);
+assert(
+  !PurchaseInvoiceLineCreateSchema.safeParse({
+    product_id: "product-1",
+    batch_no: "BATCH-1",
+    quantity: "1",
+    free_qty: "0",
+    purchase_rate: "100",
+    discount_pct: "100.01",
+    gst_rate: "18",
+  }).success,
+  "Purchase schema: discount percentages above 100 are rejected",
+);
+assert(
+  !PurchaseInvoiceLineCreateSchema.safeParse({
+    product_id: "product-1",
+    batch_no: "BATCH-1",
+    quantity: "1",
+    free_qty: "0",
+    purchase_rate: "100",
+    discount_pct: "not-a-number",
+    gst_rate: "18",
+  }).success,
+  "Purchase schema: invalid optional decimal input is rejected",
+);
+assert(
+  !productEditSchema.safeParse({
+    sku: "SKU-1",
+    name: "Product",
+    schedule_classification: "OTC",
+    mrp: "100",
+    purchase_rate: "not-a-number",
+  }).success,
+  "Product schema: invalid financial decimal input is rejected",
 );
 
 // Test determinePlaceOfSupply
@@ -952,6 +1047,11 @@ console.log(`Passed: ${passed}`);
 console.log(`Failed: ${failed}`);
 console.log(`Total:  ${passed + failed}`);
 
+const result = { passed, failed, total: passed + failed, scenarios };
+(globalThis as typeof globalThis & {
+  __OFFLINE_SUITE_RESULT__?: typeof result;
+}).__OFFLINE_SUITE_RESULT__ = result;
+
 if (failed > 0) {
-  process.exit(1);
+  throw new Error("T25 GST calculation and treatment suite failed.");
 }

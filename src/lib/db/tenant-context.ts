@@ -6,6 +6,7 @@ import type { PermissionAction, SystemRole } from "@prisma/client";
 export type TenantContext = {
   tenantId: string;
   userId: string;
+  subjectId: string;
   membershipId: string;
   roles: string[];
   permissions: string[];
@@ -17,6 +18,9 @@ export function requireTenant(ctx: Partial<TenantContext> | null | undefined): T
   }
   if (!ctx.userId) {
     throw new Error("User context is required for this operation.");
+  }
+  if (!ctx.subjectId) {
+    throw new Error("Subject context is required for this operation.");
   }
   return ctx as TenantContext;
 }
@@ -43,7 +47,7 @@ export async function establishTenantContext(
 ): Promise<void> {
   await tx.$executeRaw(Prisma.sql`
     SELECT
-      set_config('request.jwt.claim.sub', ${ctx.userId}, true),
+      set_config('request.jwt.claim.sub', ${ctx.subjectId}, true),
       set_config('request.jwt.claim.tenant_id', ${ctx.tenantId}, true)
   `);
 }
@@ -113,6 +117,7 @@ export async function getServerTenantContext(): Promise<SessionCtxResult> {
       ctx: {
         tenantId: m.tenant_id,
         userId: user.id,
+        subjectId: externalId,
         membershipId: m.id,
         roles,
         permissions,

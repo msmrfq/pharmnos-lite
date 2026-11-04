@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ScheduleClass, LedgerEntryType } from "@prisma/client";
+import { INDIAN_GSTIN_REGEX } from "@/lib/validation/gstin";
 
 const pad2 = (n: number) => n.toString().padStart(2, "0");
 
@@ -38,10 +39,13 @@ const decimalFromString = z.string().transform((s, ctx) => {
   return n;
 });
 
-const decimalFromStringOptional = z.string().or(z.number()).optional().transform((v) => {
+const decimalFromStringOptional = z.string().or(z.number()).optional().transform((v, ctx) => {
   if (v === undefined || v === null || v === "") return 0;
   const n = typeof v === "number" ? v : Number(String(v).trim());
-  if (!Number.isFinite(n) || n < 0) return 0;
+  if (!Number.isFinite(n) || n < 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a number ≥ 0" });
+    return z.NEVER;
+  }
   return n;
 });
 
@@ -111,7 +115,6 @@ export const productCreateSchema = productEditSchema.extend({}).extend({
 });
 
 const INDIAN_PHONE_REGEX = /^[0-9]{10}$/;
-const INDIAN_GSTIN_REGEX = /^[0-9A-Z]{15}$/;
 const INDIAN_STATE_REGEX = /^[A-Z]{2}$/;
 
 export const customerEditSchema = z.object({

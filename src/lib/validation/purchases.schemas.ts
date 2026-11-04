@@ -64,12 +64,35 @@ export const decimalFromStringOptional = z
   .or(z.number())
   .nullable()
   .optional()
-  .transform((v) => {
+  .transform((v, ctx) => {
     if (v === undefined || v === null || v === "") return 0;
     const n = typeof v === "number" ? v : Number(String(v).trim());
-    if (!Number.isFinite(n) || n < 0) return 0;
+    if (!Number.isFinite(n) || n < 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a number ≥ 0" });
+      return z.NEVER;
+    }
     return n;
   });
+
+export const decimalFromStringOptionalNullable = z
+  .string()
+  .or(z.number())
+  .nullable()
+  .optional()
+  .transform((v, ctx) => {
+    if (v === undefined || v === null || (typeof v === "string" && v.trim() === "")) return null;
+    const n = typeof v === "number" ? v : Number(String(v).trim());
+    if (!Number.isFinite(n) || n < 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a number ≥ 0" });
+      return z.NEVER;
+    }
+    return n;
+  });
+
+export const percentageFromStringOptional = decimalFromStringOptional.refine(
+  (value) => value <= 100,
+  "Enter a percentage between 0 and 100",
+);
 
 export const integerFromStringGteOne = z
   .string()
@@ -111,6 +134,7 @@ export const integerFromStringGteZero = z
 
 export const PurchaseInvoiceLineCreateSchema = z.object({
   product_id: z.string().min(1, "Product is required"),
+  batch_id: z.string().min(1, "Batch is required").optional(),
   batch_no: z.string().min(1, "Batch number is required").max(50),
   expiry_date: dateOptional,
   quantity: integerFromStringGteOne,
@@ -118,14 +142,14 @@ export const PurchaseInvoiceLineCreateSchema = z.object({
   mrp: decimalFromStringOptional,
   purchase_rate: decimalFromString,
   sale_rate: decimalFromStringOptional,
-  discount_pct: decimalFromStringOptional,
+  discount_pct: percentageFromStringOptional,
   gst_rate: decimalFromStringOptional,
-  declared_taxable_value: decimalFromStringOptional,
-  declared_cgst: decimalFromStringOptional,
-  declared_sgst: decimalFromStringOptional,
-  declared_igst: decimalFromStringOptional,
-  declared_cess: decimalFromStringOptional,
-  declared_line_total: decimalFromStringOptional,
+  declared_taxable_value: decimalFromStringOptionalNullable,
+  declared_cgst: decimalFromStringOptionalNullable,
+  declared_sgst: decimalFromStringOptionalNullable,
+  declared_igst: decimalFromStringOptionalNullable,
+  declared_cess: decimalFromStringOptionalNullable,
+  declared_line_total: decimalFromStringOptionalNullable,
 });
 
 export type PurchaseInvoiceLineCreateInput = z.infer<typeof PurchaseInvoiceLineCreateSchema>;
@@ -144,13 +168,13 @@ export const PurchaseInvoiceCreateSchema = z
     total_tax: decimalFromStringOptional,
     round_off: decimalFromStringOptional,
     net_amount: decimalFromStringOptional,
-    declared_taxable_value: decimalFromStringOptional,
-    declared_cgst: decimalFromStringOptional,
-    declared_sgst: decimalFromStringOptional,
-    declared_igst: decimalFromStringOptional,
-    declared_cess: decimalFromStringOptional,
-    declared_invoice_total: decimalFromStringOptional,
-    declared_round_off: decimalFromStringOptional,
+    declared_taxable_value: decimalFromStringOptionalNullable,
+    declared_cgst: decimalFromStringOptionalNullable,
+    declared_sgst: decimalFromStringOptionalNullable,
+    declared_igst: decimalFromStringOptionalNullable,
+    declared_cess: decimalFromStringOptionalNullable,
+    declared_invoice_total: decimalFromStringOptionalNullable,
+    declared_round_off: decimalFromStringOptionalNullable,
     supplier_state_at_transaction: z.string().trim().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
     recipient_state_at_transaction: z.string().trim().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
     delivery_state_at_transaction: z.string().trim().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
@@ -220,6 +244,10 @@ export const StockAdjustmentSchema = z.object({
   product_id: z.string().min(1, "Product is required"),
   batch_id: z.string().min(1, "Batch is required"),
   quantity_delta: integerFromStringSigned,
+  idempotency_key: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/, "A valid idempotency key is required"),
   reason: z.enum(["Damaged", "Expired write-off", "Found / Stock count correction", "Other"]),
   notes: z.string().max(500).optional().or(z.literal("")).transform((v) => (v || null)),
 });

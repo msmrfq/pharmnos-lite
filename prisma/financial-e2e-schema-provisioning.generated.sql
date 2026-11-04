@@ -3,7 +3,7 @@
 CREATE TYPE "SystemRole" AS ENUM ('ADMIN', 'BILLING', 'INVENTORY', 'MANAGER');
 
 -- CreateEnum
-CREATE TYPE "PermissionAction" AS ENUM ('manage_users', 'manage_roles', 'manage_business_profile', 'create_product', 'edit_product', 'view_product', 'manage_hsn_catalog', 'approve_hsn_catalog', 'approve_gst_rates', 'create_customer', 'edit_customer', 'view_customer', 'create_supplier', 'edit_supplier', 'view_supplier', 'create_purchase', 'edit_purchase', 'view_purchase', 'accept_purchase_gst', 'finalize_purchase', 'create_invoice', 'edit_invoice', 'view_invoice', 'finalize_invoice', 'cancel_invoice', 'view_inventory', 'adjust_stock', 'manage_batches', 'view_customer_ledger', 'view_supplier_ledger', 'view_reports', 'view_audit_log');
+CREATE TYPE "PermissionAction" AS ENUM ('manage_users', 'manage_roles', 'manage_business_profile', 'create_product', 'edit_product', 'view_product', 'manage_hsn_catalog', 'approve_hsn_catalog', 'approve_gst_rates', 'create_customer', 'edit_customer', 'view_customer', 'create_supplier', 'edit_supplier', 'view_supplier', 'create_purchase', 'edit_purchase', 'view_purchase', 'accept_purchase_gst', 'finalize_purchase', 'create_invoice', 'edit_invoice', 'view_invoice', 'finalize_invoice', 'cancel_invoice', 'create_payment', 'view_inventory', 'adjust_stock', 'manage_batches', 'view_customer_ledger', 'view_supplier_ledger', 'view_reports', 'view_audit_log');
 
 -- CreateEnum
 CREATE TYPE "InvoiceStatus" AS ENUM ('DRAFT', 'FINALIZED', 'CANCELLED');
@@ -654,6 +654,7 @@ CREATE TABLE "payments" (
     "id" TEXT NOT NULL,
     "tenant_id" TEXT NOT NULL,
     "customer_id" TEXT,
+    "supplier_id" TEXT,
     "invoice_id" TEXT,
     "entry_type" "LedgerEntryType" NOT NULL,
     "payment_mode" "PaymentMode",
@@ -661,6 +662,8 @@ CREATE TABLE "payments" (
     "reference_no" TEXT,
     "payment_date" TIMESTAMP(3) NOT NULL,
     "notes" TEXT,
+    "idempotency_key" TEXT,
+    "request_payload_hash" TEXT,
     "created_by" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -1022,10 +1025,16 @@ CREATE INDEX "payments_tenant_id_idx" ON "payments"("tenant_id");
 CREATE INDEX "payments_tenant_id_customer_id_idx" ON "payments"("tenant_id", "customer_id");
 
 -- CreateIndex
+CREATE INDEX "payments_tenant_id_supplier_id_idx" ON "payments"("tenant_id", "supplier_id");
+
+-- CreateIndex
 CREATE INDEX "payments_tenant_id_invoice_id_idx" ON "payments"("tenant_id", "invoice_id");
 
 -- CreateIndex
 CREATE INDEX "payments_tenant_id_payment_date_idx" ON "payments"("tenant_id", "payment_date");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payments_tenant_idempotency_key" ON "payments"("tenant_id", "idempotency_key");
 
 -- CreateIndex
 CREATE INDEX "stock_movements_tenant_id_idx" ON "stock_movements"("tenant_id");
@@ -1248,6 +1257,9 @@ ALTER TABLE "payments" ADD CONSTRAINT "payments_tenant_id_fkey" FOREIGN KEY ("te
 
 -- AddForeignKey
 ALTER TABLE "payments" ADD CONSTRAINT "payments_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payments" ADD CONSTRAINT "payments_supplier_id_fkey" FOREIGN KEY ("supplier_id") REFERENCES "suppliers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "payments" ADD CONSTRAINT "payments_invoice_id_fkey" FOREIGN KEY ("invoice_id") REFERENCES "sales_invoices"("id") ON DELETE SET NULL ON UPDATE CASCADE;

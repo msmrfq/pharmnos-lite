@@ -1,7 +1,7 @@
 ---
 title: GST Modernization Implementation Tracker
 date: 2026-10-31
-status: ACTIVE - EVIDENCE-GATED
+status: ENGINEERING CLOSED - EXTERNAL CONFIRMATION PENDING
 ---
 
 # GST Modernization Implementation Tracker
@@ -9,6 +9,118 @@ status: ACTIVE - EVIDENCE-GATED
 This tracker records the current engineering implementation state. It does
 not replace the active master specification, professional review, independent
 security acceptance, migration authorization, or production approval.
+
+## Final closure status — 2026-11-04 22-46-36 IST
+
+The final consolidated campaign is the current status for the source tree.
+The historical runtime section immediately below remains evidence for its own
+source snapshot.
+
+- DGM-T13: the shared exactly-15-character GSTIN contract is used across
+  business-profile, onboarding, customer, and supplier validation. The
+  current-source offline suite passed **12/12**. **Engineering Closed.**
+- DGM-T19: acceptance fails closed when any current purchase line lacks
+  complete GST evidence, and every current line receives an immutable
+  accepted snapshot in the guarded transaction. The current-source
+  target-bound suite passed **16/16** on the guarded disposable target;
+  source hashes match and cleanup is verified absent. **Engineering Closed.**
+- DGM-T25: invalid or negative optional monetary values surface validation
+  errors, purchase/sales discount percentages are bounded to 0 through 100,
+  and the current-source offline suite passed **293/293**. The T19 target
+  exercised purchase application behavior, and a separate guarded disposable
+  target passed current-source Sales application/persistence read-back.
+  **Engineering Closed.**
+- Full JavaScript regression, typecheck, lint, syntax, safe-placeholder
+  Prisma validation, and `git diff --check` passed in the final gate set.
+
+Current evidence:
+
+- [T13 evidence](./t13-gstin-verification-evidence-t13_gstin_final_20261104_2300.json),
+  artifact SHA-256 `19B6A31559E2FFABF621FCE6ED5BF69E1F9063DC11371F2458F02D4D6B203FEC`.
+- [T19 evidence](./purchase-gst-application-evidence-t13_t19_t25_final_20261104_2236.json),
+  artifact SHA-256 `4B59D3ACADD46103691DFA4CABE0E3DC5E37280F6635F39165C85FFC654DF2BD`.
+- [T25 calculation evidence](./t25-gst-calculation-treatment-evidence-t25_gst_calculation_treatment_1793814889348.json),
+  artifact SHA-256 `03D81B46F296FF87A5A32744D4F828D3FA186FC3B6185D26B79D5E04FC816117`,
+  293/293 offline.
+- [T25 Sales runtime evidence](./t25-sales-runtime-t25_sales_1793814909158_be9f4d-suite.json),
+  artifact SHA-256 `E4D1E4833EBFCCD762DE4D4B9BBA2D150A861914AA1F23EADF0701FFDDCFC094`,
+  application/persistence read-back and cleanup verified.
+- [Final closure report](./t13-t19-t25-final-closure-report-2026-11-04T22-46-36.md).
+
+The equal-count matrix is **25/25 evidence-supported criteria (100%)**.
+Independent technical acceptance, professional/statutory confirmation, and
+production authorization remain separate and unclaimed. No additional
+T13/T19/T25 implementation campaign is planned in this execution.
+
+## Final T13 + T19 + T25 runtime campaign — 2026-11-04 21-20-00 IST
+
+The exact immutable disposable target was authorized and validated through the
+guarded lifecycle. The historical T19 run executed against
+`127.0.0.1:55500/pharmnos_financial_e2e_t13t19t25_20261104d` under the
+restricted runtime role and passed all 16 target-bound scenarios with zero
+failures. The target was disposed through `DISPOSABLE_TARGET_DISPOSAL`, and
+the exact containers, networks, and port were verified absent afterward.
+
+- DGM-T13: independent offline suite passed 5/5; target-bound database
+  execution was not run and independent technical acceptance is not claimed.
+- DGM-T19: independent target-bound suite passed 16/16 with zero failures;
+  evidence recording succeeded; business verdict remains `PARTIALLY_ACCEPTED`
+  because owner-approved policy directions still have implementation gates,
+  unresolved threshold or statutory details, and professional-confirmation
+  dependencies as applicable.
+- DGM-T25: independent offline suite passed 289/289; target-bound database
+  execution was not run and independent technical acceptance is not claimed.
+- Initialization verified 33 RLS tables, 84 policies, 16 triggers, 123
+  constraints, and zero runtime DELETE privileges.
+- Final gates passed: all 37 JavaScript test files 241/241, typecheck,
+  full lint, changed-file syntax checks, safe-placeholder Prisma validation,
+  and `git diff --check`.
+
+The master matrix remains **22/25 evidence-supported criteria (88%)**. The
+historical result remains useful for its recorded source snapshot, but the
+current implementation hardening changed the T19 source after that run.
+Current-source T19 runtime verification, complete business acceptance,
+independent technical acceptance, and professional statutory/tax confirmation
+remain open. The historical campaign report and evidence hashes are in
+[`t13-t19-t25-runtime-verification-campaign-2026-11-04T21-20-00.md`](./t13-t19-t25-runtime-verification-campaign-2026-11-04T21-20-00.md).
+
+## T13 + T19 + T25 current-release campaign — 2026-11-04 18-12-40 IST
+
+The consolidated campaign reran all non-mutating repository and contract
+gates. The exact immutable disposable-target contract was still absent:
+`FINANCIAL_E2E_TARGET_CONTRACT` was unset, `.env.financial-e2e` only contained
+the generic local configuration for `127.0.0.1:55432/pharmnos_financial_e2e`,
+and no current contract artifact supplied the required identity, Compose
+binding, schema fingerprint, authorization, and expiry. The preprovisioned
+preflight failed closed with
+`FINANCIAL_E2E_TARGET_CONTRACT is required`; the retained `55460` target was
+not selected or connected.
+
+- DGM-T13: implemented and static/test verified for current-release
+  15-character length-only validation; target-bound runtime blocked and
+  independent acceptance remains insufficient.
+- DGM-T19: implemented and static/test verified for reviewed record version,
+  evidence revision ID, calculation ID, guarded correction rollback, and
+  existing authorization/reconciliation/reset/finalization safeguards;
+  targeted runtime and independent acceptance remain blocked.
+- DGM-T25: implemented and static/test verified for the approved demonstrated
+  exact-decimal paths, independent components, supplier-value preservation,
+  totals, commercial round-off separation, and conversion boundaries;
+  target-bound runtime and independent acceptance remain blocked. Statutory
+  boundaries still require qualified professional confirmation.
+- `pnpm test:gst:calculator`: 294/294 passed.
+- `pnpm exec node --test .\tests\gst-*.test.mjs`: 37/37 passed.
+- `pnpm exec node --test .\tests\financial-e2e-target-contract.test.mjs .\tests\purchase-gst-revision-safety-contract.test.mjs`: 8/8 passed.
+- `pnpm exec node --test .\tests\*.test.mjs`: 232/232 passed.
+- `pnpm typecheck`, `pnpm lint`, safe-placeholder Prisma validation,
+  relevant `node --check` commands, and `git diff --check`: passed.
+
+The master matrix remains **22/25 evidence-supported criteria (88%)**, with
+the three current-scope runtime/independent-acceptance criteria still
+`NOT VERIFIED`, no verified failures, and Version 2 deferrals unchanged.
+Full command output and the per-ticket acceptance matrix are recorded in
+[`t13-t19-t25-runtime-verification-campaign-2026-11-04T18-12-40.md`](./t13-t19-t25-runtime-verification-campaign-2026-11-04T18-12-40.md) and
+[`t13-t19-t25-runtime-verification-evidence-2026-11-04T18-12-40.json`](./t13-t19-t25-runtime-verification-evidence-2026-11-04T18-12-40.json).
 
 ## Q17 obsolete GST-note target cleanup — 2026-11-04 08-08-22 IST
 

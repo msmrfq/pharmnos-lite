@@ -1,4 +1,4 @@
-export type DecimalInput = Decimal | bigint | number | string;
+export type DecimalInput = Decimal | bigint | number | string | { toString(): string };
 export type DecimalRoundingMode = "NONE" | "HALF_UP" | "DOWN";
 
 export const DECIMAL_CALCULATION_SCALE = 18;
@@ -94,6 +94,9 @@ export class Decimal {
     if (typeof value === "number") {
       if (!Number.isFinite(value)) throw new Error(`Invalid decimal number: ${value}`);
       return Decimal.from(String(value));
+    }
+    if (typeof value === "object" && value !== null) {
+      return Decimal.from(value.toString());
     }
     const parsed = parseDecimalString(value);
     return new Decimal(parsed.coefficient, parsed.scale);

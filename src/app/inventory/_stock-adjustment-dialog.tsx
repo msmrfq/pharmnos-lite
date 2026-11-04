@@ -60,6 +60,7 @@ export default function StockAdjustmentDialog({ product, trigger }: Props) {
     createStockAdjustmentAction as any,
     { ok: false, errors: undefined, message: undefined },
   );
+  const [idempotencyKey, setIdempotencyKey] = useState("");
   const [batchId, setBatchId] = useState<string>(product.batches[0]?.id ?? "");
   const router = useRouter();
   const { toast } = useToast();
@@ -88,13 +89,23 @@ export default function StockAdjustmentDialog({ product, trigger }: Props) {
     ? cloneElement(trigger as ReactElement<any>, {
         onClick: (e: any) => {
           (trigger as any).props?.onClick?.(e);
+          setIdempotencyKey(`stock-adjustment:${crypto.randomUUID()}`);
           setOpen(true);
         },
       })
     : null;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (nextOpen && !idempotencyKey) {
+          setIdempotencyKey(`stock-adjustment:${crypto.randomUUID()}`);
+        }
+        if (!nextOpen) setIdempotencyKey("");
+      }}
+    >
       <DialogTrigger asChild>{triggerEl}</DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -106,6 +117,7 @@ export default function StockAdjustmentDialog({ product, trigger }: Props) {
 
         <form action={formAction} className="space-y-4 mt-2">
           <input type="hidden" name="product_id" value={product.id} />
+          <input type="hidden" name="idempotency_key" value={idempotencyKey} />
 
           <div className="space-y-1.5">
             <Label htmlFor="adjust-batch">Batch *</Label>

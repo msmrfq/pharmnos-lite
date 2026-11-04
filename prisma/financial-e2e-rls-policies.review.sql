@@ -124,8 +124,11 @@
 -- tenant_update_purchase_invoices
 -- Predicate: tenant_id::text = NULLIF(current_setting(
 --   'request.jwt.claim.tenant_id', true), '')
--- Finalized GST fields require the separate finalized-invoice protection
--- contract in financial-e2e-security-controls.review.sql.
+-- No DELETE policy is defined. Finalized rows additionally require the
+-- tenant-qualified database triggers in
+-- financial-e2e-security-controls.review.sql:
+-- prevent_finalized_purchase_mutation and
+-- prevent_finalized_purchase_item_mutation.
 
 -- sales_posting_operations
 -- tenant_select_sales_posting_operations /
@@ -150,6 +153,8 @@
 -- tenant_update_purchase_invoice_items
 -- Predicate: tenant_id::text = NULLIF(current_setting(
 --   'request.jwt.claim.tenant_id', true), '')
+-- No DELETE policy is defined. Finalized accepted/tax/amount fields are
+-- protected by prevent_finalized_purchase_item_mutation.
 
 -- Immutable GST history tables: SELECT and INSERT only; no UPDATE/DELETE
 -- policy and no direct runtime UPDATE/DELETE privilege.

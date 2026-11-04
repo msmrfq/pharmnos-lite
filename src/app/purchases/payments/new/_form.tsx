@@ -31,6 +31,7 @@ import type { ActionResult } from "@/app/auth/_actions/auth.actions";
 type Props = {
   suppliers: any[];
   prefillSupplierId?: string;
+  idempotencyKey: string;
 };
 
 function fieldError(
@@ -54,7 +55,7 @@ const PAYMENT_METHODS = ["Cash", "UPI", "Cheque", "Bank Transfer", "NEFT"] as co
 
 const initialState: ActionResult<{ id: string }> = { ok: false };
 
-export default function PurchasePaymentNewClientForm({ suppliers, prefillSupplierId }: Props) {
+export default function PurchasePaymentNewClientForm({ suppliers, prefillSupplierId, idempotencyKey }: Props) {
   const [state, action] = useFormState(createSupplierPaymentAction, initialState);
   const errors = state.errors ?? {};
   const { toast } = useToast();
@@ -95,6 +96,7 @@ export default function PurchasePaymentNewClientForm({ suppliers, prefillSupplie
 
   return (
     <form action={action} className="w-full">
+      <input type="hidden" name="idempotency_key" value={idempotencyKey} />
       <input type="hidden" name="entry_date" defaultValue={today} />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">

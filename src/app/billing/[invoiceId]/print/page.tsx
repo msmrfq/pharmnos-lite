@@ -44,6 +44,7 @@ export default async function BillingInvoicePrintPage({
   let ctx: any = null;
   let rawInvoice: any = null;
   let businessProfile: any = null;
+  let tenant: any = null;
   let notFoundFlag = false;
 
   if (dbOk) {
@@ -52,6 +53,7 @@ export default async function BillingInvoicePrintPage({
       ctx = loaded.ctx;
       rawInvoice = loaded.rawInvoice;
       businessProfile = loaded.businessProfile;
+      tenant = loaded.tenant;
       if (!rawInvoice) {
         notFoundFlag = true;
       }
@@ -105,7 +107,7 @@ export default async function BillingInvoicePrintPage({
   const hasCompleteTaxData = invoice.tax_data_status === "COMPLETE";
   const printSnapshot = buildInvoicePrintSnapshot(
     invoice,
-    businessProfile?.gstin !== undefined ? (businessProfile as any).tenant?.business_name : null,
+    tenant?.business_name ?? null,
   );
   const snapshot = <T,>(value: T | null | undefined, current: T | null | undefined) =>
     selectFinalizedInvoiceValue(hasCompleteTaxData, value, current);
@@ -652,9 +654,6 @@ export default async function BillingInvoicePrintPage({
               <p className="mt-1 text-[10px] text-body">
                 GSTIN: {businessProfile.gstin}
               </p>
-            )}
-            {!businessProfile?.gstin && (
-              <p className="mt-1 text-[10px] text-body">GSTIN: 27ABCDE1234F1Z5</p>
             )}
           </div>
 

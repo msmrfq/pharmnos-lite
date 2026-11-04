@@ -2,14 +2,16 @@
 
 import { assertPostgresConfigured, prisma } from "@/lib/db/prisma";
 import { repos } from "@/repositories";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
+import { PermissionAction } from "@prisma/client";
 
 const csvEscape = (v: any): string => {
   const s = v === null || v === undefined ? "" : String(v);
-  if (/[",\n\r]/.test(s)) {
-    return `"${s.replace(/"/g, '""')}"`;
+  const safe = /^[=+\-@]/.test(s) ? `'${s}` : s;
+  if (/[",\n\r]/.test(safe)) {
+    return `"${safe.replace(/"/g, '""')}"`;
   }
-  return s;
+  return safe;
 };
 
 const bom = "\uFEFF";
@@ -30,6 +32,7 @@ function respondCsv(filename: string, rows: string[][]): Response {
 export async function exportInventoryCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportInventoryCsvAction");
   const ctx = await requireServerTenantContext();
+  requirePermission(ctx, PermissionAction.view_inventory);
   const result = await repos.products.list({ skip: 0, take: 25000, orderBy: { name: "asc" } }, ctx);
   const rows: string[][] = [
     ["SKU", "Product", "Schedule", "HSN", "MRP", "PTR", "Pack", "Reorder level", "Available", "FEFO expiry"],
@@ -58,6 +61,7 @@ export async function exportInventoryCsvAction(): Promise<Response> {
 export async function exportLowStockCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportLowStockCsvAction");
   const ctx = await requireServerTenantContext();
+  requirePermission(ctx, PermissionAction.view_inventory);
   const result = await repos.products.listLowStock({ skip: 0, take: 25000, orderBy: { name: "asc" } }, ctx);
   const rows: string[][] = [
     ["SKU", "Product", "Available total", "Reorder level", "Schedule", "HSN", "MRP", "Pack"],
@@ -80,6 +84,7 @@ export async function exportLowStockCsvAction(): Promise<Response> {
 export async function exportNearExpiryCsvAction(windowDays = 180): Promise<Response> {
   assertPostgresConfigured("exportNearExpiryCsvAction");
   const ctx = await requireServerTenantContext();
+  requirePermission(ctx, PermissionAction.view_inventory);
   const items = await repos.productBatches.listNearExpiry(ctx, windowDays);
   const rows: string[][] = [
     ["Product", "SKU", "Schedule", "Batch no.", "Expiry date", "Available qty", "MRP", "Stock value (MRP)"],
@@ -106,6 +111,7 @@ export async function exportNearExpiryCsvAction(windowDays = 180): Promise<Respo
 export async function exportCustomersCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportCustomersCsvAction");
   const ctx = await requireServerTenantContext();
+  requirePermission(ctx, PermissionAction.view_customer);
   const result = await repos.customers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx);
   const rows: string[][] = [
     ["Code", "Business", "Contact person", "Phone", "Mobile", "Email", "City", "State", "GSTIN", "Credit limit", "Receivable", "Active"],
@@ -132,6 +138,7 @@ export async function exportCustomersCsvAction(): Promise<Response> {
 export async function exportSuppliersCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportSuppliersCsvAction");
   const ctx = await requireServerTenantContext();
+  requirePermission(ctx, PermissionAction.view_supplier);
   const result = await repos.suppliers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx);
   const rows: string[][] = [
     ["Code", "Business", "Contact person", "Phone", "Mobile", "Email", "City", "State", "GSTIN", "Payable", "Active"],
@@ -157,6 +164,7 @@ export async function exportSuppliersCsvAction(): Promise<Response> {
 export async function exportPurchaseRegisterCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportPurchaseRegisterCsvAction");
   const ctx = await requireServerTenantContext();
+  requirePermission(ctx, PermissionAction.view_purchase);
   const result = await repos.purchaseInvoices.list({ skip: 0, take: 25000, orderBy: { invoice_date: "desc" } }, ctx);
   const rows: string[][] = [
     ["Invoice no", "Date", "Supplier", "Supplier invoice", "Status", "Gross", "Discount", "Tax", "Round off", "Net", "Created at"],
@@ -184,6 +192,7 @@ export async function exportPurchaseRegisterCsvAction(): Promise<Response> {
 export async function exportSalesRegisterCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportSalesRegisterCsvAction");
   const ctx = await requireServerTenantContext();
+  requirePermission(ctx, PermissionAction.view_invoice);
   const result = await repos.salesInvoices.list({ skip: 0, take: 25000, orderBy: { invoice_date: "desc" } }, ctx);
   const rows: string[][] = [
     ["Invoice no", "Date", "Customer", "Reference no", "Cash sale", "Status", "Gross", "Discount", "Tax", "Round off", "Net", "Paid", "Balance due", "Created at"],
@@ -214,6 +223,7 @@ export async function exportSalesRegisterCsvAction(): Promise<Response> {
 export async function exportCustomerDuesCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportCustomerDuesCsvAction");
   const ctx = await requireServerTenantContext();
+  requirePermission(ctx, PermissionAction.view_customer_ledger);
   const result = await repos.customers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx);
   const rows: string[][] = [
     ["Customer code", "Business", "Contact", "City", "State", "Phone", "Total due", "Current 0-30", "31-60", "61-90", "90+", "Oldest overdue days", "Receivable balance", "Active"],
@@ -256,6 +266,7 @@ export async function exportCustomerDuesCsvAction(): Promise<Response> {
 export async function exportSupplierPayablesCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportSupplierPayablesCsvAction");
   const ctx = await requireServerTenantContext();
+  requirePermission(ctx, PermissionAction.view_supplier_ledger);
   const result = await repos.suppliers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx);
   const rows: string[][] = [
     ["Supplier code", "Business", "Contact", "City", "State", "Phone", "Total payable", "Current 0-30", "31-60", "61-90", "90+", "Oldest overdue days", "Payable balance", "Active"],
@@ -298,6 +309,7 @@ export async function exportSupplierPayablesCsvAction(): Promise<Response> {
 export async function exportStockValuationCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportStockValuationCsvAction");
   const ctx = await requireServerTenantContext();
+  requirePermission(ctx, PermissionAction.view_inventory);
   const t = ctx;
   const items = await (prisma as any).products.findMany({
     where: { tenant_id: t.tenantId },
@@ -364,6 +376,7 @@ export async function exportStockValuationCsvAction(): Promise<Response> {
 export async function exportBatchExpiryCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportBatchExpiryCsvAction");
   const ctx = await requireServerTenantContext();
+  requirePermission(ctx, PermissionAction.view_inventory);
   const t = ctx;
   const batches = await (prisma as any).product_batches.findMany({
     where: { tenant_id: t.tenantId, is_blocked: false },
@@ -416,6 +429,7 @@ export async function exportBatchExpiryCsvAction(): Promise<Response> {
 export async function exportGstHsnSummaryCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportGstHsnSummaryCsvAction");
   const ctx = await requireServerTenantContext();
+  requirePermission(ctx, PermissionAction.view_reports);
   const t = ctx;
 
   const now = new Date();
@@ -425,54 +439,41 @@ export async function exportGstHsnSummaryCsvAction(): Promise<Response> {
   const fromStr = yyyymmdd(fromDefault);
   const toStr = yyyymmdd(toDefault);
 
-  const profile = await (prisma as any).business_profiles.findFirst({
-    where: { tenant_id: t.tenantId },
-    select: { state: true },
-  }).catch(() => null);
-  const tenantState = profile?.state ?? null;
-
   const invoices = await (prisma as any).sales_invoices.findMany({
-    where: { tenant_id: t.tenantId, status: "FINALIZED", invoice_date: { gte: fromDefault, lte: new Date(toDefault.getTime() + 86399999) } },
+    where: { tenant_id: t.tenantId, status: "FINALIZED", invoice_date: { gte: fromDefault, lte: new Date(toDefault.getTime() + 86399999) }     },
     include: {
-      customer: { select: { gstin: true, billing_state: true } },
-      items: {
-        include: { product: { select: { hsn_code: true, gst_rate: true } } },
-      },
+      items: true,
     },
     take: 25000,
   });
 
   const groupMap = new Map<string, {
     hsn: string; description: string; ratePct: number; taxableValue: number;
-    totalQty: number; cgst: number; sgst: number; igst: number; invoicesSet: Set<string>;
+    totalQty: number; cgst: number; sgst: number; igst: number; totalGst: number; invoicesSet: Set<string>;
   }>();
 
   for (const inv of invoices as any[]) {
     const invId = inv.id;
-    const custState = inv.customer?.billing_state ?? null;
-    const isInterstate = Boolean(tenantState && custState && tenantState !== custState);
     const items = inv.items ?? [];
     for (const it of items) {
-      const hsn = it.product?.hsn_code ?? "UNCLASSIFIED";
-      const ratePct = Number(it.product?.gst_rate ?? it.gst_rate ?? 0);
+      const hsn = it.hsn_code_snapshot ?? "UNCLASSIFIED";
+      const ratePct = Number(it.gst_rate ?? 0);
       const gstAmount = Number(it.gst_amount ?? 0);
       const lineTotal = Number(it.line_total ?? 0);
-      const taxableValue = lineTotal - gstAmount;
+      const taxableValue = Number(it.taxable_amount ?? (lineTotal - gstAmount));
       const key = `${hsn}||${ratePct}`;
       let g = groupMap.get(key);
       if (!g) {
-        g = { hsn, description: "", ratePct, taxableValue: 0, totalQty: 0, cgst: 0, sgst: 0, igst: 0, invoicesSet: new Set() };
+        g = { hsn, description: "", ratePct, taxableValue: 0, totalQty: 0, cgst: 0, sgst: 0, igst: 0, totalGst: 0, invoicesSet: new Set() };
         groupMap.set(key, g);
       }
-      g.description = it.product?.name ?? g.description;
+      g.description = it.product_name_snapshot ?? g.description;
       g.taxableValue += taxableValue;
       g.totalQty += Number(it.quantity ?? 0) + Number(it.free_qty ?? 0);
-      if (isInterstate) {
-        g.igst += gstAmount;
-      } else {
-        g.cgst += gstAmount / 2;
-        g.sgst += gstAmount / 2;
-      }
+      g.cgst += Number(it.cgst_amount ?? 0);
+      g.sgst += Number(it.sgst_amount ?? 0);
+      g.igst += Number(it.igst_amount ?? 0);
+      g.totalGst += gstAmount;
       g.invoicesSet.add(invId);
     }
   }
@@ -482,7 +483,7 @@ export async function exportGstHsnSummaryCsvAction(): Promise<Response> {
   ];
 
   for (const g of groupMap.values()) {
-    const totalGst = g.cgst + g.sgst + g.igst;
+    const totalGst = g.totalGst;
     const totalValue = g.taxableValue + totalGst;
     rows.push([
       g.hsn,
@@ -505,6 +506,7 @@ export async function exportGstHsnSummaryCsvAction(): Promise<Response> {
 export async function exportDaybookCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportDaybookCsvAction");
   const ctx = await requireServerTenantContext();
+  requirePermission(ctx, PermissionAction.view_reports);
   const t = ctx;
 
   const now = new Date();

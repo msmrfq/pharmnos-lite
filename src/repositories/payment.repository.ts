@@ -17,7 +17,7 @@ export class PaymentRepository extends BaseRepository<
     const t = this.withTenant(ctx);
     return this.prisma.payments.findUnique({
       where: { id, tenant_id: t.tenantId },
-      include: { customer: true, invoice: true },
+      include: { customer: true, supplier: true, invoice: true },
     });
   }
 
@@ -63,7 +63,7 @@ export class PaymentRepository extends BaseRepository<
     const [rawItems, total] = await Promise.all([
       this.prisma.payments.findMany({
         where,
-        include: { customer: true, invoice: true },
+        include: { customer: true, supplier: true, invoice: true },
         skip,
         take,
         orderBy,
@@ -77,7 +77,7 @@ export class PaymentRepository extends BaseRepository<
           tenant_id: t.tenantId,
           customer: { business_name: { contains: search, mode: "insensitive" } },
         },
-        include: { customer: true, invoice: true },
+        include: { customer: true, supplier: true, invoice: true },
       });
       const seen = new Set(items.map((x: any) => x.id));
       for (const sf of byCust as any[]) if (!seen.has(sf.id)) items.push(sf);

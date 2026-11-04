@@ -59,6 +59,23 @@ test("rejects approval of a package containing review-only artifacts", () => {
     }).ok, false);
 });
 
+test("rejects review-only content mislabeled as executable", () => {
+    const content = "-- REVIEW ARTIFACT ONLY - DO NOT EXECUTE.\nBEGIN;";
+    const manifest = createArtifactManifest({
+        packageVersion: "0.1.0",
+        sourceSchema: { path: "schema.prisma", generation: "test-generator", sha256: sha256(sources["schema.prisma"]) },
+        artifacts: [{ path: "review.sql", order: 1, sha256: sha256(content), classification: "executable" }],
+        verificationSteps: ["catalog"],
+        approved: true,
+    }).manifest;
+    const result = verifyArtifactManifest(manifest, {
+        files: { "review.sql": content },
+        sources,
+    });
+    assert.equal(result.ok, false);
+    assert.match(result.errors.join(" "), /review-only marker/i);
+});
+
 test("rejects unsafe, duplicate, missing-order, and source-provenance paths", () => {
     const result = createArtifactManifest({
         packageVersion: "0.1.0",

@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test:t13:gstin": "node scripts/gstin-verification-test.cjs",
+    "test:t19:purchase-gst": "node scripts/purchase-gst-application-acceptance.cjs",
+    "test:t25:gst-calculation": "node scripts/gst-calculator-test.cjs",
     "test:gst:calculator": "node scripts/gst-calculator-test.cjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -17,8 +20,8 @@
     "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
     "financial:e2e:safe": "node scripts/financial-e2e.mjs",
     "sales:gst:acceptance": "node scripts/sales-gst-application-acceptance.cjs",
-    "financial:e2e:up": "docker compose --env-file .env.financial-e2e -f docker-compose.financial-e2e.yml --profile financial-e2e up -d --wait",
-    "financial:e2e:down": "docker compose --env-file .env.financial-e2e -f docker-compose.financial-e2e.yml --profile financial-e2e down --volumes --remove-orphans",
+    "financial:e2e:up": "node scripts/financial-e2e-compose.mjs up",
+    "financial:e2e:down": "node scripts/financial-e2e-compose.mjs down",
     "shadcn:add": "npx shadcn-ui@latest add"
   },
   "dependencies": {

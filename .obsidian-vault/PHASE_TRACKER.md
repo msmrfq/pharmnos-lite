@@ -11,13 +11,13 @@
 
 **Working phase numbering (PROJECT-WIDE MANDATORY):** We use 7 working phases P1…P7. The PRD `.obsidian-vault/prd-technical-architecture.md §29 Suggested Development Phases` originally proposed 6 phases (Phase 0…Phase 5). The crosswalk column below maps every working phase to its corresponding PRD coverage area so we never confuse the two. **Always use P1…P7 working phase numbers in all notes, bugs, specs, decisions, retro, TODO lists, and commit messages going forward.** Do NOT use PRD numbering in day-to-day work.
 
-**Last updated:** `Date: 2026-11-04  Time: 07-50-04 (IST)`
+**Last updated:** `Date: 2026-11-05  Time: 02-15-37 (IST)`
 
 N.B: ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. 
 
-**Current working phase:** `GST MODERNIZATION — POST-P7 PRE-PRODUCTION VALIDATION IN PROGRESS.`
+**Current working phase:** `GST MODERNIZATION — POST-P7 PRE-PRODUCTION VALIDATION — CURRENT-SOURCE ENGINEERING GATES PASS; T19 RUNTIME, BROWSER E2E, INDEPENDENT ACCEPTANCE, AND PRODUCTION GATES OPEN.`
 
-> **GST specification review state:** the current GST Master Specification is `PROPOSED / READY FOR OWNER REVIEW`. The `40%` figure measures specification drafting/review progress only; it does not represent owner approval, implementation authorization, migration approval, or production readiness. A subsequent percentage increase requires evidence-backed work beyond drafting.
+> **GST specification review state:** the latest current-source campaign passes T13 12/12, T25 297/297, focused financial-integrity contracts 22/22, closure-hardening contracts 19/19, full JavaScript regression 274/274, typecheck, lint, build, safe-placeholder Prisma validation, provisioning static guard, artifact-manifest verification, and `git diff --check`. Artifact package `0.1.2` contains 11 executable artifacts and excludes review-only SQL. Current-source target-bound T19 was not rerun because no fresh immutable disposable-target contract was supplied; browser E2E, separate technical acceptance, professional/statutory confirmation, migration/recovery proof, and production readiness remain open. The separate technical acceptance is **NOT ACCEPTED** and production readiness is **NO-GO**. The equal-count 25/25 report is historical and not the current closure decision.
 
 ## Canonical Phase Scope Labels
 
@@ -69,9 +69,9 @@ Overall project progress: 100% (P1-P7 complete. Post-P7 pre-production validatio
 may execute delegated tasks but do not own the project, approvals, or release
 decision.
 
-**Current official stage:** GST master specification consolidation and review — `████████░░░░░░░░░░░░` 40% — `IN PROGRESS`
-**Active substep:** Implement and validate the owner-authorized complete GST Modernization scope while preserving the specification's evidence boundaries and approval gates.
-**Immediate next action:** Resolve outstanding decisions and complete evidence-backed implementation work, with legal/accounting confirmation kept separate from product-owner authorization.
+**Current official stage:** GST modernization and financial integrity pre-production validation — `████████████░░░░░░░░` 60% — `IN PROGRESS`
+**Active substep:** Preserve current-source engineering evidence, obtain an immutable target contract for T19/runtime proof, and establish browser, independent-acceptance, migration, recovery, and production-readiness gates.
+**Immediate next action:** Run only the authorized target-bound suites after a fresh immutable target contract; keep professional/statutory confirmation and production approval separate.
 **Live Supabase readiness:** `NO-GO`
 
 ### Progress and status rules
@@ -137,30 +137,39 @@ decision.
 The following seven stages are overview milestones only. Their authoritative
 tasks and statuses live in Layer A; no underlying task is duplicated.
 
-### 1. GST Modernization — `████████░░░░░░░░░░░░` 40% — `IN PROGRESS`
+### 1. GST Modernization — `████████████░░░░░░░░` 60% — `CURRENT-SOURCE ENGINEERING VERIFIED; RUNTIME AND RELEASE GATES OPEN`
 
 - **Authoritative source:** `.obsidian-vault/specs/domestic-gst-modernization.md`.
 - **Scope:** implement the specification's hybrid GST architecture for
   captured sales supply facts, purchase supplier-evidence reconciliation,
   persisted tax components, immutable finalized-invoice facts, and explicit
   versioned/auditable rules.
-- **Completed evidence:** current gap-resolution evidence records 22/25
-  evidence-supported criteria, including authorized 0419 restricted-runtime
-  inter-state purchase, POS-negative, Sales retry, stale-revision,
-  tenant-isolation, and legacy-hold scenarios. This evidence does not
-  establish database rollout or production readiness.
-- **Current blockers:** DGM-T13 remains
-  `CURRENT RELEASE SCOPE APPROVED — VERSION 2 DEFERRED`; its implementation
-  and focused tests pass, but runtime and independent acceptance remain open.
-  DGM-T19 retains the same approved Version 2 scope decision while its
-  reviewed-revision guard is implemented and focused-tested; targeted runtime
-  and independent acceptance remain open. DGM-T25 current engineering scope is
-  owner-approved with e-invoice and credit/debit-note capabilities deferred to
-  Version 2; runtime/independent acceptance and qualified GST review remain
-  open.
-- **Exit criterion:** approved requirements are implemented and verified with
-  the required isolated evidence, without treating local tests as live
-  validation.
+- **Completed evidence:** the latest current-source campaign passes T13 12/12
+  offline, T25 297/297, focused financial-integrity contracts 22/22, full
+  JavaScript regression 274/274, typecheck, lint, build, safe-placeholder
+  Prisma validation, provisioning static guard, artifact-manifest verification,
+  closure-hardening contracts 19/19, and `git diff --check`. Artifact package
+  `0.1.2` contains 11 executable artifacts and excludes review-only SQL.
+  Sales and purchase concurrency/immutability corrections are covered by
+  current-source contracts and normal migration artifacts.
+- **Current blockers:** current-source target-bound T19 was not rerun because
+  no fresh immutable disposable-target contract was supplied. No committed
+  authenticated browser E2E harness exists. Independent technical acceptance,
+  professional/statutory confirmation, production migration/recovery proof,
+  and production authorization remain open.
+- **Documentation reconciliation:** The current-release baseline and
+  historical reports remain retained. The authoritative current campaign
+  report is
+  [`pharmnos-lite-gst-modernization-financial-e2e-final-closure-report-2026-11-05T01-31-42.md`](./specs/pharmnos-lite-gst-modernization-financial-e2e-final-closure-report-2026-11-05T01-31-42.md).
+  Historical reports are recorded in
+  [`t13-t19-t25-current-release-scope-baseline-2026-11-04T21-32-19.md`](./specs/t13-t19-t25-current-release-scope-baseline-2026-11-04T21-32-19.md),
+  [`t13-t19-t25-documentation-reconciliation-matrix-2026-11-04T21-32-19.md`](./specs/t13-t19-t25-documentation-reconciliation-matrix-2026-11-04T21-32-19.md),
+  [`t13-t19-t25-final-closure-report-2026-11-04T22-46-36.md`](./specs/t13-t19-t25-final-closure-report-2026-11-04T22-46-36.md), and
+  [`t13-t19-t25-implementation-campaign-report-2026-11-04T22-16-03.md`](./specs/t13-t19-t25-implementation-campaign-report-2026-11-04T22-16-03.md).
+- **Exit criterion:** current-source engineering gates pass, but the stage
+  remains open until target-bound runtime, browser, independent-acceptance,
+  migration/recovery, and production-readiness evidence is separately
+  accepted.
 
 ### 2. Financial E2E Validation Harness — `PENDING`
 
@@ -204,7 +213,7 @@ tasks and statuses live in Layer A; no underlying task is duplicated.
 
 ```mermaid
 flowchart LR
-    A["1. GST Modernization<br/>40% IN PROGRESS<br/>GST specification workstreams"] -->|completed and accepted| B["2. Financial E2E Validation Harness<br/>PENDING<br/>Existing Financial E2E workstreams"]
+    A["1. GST Modernization<br/>60% CURRENT-SOURCE ENGINEERING VERIFIED<br/>GST specification workstreams"] -->|completed and accepted| B["2. Financial E2E Validation Harness<br/>PENDING<br/>Existing Financial E2E workstreams"]
     B -->|completed and accepted| C["3. Invoice Modernization<br/>0% PENDING<br/>Workstreams 6,10"]
     C -->|completed and approved| D["4. Live Supabase Rollout<br/>0% NO-GO<br/>Workstreams 2,3,4,12-14"]
     D -->|separate live authorization| E["5. Post-Rollout Validation<br/>0% PENDING<br/>Workstreams 2,6-12"]
@@ -216,9 +225,12 @@ flowchart LR
 
 - Local schema/security catalog, ordinary-role isolation, immutable-history, finalized-invoice, posting, rollback, cleanup, and focused regression evidence are recorded.
 - The broader financial lifecycle matrix remains pending; static validation and local testing do not prove preview-to-Supabase, production Prisma, or live rollout readiness.
-- The authoritative Financial E2E target contract is implemented; the authorized 0419 disposable runtime credential was repaired from the approved source, and Purchase GST run `purchase_gst_1793531037977_0975f5` passed 16/16 with restricted-role and cleanup evidence.
+- The authoritative Financial E2E target-contract lifecycle is implemented, but no fresh target contract was supplied for the current-source T19 rerun in this campaign; no new target-bound runtime acceptance is claimed.
 - Backup/restore, operational readiness, and final approval remain outstanding.
-- **Next action:** implement the approved GST Modernization scope, then prepare the separately authorized Financial E2E Validation Harness run. Do not connect to live Supabase or production Prisma.
+- **Next action:** obtain and validate a fresh immutable target contract, then
+  run only the authorized current-source target-bound suites. Keep browser E2E,
+  independent technical acceptance, migration/recovery, and production
+  decisions at their current open or NO-GO states until evidence is accepted.
 
 ---
 

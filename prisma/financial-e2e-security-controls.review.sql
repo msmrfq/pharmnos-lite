@@ -92,7 +92,9 @@ FROM pharmnos_e2e_runtime;
 
 REVOKE DELETE ON TABLE
   public.tenants,
-  public.audit_logs
+  public.audit_logs,
+  public.purchase_invoices,
+  public.purchase_invoice_items
 FROM pharmnos_e2e_runtime;
 
 -- No direct browser CRUD is granted. No anon/authenticated principal is
@@ -195,11 +197,24 @@ FROM pharmnos_e2e_runtime;
 -- HSN/SAC and GST rule history use the same trigger contract. Approved GST
 -- rate rules are immutable; changes must be represented by pending revisions.
 --
--- A second trigger must reject changes to GST evidence pointers, GST statuses,
--- and GST record version after purchase_invoices.status = 'FINALIZED', except
--- for an explicitly approved controlled transition. This is database
--- enforceable; the permission to initiate the transition remains
--- application/service policy.
+-- Finalized purchase history is guarded by:
+--   prevent_finalized_purchase_mutation
+--     BEFORE UPDATE OR DELETE ON purchase_invoices
+--   prevent_finalized_purchase_item_mutation
+--     BEFORE UPDATE OR DELETE ON purchase_invoice_items
+-- The parent guard protects invoice_no, gross_amount, total_discount,
+-- total_tax, round_off, net_amount, finalized_at, GST pointers/statuses, and
+-- gst_record_version once the controlled finalization completion is recorded.
+-- The item guard protects the invoice facts, calculated tax components,
+-- accepted_taxable_value, accepted_cgst, accepted_sgst, accepted_igst,
+-- accepted_cess, accepted_line_total, accepted_value_source,
+-- accepted_reason, accepted_at, accepted_by_membership_id,
+-- accepted_decision_id, GST acceptance metadata, gst_amount, and line_total.
+-- The item lookup is tenant-qualified by purchase_id and tenant_id. Draft
+-- rows remain editable; the finalization transaction may complete its
+-- controlled parent/item writes before finalized_at is set. Post-finalization
+-- valuation denormalizations remain separately governed. Neither trigger
+-- permits finalized-row deletion, and the runtime role has no DELETE grant.
 
 -- ---------------------------------------------------------------------------
 -- Guarded posting transitions and idempotency

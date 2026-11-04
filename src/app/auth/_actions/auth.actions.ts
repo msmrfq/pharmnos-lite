@@ -36,6 +36,7 @@ const ROLE_PERMISSION_SETS: Record<SystemRole, PermissionAction[]> = {
     PermissionAction.edit_invoice,
     PermissionAction.view_invoice,
     PermissionAction.finalize_invoice,
+    PermissionAction.create_payment,
     PermissionAction.view_customer_ledger,
     PermissionAction.view_inventory,
   ],
@@ -67,7 +68,7 @@ const ROLE_PERMISSION_SETS: Record<SystemRole, PermissionAction[]> = {
   ],
 };
 
-export async function ensureRolePermissionsForTenant(tenantId: string): Promise<void> {
+async function ensureRolePermissionsForTenant(tenantId: string): Promise<void> {
   for (const role of Object.values(SystemRole)) {
     const roleRow = await prisma.roles.upsert({
       where: { tenant_id_name: { tenant_id: tenantId, name: role } },
@@ -112,7 +113,7 @@ export type OnboardingTenantParams = {
   }>;
 };
 
-export async function onboardNewTenant(params: OnboardingTenantParams) {
+async function onboardNewTenant(params: OnboardingTenantParams) {
   const normalizedBusinessProfileState = businessProfileStateSchema.parse(params.business_profile?.state);
   const slug = params.slug ?? slugify(params.business_name).slice(0, 40);
   const existing = await prisma.tenants.findUnique({ where: { slug } });

@@ -4,10 +4,22 @@ import { revalidatePath } from "next/cache.js";
 import { redirect } from "next/navigation.js";
 import { createHash } from "node:crypto";
 import { prisma, assertPostgresConfigured } from "@/lib/db/prisma";
-import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
+import {
+  establishTenantContext,
+  requirePermission,
+  requireServerTenantContext,
+  type TenantContext,
+} from "@/lib/db/tenant-context";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
-import { Prisma } from "@prisma/client";
-import type { sales_invoices, InvoiceStatus, StockMovementType, LedgerEntryType, PaymentMode, PermissionAction } from "@prisma/client";
+import { PermissionAction, Prisma } from "@prisma/client";
+import type {
+  payments,
+  sales_invoices,
+  InvoiceStatus,
+  StockMovementType,
+  LedgerEntryType,
+  PaymentMode,
+} from "@prisma/client";
 import {
   SalesInvoiceCreateSchema,
   SalesInvoiceLineCreateSchema,
@@ -127,6 +139,130 @@ function canonicalSalesFinalizationPayload(tenantId: string, saleId: string): st
 
 function salesFinalizationPayloadHash(tenantId: string, saleId: string): string {
   return createHash("sha256").update(canonicalSalesFinalizationPayload(tenantId, saleId), "utf8").digest("hex");
+}
+
+type PaymentRequestData = {
+  amount: number;
+  payment_method: string;
+  reference_no: string | null;
+  entry_date: Date;
+  notes: string | null;
+};
+
+type PaymentIdempotencyRecord = Pick<payments, "id" | "amount" | "request_payload_hash">;
+
+function paymentPayloadHash(
+  tenantId: string,
+  counterpartyType: "customer" | "supplier",
+  counterpartyId: string,
+  data: PaymentRequestData,
+): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        operation: "CREATE_PAYMENT",
+        tenantId,
+        counterpartyType,
+        counterpartyId,
+        amount: decimalOrZero(data.amount).round(2, "HALF_UP").toString(),
+        paymentMethod: data.payment_method,
+        referenceNo: data.reference_no,
+        entryDate: data.entry_date.toISOString(),
+        notes: data.notes,
+      }),
+      "utf8",
+    )
+    .digest("hex");
+}
+
+function paymentReplay(
+  payment: PaymentIdempotencyRecord,
+  requestHash: string,
+): { id: string; applied: number } {
+  if (!payment.request_payload_hash || payment.request_payload_hash !== requestHash) {
+    throw new Error("This payment idempotency key was already used with a different payment payload.");
+  }
+  return {
+    id: payment.id,
+    applied: decimalOrZero(payment.amount?.toString()).round(2, "HALF_UP").toNumber(),
+  };
+}
+
+function paymentWarning(
+  requested: number,
+  applied: number,
+  balanceLabel: "dues" | "payables",
+): string | null {
+  return decimalOrZero(requested).subtract(applied).compare("0.001") === 1
+    ? `Payment exceeds total ${balanceLabel}; clamped to 0 — please verify.`
+    : null;
+}
+
+function isPaymentIdempotencyUniqueViolation(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+    return false;
+  }
+  const target = error.meta?.target;
+  const fields = Array.isArray(target) ? target.map(String) : [String(target ?? "")];
+  return fields.includes("tenant_id") && fields.includes("idempotency_key");
+}
+
+async function findPaymentIdempotencyReplay(
+  ctx: TenantContext,
+  idempotencyKey: string,
+  requestHash: string,
+  requestedAmount: number,
+  balanceLabel: "dues" | "payables",
+): Promise<{ id: string; warning: string | null }> {
+  const existing = await prisma.$transaction(async (tx) => {
+    await establishTenantContext(tx, ctx);
+    return tx.payments.findUnique({
+      where: {
+        tenant_id_idempotency_key: {
+          tenant_id: ctx.tenantId,
+          idempotency_key: idempotencyKey,
+        },
+      },
+      select: { id: true, amount: true, request_payload_hash: true },
+    });
+  });
+  if (!existing) {
+    throw new Error("Payment idempotency conflict could not be resolved; retry with a new key.");
+  }
+  const replay = paymentReplay(existing, requestHash);
+  return { id: replay.id, warning: paymentWarning(requestedAmount, replay.applied, balanceLabel) };
+}
+
+async function lockCustomerBalance(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  customerId: string,
+): Promise<number> {
+  const rows = await tx.$queryRaw<Array<{ receivable_balance: unknown }>>(Prisma.sql`
+    SELECT "receivable_balance"
+    FROM "customers"
+    WHERE "tenant_id" = ${tenantId} AND "id" = ${customerId}
+    FOR UPDATE
+  `);
+  const row = rows[0];
+  if (!row) throw new Error("Customer not found.");
+  return decimalOrZero(String(row.receivable_balance ?? "0")).toNumber();
+}
+
+async function lockSupplierBalance(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  supplierId: string,
+): Promise<number> {
+  const rows = await tx.$queryRaw<Array<{ payable_balance: unknown }>>(Prisma.sql`
+    SELECT "payable_balance"
+    FROM "suppliers"
+    WHERE "tenant_id" = ${tenantId} AND "id" = ${supplierId}
+    FOR UPDATE
+  `);
+  const row = rows[0];
+  if (!row) throw new Error("Supplier not found.");
+  return decimalOrZero(String(row.payable_balance ?? "0")).toNumber();
 }
 
 async function resolveSalesLineRules(
@@ -263,10 +399,10 @@ export async function createSalesDraftAction(
       return { ok: false, message: treatment.error, errors: { gst_treatment: [treatment.error ?? "Invalid GST treatment."] } };
     }
 
-    const profile = await prisma.business_profiles.findUnique({ where: { tenant_id: ctx.tenantId } });
-    const customer = data.customer_id
-      ? await prisma.customers.findUnique({ where: { id: data.customer_id, tenant_id: ctx.tenantId } })
-      : null;
+    const profile = await prisma.$transaction(async (tx) => {
+      await establishTenantContext(tx, ctx);
+      return tx.business_profiles.findUnique({ where: { tenant_id: ctx.tenantId } });
+    });
     const businessState = profile?.state ?? null;
     const capturedPlaceOfSupplyState = normalizeState(data.place_of_supply_state);
     const placeResult = gstCalculator.detectPlace(businessState, capturedPlaceOfSupplyState);
@@ -279,7 +415,33 @@ export async function createSalesDraftAction(
     const placeOfSupply = placeResult.type;
 
     const invoice = await prisma.$transaction(async (tx) => {
+      await establishTenantContext(tx, ctx);
       const governedLines = await resolveSalesLineRules(tx, ctx.tenantId, linesParsed, data.invoice_date);
+      const customer = await tx.customers.findUnique({
+        where: { id: data.customer_id, tenant_id: ctx.tenantId },
+        select: { id: true },
+      });
+      if (!customer) {
+        throw new Error("Customer not found or belongs to another tenant.");
+      }
+
+      const batchIds = Array.from(new Set(governedLines.map((line: any) => String(line.batch_id))));
+      const batches = await tx.product_batches.findMany({
+        where: { tenant_id: ctx.tenantId, id: { in: batchIds } },
+        select: { id: true, product_id: true, batch_no: true },
+      });
+      const batchesById = new Map(batches.map((batch) => [batch.id, batch]));
+      for (const line of governedLines) {
+        const batch = batchesById.get(String(line.batch_id));
+        if (
+          !batch ||
+          batch.product_id !== String(line.product_id) ||
+          batch.batch_no !== String(line.batch_no)
+        ) {
+          throw new Error("Sales line batch is missing or belongs to another tenant.");
+        }
+      }
+
       const gstTotals = computeServerGstTotals(governedLines, placeOfSupply);
       const lineAmounts = governedLines.map((line: any) => calculateSalesLineAmounts(line));
       const totalDiscount = sumDecimals(lineAmounts.map((line) => line.discount_amount))
@@ -415,9 +577,7 @@ export async function finalizeSalesInvoiceAction(
 
     let replayed = false;
     const invoice = await prisma.$transaction(async (tx) => {
-      await tx.$executeRaw(Prisma.sql`
-        SELECT set_config('request.jwt.claim.tenant_id', ${ctx.tenantId}, true)
-      `);
+      await establishTenantContext(tx, ctx);
       await tx.$executeRaw(Prisma.sql`
         SELECT pg_advisory_xact_lock(
           hashtextextended(
@@ -536,10 +696,12 @@ export async function finalizeSalesInvoiceAction(
           where: { id: line.id },
           data: {
             taxable_amount: persistedTax.taxable_amount,
+            gst_amount: persistedTax.gst_amount,
             cgst_amount: persistedTax.cgst_amount,
             sgst_amount: persistedTax.sgst_amount,
             igst_amount: persistedTax.igst_amount,
             cess_amount: persistedTax.cess_amount,
+            line_total: persistedTax.line_total,
             hsn_code_snapshot: governedLines[index]?.hsn_code_snapshot ?? null,
             product_name_snapshot: line.product?.name ?? null,
             generic_name_snapshot: line.product?.generic_name ?? null,
@@ -615,7 +777,16 @@ export async function finalizeSalesInvoiceAction(
 
       let finalInvoiceNo = existing.invoice_no;
       if (!finalInvoiceNo || !finalInvoiceNo.trim()) {
-        const bp = profile ?? await tx.business_profiles.findUnique({ where: { tenant_id: ctx.tenantId } });
+        const profiles = await tx.$queryRaw<Array<{
+          invoice_next_seq: number;
+          invoice_prefix: string | null;
+        }>>`
+          SELECT invoice_next_seq, invoice_prefix
+          FROM business_profiles
+          WHERE tenant_id = ${ctx.tenantId}
+          FOR UPDATE
+        `;
+        const bp = profiles[0];
         if (bp) {
           const prefix = bp.invoice_prefix ?? "INV";
           const seq = bp.invoice_next_seq ?? 1;
@@ -625,10 +796,15 @@ export async function finalizeSalesInvoiceAction(
             data: { invoice_next_seq: seq + 1, updated_at: new Date() },
           });
         } else {
+          await tx.$executeRaw`
+            SELECT pg_advisory_xact_lock(hashtextextended(${ctx.tenantId}, 0))
+          `;
           const cnt = await tx.sales_invoices.count({ where: { tenant_id: ctx.tenantId } });
           finalInvoiceNo = `INV-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${String(cnt + 1).padStart(3, "0")}`;
         }
       }
+
+      const balanceBefore = decimalOrZero(await lockCustomerBalance(tx, ctx.tenantId, cust.id));
 
       const updated = await tx.sales_invoices.update({
         where: { id: existing.id, tenant_id: ctx.tenantId },
@@ -662,9 +838,8 @@ export async function finalizeSalesInvoiceAction(
         },
       });
 
-      const balanceBefore = Number(cust.receivable_balance ?? 0);
       const debit = serverGst.grand_total;
-      const balanceAfter = decimalOrZero(balanceBefore).add(debit).round(2, "HALF_UP").toNumber();
+      const balanceAfter = balanceBefore.add(debit).round(2, "HALF_UP").toNumber();
 
       await tx.customer_ledgers.create({
         data: {
@@ -734,13 +909,16 @@ export async function finalizeSalesInvoiceAction(
       const ctx = await requireServerTenantContext();
       const retryPayloadHash = salesFinalizationPayloadHash(ctx.tenantId, saleId);
       for (let attempt = 0; attempt < 10; attempt += 1) {
-        const committed = await prisma.sales_posting_operations.findUnique({
-          where: {
-            tenant_id_idempotency_key: {
-              tenant_id: ctx.tenantId,
-              idempotency_key: idempotencyKey,
+        const committed = await prisma.$transaction(async (tx) => {
+          await establishTenantContext(tx, ctx);
+          return tx.sales_posting_operations.findUnique({
+            where: {
+              tenant_id_idempotency_key: {
+                tenant_id: ctx.tenantId,
+                idempotency_key: idempotencyKey,
+              },
             },
-          },
+          });
         });
         if (committed &&
           committed.request_payload_hash === retryPayloadHash &&
@@ -777,63 +955,111 @@ export async function createCustomerPaymentAction(
       };
     }
     const ctx = await requireServerTenantContext();
-    requirePermission(ctx, "view_customer_ledger" as PermissionAction);
+    requirePermission(ctx, PermissionAction.create_payment);
     const data = parsed.data;
     const entryDate = data.entry_date ?? new Date();
-
-    const result = await prisma.$transaction(async (tx) => {
-      const cust = await tx.customers.findUnique({
-        where: { id: data.customer_id, tenant_id: ctx.tenantId },
-        select: { receivable_balance: true },
-      });
-      if (!cust) throw new Error("Customer not found.");
-      const before = decimalOrZero(cust.receivable_balance?.toString());
-      const credit = decimalOrZero(data.amount);
-      const appliedDecimal = before.compare(credit) < 0 ? before : credit;
-      const clamped = before.subtract(appliedDecimal).round(2, "HALF_UP");
-      const applied = appliedDecimal.round(2, "HALF_UP").toNumber();
-      const newBal = clamped.toNumber();
-      const warning = credit.subtract(before).compare("0.001") === 1
-        ? "Payment exceeds total dues; clamped to 0 — please verify."
-        : null;
-
-      const payment = await tx.payments.create({
-        data: {
-          tenant_id: ctx.tenantId,
-          customer_id: data.customer_id,
-          entry_type: __LedgerEntryPAYMENT_RECEIVED,
-          payment_mode: paymentMethodToPrismaMode(data.payment_method),
-          amount: applied,
-          reference_no: data.reference_no,
-          payment_date: entryDate,
-          notes: data.notes,
-          created_by: ctx.userId,
-          created_at: new Date(),
-        },
-      });
-
-      const row = await tx.customer_ledgers.create({
-        data: {
-          tenant_id: ctx.tenantId,
-          customer_id: data.customer_id,
-          entry_type: __LedgerEntryPAYMENT_RECEIVED,
-          debit: 0,
-          credit: applied,
-          balance: newBal,
-          reference_type: "payment_received",
-          reference_id: null,
-          invoice_id: null,
-          narration: `Payment received — ${data.payment_method}${data.reference_no ? ` #${data.reference_no}` : ""}${data.notes ? ` — ${data.notes}` : ""}`,
-          entry_date: entryDate,
-          created_at: new Date(),
-        },
-      });
-      await tx.customers.update({
-        where: { id: data.customer_id, tenant_id: ctx.tenantId },
-        data: { receivable_balance: clamped.toNumber(), updated_at: new Date() },
-      });
-      return { id: payment.id, warning };
+    const requestHash = paymentPayloadHash(ctx.tenantId, "customer", data.customer_id, {
+      amount: data.amount,
+      payment_method: data.payment_method,
+      reference_no: data.reference_no,
+      entry_date: entryDate,
+      notes: data.notes,
     });
+
+    let result: { id: string; warning: string | null };
+    try {
+      result = await prisma.$transaction(async (tx) => {
+        await establishTenantContext(tx, ctx);
+        const existing = await tx.payments.findUnique({
+          where: {
+            tenant_id_idempotency_key: {
+              tenant_id: ctx.tenantId,
+              idempotency_key: data.idempotency_key,
+            },
+          },
+          select: { id: true, amount: true, request_payload_hash: true },
+        });
+        if (existing) {
+          const replay = paymentReplay(existing, requestHash);
+          return {
+            id: replay.id,
+            warning: paymentWarning(data.amount, replay.applied, "dues"),
+          };
+        }
+
+        const before = decimalOrZero(await lockCustomerBalance(tx, ctx.tenantId, data.customer_id));
+        const committed = await tx.payments.findUnique({
+          where: {
+            tenant_id_idempotency_key: {
+              tenant_id: ctx.tenantId,
+              idempotency_key: data.idempotency_key,
+            },
+          },
+          select: { id: true, amount: true, request_payload_hash: true },
+        });
+        if (committed) {
+          const replay = paymentReplay(committed, requestHash);
+          return {
+            id: replay.id,
+            warning: paymentWarning(data.amount, replay.applied, "dues"),
+          };
+        }
+
+        const credit = decimalOrZero(data.amount);
+        const appliedDecimal = before.compare(credit) < 0 ? before : credit;
+        const clamped = before.subtract(appliedDecimal).round(2, "HALF_UP");
+        const applied = appliedDecimal.round(2, "HALF_UP").toNumber();
+
+        const payment = await tx.payments.create({
+          data: {
+            tenant_id: ctx.tenantId,
+            customer_id: data.customer_id,
+            supplier_id: null,
+            entry_type: __LedgerEntryPAYMENT_RECEIVED,
+            payment_mode: paymentMethodToPrismaMode(data.payment_method),
+            amount: applied,
+            reference_no: data.reference_no,
+            payment_date: entryDate,
+            notes: data.notes,
+            idempotency_key: data.idempotency_key,
+            request_payload_hash: requestHash,
+            created_by: ctx.userId,
+            created_at: new Date(),
+          },
+        });
+
+        await tx.customer_ledgers.create({
+          data: {
+            tenant_id: ctx.tenantId,
+            customer_id: data.customer_id,
+            entry_type: __LedgerEntryPAYMENT_RECEIVED,
+            debit: 0,
+            credit: applied,
+            balance: clamped.toNumber(),
+            reference_type: "payment_received",
+            reference_id: payment.id,
+            invoice_id: null,
+            narration: `Payment received — ${data.payment_method}${data.reference_no ? ` #${data.reference_no}` : ""}${data.notes ? ` — ${data.notes}` : ""}`,
+            entry_date: entryDate,
+            created_at: new Date(),
+          },
+        });
+        await tx.customers.update({
+          where: { id: data.customer_id, tenant_id: ctx.tenantId },
+          data: { receivable_balance: clamped.toNumber(), updated_at: new Date() },
+        });
+        return { id: payment.id, warning: paymentWarning(data.amount, applied, "dues") };
+      });
+    } catch (error) {
+      if (!isPaymentIdempotencyUniqueViolation(error)) throw error;
+      result = await findPaymentIdempotencyReplay(
+        ctx,
+        data.idempotency_key,
+        requestHash,
+        data.amount,
+        "dues",
+      );
+    }
 
     if (process.env.FINANCIAL_E2E_TEST_MODE !== "true") {
       revalidatePath("/billing");
@@ -871,62 +1097,111 @@ export async function createSupplierPaymentAction(
       };
     }
     const ctx = await requireServerTenantContext();
-    requirePermission(ctx, "view_supplier_ledger" as PermissionAction);
+    requirePermission(ctx, PermissionAction.create_payment);
     const data = parsed.data;
     const entryDate = data.entry_date ?? new Date();
-
-    const result = await prisma.$transaction(async (tx) => {
-      const sup = await tx.suppliers.findUnique({
-        where: { id: data.supplier_id, tenant_id: ctx.tenantId },
-        select: { payable_balance: true },
-      });
-      if (!sup) throw new Error("Supplier not found.");
-      const before = decimalOrZero(sup.payable_balance?.toString());
-      const debit = decimalOrZero(data.amount);
-      const appliedDecimal = before.compare(debit) < 0 ? before : debit;
-      const clamped = before.subtract(appliedDecimal).round(2, "HALF_UP");
-      const applied = appliedDecimal.round(2, "HALF_UP").toNumber();
-      const newBal = clamped.toNumber();
-      const warning = debit.subtract(before).compare("0.001") === 1
-        ? "Payment exceeds total payables; clamped to 0 — please verify."
-        : null;
-
-      const payment = await tx.payments.create({
-        data: {
-          tenant_id: ctx.tenantId,
-          entry_type: __LedgerEntryPAYMENT_MADE,
-          payment_mode: paymentMethodToPrismaMode(data.payment_method),
-          amount: applied,
-          reference_no: data.reference_no,
-          payment_date: entryDate,
-          notes: data.notes,
-          created_by: ctx.userId,
-          created_at: new Date(),
-        },
-      });
-
-      const row = await tx.supplier_ledgers.create({
-        data: {
-          tenant_id: ctx.tenantId,
-          supplier_id: data.supplier_id,
-          entry_type: __LedgerEntryPAYMENT_MADE,
-          debit: applied,
-          credit: 0,
-          balance: newBal,
-          reference_type: "payment_made",
-          reference_id: null,
-          purchase_id: null,
-          narration: `Payment made — ${data.payment_method}${data.reference_no ? ` #${data.reference_no}` : ""}${data.notes ? ` — ${data.notes}` : ""}`,
-          entry_date: entryDate,
-          created_at: new Date(),
-        },
-      });
-      await tx.suppliers.update({
-        where: { id: data.supplier_id, tenant_id: ctx.tenantId },
-        data: { payable_balance: clamped.toNumber(), updated_at: new Date() },
-      });
-      return { id: payment.id, warning };
+    const requestHash = paymentPayloadHash(ctx.tenantId, "supplier", data.supplier_id, {
+      amount: data.amount,
+      payment_method: data.payment_method,
+      reference_no: data.reference_no,
+      entry_date: entryDate,
+      notes: data.notes,
     });
+
+    let result: { id: string; warning: string | null };
+    try {
+      result = await prisma.$transaction(async (tx) => {
+        await establishTenantContext(tx, ctx);
+        const existing = await tx.payments.findUnique({
+          where: {
+            tenant_id_idempotency_key: {
+              tenant_id: ctx.tenantId,
+              idempotency_key: data.idempotency_key,
+            },
+          },
+          select: { id: true, amount: true, request_payload_hash: true },
+        });
+        if (existing) {
+          const replay = paymentReplay(existing, requestHash);
+          return {
+            id: replay.id,
+            warning: paymentWarning(data.amount, replay.applied, "payables"),
+          };
+        }
+
+        const before = decimalOrZero(await lockSupplierBalance(tx, ctx.tenantId, data.supplier_id));
+        const committed = await tx.payments.findUnique({
+          where: {
+            tenant_id_idempotency_key: {
+              tenant_id: ctx.tenantId,
+              idempotency_key: data.idempotency_key,
+            },
+          },
+          select: { id: true, amount: true, request_payload_hash: true },
+        });
+        if (committed) {
+          const replay = paymentReplay(committed, requestHash);
+          return {
+            id: replay.id,
+            warning: paymentWarning(data.amount, replay.applied, "payables"),
+          };
+        }
+
+        const debit = decimalOrZero(data.amount);
+        const appliedDecimal = before.compare(debit) < 0 ? before : debit;
+        const clamped = before.subtract(appliedDecimal).round(2, "HALF_UP");
+        const applied = appliedDecimal.round(2, "HALF_UP").toNumber();
+
+        const payment = await tx.payments.create({
+          data: {
+            tenant_id: ctx.tenantId,
+            customer_id: null,
+            supplier_id: data.supplier_id,
+            entry_type: __LedgerEntryPAYMENT_MADE,
+            payment_mode: paymentMethodToPrismaMode(data.payment_method),
+            amount: applied,
+            reference_no: data.reference_no,
+            payment_date: entryDate,
+            notes: data.notes,
+            idempotency_key: data.idempotency_key,
+            request_payload_hash: requestHash,
+            created_by: ctx.userId,
+            created_at: new Date(),
+          },
+        });
+
+        await tx.supplier_ledgers.create({
+          data: {
+            tenant_id: ctx.tenantId,
+            supplier_id: data.supplier_id,
+            entry_type: __LedgerEntryPAYMENT_MADE,
+            debit: applied,
+            credit: 0,
+            balance: clamped.toNumber(),
+            reference_type: "payment_made",
+            reference_id: payment.id,
+            purchase_id: null,
+            narration: `Payment made — ${data.payment_method}${data.reference_no ? ` #${data.reference_no}` : ""}${data.notes ? ` — ${data.notes}` : ""}`,
+            entry_date: entryDate,
+            created_at: new Date(),
+          },
+        });
+        await tx.suppliers.update({
+          where: { id: data.supplier_id, tenant_id: ctx.tenantId },
+          data: { payable_balance: clamped.toNumber(), updated_at: new Date() },
+        });
+        return { id: payment.id, warning: paymentWarning(data.amount, applied, "payables") };
+      });
+    } catch (error) {
+      if (!isPaymentIdempotencyUniqueViolation(error)) throw error;
+      result = await findPaymentIdempotencyReplay(
+        ctx,
+        data.idempotency_key,
+        requestHash,
+        data.amount,
+        "payables",
+      );
+    }
 
     if (process.env.FINANCIAL_E2E_TEST_MODE !== "true") {
       revalidatePath("/purchases");

@@ -5,6 +5,7 @@ import path from "node:path";
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const SAFE_RELATIVE_PATH = /^(?![\\/])(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/;
 const CHECKED_IN_MANIFEST_PATH = "prisma/financial-e2e-artifact-manifest.json";
+const REVIEW_ONLY_MARKER = /^\s*--\s*(?:REVIEW ARTIFACT|REVIEW SPECIFICATION) ONLY\b[\s\S]*?\bDO NOT EXECUTE\b/i;
 
 function validateManifestPath(value, label) {
     if (typeof value !== "string" || !SAFE_RELATIVE_PATH.test(value) ||
@@ -122,6 +123,8 @@ export function verifyArtifactManifest(manifest, {
             errors.push(`Manifest artifact is missing: ${artifact.path}.`);
         } else if (sha256(content) !== artifact.sha256) {
             errors.push(`Manifest artifact hash mismatch: ${artifact.path}.`);
+        } else if (artifact.classification === "executable" && REVIEW_ONLY_MARKER.test(content)) {
+            errors.push(`Executable artifact contains a review-only marker: ${artifact.path}.`);
         }
     }
     return { ok: errors.length === 0, errors };

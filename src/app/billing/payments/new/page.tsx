@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { randomUUID } from "node:crypto";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,12 +18,15 @@ export const metadata: Metadata = {
   title: "Record customer payment",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function NewBillingPaymentPage({
   searchParams,
 }: {
   searchParams?: { customer_id?: string };
 }) {
   const prefillCustomerId = searchParams?.customer_id ?? "";
+  const idempotencyKey = randomUUID();
   let dbOk = isPostgresConfigured();
   let customers: any[] = [];
 
@@ -64,6 +68,7 @@ export default async function NewBillingPaymentPage({
       <BillingPaymentNewClientForm
         customers={customers}
         prefillCustomerId={prefillCustomerId}
+        idempotencyKey={idempotencyKey}
       />
     </DashboardLayout>
   );

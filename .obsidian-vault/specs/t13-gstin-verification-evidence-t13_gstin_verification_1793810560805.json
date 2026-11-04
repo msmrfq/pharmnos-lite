@@ -1,0 +1,54 @@
+{
+  "evidenceVersion": 1,
+  "function": "DGM-T13",
+  "suite": "t13-gstin-verification",
+  "runId": "t13_gstin_verification_1793810560805",
+  "recordedAt": "2026-11-04T16:42:40.805Z",
+  "command": "pnpm test:t13:gstin",
+  "offline": true,
+  "databaseAccessed": false,
+  "targetBound": false,
+  "status": "PASS",
+  "passed": 9,
+  "failed": 0,
+  "total": 9,
+  "scenarios": [
+    {
+      "name": "DGM-T13: exactly 15 GSTIN characters are accepted",
+      "status": "PASS"
+    },
+    {
+      "name": "DGM-T13: unsupported GSTIN prefixes are not used as a current-release length failure",
+      "status": "PASS"
+    },
+    {
+      "name": "DGM-T13: GSTIN shorter than 15 characters is rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "DGM-T13: GSTIN longer than 15 characters is rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "DGM-T13: optional blank GSTIN remains allowed",
+      "status": "PASS"
+    },
+    {
+      "name": "DGM-T13: onboarding accepts an exactly 15-character GSTIN",
+      "status": "PASS"
+    },
+    {
+      "name": "DGM-T13: customer GSTIN keeps the existing uppercase normalization",
+      "status": "PASS"
+    },
+    {
+      "name": "DGM-T13: supplier GSTIN keeps the existing uppercase normalization",
+      "status": "PASS"
+    },
+    {
+      "name": "DGM-T13: master-record GSTIN lengths remain bounded at 15 characters",
+      "status": "PASS"
+    }
+  ],
+  "evidenceRecordingSucceeded": true
+}

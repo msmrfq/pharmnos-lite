@@ -4,6 +4,7 @@ import {
   dateOptional,
   decimalFromString,
   decimalFromStringOptional,
+  percentageFromStringOptional,
   integerFromStringGteOne,
   integerFromStringGteZero,
 } from "./purchases.schemas";
@@ -26,7 +27,7 @@ export const SalesInvoiceLineCreateSchema = z.object({
   free_qty: integerFromStringGteZero,
   sale_rate: decimalFromString,
   mrp: decimalFromStringOptional,
-  trade_discount_pct: decimalFromStringOptional,
+  trade_discount_pct: percentageFromStringOptional,
   gst_rate: decimalFromStringOptional,
 });
 
@@ -53,16 +54,7 @@ export const SalesInvoiceCreateSchema = z
     round_off: decimalFromStringOptional,
     net_amount: decimalFromStringOptional,
     notes: z.string().max(500).optional().or(z.literal("")).transform((v) => (v || null)),
-  })
-  .superRefine((_val, ctx) => {
-    const linesRaw = (ctx as any).lines as any[] | undefined;
-    if (!linesRaw || linesRaw.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "At least one line item is required",
-        path: ["lines"],
-      });
-    }
+    lines: z.array(SalesInvoiceLineCreateSchema).min(1, "At least one line item is required"),
   });
 
 export type SalesInvoiceCreateInput = z.infer<typeof SalesInvoiceCreateSchema> & {
@@ -71,6 +63,7 @@ export type SalesInvoiceCreateInput = z.infer<typeof SalesInvoiceCreateSchema> &
 
 export const CustomerPaymentCreateSchema = z.object({
   customer_id: z.string().min(1, "Customer is required"),
+  idempotency_key: z.string().trim().min(1, "Payment idempotency key is required").max(200),
   amount: decimalFromString,
   payment_method: CustomerPaymentMethodSchema,
   reference_no: z.string().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
@@ -82,6 +75,7 @@ export type CustomerPaymentCreateInput = z.infer<typeof CustomerPaymentCreateSch
 
 export const SupplierPaymentCreateSchema = z.object({
   supplier_id: z.string().min(1, "Supplier is required"),
+  idempotency_key: z.string().trim().min(1, "Payment idempotency key is required").max(200),
   amount: decimalFromString,
   payment_method: SupplierPaymentMethodSchema,
   reference_no: z.string().max(100).optional().or(z.literal("")).transform((v) => (v || null)),

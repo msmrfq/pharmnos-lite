@@ -1,57 +1,29 @@
 #!/usr/bin/env node
 
-const fs = require("node:fs");
-const Module = require("node:module");
 const path = require("node:path");
-const typescript = require("typescript");
+const { runOfflineSuite } = require("./offline-suite-runner.cjs");
 
-const root = path.resolve(__dirname, "..");
-const testFile = path.resolve(root, "tests", "gst-calculator.test.ts");
-const originalResolve = Module._resolveFilename;
-
-process.env.TS_NODE_COMPILER_OPTIONS = JSON.stringify({
-  module: "commonjs",
-  moduleResolution: "node",
-  jsx: "preserve",
+runOfflineSuite({
+  functionId: "DGM-T25",
+  suite: "t25-gst-calculation-treatment",
+  testFile: path.join("tests", "gst-calculator.test.ts"),
+  sourceFiles: [
+    "tests/gst-calculator.test.ts",
+    "src/lib/constants/indian-states.ts",
+    "src/lib/gst/place-of-supply.ts",
+    "src/domain/services/gst-calculator.service.ts",
+    "src/domain/services/purchase-calculator.service.ts",
+    "src/lib/decimal.ts",
+    "src/lib/validation/tenant.schemas.ts",
+    "src/lib/validation/masters.schemas.ts",
+    "src/lib/validation/purchases.schemas.ts",
+    "src/app/_actions/settings.actions.ts",
+  ],
+  evidenceEnvironmentVariable: "T25_EVIDENCE_FILE",
+  runIdEnvironmentVariable: "T25_SUITE_RUN_ID",
+  defaultEvidenceSlug: "t25-gst-calculation-treatment",
+  command: "pnpm test:t25:gst-calculation",
+  evidenceMarker: "T25_GST_CALCULATION_EVIDENCE",
+  resultsMarker: "T25_GST_CALCULATION_RESULTS",
+  failuresMarker: "T25_GST_CALCULATION_FAILURES",
 });
-
-Module._resolveFilename = function resolveFilename(request, parent, isMain, options) {
-  if (request.startsWith("@/")) {
-    return originalResolve.call(this, path.join(root, "src", request.slice(2)), parent, isMain, options);
-  }
-  return originalResolve.call(this, request, parent, isMain, options);
-};
-
-require("ts-node/register/transpile-only");
-const tsNodeLoader = require.extensions[".ts"];
-
-require.extensions[".ts"] = function loadTypeScript(module, filename) {
-  if (path.resolve(filename) !== testFile) {
-    return tsNodeLoader(module, filename);
-  }
-
-  const source = fs.readFileSync(filename, "utf8").replace(/^#!.*(?:\r?\n|$)/, "");
-  const transpiled = typescript.transpileModule(source, {
-    compilerOptions: {
-      target: typescript.ScriptTarget.ES2022,
-      module: typescript.ModuleKind.CommonJS,
-      moduleResolution: typescript.ModuleResolutionKind.Node10,
-      esModuleInterop: true,
-      jsx: typescript.JsxEmit.Preserve,
-      sourceMap: false,
-    },
-    fileName: filename,
-  }).outputText;
-
-  module._compile(`module.exports = (async () => {\n${transpiled}\n})();`, filename);
-};
-
-Promise.resolve()
-  .then(() => require(testFile))
-  .then(() => {
-    console.log("GST_CALCULATOR_RUNNER=PASS_TS_NODE_TOP_LEVEL_AWAIT");
-  })
-  .catch((error) => {
-    console.error(error?.stack ?? error);
-    process.exitCode = 1;
-  });

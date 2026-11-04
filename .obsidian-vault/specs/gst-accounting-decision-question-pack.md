@@ -232,7 +232,13 @@ rate is approved by this note.
 **Decision area:** Tax calculation and accounting policy.  
 **Exact question:** What approved calculation contract governs quantity and unit-price precision, discount precision and allocation, taxable-value and tax-component precision, intermediate arithmetic, line/invoice rounding, residual allocation, invoice-total reconciliation, tax-inclusive/exclusive pricing, mixed-rate discounts, and pre-supply, at-supply, and qualifying post-supply discounts?  
 **Why needed:** Current arithmetic uses JavaScript numeric values and two-decimal behavior; tax-inclusive pricing and consistent draft/finalization policy are unresolved. No numeric storage type, including a possible PostgreSQL `Decimal(20,4)` candidate, is approved by this pack.  
-**Current project direction:** Keep this calculation contract BLOCKED until the formula, precision, discount, and rounding policy is explicitly approved. Use one authoritative calculator and preserve source representation separately from parsed values.  
+**Current project direction:** Owner-approved records `0005`, `0007`, and
+`0009` establish the demonstrated current-release engineering direction:
+use one authoritative exact-decimal calculator, preserve source
+representations, distinguish inclusive and exclusive paths, and separate
+commercial round-off from tax. Keep unsupported purchase workflows, unresolved
+thresholds, statutory boundaries, and professional-confirmation questions
+blocked until their required evidence exists.
 **Established:** CGST Act section 15 addresses transaction value, inclusions, and conditions for discounts. Section 15(3) distinguishes discounts given before or at supply and qualifying post-supply discounts.  
 **Unresolved:** Discount classes, ITC evidence, inclusive pricing, quantity/unit-price and decimal scale, intermediate arithmetic, line versus invoice rounding, statutory rounding requirements, residual allocation, negative round-off, invoice reconciliation, and mixed-rate invoices.  
 **Authoritative sources:** [CGST Act section 15, India Code](https://www.indiacode.nic.in/handle/123456789/7771?sam_handle=123456789/2489); [CBIC Circular 92/11/2019-GST](https://cbic-gst.gov.in/pdf/circular-cgst-92.pdf), subject to current-status verification. Circular 105/24/2019-GST is not operative and must not be used.  
@@ -250,7 +256,11 @@ rate is approved by this note.
 **Decision area:** Purchase accounting and reconciliation.  
 **Exact question:** What discrepancy thresholds, materiality rules, evidence, authority, segregation of duties, and revision behavior determine whether supplier-declared and system-calculated values may become accounting-accepted values, without treating acceptance as proof of ITC eligibility?  
 **Why needed:** These three value types must remain separate; acceptance is not a recalculation shortcut.  
-**Current project direction:** Preserve all three values; acceptance is explicit and guarded; posting is service-led with database integrity and idempotency protections.  
+**Current project direction:** Preserve all three values; acceptance is explicit
+and guarded; posting is service-led with database integrity and idempotency
+protections. Decision `0008` records owner-approved high-level discrepancy
+direction, while threshold, materiality, authority, segregation, and statutory
+ITC conditions remain unresolved.
 **Established:** Supplier-declared values are invoice evidence; system-calculated values are Pharmnos' expected values; accounting-accepted values are an explicit authorized decision. Acceptance must require user identity, authorization, timestamp, rationale/evidence, current evidence/calculation linkage, and immutable audit history. Purchase acceptance remains required before posting.  
 **Unresolved:** Threshold units, tax-component versus total comparison, acceptance roles, stale acceptance, correction/rejection, GSTR-2B matching use, reversals, other statutory ITC conditions, and posting eligibility.  
 **Authoritative sources:** [CGST Act, India Code](https://www.indiacode.nic.in/handle/123456789/7771?sam_handle=123456789/2489), sections 16 and 34 where applicable; [CGST Rules, CBIC](https://cbic-gst.gov.in/pdf/cgst-rules-30122017.pdf); [GST portal](https://www.gst.gov.in/) for official return/statement context.  
@@ -563,6 +573,16 @@ Q-01..Q-15 ── Q-16 release gate authorization
 | [Notification 78/2020-Central Tax, dated 2020-10-15](https://www.cbic.gov.in/resources//htdocs-cbec/gst/notfctn-78-central-tax-english-2020.pdf) | HSN/SAC invoice context | Official notification URL located, but direct PDF retrieval returned 500 in this review; current status/effective amendments are `NOT VERIFIED`. This is not the Notification 79/2020 PDF. |
 | [Notification 1/2017-Central Tax (Rate), dated 2017-06-28](https://gstcouncil.gov.in/sites/default/files/gst%20rates/1-2017%28R%29%20dt.%2028.06.2017%20-%20Rate%20noti.pdf) | Original goods-rate schedule and entry framework | Official rate notification; current amendments, schedules, conditions, exemptions, and effective dates must be checked before any product rule is approved. It does not establish a universal HSN 3004 rate. |
 | [Notification 1/2017-Integrated Tax (Rate), CBIC rate-notification index](https://cbic-gst.gov.in/htdocs-cbec/gst/int-tax-rate-notfns-2017) | Integrated-tax rate source for inter-State supplies | Official CBIC index URL was located, but the complete current entry/amendment chain for the Pharmnos product scope was not directly verified; applicable entry, conditions, and effective dates remain `NOT VERIFIED` and block rate approval. |
+
+## 8. Current-release reconciliation note
+
+The earlier final boundary in §12.4 is retained as historical chronology for
+the 2026-10-31 question-pack review. The later owner instruction and decisions
+`0003` through `0009` authorize the current T13/T19/T25 engineering scope and
+record high-level policy direction. They do not close the professional,
+statutory, implementation, target-bound runtime, independent-acceptance, or
+production gates listed in this pack and in the
+[current-release scope baseline](./t13-t19-t25-current-release-scope-baseline-2026-11-04T21-32-19.md).
 | [GST Council CGST rate notifications](https://gstcouncil.gov.in/en/cgst-rate-notification) | Central Tax (Rate) amendment discovery | Official index lists Notification 01/2025-Central Tax (Rate) as amending Notification 01/2017-Central Tax (Rate), but the complete pharmaceutical entry, conditions, amendment chain, and effective-date applicability were not established here; `NOT VERIFIED`. |
 | [GST Council SGST rate notifications](https://gstcouncil.gov.in/en/sgst-rate-notifications) | State-wise SGST component source discovery | Official state-wise index located; no complete state-by-state notification and amendment matrix was verified for the supported scenarios; `NOT VERIFIED`. |
 | [CBIC Union Territory Tax notifications](https://cbic-gst.gov.in/hindi/union-territory-tax.html) | UTGST component source discovery | Official UTGST notification index located, including historical notifications, but the applicable current entry and amendment chain for each supported UT scenario were not fully verified; `NOT VERIFIED`. |

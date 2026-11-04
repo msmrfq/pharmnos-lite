@@ -2,15 +2,14 @@
 
 const fs = require("node:fs");
 const crypto = require("node:crypto");
-const { execFileSync } = require("node:child_process");
 const Module = require("node:module");
 const path = require("node:path");
 const { Client } = require("pg");
 
 const environmentFiles = [
-  process.env.FINANCIAL_E2E_BASE_ENV_FILE || ".env.local",
+  process.env.FINANCIAL_E2E_BASE_ENV_FILE,
   process.env.FINANCIAL_E2E_ENV_FILE || ".env.financial-e2e",
-];
+].filter(Boolean);
 for (const environmentFile of environmentFiles) {
   if (!fs.existsSync(environmentFile)) continue;
   for (const line of fs.readFileSync(environmentFile, "utf8").split(/\r?\n/)) {
@@ -62,11 +61,10 @@ Module._load = function (request, parent, isMain) {
 };
 require("ts-node/register/transpile-only");
 
-const run = `purchase_gst_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
-const databaseName = `${process.env.TEST_DATABASE_NAME}_${run}`;
+const run = process.env.FINANCIAL_E2E_SUITE_RUN_ID || process.env.FINANCIAL_E2E_RUN_ID ||
+  `purchase_gst_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+const databaseName = process.env.TEST_DATABASE_NAME;
 const databaseUrl = new URL(process.env.TEST_DATABASE_URL);
-const ordinaryDatabaseUrl = process.env.DATABASE_URL;
-databaseUrl.pathname = `/${databaseName}`;
 databaseUrl.searchParams.set("application_name", "pharmnos-purchase-gst");
 const ids = {
   tenantA: `${run}_tenant_a`,
@@ -110,20 +108,24 @@ const sha256 = (file) => crypto.createHash("sha256").update(fs.readFileSync(file
 const requestHash = (value) => crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const evidence = {
   evidenceVersion: 1,
+  function: "DGM-T19",
+  suite: "t19-purchase-gst-revision-safety",
   run,
+  runId: run,
+  recordedAt: new Date().toISOString(),
+  command: process.env.npm_lifecycle_event
+    ? `pnpm ${process.env.npm_lifecycle_event}`
+    : "pnpm test:t19:purchase-gst",
+  databaseAccessed: true,
+  targetBound: true,
   target: "approved local disposable PostgreSQL database only",
   applicationConnection: "application actions use restricted runtime role; bootstrap is fixture/assertion-only; no Supabase or production",
   sourceHashes: Object.fromEntries(sourceFiles.map((file) => [file, sha256(file)])),
   tests: [],
   cleanup: {},
 };
-let admin;
 let db;
 let prisma;
-let authorizedTargetContract;
-let validateAuthorizedTargetContract;
-let authorizedTargetUrl;
-let authorizedRuntimeUrl;
 let installFinancialE2eTestSession;
 let clearFinancialE2eTestSession;
 let createPurchaseDraftAction;
@@ -417,61 +419,38 @@ async function recordConcurrentTest(id, purchaseId, expected, operations, predic
 }
 
 async function main() {
+  const ordinaryDatabaseUrl = process.env.DATABASE_URL;
   const {
-    createTargetContract,
-    schemaArtifactHash,
     targetContractBinding,
-    validateTargetContract,
     verifyTargetSchema,
   } = await import("./financial-e2e-target-contract.mjs");
-  const runtimeDatabaseUrl = new URL(databaseUrl.toString());
-  runtimeDatabaseUrl.username = process.env.FINANCIAL_E2E_RUNTIME_DB_USER;
-  runtimeDatabaseUrl.password = process.env.FINANCIAL_E2E_RUNTIME_DB_PASSWORD;
+  const {
+    loadAuthorizedTargetLifecycle,
+    createLifecycleEvidence,
+    targetContractFingerprint,
+    writeLifecycleEvidence,
+  } = await import("./financial-e2e-target-lifecycle.mjs");
+  const lifecycle = loadAuthorizedTargetLifecycle({
+    env: process.env,
+    phase: "SUITE_EXECUTION",
+    suiteName: "purchase-gst",
+  });
+  const targetContract = lifecycle.contract;
+  if (targetContract.databaseName !== databaseName ||
+      targetContractFingerprint(targetContract) !== process.env.FINANCIAL_E2E_AUTHORIZED_TARGET_FINGERPRINT) {
+    throw new Error("Purchase GST target contract does not match the authorized immutable target.");
+  }
+  const runtimeDatabaseUrl = new URL(process.env.FINANCIAL_E2E_RUNTIME_DATABASE_URL);
   runtimeDatabaseUrl.searchParams.set("application_name", "pharmnos-purchase-gst");
-  const targetContract = createTargetContract({
-    runId: `${run}-provision`,
-    targetUrl: databaseUrl.toString(),
-    runtimeUrl: runtimeDatabaseUrl.toString(),
-    databaseName,
-    composeProject: process.env.FINANCIAL_E2E_COMPOSE_PROJECT || "pharmnoslite",
-    schemaArtifactHash: schemaArtifactHash(),
-    expiresAt: Date.now() + 2 * 60 * 60 * 1000,
-  });
-  authorizedTargetContract = targetContract;
-  validateAuthorizedTargetContract = validateTargetContract;
-  authorizedTargetUrl = databaseUrl.toString();
-  authorizedRuntimeUrl = runtimeDatabaseUrl.toString();
-  process.env.FINANCIAL_E2E_TARGET_CONTRACT = JSON.stringify(targetContract);
-  admin = await connect(process.env.TEST_DATABASE_URL);
-  await admin.query(`CREATE DATABASE "${databaseName}"`);
-  databaseUrl.searchParams.set("application_name", "pharmnos-financial-e2e");
-  runtimeDatabaseUrl.searchParams.set("application_name", "pharmnos-financial-e2e");
-  const provisioningIdentity = targetContractBinding(targetContract);
-  execFileSync(process.execPath, ["scripts/financial-e2e-provision-local.mjs"], {
-    cwd: root,
-    env: {
-      ...process.env,
-      TEST_DATABASE_URL: databaseUrl.toString(),
-      TEST_DATABASE_NAME: databaseName,
-      FINANCIAL_E2E_DB_NAME: databaseName,
-      FINANCIAL_E2E_RUNTIME_DATABASE_URL: runtimeDatabaseUrl.toString(),
-      FINANCIAL_E2E_AUTHORIZED_TARGET_BINDING: provisioningIdentity,
-      FINANCIAL_E2E_RUN_ID: `${run}-provision`,
-      FINANCIAL_E2E_INITIALIZATION_ATTEMPT_ID: `${run}-attempt`,
-      FINANCIAL_E2E_INITIALIZATION_AUTHORIZED: "true",
-      FINANCIAL_E2E_INITIALIZATION_SCOPE: "DATABASE_INITIALIZATION_ONLY",
-      FINANCIAL_E2E_TARGET_APPROVED: "true",
-      FINANCIAL_E2E_MARKER_ESTABLISHMENT_METHOD: "BOOTSTRAP_CONNECTED_CATALOG_READBACK",
-      FINANCIAL_E2E_ROLE_SETUP_METHOD: "PRECREATED_LOCAL_CREDENTIAL_PROCEDURE",
-      FINANCIAL_E2E_BASELINE_PACKAGE: "VERSION_PINNED_REVIEW_ARTIFACTS",
-      FINANCIAL_E2E_EVIDENCE_MODE: "SANITIZED_APPEND_ONLY_LOCAL",
-      FINANCIAL_E2E_EVIDENCE_RETENTION_DAYS: "30",
-      FINANCIAL_E2E_EVIDENCE_PATH_APPROVED: "true",
-      FINANCIAL_E2E_RECOVERY_POLICY: "UNTRUSTED_STOP_INSPECT_REAUTHORIZE_NEW_TARGET",
-      FINANCIAL_E2E_TARGET_CONTRACT: JSON.stringify(targetContract),
-    },
-    stdio: "inherit",
-  });
+  evidence.targetContract = {
+    runId: targetContract.runId,
+    targetBinding: targetContractBinding(targetContract),
+    targetFingerprint: targetContractFingerprint(targetContract),
+    databaseName: targetContract.databaseName,
+    port: targetContract.port,
+    composeProject: targetContract.composeProject,
+    schemaArtifactHash: targetContract.schemaArtifactHash,
+  };
   db = await connect(databaseUrl.toString());
   const identity = (await db.query(`
     SELECT current_database() AS database_name, current_user AS current_user_name,
@@ -490,9 +469,9 @@ async function main() {
   `)).rows[0];
   evidence.databaseRoleAssessment = {
     ...role,
-    restrictedRuntimeRoleDemonstrated: true,
-    rlsAcceptance: "APPLICATION_RUNTIME_ROLE_SEPARATELY_VERIFIED",
-    reason: "Bootstrap role was used only for fixture setup and persisted-state assertions; application actions used the restricted runtime role.",
+    restrictedRuntimeRoleDemonstrated: false,
+    rlsAcceptance: "BOOTSTRAP_FIXTURE_AND_ASSERTION_ONLY",
+    reason: "The application path is exercised through the restricted runtime role; bootstrap is fixture/assertion-only.",
   };
   const runtimeProbe = await connect(runtimeDatabaseUrl.toString());
   evidence.applicationDatabaseIdentity = (await runtimeProbe.query(`
@@ -504,6 +483,16 @@ async function main() {
     SELECT rolcanlogin AS can_login, rolsuper AS is_superuser, rolbypassrls AS bypasses_rls
     FROM pg_roles WHERE rolname = current_user
   `)).rows[0];
+  if (evidence.applicationDatabaseIdentity.database_name !== databaseName ||
+      evidence.applicationDatabaseIdentity.current_user_name !== targetContract.runtimeRole ||
+      evidence.applicationDatabaseIdentity.session_user_name !== targetContract.runtimeRole ||
+      evidence.applicationDatabaseRoleAssessment.can_login !== true ||
+      evidence.applicationDatabaseRoleAssessment.is_superuser !== false ||
+      evidence.applicationDatabaseRoleAssessment.bypasses_rls !== false) {
+    await runtimeProbe.end();
+    throw new Error("Purchase GST runtime probe did not resolve to the restricted authorized target role.");
+  }
+  evidence.databaseRoleAssessment.restrictedRuntimeRoleDemonstrated = true;
   await verifyTargetSchema(runtimeProbe, targetContract);
   evidence.authenticatedTenantContext = {
     status: "VERIFIED",
@@ -850,6 +839,7 @@ async function main() {
   if (!discrepancyPurchase) {
     throw new Error(`The real createPurchaseDraftAction did not create the discrepancy purchase. result=${JSON.stringify(discrepancyCreate)}`);
   }
+  const discrepancyRevisionFields = await gstRevisionFields(discrepancyPurchase);
 
   await runTest(
     "accept_discrepancy_rejected",
@@ -869,7 +859,6 @@ async function main() {
       before?.gst_accounting_acceptance_status === after?.gst_accounting_acceptance_status,
   );
   const discrepancyItems = await itemState(discrepancyPurchase);
-  const discrepancyRevisionFields = await gstRevisionFields(discrepancyPurchase);
   const resolutionEntries = [
     ["decision_reference", `${run}-RESOLVE-001`],
     ["decision", "Accept explicitly documented line values"],
@@ -1015,55 +1004,58 @@ async function main() {
       };
     }
   }
+  const failedCount = evidence.tests.filter((test) => test.status !== "PASS").length;
+  evidence.passed = evidence.tests.length - failedCount;
+  evidence.failed = failedCount;
+  evidence.total = evidence.tests.length;
+  evidence.executionStatus = failedCount === 0 ? "PASS" : "FAIL";
   evidence.verdict = "PARTIALLY_ACCEPTED";
   evidence.blockers = [
     "Cess, inclusive-tax, freight allocation, discount allocation, rounding precedence, and discrepancy tolerance policies remain unresolved where applicable.",
   ];
+  evidence.evidenceRecordingSucceeded = true;
 
   await db.end();
   await prisma.$disconnect();
-  const cleanupCheck = validateAuthorizedTargetContract({
-    contract: authorizedTargetContract,
-    targetUrl: databaseUrl.toString(),
-    runtimeUrl: runtimeDatabaseUrl.toString(),
-    ordinaryUrl: ordinaryDatabaseUrl,
+  evidence.cleanup = {
+    status: "DEFERRED",
+    databaseDropped: false,
+    targetDisposalRequired: true,
+    authorization: "SEPARATE_CLEANUP_AUTHORIZATION_REQUIRED",
+  };
+  const lifecycleEvidence = createLifecycleEvidence({
+    phase: "EVIDENCE_RECORDING",
+    lifecycle: loadAuthorizedTargetLifecycle({
+      env: { ...process.env, DATABASE_URL: ordinaryDatabaseUrl },
+      phase: "EVIDENCE_RECORDING",
+      suiteName: "purchase-gst",
+    }),
+    status: evidence.tests.some((test) => test.status !== "PASS") ? "FAIL" : "PASS",
+    details: {
+      function: "DGM-T19",
+      suite: "purchase-gst",
+      databaseAccessed: true,
+      resultCount: evidence.tests.length,
+      failureCount: evidence.tests.filter((test) => test.status !== "PASS").length,
+      cleanupStatus: evidence.cleanup.status,
+      evidenceRecordingSucceeded: true,
+    },
   });
-  if (!cleanupCheck.ok || authorizedTargetContract.databaseName !== databaseName) {
-    throw new Error("Cleanup target does not match the authorized immutable target contract.");
-  }
-  await admin.query(`DROP DATABASE "${databaseName}" WITH (FORCE)`);
-  evidence.cleanup.databaseDropped = true;
-  evidence.cleanup.databaseVerifiedAbsent =
-    (await admin.query("SELECT 1 FROM pg_database WHERE datname = $1", [databaseName])).rowCount === 0;
-  await admin.end();
-  evidence.cleanup.verifiedAbsent = evidence.cleanup.databaseVerifiedAbsent;
+  writeLifecycleEvidence({
+    filePath: process.env.FINANCIAL_E2E_SUITE_EVIDENCE_FILE,
+    evidence: lifecycleEvidence,
+  });
   const output = `.obsidian-vault/specs/purchase-gst-application-evidence-${run}.json`;
   fs.writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`);
   console.log(`PURCHASE_GST_EVIDENCE=${output}`);
   console.log(`PURCHASE_GST_RESULTS=${evidence.tests.length}`);
   console.log(`PURCHASE_GST_FAILURES=${evidence.tests.filter((test) => test.status !== "PASS").length}`);
-  if (evidence.tests.some((test) => test.status !== "PASS") || !evidence.cleanup.verifiedAbsent) process.exitCode = 1;
+  if (evidence.tests.some((test) => test.status !== "PASS")) process.exitCode = 1;
 }
 
 main().catch(async (error) => {
   console.error(error?.stack ?? error);
   try { await db?.end(); } catch {}
   try { await prisma?.$disconnect(); } catch {}
-  try {
-    if (admin && authorizedTargetContract && validateAuthorizedTargetContract) {
-      const cleanupCheck = validateAuthorizedTargetContract({
-        contract: authorizedTargetContract,
-        targetUrl: authorizedTargetUrl,
-        runtimeUrl: authorizedRuntimeUrl,
-        ordinaryUrl: ordinaryDatabaseUrl,
-      });
-      if (!cleanupCheck.ok || authorizedTargetContract.databaseName !== databaseName) {
-        console.error("CLEANUP=BLOCKED_TARGET_CONTRACT_MISMATCH");
-        throw new Error("Cleanup target did not match the authorized immutable target contract.");
-      }
-      await admin.query(`DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`);
-      await admin.end();
-    }
-  } catch {}
   process.exitCode = 1;
 });

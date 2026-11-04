@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { randomUUID } from "node:crypto";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,12 +18,15 @@ export const metadata: Metadata = {
   title: "Record supplier payment",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function NewPurchasePaymentPage({
   searchParams,
 }: {
   searchParams?: { supplier_id?: string };
 }) {
   const prefillSupplierId = searchParams?.supplier_id ?? "";
+  const idempotencyKey = randomUUID();
   let dbOk = isPostgresConfigured();
   let suppliers: any[] = [];
 
@@ -64,6 +68,7 @@ export default async function NewPurchasePaymentPage({
       <PurchasePaymentNewClientForm
         suppliers={suppliers}
         prefillSupplierId={prefillSupplierId}
+        idempotencyKey={idempotencyKey}
       />
     </DashboardLayout>
   );

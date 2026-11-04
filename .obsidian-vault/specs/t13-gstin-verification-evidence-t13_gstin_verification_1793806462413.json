@@ -1,0 +1,38 @@
+{
+  "evidenceVersion": 1,
+  "function": "DGM-T13",
+  "suite": "t13-gstin-verification",
+  "runId": "t13_gstin_verification_1793806462413",
+  "recordedAt": "2026-11-04T15:34:22.413Z",
+  "command": "pnpm test:t13:gstin",
+  "offline": true,
+  "databaseAccessed": false,
+  "targetBound": false,
+  "status": "PASS",
+  "passed": 5,
+  "failed": 0,
+  "total": 5,
+  "scenarios": [
+    {
+      "name": "DGM-T13: exactly 15 GSTIN characters are accepted",
+      "status": "PASS"
+    },
+    {
+      "name": "DGM-T13: unsupported GSTIN prefixes are not used as a current-release length failure",
+      "status": "PASS"
+    },
+    {
+      "name": "DGM-T13: GSTIN shorter than 15 characters is rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "DGM-T13: GSTIN longer than 15 characters is rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "DGM-T13: optional blank GSTIN remains allowed",
+      "status": "PASS"
+    }
+  ],
+  "evidenceRecordingSucceeded": true
+}

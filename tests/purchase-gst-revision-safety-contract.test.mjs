@@ -31,6 +31,10 @@ test("purchase GST acceptance and correction paths bind decisions to the reviewe
   assert.match(action, /current_gst_accounting_decision_id: null/);
   assert.match(action, /expectedCurrentEvidenceRevisionId/);
   assert.match(action, /expectedCurrentCalculationId/);
+  assert.match(action, /currentLineEvidenceCount/);
+  assert.match(action, /Every purchase line requires current GST evidence before acceptance/);
+  assert.match(action, /updatedLineCount/);
+  assert.match(action, /Every purchase line must receive an immutable accounting acceptance snapshot/);
   assert.match(action, /Purchase GST revision changed while the correction was being recorded; retry/);
   assert.match(action, /fromStatus: purchase\.gst_reconciliation_status/);
 

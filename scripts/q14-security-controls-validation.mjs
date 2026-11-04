@@ -229,7 +229,7 @@ async function main() {
         (SELECT count(*) FROM q14_maintenance_audit WHERE outcome = 'DENIED') AS denied_audits
     `);
     record("sec01-independent-trigger-restoration", "true/true", `${triggerStates[0].eligible_restored}/${triggerStates[0].protected_restored}`);
-    record("sec01-allowlist-exclusion-matrix", "1/11", `${triggerStates[0].eligible_count}/${triggerStates[0].protected_count}`);
+    record("sec01-allowlist-exclusion-matrix", "1/12", `${triggerStates[0].eligible_count}/${triggerStates[0].protected_count}`);
     record("sec01-audit-evidence", "true",
       String(Number(triggerStates[0].successful_audits) >= 3 && Number(triggerStates[0].denied_audits) >= 2));
 

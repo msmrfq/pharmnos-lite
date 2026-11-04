@@ -346,5 +346,6 @@ export {
     REQUIRED_ENVIRONMENT_MARKER,
     REQUIRED_MARKER,
     identityKey,
+    isBlockedHost,
     targetBinding,
 };

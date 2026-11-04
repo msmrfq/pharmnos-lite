@@ -122,6 +122,7 @@ export async function createProductAction(
     }
 
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, PermissionAction.create_product);
     const data = parsed.data;
 
     const product = await prisma.$transaction(async (tx) => {
@@ -198,6 +199,7 @@ export async function updateProductAction(
     }
 
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, PermissionAction.edit_product);
     const data = parsed.data;
 
     const existing = await prisma.products.findUnique({
@@ -342,6 +344,7 @@ export async function createCustomerAction(
     }
 
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, PermissionAction.create_customer);
     const data = parsed.data;
 
     const customer = await prisma.$transaction(async (tx) => {
@@ -433,6 +436,7 @@ export async function updateCustomerAction(
     }
 
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, PermissionAction.edit_customer);
     const data = parsed.data;
 
     const existing = await prisma.customers.findUnique({
@@ -568,6 +572,7 @@ export async function createSupplierAction(
     }
 
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, PermissionAction.create_supplier);
     const data = parsed.data;
 
     const supplier = await prisma.$transaction(async (tx) => {
@@ -657,6 +662,7 @@ export async function updateSupplierAction(
     }
 
     const ctx = await requireServerTenantContext();
+    requirePermission(ctx, PermissionAction.edit_supplier);
     const data = parsed.data;
 
     const existing = await prisma.suppliers.findUnique({

@@ -15,11 +15,31 @@ import {
   CLEANUP_TABLES,
   collectOwnedResources,
 } from "./financial-e2e-fixture-ownership.mjs";
-import { loadTargetContractFromEnv, targetContractBinding, verifyTargetSchema } from "./financial-e2e-target-contract.mjs";
+import { targetContractBinding, verifyTargetSchema } from "./financial-e2e-target-contract.mjs";
+import {
+  createLifecycleEvidence,
+  loadAuthorizedTargetLifecycle,
+  loadFinancialE2eEnvironment,
+  writeLifecycleEvidence,
+} from "./financial-e2e-target-lifecycle.mjs";
 
 const { Client } = pg;
 const require = createRequire(import.meta.url);
 const root = process.cwd();
+const SALES_SOURCE_FILES = [
+  "src/app/_actions/sales.actions.ts",
+  "src/domain/services/gst-calculator.service.ts",
+  "src/lib/decimal.ts",
+  "prisma/schema.prisma",
+  "prisma/financial-e2e-schema-provisioning.generated.sql",
+  "scripts/gst-application-e2e-runner.mjs",
+];
+const sourceHashes = () => Object.fromEntries(
+  SALES_SOURCE_FILES.map((file) => [
+    file,
+    crypto.createHash("sha256").update(fs.readFileSync(path.resolve(root, file))).digest("hex"),
+  ]),
+);
 process.env.TS_NODE_COMPILER_OPTIONS = JSON.stringify({
   module: "commonjs",
   moduleResolution: "node",
@@ -49,6 +69,8 @@ const {
   clearFinancialE2eTestSession,
 } = require("../src/adapters/auth/index.ts");
 let APPROVED;
+let LIFECYCLE;
+let salesPersistenceEvidence = null;
 
 async function cleanupOwnedResources(plan, client) {
   await client.query("BEGIN");
@@ -70,10 +92,7 @@ async function cleanupOwnedResources(plan, client) {
 }
 
 function loadEnv() {
-  for (const line of fs.readFileSync(".env.financial-e2e", "utf8").split(/\r?\n/)) {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (match && process.env[match[1]] === undefined) process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, "");
-  }
+  Object.assign(process.env, loadFinancialE2eEnvironment(process.env));
 }
 
 function targetUrl(name, password, options = "") {
@@ -95,7 +114,12 @@ async function query(client, text, values) {
 
 async function gate() {
   loadEnv();
-  APPROVED = loadTargetContractFromEnv();
+  LIFECYCLE = loadAuthorizedTargetLifecycle({
+    env: process.env,
+    phase: "SUITE_EXECUTION",
+    suiteName: "sales-gst",
+  });
+  APPROVED = LIFECYCLE.contract;
   assert.equal(process.env.ALLOW_FINANCIAL_E2E, "true");
   assert.equal(process.env.TEST_DATABASE_NAME, APPROVED.databaseName);
   assert.equal(process.env.TEST_DATABASE_MARKER, APPROVED.marker);
@@ -471,9 +495,12 @@ async function main() {
   let prisma = null;
   let fixture = null;
   let fixtureManifest = null;
+  let suiteFailure = null;
+  let ordinaryDatabaseUrl = null;
+  let salesOnly = false;
   try {
     bootstrap = await gate();
-    const ordinaryDatabaseUrl = process.env.DATABASE_URL;
+    ordinaryDatabaseUrl = process.env.DATABASE_URL;
     fixture = await createFixture(bootstrap);
     await verifyTenantIsolationAndPrivileges(bootstrap, fixture);
     const snapshotFixture = await createSnapshotFixtures(bootstrap, fixture);
@@ -493,7 +520,8 @@ async function main() {
     } = require("../src/app/_actions/purchases.actions.ts");
     const { repos } = require("../src/repositories/index.ts");
     const onlyGst016 = process.env.GST_E2E_ONLY === "016";
-    if (!onlyGst016) {
+    salesOnly = process.env.GST_E2E_SALES_ONLY === "true";
+    if (!onlyGst016 && !salesOnly) {
     const salesBefore = await prisma.sales_invoices.findUnique({ where: { id: fixture.sales, tenant_id: fixture.tenant }, include: { items: true, customer: true } });
     const batchesBefore = await prisma.product_batches.findMany({ where: { id: { in: [fixture.batchA, fixture.batchB] }, tenant_id: fixture.tenant } });
     const profileBefore = await prisma.business_profiles.findUnique({ where: { tenant_id: fixture.tenant } });
@@ -527,20 +555,41 @@ async function main() {
     }
     const salesSuccessBefore = await prisma.sales_invoices.findUnique({ where: { id: fixture.salesSuccess, tenant_id: fixture.tenant }, include: { items: true } });
     const salesSuccessCustomerBefore = await prisma.customers.findUnique({ where: { id: fixture.customer, tenant_id: fixture.tenant } });
+    const salesSuccessSupplierBefore = await prisma.suppliers.findUnique({ where: { id: fixture.supplier, tenant_id: fixture.tenant } });
     const salesSuccessBatchesBefore = await prisma.product_batches.findMany({ where: { tenant_id: fixture.tenant, product_id: fixture.productA } });
     const salesSuccessForm = new FormData();
     salesSuccessForm.append("idempotency_key", `gst-e2e-success-${fixture.salesSuccess}`);
     const salesSuccessResult = await invokeSuccessfulAction(() =>
       finalizeSalesInvoiceAction(fixture.salesSuccess, {}, salesSuccessForm));
-    assert.equal(salesSuccessResult.ok, true);
+    assert.equal(salesSuccessResult.ok, true, salesSuccessResult.message ?? "Sales finalization failed.");
     const salesSuccessAfter = await prisma.sales_invoices.findUnique({ where: { id: fixture.salesSuccess, tenant_id: fixture.tenant }, include: { items: true } });
     assert.equal(salesSuccessAfter.status, "FINALIZED");
     assert.ok(salesSuccessAfter.invoice_no);
-    assert.equal(Number(salesSuccessAfter.items[0].cgst_amount), 9);
-    assert.equal(Number(salesSuccessAfter.items[0].sgst_amount), 9);
+    const salesSuccessItemAfter = salesSuccessAfter.items[0];
+    assert.equal(salesSuccessAfter.gst_treatment, "Registered Business – Regular");
+    assert.equal(salesSuccessAfter.tax_mode, "EXCLUSIVE");
+    assert.equal(salesSuccessAfter.place_of_supply_code, "MH");
+    assert.equal(salesSuccessAfter.tax_data_status, "COMPLETE");
+    assert.equal(Number(salesSuccessAfter.gross_amount), 100);
+    assert.equal(Number(salesSuccessAfter.total_discount), 0);
+    assert.equal(Number(salesSuccessAfter.total_tax), 18);
+    assert.equal(Number(salesSuccessAfter.round_off), 0);
+    assert.equal(Number(salesSuccessAfter.net_amount), 118);
+    assert.equal(Number(salesSuccessAfter.balance_due), 118);
+    assert.equal(Number(salesSuccessItemAfter.line_total), 118);
+    assert.equal(Number(salesSuccessItemAfter.taxable_amount), 100);
+    assert.equal(Number(salesSuccessItemAfter.cgst_amount), 9);
+    assert.equal(Number(salesSuccessItemAfter.sgst_amount), 9);
+    assert.equal(Number(salesSuccessItemAfter.igst_amount), 0);
+    assert.equal(Number(salesSuccessItemAfter.cess_amount), 0);
     assert.equal(await prisma.stock_movements.count({ where: { tenant_id: fixture.tenant, reference_id: fixture.salesSuccess } }), 1);
     assert.equal(await prisma.customer_ledgers.count({ where: { tenant_id: fixture.tenant, invoice_id: fixture.salesSuccess } }), 1);
-    assert.equal(Number((await prisma.customers.findUnique({ where: { id: fixture.customer, tenant_id: fixture.tenant } })).receivable_balance), Number(salesSuccessCustomerBefore.receivable_balance) + 118);
+    const salesSuccessCustomerAfter = await prisma.customers.findUnique({ where: { id: fixture.customer, tenant_id: fixture.tenant } });
+    const salesSuccessSupplierAfter = await prisma.suppliers.findUnique({ where: { id: fixture.supplier, tenant_id: fixture.tenant } });
+    assert.equal(Number(salesSuccessCustomerAfter.receivable_balance), Number(salesSuccessCustomerBefore.receivable_balance) + 118);
+    if (salesOnly) {
+      assert.equal(Number(salesSuccessSupplierAfter.payable_balance), Number(salesSuccessSupplierBefore.payable_balance));
+    }
     assert.equal(await prisma.audit_logs.count({ where: { tenant_id: fixture.tenant, target_id: fixture.salesSuccess, event_type: "INVOICE_FINALIZED" } }), 1);
     const salesSuccessBatchesAfter = await prisma.product_batches.findMany({ where: { tenant_id: fixture.tenant, product_id: fixture.productA } });
     const availableBefore = salesSuccessBatchesBefore.reduce((total, batch) => total + Number(batch.available_qty), 0);
@@ -579,9 +628,50 @@ async function main() {
     assert.equal((await prisma.sales_invoices.findUnique({
       where: { id: fixture.sales, tenant_id: fixture.tenant },
     })).status, "DRAFT");
+    salesPersistenceEvidence = {
+      scenario: "INTRA_STATE_SALES_FINALIZATION",
+      invoiceId: fixture.salesSuccess,
+      invoice: {
+        status: salesSuccessAfter.status,
+        invoiceNo: salesSuccessAfter.invoice_no,
+        gstTreatment: salesSuccessAfter.gst_treatment,
+        taxMode: salesSuccessAfter.tax_mode,
+        placeOfSupplyCode: salesSuccessAfter.place_of_supply_code,
+        taxDataStatus: salesSuccessAfter.tax_data_status,
+        grossAmount: Number(salesSuccessAfter.gross_amount),
+        totalDiscount: Number(salesSuccessAfter.total_discount),
+        totalTax: Number(salesSuccessAfter.total_tax),
+        roundOff: Number(salesSuccessAfter.round_off),
+        netAmount: Number(salesSuccessAfter.net_amount),
+        balanceDue: Number(salesSuccessAfter.balance_due),
+      },
+      line: {
+        lineTotal: Number(salesSuccessItemAfter.line_total),
+        taxableAmount: Number(salesSuccessItemAfter.taxable_amount),
+        cgstAmount: Number(salesSuccessItemAfter.cgst_amount),
+        sgstAmount: Number(salesSuccessItemAfter.sgst_amount),
+        igstAmount: Number(salesSuccessItemAfter.igst_amount),
+        cessAmount: Number(salesSuccessItemAfter.cess_amount),
+      },
+      customer: {
+        beforeReceivableBalance: Number(salesSuccessCustomerBefore.receivable_balance),
+        afterReceivableBalance: Number(salesSuccessCustomerAfter.receivable_balance),
+      },
+      supplier: {
+        beforePayableBalance: Number(salesSuccessSupplierBefore.payable_balance),
+        afterPayableBalance: Number(salesSuccessSupplierAfter.payable_balance),
+      },
+      posting: {
+        stockMovements: await prisma.stock_movements.count({ where: { tenant_id: fixture.tenant, reference_id: fixture.salesSuccess } }),
+        customerLedgers: await prisma.customer_ledgers.count({ where: { tenant_id: fixture.tenant, invoice_id: fixture.salesSuccess } }),
+        auditLogs: await prisma.audit_logs.count({ where: { tenant_id: fixture.tenant, target_id: fixture.salesSuccess, event_type: "INVOICE_FINALIZED" } }),
+      },
+    };
     console.log("SALES-IDEMPOTENCY-RETRY-CONFLICT-ROLLBACK=PASS_CURRENT_CAMPAIGN");
     console.log("SALES-SUCCESS=PASS_APPLICATION_PATH_DATABASE_E2E");
+    if (salesOnly) console.log("T25-SALES-PERSISTENCE=PASS_CURRENT_SOURCE_DATABASE_READBACK");
 
+    if (!salesOnly) {
     const purchaseSuccessBefore = await prisma.purchase_invoices.findUnique({ where: { id: fixture.purchaseSuccess, tenant_id: fixture.tenant } });
     const purchaseSuccessForm = new FormData();
     purchaseSuccessForm.append("idempotency_key", `gst-e2e-success-${fixture.purchaseSuccess}`);
@@ -800,6 +890,7 @@ async function main() {
     const supplierPaymentFailure = await createSupplierPaymentAction({}, badSupplierPayment);
     assert.equal(supplierPaymentFailure.ok, false);
     console.log("PAYMENT=PASS_APPLICATION_PATH_DATABASE_E2E");
+    }
   const { updateProductAction, updateCustomerAction } = require("../src/app/_actions/masters.actions.ts");
   const { loadBillingInvoicePrintData } = require("../src/app/billing/[invoiceId]/print/data.ts");
   const { buildInvoicePrintSnapshot } = require("../src/domain/services/gst-calculator.service.ts");
@@ -878,6 +969,9 @@ async function main() {
   });
   assert.equal(crossTenant, null);
   console.log(`GST-016=PASS_APPLICATION_PATH_DATABASE_E2E fixture=${snapshotFixture.completeInvoice} missing=${snapshotFixture.missingInvoice}`);
+  } catch (error) {
+    suiteFailure = error;
+    throw error;
   } finally {
     clearFinancialE2eTestSession();
     if (prisma) await prisma.$disconnect().catch(() => {});
@@ -956,6 +1050,36 @@ async function main() {
       } finally {
         await cleanupBootstrap.end();
       }
+    }
+    if (ordinaryDatabaseUrl) process.env.DATABASE_URL = ordinaryDatabaseUrl;
+    if (LIFECYCLE && process.env.FINANCIAL_E2E_SUITE_EVIDENCE_FILE) {
+      const evidenceLifecycle = loadAuthorizedTargetLifecycle({
+        env: process.env,
+        phase: "EVIDENCE_RECORDING",
+        suiteName: "sales-gst",
+      });
+      const evidence = createLifecycleEvidence({
+        phase: "EVIDENCE_RECORDING",
+        lifecycle: evidenceLifecycle,
+        status: suiteFailure ? "FAIL" : "PASS",
+        details: {
+          suite: "sales-gst",
+          command: process.env.FINANCIAL_E2E_SUITE_COMMAND || "pnpm exec node .\\scripts\\sales-gst-application-acceptance.cjs",
+          databaseAccessed: true,
+          salesOnly,
+          sourceHashes: sourceHashes(),
+          salesPersistence: salesPersistenceEvidence,
+          fixtureResourceCount: fixtureManifest?.resources?.length ?? 0,
+          cleanupMode: process.env.FINANCIAL_E2E_CLEANUP_MODE || "ROW_LEVEL_CLEANUP",
+          cleanupAuthorization: process.env.FINANCIAL_E2E_CLEANUP_AUTHORIZED === "true",
+          failure: suiteFailure ? String(suiteFailure.message || "suite failure").slice(0, 500) : null,
+        },
+      });
+      writeLifecycleEvidence({
+        filePath: process.env.FINANCIAL_E2E_SUITE_EVIDENCE_FILE,
+        evidence,
+      });
+      console.log(`FINANCIAL_E2E_SUITE_EVIDENCE=${process.env.FINANCIAL_E2E_SUITE_EVIDENCE_FILE}`);
     }
   }
 }

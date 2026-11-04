@@ -81,6 +81,7 @@ test("builds context from the authenticated membership and permissions", async (
     assert.deepEqual(context, {
         tenantId: "tenant-from-membership",
         userId: "application-user-id",
+        subjectId: "supabase-user-id",
         roles: ["Billing"],
         permissions: ["finalize_invoice"],
     });

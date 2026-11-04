@@ -40,14 +40,14 @@ You have full access to this session's chat history, all code changes, git diff,
 
 ### Task 0 (MANDATORY — DO BEFORE Task 1): Confirm phase tracker is up to date.
 
-1. Open `PHASE_TRACKER.md` at the project root.
+1. Open `.obsidian-vault/PHASE_TRACKER.md`.
 2. Check the `Last updated:` date and time stamp on line 17-ish. Is it TODAY'S actual date and Current time? If NOT:
    a. Update `Last updated:` to today's date and current time.
    b. If the session finished a working phase end-to-end (e.g. Phase 3 complete — all AC checkboxes in the 3 Masters CRUD spec passed), flip Status column line of that phase from `🚧 IN PROGRESS → ✅ DONE (completed Date: YYYY-MM-DD Time: HH-MM-SS)` with today's date and current timing according to the Indian Standard Time.
    c. Move the `✅ YES` in `Current?` column exactly ONE row down to the NEXT working phase (only one current phase at a time; we never work on two phases simultaneously).
    d. Update the `Current working phase:` banner line on line 19-ish to match the newly current phase title.
    e. Update the `% complete` column for the phase with a realistic confidence-weighted % — never % from planning alone; only bump when real code is actually shipped and passing typecheck/lint/smoke.
-3. If you touched `PHASE_TRACKER.md` in step 2, THEN also run the cross-reference update list in the footer of PHASE_TRACKER.md (at minimum open CLAUDE.md canonical → confirm File map section still contains the `PHASE_TRACKER.md` row with correct current phase label → then run `& .\sync-agent-briefings.ps1` so all 6 AI mirrors receive the phase shift).
+3. If you touched `.obsidian-vault/PHASE_TRACKER.md` in step 2, THEN also run the cross-reference update list in the footer of `.obsidian-vault/PHASE_TRACKER.md` (at minimum open `.obsidian-vault/CLAUDE.md` canonical → confirm the File map section still contains the `PHASE_TRACKER.md` row with the correct current phase label → then run `& .\sync-agent-briefings.ps1` so all 6 AI mirrors receive the phase shift).
 
 ### Task 1: Generate the daily working note
 

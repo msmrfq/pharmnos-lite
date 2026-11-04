@@ -1,0 +1,1174 @@
+{
+  "evidenceVersion": 1,
+  "function": "DGM-T25",
+  "suite": "t25-gst-calculation-treatment",
+  "runId": "t25_gst_calculation_treatment_1793806462413",
+  "recordedAt": "2026-11-04T15:34:22.413Z",
+  "command": "pnpm test:t25:gst-calculation",
+  "offline": true,
+  "databaseAccessed": false,
+  "targetBound": false,
+  "status": "PASS",
+  "passed": 289,
+  "failed": 0,
+  "total": 289,
+  "scenarios": [
+    {
+      "name": "Print loader prefers seller snapshot",
+      "status": "PASS"
+    },
+    {
+      "name": "Print loader prefers customer snapshot",
+      "status": "PASS"
+    },
+    {
+      "name": "Print loader prefers product snapshot",
+      "status": "PASS"
+    },
+    {
+      "name": "Print loader prefers HSN snapshot",
+      "status": "PASS"
+    },
+    {
+      "name": "Legacy print loader uses disclosed current fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "Legacy print loader uses current customer fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "Legacy print loader uses current product fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "Decimal arithmetic: 0.1 + 0.2 is exact",
+      "status": "PASS"
+    },
+    {
+      "name": "Decimal rounding HALF_UP: below midpoint remains 10.12",
+      "status": "PASS"
+    },
+    {
+      "name": "Decimal rounding HALF_UP: midpoint rounds to 10.13",
+      "status": "PASS"
+    },
+    {
+      "name": "Decimal rounding HALF_UP: above midpoint remains 10.13",
+      "status": "PASS"
+    },
+    {
+      "name": "Decimal arithmetic: intermediate values are not rounded prematurely",
+      "status": "PASS"
+    },
+    {
+      "name": "Decimal boundary: an already-rounded two-decimal value serializes to its expected number",
+      "status": "PASS"
+    },
+    {
+      "name": "JavaScript number boundary: arithmetic after conversion retains binary floating-point behavior",
+      "status": "PASS"
+    },
+    {
+      "name": "JavaScript number boundary: high-precision NUMERIC(20,4)-scale values can lose precision",
+      "status": "PASS"
+    },
+    {
+      "name": "Section 170 helper: 10000.49 rounds to 10000",
+      "status": "PASS"
+    },
+    {
+      "name": "Section 170 helper: 10000.50 rounds to 10001",
+      "status": "PASS"
+    },
+    {
+      "name": "Commercial round-off: nearest rupee remains a separate operation",
+      "status": "PASS"
+    },
+    {
+      "name": "Indian region catalog: 28 states",
+      "status": "PASS"
+    },
+    {
+      "name": "Indian region catalog: 8 union territories",
+      "status": "PASS"
+    },
+    {
+      "name": "Indian region catalog: 36 combined regions",
+      "status": "PASS"
+    },
+    {
+      "name": "Indian region catalog: no duplicate codes",
+      "status": "PASS"
+    },
+    {
+      "name": "Indian region catalog: classifications are explicit",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: Full state name 'Maharashtra'",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: Lowercase state name",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: Uppercase state name",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: State name with whitespace",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: Multi-word state name 'Tamil Nadu'",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: Lowercase multi-word state name",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: 'Uttar Pradesh'",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: Union Territory 'Delhi'",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: State code 'MH'",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: Lowercase state code 'mh'",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: State code with whitespace",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: Empty string",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: null input",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: undefined input",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: Invalid state name",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: Invalid state code 'XX'",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateName: Valid code 'MH'",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateName: Lowercase code 'mh'",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateName: Invalid code 'XX'",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateName: null input",
+      "status": "PASS"
+    },
+    {
+      "name": "isValidStateCode: Valid code 'MH'",
+      "status": "PASS"
+    },
+    {
+      "name": "isValidStateCode: Lowercase code 'mh'",
+      "status": "PASS"
+    },
+    {
+      "name": "isValidStateCode: Invalid code 'XX'",
+      "status": "PASS"
+    },
+    {
+      "name": "isValidStateCode: Empty string",
+      "status": "PASS"
+    },
+    {
+      "name": "isValidStateCode: null input",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 01",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 02",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 03",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 04",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 05",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 06",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 07",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 08",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 09",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 10",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 11",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 12",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 13",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 14",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 15",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 16",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 17",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 18",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 19",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 20",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 21",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 22",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 23",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 24",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 25",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 26",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 27",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 28",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 29",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 30",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 31",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 32",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 33",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 34",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 35",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 36",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 37",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix 38",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Empty string",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Prefix-only input is not a GSTIN",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Standalone code uses normalizeState instead",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Short identifier",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Invalid character",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Valid lowercase input with whitespace",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Unsupported prefix 00",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Unsupported prefix 39",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Special-purpose prefix 96 remains unknown",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Special-purpose prefix 97 remains unknown",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: Special-purpose prefix 99 remains unknown",
+      "status": "PASS"
+    },
+    {
+      "name": "getStateCodeFromGstin: null input",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: Standalone AP state code",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: Current Ladakh state name",
+      "status": "PASS"
+    },
+    {
+      "name": "normalizeState: Merged UT canonical name",
+      "status": "PASS"
+    },
+    {
+      "name": "businessProfileStateSchema: State name normalized to canonical code",
+      "status": "PASS"
+    },
+    {
+      "name": "businessProfileStateSchema: State code normalized to uppercase",
+      "status": "PASS"
+    },
+    {
+      "name": "businessProfileStateSchema: Blank state remains optional",
+      "status": "PASS"
+    },
+    {
+      "name": "businessProfileStateSchema: Unsupported state rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Business profile action mapping: normalized state persisted",
+      "status": "PASS"
+    },
+    {
+      "name": "Business profile action mapping: blank address persists as null",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: pre-discount gross",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: discount",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: aggregate GST",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: line total",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: invoice tax",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: existing whole-unit round-off",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: invoice net amount",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase decimal calculation: gross retains internal precision",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase decimal calculation: taxable value is not rounded before tax",
+      "status": "PASS"
+    },
+    {
+      "name": "Inclusive purchase helper: supplier-declared amount is preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "Inclusive purchase helper: Rule 35 taxable extraction",
+      "status": "PASS"
+    },
+    {
+      "name": "Inclusive purchase helper: independent CGST",
+      "status": "PASS"
+    },
+    {
+      "name": "Inclusive purchase helper: independent SGST",
+      "status": "PASS"
+    },
+    {
+      "name": "Inclusive purchase helper: extracted GST reconciles to declared amount",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: zero gross remains zero",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: zero tax remains zero",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: zero line remains zero",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: non-finite gross input is neutralized",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: non-finite tax input is neutralized",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: multi-line gross total",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: positive whole-unit round-off",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase facts: rounded multi-line net amount",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase schema: valid line accepted",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase schema: zero quantity rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase schema: negative purchase rate rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Same state names",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Same state codes",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Name vs code same state",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Code vs name same state",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Different state names",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Different state codes",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Name vs code different states",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Non-Maharashtra same state",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Non-Maharashtra supplier",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Missing supplier state",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Missing buyer state",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Whitespace-only supplier state",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Whitespace-only buyer state",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Both whitespace-only states",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: null supplier state",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: null buyer state",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Invalid supplier state",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Invalid buyer state",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Both missing",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Both invalid",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Same-UT supply is blocked",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Same-UT block reason",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Missing supplier - type",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Missing supplier - reason",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Missing buyer - type",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Missing buyer - reason",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Invalid supplier - type",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Invalid supplier - reason",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Invalid buyer - type",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Invalid buyer - reason",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Both missing - type",
+      "status": "PASS"
+    },
+    {
+      "name": "determinePlaceOfSupply: Both missing - reason",
+      "status": "PASS"
+    },
+    {
+      "name": "requireResolvedPlaceOfSupply: Same state accepted",
+      "status": "PASS"
+    },
+    {
+      "name": "requireResolvedPlaceOfSupply: Different state accepted",
+      "status": "PASS"
+    },
+    {
+      "name": "requireResolvedPlaceOfSupply: Missing supplier rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "requireResolvedPlaceOfSupply: Invalid customer rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "toTaxableGstLine: Draft discount field",
+      "status": "PASS"
+    },
+    {
+      "name": "toTaxableGstLine: Persisted discount field",
+      "status": "PASS"
+    },
+    {
+      "name": "toTaxableGstLine: Equivalent discount totals",
+      "status": "PASS"
+    },
+    {
+      "name": "toTaxableGstLine: Equivalent grand totals",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst 5% INTRA on ₹10.10: CGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst 5% INTRA on ₹10.10: SGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst 5% INTRA on ₹10.10: line total",
+      "status": "PASS"
+    },
+    {
+      "name": "Persisted sales facts INTRA: taxable amount",
+      "status": "PASS"
+    },
+    {
+      "name": "Persisted sales facts INTRA: aggregate GST",
+      "status": "PASS"
+    },
+    {
+      "name": "Persisted sales facts INTRA: components reconcile to aggregate GST",
+      "status": "PASS"
+    },
+    {
+      "name": "Persisted sales facts INTRA: line total",
+      "status": "PASS"
+    },
+    {
+      "name": "Billing preview parity: canonical INTRA line total",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals 5% INTRA on ₹10.10: aggregate tax",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals 5% INTRA: aggregate tax equals canonical line components",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals multiple 5% INTRA lines: per-line tax rounding",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals multiple 5% INTRA lines: grand total",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals: three ₹0.99 lines preserve CGST components",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals: three ₹0.99 lines preserve SGST components",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals: item tax amounts reconcile to invoice tax",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals: three ₹0.99 lines grand total",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals: mixed rates keep CGST independent",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals: mixed rates keep SGST independent",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals: mixed rates aggregate reported components",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst: CGST rounds independently",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst: SGST rounds independently",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst: no lump-sum tax split",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst INTRA: Rate preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst INTRA: CGST = 1000 * 9% = 90",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst INTRA: SGST = 1000 * 9% = 90",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst INTRA: IGST = 0",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst INTRA: Line total = 1000 + 90 + 90 = 1180",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst 5% INTER on ₹10.10: IGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst 5% INTER on ₹10.10: line total",
+      "status": "PASS"
+    },
+    {
+      "name": "Persisted sales facts INTER: aggregate GST",
+      "status": "PASS"
+    },
+    {
+      "name": "Persisted sales facts INTER: IGST",
+      "status": "PASS"
+    },
+    {
+      "name": "Persisted sales facts INTER: line total",
+      "status": "PASS"
+    },
+    {
+      "name": "Billing preview parity: canonical INTER line total",
+      "status": "PASS"
+    },
+    {
+      "name": "Sales snapshot readiness: complete facts accepted",
+      "status": "PASS"
+    },
+    {
+      "name": "Sales snapshot readiness: missing product snapshot rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Sales completeness: complete tax and snapshot facts accepted",
+      "status": "PASS"
+    },
+    {
+      "name": "Sales completeness: unresolved place of supply rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Invoice printing: complete record prefers persisted snapshot",
+      "status": "PASS"
+    },
+    {
+      "name": "Invoice printing: complete record does not substitute current data for a missing snapshot",
+      "status": "PASS"
+    },
+    {
+      "name": "Invoice printing: legacy record falls back to current display data",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst INTER: Rate preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst INTER: CGST = 0",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst INTER: SGST = 0",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst INTER: IGST = 1000 * 18% = 180",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst INTER: Line total = 1000 + 180 = 1180",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Zero rate: CGST = 0",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Zero rate: SGST = 0",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Zero rate: IGST = 0",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Zero rate: Line total = taxable only",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Non-taxable: CGST = 0",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Non-taxable: SGST = 0",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Non-taxable: IGST = 0",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Non-taxable: Line total = taxable only",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 0.25% INTRA: CGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 0.25% INTRA: SGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 0.25% INTER: IGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 3% INTRA: CGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 3% INTRA: SGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 3% INTER: IGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 5% INTRA: CGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 5% INTRA: SGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 5% INTER: IGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 12% INTRA: CGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 12% INTRA: SGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 12% INTER: IGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 18% INTRA: CGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 18% INTRA: SGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 18% INTER: IGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 28% INTRA: CGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 28% INTRA: SGST",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst Rate 28% INTER: IGST",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals INTRA: 3 lines",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals INTRA: Total taxable",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals INTRA: Total CGST",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals INTRA: Total SGST",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals INTRA: Total IGST = 0",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals INTRA: Total tax",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals INTRA: Place of supply",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals INTER: 2 lines",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals INTER: Total taxable",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals INTER: Total CGST = 0",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals INTER: Total SGST = 0",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals INTER: Total IGST",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals INTER: Total tax",
+      "status": "PASS"
+    },
+    {
+      "name": "calculateGstTotals INTER: Place of supply",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst HALF_UP: CGST rounded to 9.01",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst DOWN: CGST floored to 9.01",
+      "status": "PASS"
+    },
+    {
+      "name": "splitLineGst NONE: CGST not rounded",
+      "status": "PASS"
+    },
+    {
+      "name": "gstCalculator.computeTotals INTRA: CGST",
+      "status": "PASS"
+    },
+    {
+      "name": "gstCalculator.computeTotals INTRA: SGST",
+      "status": "PASS"
+    },
+    {
+      "name": "gstCalculator.computeTotals INTRA: IGST",
+      "status": "PASS"
+    },
+    {
+      "name": "gstCalculator.computeTotals INTER: CGST",
+      "status": "PASS"
+    },
+    {
+      "name": "gstCalculator.computeTotals INTER: SGST",
+      "status": "PASS"
+    },
+    {
+      "name": "gstCalculator.computeTotals INTER: IGST",
+      "status": "PASS"
+    },
+    {
+      "name": "detectPlaceOfSupply: Same codes",
+      "status": "PASS"
+    },
+    {
+      "name": "detectPlaceOfSupply: Different codes",
+      "status": "PASS"
+    },
+    {
+      "name": "detectPlaceOfSupply: Names normalized",
+      "status": "PASS"
+    },
+    {
+      "name": "detectPlaceOfSupply: Name vs code same",
+      "status": "PASS"
+    },
+    {
+      "name": "detectPlaceOfSupply: Missing supplier",
+      "status": "PASS"
+    },
+    {
+      "name": "detectPlaceOfSupply: Missing buyer",
+      "status": "PASS"
+    },
+    {
+      "name": "GstCalculatorService.detectPlace: Same codes",
+      "status": "PASS"
+    },
+    {
+      "name": "GstCalculatorService.detectPlace: Different codes",
+      "status": "PASS"
+    },
+    {
+      "name": "GstCalculatorService.detectPlace: Names normalized",
+      "status": "PASS"
+    },
+    {
+      "name": "GstCalculatorService.detectPlace: Name vs code same",
+      "status": "PASS"
+    },
+    {
+      "name": "GstCalculatorService.detectPlace: Missing supplier",
+      "status": "PASS"
+    },
+    {
+      "name": "GstCalculatorService.detectPlace: Missing buyer",
+      "status": "PASS"
+    },
+    {
+      "name": "GstCalculatorService.detectPlace: Missing supplier - type",
+      "status": "PASS"
+    },
+    {
+      "name": "GstCalculatorService.detectPlace: Missing supplier - reason",
+      "status": "PASS"
+    },
+    {
+      "name": "GstCalculatorService.detectPlace: Missing buyer - type",
+      "status": "PASS"
+    },
+    {
+      "name": "GstCalculatorService.detectPlace: Missing buyer - reason",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase POS: same-UT supply is blocked",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase POS: same-UT block reason",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase POS: missing supplier state is rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase POS: invalid supplier state is rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase POS: contradictory scenario is rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase POS: recipient/delivery mismatch is rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Purchase POS: governed inter-state facts are accepted",
+      "status": "PASS"
+    }
+  ],
+  "evidenceRecordingSucceeded": true
+}

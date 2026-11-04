@@ -24,7 +24,7 @@ function resolveActiveMembership(user) {
     return activeMemberships[0];
 }
 
-function buildTenantContext(user, membership) {
+function buildTenantContext(user, membership, subjectId) {
     const permissions = Array.isArray(membership.role?.permissions)
         ? membership.role.permissions
             .map((permission) => permission?.permission)
@@ -35,6 +35,7 @@ function buildTenantContext(user, membership) {
     return Object.freeze({
         tenantId: membership.tenant_id,
         userId: user.id,
+        subjectId,
         roles: membership.role?.name ? [membership.role.name] : [],
         permissions,
     });
@@ -73,7 +74,7 @@ export function createFinancialE2eAuthContextAdapter({
                 fail("APPLICATION_USER_LOOKUP_FAILED", "Authenticated application user lookup failed.");
             }
             const membership = resolveActiveMembership(user);
-            return buildTenantContext(user, membership);
+            return buildTenantContext(user, membership, session.user.id);
         },
     });
 }

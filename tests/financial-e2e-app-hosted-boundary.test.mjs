@@ -8,6 +8,7 @@ import { ORCHESTRATION_STATUS } from "../scripts/financial-e2e-orchestration.mjs
 const context = {
     tenantId: "request-tenant",
     userId: "request-user",
+    subjectId: "request-subject",
     roles: ["Billing"],
     permissions: ["finalize_invoice"],
 };

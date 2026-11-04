@@ -29,7 +29,8 @@ import {
   Info,
 } from "lucide-react";
 import { isPostgresConfigured, prisma } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
+import { PermissionAction } from "@prisma/client";
 import ExportCsvButton from "@/components/ui/export-csv-button";
 import { exportGstHsnSummaryCsvAction } from "@/app/_actions/exports.actions";
 import { cn } from "@/lib/utils";
@@ -97,15 +98,10 @@ export default async function GstHsnSummaryPage({
   let summaryGrand = 0;
 
   if (dbOk) {
+    const ctx = await requireServerTenantContext();
+    requirePermission(ctx, PermissionAction.view_reports);
     try {
-      const ctx = await requireServerTenantContext();
       const t = ctx;
-
-      const profile = await (prisma as any).business_profiles.findFirst({
-        where: { tenant_id: t.tenantId },
-        select: { state: true },
-      }).catch(() => null);
-      const tenantState = profile?.state ?? null;
 
       let invoices = await (prisma as any).sales_invoices.findMany({
         where: {
@@ -114,32 +110,27 @@ export default async function GstHsnSummaryPage({
           invoice_date: { gte: fromDate, lte: toDate },
         },
         include: {
-          customer: { select: { gstin: true, billing_state: true } },
-          items: {
-            include: { product: { select: { hsn_code: true, gst_rate: true, name: true } } },
-          },
+          items: true,
         },
       });
 
       if (party === "b2b") {
-        invoices = invoices.filter((inv: any) => inv.customer?.gstin && inv.customer.gstin.trim().length > 0);
+        invoices = invoices.filter((inv: any) => inv.customer_gstin_snapshot?.trim().length > 0);
       } else if (party === "unregistered") {
-        invoices = invoices.filter((inv: any) => !inv.customer?.gstin || inv.customer.gstin.trim().length === 0);
+        invoices = invoices.filter((inv: any) => !inv.customer_gstin_snapshot?.trim());
       }
 
       const groupMap = new Map<string, HsnRow>();
 
       for (const inv of invoices as any[]) {
         const invId = inv.id;
-        const custState = inv.customer?.billing_state ?? null;
-        const isInterstate = Boolean(tenantState && custState && tenantState !== custState);
         const invItems = inv.items ?? [];
         for (const it of invItems) {
-          const hsn = it.product?.hsn_code ?? "UNCLASSIFIED";
-          const ratePct = Number(it.product?.gst_rate ?? it.gst_rate ?? 0);
+          const hsn = it.hsn_code_snapshot ?? "UNCLASSIFIED";
+          const ratePct = Number(it.gst_rate ?? 0);
           const gstAmount = Number(it.gst_amount ?? 0);
           const lineTotal = Number(it.line_total ?? 0);
-          const taxableValue = lineTotal - gstAmount;
+          const taxableValue = Number(it.taxable_amount ?? (lineTotal - gstAmount));
           const key = `${hsn}||${ratePct}`;
           let g = groupMap.get(key);
           if (!g) {
@@ -151,21 +142,18 @@ export default async function GstHsnSummaryPage({
             (g as any)._invoicesSet = new Set<string>();
             groupMap.set(key, g);
           }
-          g.description = it.product?.name ?? g.description;
+          g.description = it.product_name_snapshot ?? g.description;
           g.taxable_value += taxableValue;
-          if (isInterstate) {
-            g.igst += gstAmount;
-          } else {
-            g.cgst += gstAmount / 2;
-            g.sgst += gstAmount / 2;
-          }
+          g.cgst += Number(it.cgst_amount ?? 0);
+          g.sgst += Number(it.sgst_amount ?? 0);
+          g.igst += Number(it.igst_amount ?? 0);
+          g.total_gst += gstAmount;
           (g as any)._invoicesSet.add(invId);
         }
       }
 
       const computed: HsnRow[] = [];
       for (const g of groupMap.values()) {
-        g.total_gst = g.cgst + g.sgst + g.igst;
         g.total_invoice_value = g.taxable_value + g.total_gst;
         g.invoices_count = (g as any)._invoicesSet?.size ?? 0;
         computed.push(g);

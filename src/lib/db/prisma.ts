@@ -37,7 +37,7 @@ function createPrismaClient(): PrismaClient {
     connectionTimeoutMillis: 60_000,
     keepAlive: true,
     keepAliveInitialDelayMillis: 10_000,
-    ssl: isLoopback ? false : { rejectUnauthorized: false },
+    ssl: isLoopback ? false : { rejectUnauthorized: true },
   });
   pool.on("error", (error) => {
     if (process.env.NODE_ENV === "development") {

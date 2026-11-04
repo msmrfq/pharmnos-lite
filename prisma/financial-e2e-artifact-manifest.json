@@ -1,60 +1,78 @@
 {
   "manifestVersion": 1,
-  "packageVersion": "0.1.0",
+  "packageVersion": "0.1.2",
   "approved": true,
   "status": "APPROVED_EXECUTABLE_LOCAL_ONLY",
   "sourceSchema": {
     "path": "prisma/schema.prisma",
     "generation": "prisma migrate diff --from-empty",
-    "sha256": "a4c2d9e2eadf25b58728b3dcb9b7274278d08dd948aab2da16e1999dd543368d"
+    "sha256": "e175fb2d8b023cc47b2ac6ecd1d6db22d1ab0663a187e238b3acbf7465cb057d"
   },
   "artifacts": [
     {
       "order": 1,
       "path": "prisma/financial-e2e-schema-provisioning.generated.sql",
-      "sha256": "508e0122b95496466544b4b508a50b18a326b7f4a43b6f6a5849232291a8bea5",
+      "sha256": "f507579e1004a6c021b4a602ffd5933c91823586aeb987bc8e99091fc7ad9f89",
       "classification": "executable"
     },
     {
       "order": 2,
-      "path": "prisma/financial-e2e-security-controls.review.sql",
-      "sha256": "88af752140aab6bffa6a71ed613f7456adf93c493a05691674025efdadc596c0",
-      "classification": "executable"
-    },
-    {
-      "order": 3,
-      "path": "prisma/financial-e2e-rls-policies.review.sql",
-      "sha256": "327339cdee28392964fc336d4177ffe01475959a78f5fadba372742e967d8b8b",
-      "classification": "executable"
-    },
-    {
-      "order": 4,
-      "path": "prisma/financial-e2e-additive-provisioning.review.sql",
-      "sha256": "a4637c0a28670cbe0f53195942f2dabb75c3f04918e9e91e58aa763ed7cef90a",
-      "classification": "executable"
-    },
-    {
-      "order": 5,
       "path": "prisma/migrations/0001_baseline/migration.sql",
       "sha256": "d7d618cb6e5f30a1f62efbdf2fdf36dc7eb5b557de4da417ee8165f551512c1d",
       "classification": "executable"
     },
     {
-      "order": 6,
+      "order": 3,
       "path": "scripts/financial-e2e-provisioning-static-guard.mjs",
       "sha256": "d3fd847a8d900e27eeadc1b5369817fff3d3ff823a7f8df51767e64c42ba9f52",
       "classification": "executable"
     },
     {
-      "order": 7,
+      "order": 4,
       "path": "prisma/migrations/0008_hsn_governance_integrity/migration.sql",
       "sha256": "a52333f0526cf512588f488ca2c488d2322f211ca7a81505dad381bda111e047",
       "classification": "executable"
     },
     {
-      "order": 8,
+      "order": 5,
       "path": "prisma/migrations/0011_inventory_valuation_decision_history/migration.sql",
       "sha256": "d7148f60b6cfb2493af7c8a5216778de80acd7c8e17127350daa7231fffab768",
+      "classification": "executable"
+    },
+    {
+      "order": 6,
+      "path": "scripts/financial-e2e-provision-local.mjs",
+      "sha256": "42c15ead629e1068777f93917fe24e62c8bfda126177accb08f8ab694bcdf6ba",
+      "classification": "executable"
+    },
+    {
+      "order": 7,
+      "path": "prisma/migrations/0012_payment_integrity/migration.sql",
+      "sha256": "6da50f365d40b3c4e81854ffd9bffb31725f3b31afed5fb0979ca4c2caadf953",
+      "classification": "executable"
+    },
+    {
+      "order": 8,
+      "path": "prisma/migrations/0013_payment_permission_backfill/migration.sql",
+      "sha256": "fde67e64a30e06e687d3f81b692957dafb9368c772d3c532d594bf3bbb25e790",
+      "classification": "executable"
+    },
+    {
+      "order": 9,
+      "path": "prisma/migrations/0014_supplier_invoice_uniqueness/migration.sql",
+      "sha256": "5a22265f196e8a68077703cbe19268e514c78148ad4f1490b26a8ed2afdfa4b5",
+      "classification": "executable"
+    },
+    {
+      "order": 10,
+      "path": "prisma/migrations/0015_purchase_finalized_immutability/migration.sql",
+      "sha256": "aa23258440cf6b14b135f9737740cb9813291d16ef24cc0dba7d50b80c43ec82",
+      "classification": "executable"
+    },
+    {
+      "order": 11,
+      "path": "prisma/migrations/0016_supplier_invoice_trimmed_uniqueness/migration.sql",
+      "sha256": "43dbb060f772346bbfb40dc444abd4f2595af7597e688d0353acf32d01302c87",
       "classification": "executable"
     }
   ],

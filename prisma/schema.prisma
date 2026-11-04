@@ -58,6 +58,7 @@ enum PermissionAction {
   view_invoice
   finalize_invoice
   cancel_invoice
+  create_payment
 
   // inventory
   view_inventory
@@ -465,6 +466,7 @@ model suppliers {
   purchases       purchase_invoices[]
   batches         product_batches[]
   ledger          supplier_ledgers[]
+  payments        payments[]
 
   @@unique([tenant_id, code])
   @@index([tenant_id])
@@ -1088,6 +1090,7 @@ model payments {
   id            String          @id @default(cuid())
   tenant_id     String
   customer_id   String?
+  supplier_id   String?
   invoice_id    String?
   entry_type    LedgerEntryType
   payment_mode  PaymentMode?
@@ -1095,17 +1098,22 @@ model payments {
   reference_no  String?
   payment_date  DateTime
   notes         String?
+  idempotency_key String?
+  request_payload_hash String?
   created_by    String?
   created_at    DateTime        @default(now())
 
   tenant    tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   customer  customers?          @relation(fields: [customer_id], references: [id])
+  supplier  suppliers?          @relation(fields: [supplier_id], references: [id])
   invoice   sales_invoices?     @relation(fields: [invoice_id], references: [id])
 
   @@index([tenant_id])
   @@index([tenant_id, customer_id])
+  @@index([tenant_id, supplier_id])
   @@index([tenant_id, invoice_id])
   @@index([tenant_id, payment_date])
+  @@unique([tenant_id, idempotency_key], map: "payments_tenant_idempotency_key")
 }
 
 // ═══════════════════════════════════════════════════════════

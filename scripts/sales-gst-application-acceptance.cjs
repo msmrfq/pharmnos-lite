@@ -1,19 +1,12 @@
 #!/usr/bin/env node
 
-const crypto = require("node:crypto");
 const fs = require("node:fs");
 const { execFileSync } = require("node:child_process");
-
-const PREPROVISIONED_MODE = "PREPROVISIONED";
-const PREPROVISIONED_HOST = "127.0.0.1";
-const PREPROVISIONED_PORT = "55435";
-const PREPROVISIONED_DATABASE = "pharmnos_financial_e2e_0419";
-const PREPROVISIONED_COMPOSE_PROJECT = "pharmnoslite-financial-e2e-0419";
-const SCHEMA_ARTIFACT_PATH = "prisma/financial-e2e-schema-provisioning.generated.sql";
 
 const REQUIRED_ENV = [
   "ALLOW_FINANCIAL_E2E",
   "TEST_DATABASE_URL",
+  "DATABASE_URL",
   "TEST_DATABASE_NAME",
   "TEST_DATABASE_MARKER",
   "FINANCIAL_E2E_DB_PORT",
@@ -22,14 +15,24 @@ const REQUIRED_ENV = [
   "FINANCIAL_E2E_RUNTIME_DB_USER",
   "FINANCIAL_E2E_RUNTIME_DB_PASSWORD",
   "FINANCIAL_E2E_RUNTIME_DATABASE_URL",
+  "FINANCIAL_E2E_TARGET_CONTRACT",
+  "FINANCIAL_E2E_RUN_ID",
+  "FINANCIAL_E2E_AUTHORIZED_TARGET_BINDING",
+  "FINANCIAL_E2E_AUTHORIZED_TARGET_FINGERPRINT",
+  "FINANCIAL_E2E_EXECUTION_AUTHORIZED",
+  "FINANCIAL_E2E_EVIDENCE_RECORDING_AUTHORIZED",
+  "FINANCIAL_E2E_SUITE_NAME",
+  "FINANCIAL_E2E_INFRASTRUCTURE_EVIDENCE_FILE",
+  "FINANCIAL_E2E_INITIALIZATION_EVIDENCE_FILE",
+  "FINANCIAL_E2E_SUITE_EVIDENCE_FILE",
 ];
 
 function loadEnvironment(base = process.env) {
   const environment = { ...base };
   const files = [
-    environment.FINANCIAL_E2E_BASE_ENV_FILE || ".env.local",
+    environment.FINANCIAL_E2E_BASE_ENV_FILE,
     environment.FINANCIAL_E2E_ENV_FILE || ".env.financial-e2e",
-  ];
+  ].filter(Boolean);
   for (const file of files) {
     if (!fs.existsSync(file)) continue;
     for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
@@ -76,48 +79,21 @@ function assertSafeTarget(environment) {
   return target;
 }
 
-function assertPreProvisionedTarget(environment, target) {
-  if (environment.FINANCIAL_E2E_TARGET_MODE !== PREPROVISIONED_MODE) {
-    throw new Error("Pre-provisioned execution requires explicit FINANCIAL_E2E_TARGET_MODE=PREPROVISIONED.");
-  }
-  if (target.hostname !== PREPROVISIONED_HOST ||
-      Number(target.port) !== Number(PREPROVISIONED_PORT) ||
-      target.pathname !== `/${PREPROVISIONED_DATABASE}` ||
-      environment.TEST_DATABASE_NAME !== PREPROVISIONED_DATABASE ||
-      environment.FINANCIAL_E2E_DB_PORT !== PREPROVISIONED_PORT ||
-      environment.FINANCIAL_E2E_COMPOSE_PROJECT !== PREPROVISIONED_COMPOSE_PROJECT) {
-    throw new Error("Pre-provisioned mode is authorized only for verified target 0419.");
-  }
-}
-
-function assertPreProvisionedContract(contract) {
-  if (contract.host !== PREPROVISIONED_HOST ||
-      Number(contract.port) !== Number(PREPROVISIONED_PORT) ||
-      contract.databaseName !== PREPROVISIONED_DATABASE ||
-      contract.composeProject !== PREPROVISIONED_COMPOSE_PROJECT ||
-      contract.bootstrapRole !== "pharmnos_e2e" ||
-      contract.runtimeRole !== "pharmnos_e2e_runtime" ||
-      contract.schemaArtifactHash !== crypto.createHash("sha256")
-        .update(fs.readFileSync(SCHEMA_ARTIFACT_PATH))
-        .digest("hex")) {
-    throw new Error("Pre-provisioned target contract is not bound to verified target 0419.");
-  }
-}
-
-function createInitializationEnvironment(environment, contract, serializedContract, binding, mode = "FRESH_PROVISIONING") {
-  const preProvisioned = mode === PREPROVISIONED_MODE;
+function createInitializationEnvironment(environment, contract, serializedContract, binding, fingerprint) {
   return {
     ...environment,
     TEST_DATABASE_NAME: contract.databaseName,
     FINANCIAL_E2E_DB_NAME: contract.databaseName,
     FINANCIAL_E2E_RUNTIME_DATABASE_URL: environment.FINANCIAL_E2E_RUNTIME_DATABASE_URL,
     FINANCIAL_E2E_AUTHORIZED_TARGET_BINDING: binding,
+    FINANCIAL_E2E_AUTHORIZED_TARGET_FINGERPRINT: fingerprint,
     FINANCIAL_E2E_RUN_ID: contract.runId,
-    FINANCIAL_E2E_INITIALIZATION_ATTEMPT_ID: `${contract.runId}-attempt`,
-    FINANCIAL_E2E_INITIALIZATION_AUTHORIZED: preProvisioned ? "false" : "true",
-    FINANCIAL_E2E_INITIALIZATION_SCOPE: preProvisioned
-      ? "PREPROVISIONED_VERIFICATION_ONLY"
-      : "DATABASE_INITIALIZATION_ONLY",
+    FINANCIAL_E2E_INITIALIZATION_AUTHORIZED: "false",
+    FINANCIAL_E2E_INITIALIZATION_SCOPE: "PREPROVISIONED_VERIFICATION_ONLY",
+    FINANCIAL_E2E_EXECUTION_AUTHORIZED: "true",
+    FINANCIAL_E2E_EVIDENCE_RECORDING_AUTHORIZED: environment.FINANCIAL_E2E_EVIDENCE_RECORDING_AUTHORIZED || "false",
+    FINANCIAL_E2E_SUITE_NAME: "sales-gst",
+    FINANCIAL_E2E_SUITE_RUN_ID: environment.FINANCIAL_E2E_SUITE_RUN_ID || contract.runId,
     FINANCIAL_E2E_TARGET_APPROVED: "true",
     FINANCIAL_E2E_MARKER_ESTABLISHMENT_METHOD: "BOOTSTRAP_CONNECTED_CATALOG_READBACK",
     FINANCIAL_E2E_ROLE_SETUP_METHOD: "PRECREATED_LOCAL_CREDENTIAL_PROCEDURE",
@@ -126,17 +102,14 @@ function createInitializationEnvironment(environment, contract, serializedContra
     FINANCIAL_E2E_EVIDENCE_RETENTION_DAYS: "30",
     FINANCIAL_E2E_EVIDENCE_PATH_APPROVED: "true",
     FINANCIAL_E2E_RECOVERY_POLICY: "UNTRUSTED_STOP_INSPECT_REAUTHORIZE_NEW_TARGET",
-    FINANCIAL_E2E_CLEANUP_AUTHORIZED: "true",
+    FINANCIAL_E2E_CLEANUP_AUTHORIZED: environment.FINANCIAL_E2E_CLEANUP_AUTHORIZED || "false",
     FINANCIAL_E2E_CLEANUP_MODE: environment.FINANCIAL_E2E_CLEANUP_MODE || "ROW_LEVEL_CLEANUP",
     FINANCIAL_E2E_TARGET_CONTRACT: serializedContract,
   };
 }
 
-function runSalesGstAcceptance({
+async function runSalesGstAcceptance({
   environment = loadEnvironment(),
-  createContract,
-  validateBinding,
-  serialize = JSON.stringify,
   runChild = (script, childEnvironment) => execFileSync(
     process.execPath,
     [script],
@@ -145,22 +118,24 @@ function runSalesGstAcceptance({
 } = {}) {
   assertRequiredEnvironment(environment);
   const target = assertSafeTarget(environment);
-  const preProvisioned = environment.FINANCIAL_E2E_TARGET_MODE === PREPROVISIONED_MODE;
-  if (preProvisioned) assertPreProvisionedTarget(environment, target);
-  const generated = createContract({
-    runId: `sales_gst_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`,
-    targetUrl: environment.TEST_DATABASE_URL,
-    runtimeUrl: environment.FINANCIAL_E2E_RUNTIME_DATABASE_URL,
-    databaseName: environment.TEST_DATABASE_NAME,
-    composeProject: environment.FINANCIAL_E2E_COMPOSE_PROJECT || "pharmnoslite",
+  const {
+    loadAuthorizedTargetLifecycle,
+    targetContractFingerprint,
+  } = await import("./financial-e2e-target-lifecycle.mjs");
+  const { targetContractBinding } = await import("./financial-e2e-target-contract.mjs");
+  const lifecycle = loadAuthorizedTargetLifecycle({
+    env: environment,
+    phase: "SUITE_EXECUTION",
+    suiteName: "sales-gst",
   });
-  const contract = generated.targetContract || generated;
-  if (preProvisioned) assertPreProvisionedContract(contract);
-  const binding = generated.binding;
-  if (!binding || (validateBinding && binding !== validateBinding(contract))) {
-    throw new Error("Sales GST target contract binding is invalid.");
+  const contract = lifecycle.contract;
+  const binding = targetContractBinding(contract);
+  const fingerprint = targetContractFingerprint(contract);
+  if (target.port !== String(contract.port)) throw new Error("Sales GST target port is not contract-bound.");
+  const serializedContract = String(environment.FINANCIAL_E2E_TARGET_CONTRACT);
+  if (targetContractFingerprint(JSON.parse(serializedContract)) !== fingerprint) {
+    throw new Error("Sales GST target contract serialization changed the authorized contract.");
   }
-  const serializedContract = serialize(contract);
   if (!serializedContract || serializedContract.includes(environment.FINANCIAL_E2E_DB_PASSWORD) ||
       serializedContract.includes(environment.FINANCIAL_E2E_RUNTIME_DB_PASSWORD)) {
     throw new Error("Sales GST target contract must not contain credentials.");
@@ -171,13 +146,7 @@ function runSalesGstAcceptance({
     contract,
     serializedContract,
     binding,
-    preProvisioned ? PREPROVISIONED_MODE : "FRESH_PROVISIONING",
-  );
-  runChild(
-    preProvisioned
-      ? "scripts/financial-e2e-preprovisioned-verify.mjs"
-      : "scripts/financial-e2e-provision-local.mjs",
-    childEnvironment,
+    fingerprint,
   );
   runChild("scripts/gst-application-e2e-runner.mjs", childEnvironment);
   return {
@@ -185,27 +154,12 @@ function runSalesGstAcceptance({
     databaseName: contract.databaseName,
     port: target.port,
     serializedContract,
+    targetContractFingerprint: fingerprint,
   };
 }
 
 async function main() {
-  const {
-    createTargetContract,
-    schemaArtifactHash,
-    targetContractBinding,
-  } = await import("./financial-e2e-target-contract.mjs");
-  const createContract = (input) => {
-    const contract = createTargetContract({
-      ...input,
-      schemaArtifactHash: schemaArtifactHash(),
-      expiresAt: Date.now() + 2 * 60 * 60 * 1000,
-    });
-    return {
-      targetContract: contract,
-      binding: targetContractBinding(contract),
-    };
-  };
-  runSalesGstAcceptance({ createContract, validateBinding: targetContractBinding });
+  await runSalesGstAcceptance();
 }
 
 if (require.main === module) {

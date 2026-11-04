@@ -150,20 +150,21 @@ export default async function BillingInvoiceDetailPage({
                   <TableHead className="text-right">Rate</TableHead>
                   <TableHead className="text-right">Disc %</TableHead>
                   <TableHead className="text-right">Tax %</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Taxable</TableHead>
+                  <TableHead className="text-right">GST</TableHead>
+                  <TableHead className="text-right">Line total</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((it: any, i: number) => {
-                  const qty = Number(it.quantity ?? 0);
-                  const rate = Number(it.sale_rate ?? 0);
-                  const discPct = Number(it.trade_discount_pct ?? 0);
-                  const taxPct = Number(it.gst_rate_pct ?? 0);
-                  const gross = qty * rate;
-                  const disc = gross * (discPct / 100);
-                  const taxable = gross - disc;
-                  const tax = taxable * (taxPct / 100);
-                  const lineTotal = taxable + tax;
+                  const discountPct = Number(it.discount_pct ?? 0);
+                  const gstRate = Number(it.gst_rate ?? 0);
+                  const taxComponents = [
+                    it.cgst_amount !== null && it.cgst_amount !== undefined && `CGST ${rupee(it.cgst_amount)}`,
+                    it.sgst_amount !== null && it.sgst_amount !== undefined && `SGST ${rupee(it.sgst_amount)}`,
+                    it.igst_amount !== null && it.igst_amount !== undefined && `IGST ${rupee(it.igst_amount)}`,
+                    it.cess_amount !== null && it.cess_amount !== undefined && `Cess ${rupee(it.cess_amount)}`,
+                  ].filter(Boolean);
                   return (
                     <TableRow key={it.id ?? i}>
                       <TableCell className="text-muted">{i + 1}</TableCell>
@@ -175,17 +176,38 @@ export default async function BillingInvoiceDetailPage({
                         {it.batch?.batch_no ?? "—"}
                         {it.batch?.expiry_date && <p className="text-caption text-muted">Exp {formatDate(it.batch.expiry_date)}</p>}
                       </TableCell>
-                      <TableCell className="text-right text-body">{qty}</TableCell>
-                      <TableCell className="text-right text-body">{rupee(rate)}</TableCell>
-                      <TableCell className="text-right text-body">{discPct}%</TableCell>
-                      <TableCell className="text-right text-body">{taxPct}%</TableCell>
-                      <TableCell className="text-right font-medium text-ink">{rupee(lineTotal)}</TableCell>
+                      <TableCell className="text-right text-body">{it.quantity}</TableCell>
+                      <TableCell className="text-right text-body">{rupee(it.sale_rate)}</TableCell>
+                      <TableCell className="text-right text-body">{discountPct}%</TableCell>
+                      <TableCell className="text-right text-body">{gstRate}%</TableCell>
+                      <TableCell className="text-right text-body">
+                        {it.taxable_amount === null || it.taxable_amount === undefined
+                          ? "—"
+                          : rupee(it.taxable_amount)}
+                      </TableCell>
+                      <TableCell className="text-right text-body">
+                        {it.gst_amount === null || it.gst_amount === undefined
+                          ? "—"
+                          : (
+                            <>
+                              <div>{rupee(it.gst_amount)}</div>
+                              {taxComponents.length > 0 && (
+                                <div className="text-caption text-muted">
+                                  {taxComponents.join(" · ")}
+                                </div>
+                              )}
+                            </>
+                          )}
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-ink">
+                        {rupee(it.line_total)}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
                 {items.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted">No line items yet.</TableCell>
+                    <TableCell colSpan={10} className="text-center py-8 text-muted">No line items yet.</TableCell>
                   </TableRow>
                 )}
               </TableBody>

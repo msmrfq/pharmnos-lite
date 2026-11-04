@@ -1,0 +1,34 @@
+{
+  "evidenceVersion": 1,
+  "phase": "INFRASTRUCTURE_CREATION",
+  "status": "PASS",
+  "runId": "t25_sales_1793814436379_03d93d",
+  "targetBinding": "1|t25_sales_1793814436379_03d93d|127.0.0.1|55467|pharmnos_financial_e2e_t25_sales_1793814436379_03d93d|pharmnos_e2e|pharmnos_e2e_runtime|FINANCIAL_E2E_DB_PASSWORD|FINANCIAL_E2E_RUNTIME_DB_PASSWORD|pharmnos-financial-e2e|pharmnoslite-financial-e2e-t25-sales-1793814436379_03d93d|financial-e2e-postgres|508e0122b95496466544b4b508a50b18a326b7f4a43b6f6a5849232291a8bea5",
+  "targetFingerprint": "af6dbb2b80c01933673c9337dc92ff41c4451891f8dac76c7775fd87851065a9",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 55467,
+    "databaseName": "pharmnos_financial_e2e_t25_sales_1793814436379_03d93d",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "composeProject": "pharmnoslite-financial-e2e-t25-sales-1793814436379_03d93d",
+    "composeService": "financial-e2e-postgres",
+    "composeProfile": "financial-e2e",
+    "schemaArtifactHash": "508e0122b95496466544b4b508a50b18a326b7f4a43b6f6a5849232291a8bea5"
+  },
+  "recordedAt": 1793814481115,
+  "details": {
+    "creationResult": "CONTAINER_CREATED_START_FAILED",
+    "containerId": "01965a77991d28bf369d7bf86d6a29137e60db7f02b87d9a360df9a7c7932980",
+    "project": "pharmnoslite-financial-e2e-t25-sales-1793814436379_03d93d",
+    "service": "financial-e2e-postgres",
+    "image": "postgres:17-alpine",
+    "host": "127.0.0.1",
+    "port": 55467,
+    "containerPort": 5432,
+    "restartPolicy": "no",
+    "storage": "tmpfs",
+    "isolationLabel": "financial-e2e-isolated",
+    "note": "Exact target container was created but could not start because Windows denied binding the authorized port; no database initialization occurred."
+  }
+}

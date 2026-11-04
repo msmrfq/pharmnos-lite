@@ -165,7 +165,38 @@ function assertPurchaseGstRevisionCurrent(
     return createHash("sha256").update(JSON.stringify(value)).digest("hex");
   }
 
-  async function resolvePurchaseLineRules(
+  const SUPPLIER_INVOICE_UNIQUE_INDEX =
+    "purchase_invoices_tenant_id_supplier_id_supplier_invoice_no_key";
+
+  function isSupplierInvoiceUniqueViolation(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+      return false;
+    }
+    const target = error.meta?.target;
+    const targetValues = Array.isArray(target) ? target.map(String) : [String(target ?? "")];
+    return (
+      targetValues.includes(SUPPLIER_INVOICE_UNIQUE_INDEX) ||
+      ["tenant_id", "supplier_id", "supplier_invoice_no"].every((field) => targetValues.includes(field))
+    );
+  }
+
+  async function lockSupplierBalance(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    supplierId: string,
+  ): Promise<number> {
+    const rows = await tx.$queryRaw<Array<{ payable_balance: unknown }>>(Prisma.sql`
+      SELECT "payable_balance"
+      FROM "suppliers"
+      WHERE "tenant_id" = ${tenantId} AND "id" = ${supplierId}
+      FOR UPDATE
+    `);
+    const row = rows[0];
+    if (!row) throw new Error("Supplier not found.");
+    return decimalOrZero(String(row.payable_balance ?? "0")).toNumber();
+  }
+
+    async function resolvePurchaseLineRules(
     tx: Prisma.TransactionClient,
     tenantId: string,
     lines: any[],
@@ -256,6 +287,11 @@ function assertPurchaseGstRevisionCurrent(
     };
   }
 
+function normalizeSupplierInvoiceNo(value: unknown): string | null {
+  const normalized = String(value ?? "").trim();
+  return normalized || null;
+}
+
 function purchaseGstEvidenceFromData(data: any): SupplierDeclaredPurchaseGstEvidence | null {
     const amountKeys = [
       "declared_taxable_value",
@@ -282,7 +318,7 @@ function purchaseGstEvidenceFromData(data: any): SupplierDeclaredPurchaseGstEvid
       throw new Error("Non-zero cess is blocked until a governed cess rule and credit-utilization policy are configured.");
     }
     return {
-      source_document_reference: data.supplier_invoice_no ?? null,
+      source_document_reference: normalizeSupplierInvoiceNo(data.supplier_invoice_no),
       amounts: {
         taxable_value: decimalOrNull(data.declared_taxable_value),
         cgst: decimalOrNull(data.declared_cgst),
@@ -442,7 +478,7 @@ async function persistPurchaseGstEvidence(
         "declared_cess",
         "declared_line_total",
       ];
-      if (!lineFields.some((field) => line[field] !== undefined && line[field] !== "")) continue;
+      if (!lineFields.some((field) => line[field] !== undefined && line[field] !== null && line[field] !== "")) continue;
       const expectedLine = calculated.line_calculations?.[index];
       const lineReconciliation = expectedLine
         ? reconcilePurchaseGstLineEvidence(
@@ -595,13 +631,54 @@ export async function createPurchaseDraftAction(
 
     const invoice = await prisma.$transaction(async (tx) => {
       await establishTenantContext(tx, ctx);
+      const supplier = await tx.suppliers.findUnique({
+        where: { id: data.supplier_id, tenant_id: ctx.tenantId },
+        select: { id: true },
+      });
+      if (!supplier) {
+        throw new Error("Supplier not found or belongs to another tenant.");
+      }
+
+      const productIds = Array.from(new Set(linesParsed.map((line) => String(line.product_id))));
+      const products = await tx.products.findMany({
+        where: { tenant_id: ctx.tenantId, id: { in: productIds } },
+        select: { id: true },
+      });
+      const ownedProductIds = new Set(products.map((product) => product.id));
+      if (productIds.some((productId) => !ownedProductIds.has(productId))) {
+        throw new Error("Purchase line product is missing or belongs to another tenant.");
+      }
+
+      const referencedBatchIds = linesParsed
+        .map((line) => String(line.batch_id ?? "").trim())
+        .filter((batchId) => batchId.length > 0);
+      if (referencedBatchIds.length > 0) {
+        const batches = await tx.product_batches.findMany({
+          where: { tenant_id: ctx.tenantId, id: { in: referencedBatchIds } },
+          select: { id: true, product_id: true, batch_no: true },
+        });
+        const batchesById = new Map(batches.map((batch) => [batch.id, batch]));
+        for (const line of linesParsed) {
+          const batchId = String(line.batch_id ?? "").trim();
+          if (!batchId) continue;
+          const batch = batchesById.get(batchId);
+          if (
+            !batch ||
+            batch.product_id !== String(line.product_id) ||
+            batch.batch_no !== String(line.batch_no)
+          ) {
+            throw new Error("Purchase line batch is missing or belongs to another tenant.");
+          }
+        }
+      }
+
       const created = await tx.purchase_invoices.create({
         data: {
           tenant_id: ctx.tenantId,
           created_by: ctx.userId,
           invoice_no: data.invoice_no && String(data.invoice_no).trim() ? String(data.invoice_no).trim() : "",
           supplier_id: data.supplier_id,
-          supplier_invoice_no: data.supplier_invoice_no ?? null,
+          supplier_invoice_no: normalizeSupplierInvoiceNo(data.supplier_invoice_no),
           invoice_date: data.invoice_date instanceof Date ? data.invoice_date : new Date(data.invoice_date as any),
           status: __PurchaseStatusDRAFT,
           gst_treatment: treatment.treatment,
@@ -765,6 +842,23 @@ export async function acceptPurchaseGstAction(
         }),
       ]);
       if (!evidence || !calculation) throw new Error("Current GST revisions could not be loaded.");
+      const purchaseItems = await tx.purchase_invoice_items.findMany({
+        where: { tenant_id: ctx.tenantId, purchase_id: purchase.id },
+        select: { id: true },
+      });
+      if (purchaseItems.length === 0) {
+        throw new Error("Every purchase line requires current GST evidence before acceptance.");
+      }
+      const currentLineEvidenceCount = await tx.purchase_gst_line_evidence.count({
+        where: {
+          tenant_id: ctx.tenantId,
+          purchase_invoice_id: purchase.id,
+          evidence_revision_id: evidence.id,
+        },
+      });
+      if (currentLineEvidenceCount !== purchaseItems.length) {
+        throw new Error("Every purchase line requires current GST evidence before acceptance.");
+      }
       const source = parsed.data.accepted_value_source;
       if (source === "EXPLICIT_DECISION") {
         throw new Error("Explicit accepted values require a discrepancy-resolution workflow.");
@@ -819,7 +913,7 @@ export async function acceptPurchaseGstAction(
           decided_by_membership_id: ctx.membershipId,
         },
       });
-      await tx.$executeRaw(Prisma.sql`
+      const updatedLineCount = await tx.$executeRaw(Prisma.sql`
         UPDATE "purchase_invoice_items" AS item
         SET
           "accepted_taxable_value" = CASE WHEN ${source} = 'SUPPLIER_DECLARED'
@@ -849,6 +943,9 @@ export async function acceptPurchaseGstAction(
           AND line."purchase_invoice_item_id" = item."id"
           AND line."evidence_revision_id" = ${evidence.id}
       `);
+      if (updatedLineCount !== purchaseItems.length) {
+        throw new Error("Every purchase line must receive an immutable accounting acceptance snapshot.");
+      }
       const updated = await tx.purchase_invoices.updateMany({
         where: {
           id: purchase.id,
@@ -1658,11 +1755,7 @@ export async function finalizePurchaseAction(
         },
       });
 
-      const supplierRow = await tx.suppliers.findUnique({
-        where: { id: existing.supplier_id, tenant_id: ctx.tenantId },
-        select: { payable_balance: true },
-      });
-      const balanceBefore = Number(supplierRow?.payable_balance ?? 0);
+      const balanceBefore = await lockSupplierBalance(tx, ctx.tenantId, existing.supplier_id);
       const credit = postingTotals.net_amount;
       const balanceAfter = decimalOrZero(balanceBefore).add(credit).round(2, "HALF_UP").toNumber();
 
@@ -1711,6 +1804,13 @@ export async function finalizePurchaseAction(
     redirect(`/purchases?created=${encodeURIComponent(invoice.id)}&finalized=1`);
   } catch (e: any) {
     if (e?.message && typeof e.message === "string" && e.message.includes("NEXT_REDIRECT")) throw e;
+    if (isSupplierInvoiceUniqueViolation(e)) {
+      return {
+        ok: false,
+        message: "Supplier invoice number already exists for this supplier; review the possible duplicate before posting.",
+        errors: undefined,
+      };
+    }
     const msg = e?.message && typeof e.message === "string" ? e.message : "Purchase could not be finalized. Please try again.";
     return { ok: false, message: msg, errors: undefined };
   }
@@ -1737,28 +1837,79 @@ export async function createStockAdjustmentAction(
     const ctx = await requireServerTenantContext();
     requirePermission(ctx, "adjust_stock" as PermissionAction);
     const data = parsed.data;
+    const delta = data.quantity_delta;
+    const adjustmentNotes = data.reason + (data.notes ? ` — ${data.notes}` : "");
 
     await prisma.$transaction(async (tx) => {
       await establishTenantContext(tx, ctx);
+      await tx.$executeRaw(Prisma.sql`
+        SELECT pg_advisory_xact_lock(
+          hashtextextended(
+            concat(${ctx.tenantId}, ':stock-adjustment:', ${data.idempotency_key}),
+            0
+          )
+        )
+      `);
       const batch = await tx.product_batches.findUnique({
         where: { id: data.batch_id, tenant_id: ctx.tenantId },
       });
       if (!batch) {
         throw new Error("Batch not found.");
       }
-      const before = Number(batch.available_qty ?? 0);
-      const delta = Number(data.quantity_delta);
-      if (delta < 0 && before < Math.abs(delta)) {
-        throw new Error("Insufficient available quantity for this batch.");
-      }
-      await tx.product_batches.update({
-        where: { id: data.batch_id, tenant_id: ctx.tenantId },
-        data: {
-          available_qty: { increment: delta },
-          updated_at: new Date(),
+
+      const movement: StockMovementType = delta > 0 ? __MovementADJUSTMENT_IN : __MovementADJUSTMENT_OUT;
+      const prior = await tx.stock_movements.findFirst({
+        where: {
+          tenant_id: ctx.tenantId,
+          reference_type: "stock_adjustment",
+          reference_id: data.idempotency_key,
+        },
+        select: {
+          batch_id: true,
+          product_id: true,
+          movement_type: true,
+          quantity_delta: true,
+          notes: true,
         },
       });
-      const movement: StockMovementType = delta > 0 ? __MovementADJUSTMENT_IN : __MovementADJUSTMENT_OUT;
+      if (prior) {
+        if (
+          prior.batch_id !== batch.id ||
+          prior.product_id !== batch.product_id ||
+          prior.movement_type !== movement ||
+          prior.quantity_delta !== delta ||
+          prior.notes !== adjustmentNotes
+        ) {
+          throw new Error("This idempotency key was already used with a different stock adjustment.");
+        }
+        return;
+      }
+
+      if (delta < 0) {
+        const updated = await tx.product_batches.updateMany({
+          where: {
+            id: data.batch_id,
+            tenant_id: ctx.tenantId,
+            available_qty: { gte: Math.abs(delta) },
+          },
+          data: {
+            available_qty: { decrement: Math.abs(delta) },
+            updated_at: new Date(),
+          },
+        });
+        if (updated.count !== 1) {
+          throw new Error("Insufficient available quantity for this batch.");
+        }
+      } else {
+        await tx.product_batches.update({
+          where: { id: data.batch_id, tenant_id: ctx.tenantId },
+          data: {
+            available_qty: { increment: delta },
+            updated_at: new Date(),
+          },
+        });
+      }
+
       await tx.stock_movements.create({
         data: {
           tenant_id: ctx.tenantId,
@@ -1767,9 +1918,9 @@ export async function createStockAdjustmentAction(
           movement_type: movement,
           quantity_delta: delta,
           reference_type: "stock_adjustment",
-          reference_id: null,
+          reference_id: data.idempotency_key,
           unit_rate: batch.purchase_rate ? Number(batch.purchase_rate) : 0,
-          notes: data.reason + (data.notes ? ` — ${data.notes}` : ""),
+          notes: adjustmentNotes,
           created_by: ctx.userId,
           created_at: new Date(),
         },

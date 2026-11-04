@@ -48,6 +48,7 @@ VALUES
     ('prevent_purchase_gst_reconciliation_events_mutation', 'purchase_gst_reconciliation_events', 'IMMUTABLE_RECONCILIATION_HISTORY', 'IMMUTABILITY', false),
     ('prevent_purchase_gst_reconciliation_event_lines_mutation', 'purchase_gst_reconciliation_event_lines', 'IMMUTABLE_RECONCILIATION_HISTORY', 'IMMUTABILITY', false),
     ('prevent_finalized_purchase_mutation', 'purchase_invoices', 'FINALIZED_PURCHASE_HISTORY', 'FINALIZED_HISTORY', false),
+    ('prevent_finalized_purchase_item_mutation', 'purchase_invoice_items', 'FINALIZED_PURCHASE_HISTORY', 'FINALIZED_HISTORY', false),
     ('prevent_finalized_sales_invoice_mutation', 'sales_invoices', 'FINALIZED_SALES_HISTORY', 'FINALIZED_HISTORY', false),
     ('prevent_finalized_sales_item_mutation', 'sales_invoice_items', 'FINALIZED_SALES_HISTORY', 'FINALIZED_HISTORY', false),
     ('guard_purchase_posting_transition', 'purchase_posting_operations', 'POSTING_INTEGRITY', 'SECURITY', false),
