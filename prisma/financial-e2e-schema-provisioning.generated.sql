@@ -1480,3 +1480,69 @@ ALTER TABLE "inventory_valuation_adjustments"
   ADD CONSTRAINT "inventory_valuation_adjustments_prior_fkey" FOREIGN KEY ("tenant_id", "prior_decision_id") REFERENCES "inventory_valuation_decisions"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
   ADD CONSTRAINT "inventory_valuation_adjustments_resulting_fkey" FOREIGN KEY ("tenant_id", "resulting_decision_id") REFERENCES "inventory_valuation_decisions"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
   ADD CONSTRAINT "inventory_valuation_adjustments_actor_fkey" FOREIGN KEY ("tenant_id", "adjusted_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- Invoice modernization artifact fields.
+ALTER TABLE "sales_invoices"
+  ADD COLUMN "finalized_snapshot" JSONB,
+  ADD COLUMN "finalized_snapshot_hash" TEXT,
+  ADD COLUMN "rendering_version" TEXT,
+  ADD COLUMN "pdf_artifact_key" TEXT,
+  ADD COLUMN "pdf_generation_status" TEXT NOT NULL DEFAULT 'PENDING',
+  ADD COLUMN "pdf_generated_at" TIMESTAMP(3),
+  ADD COLUMN "pdf_rendering_version" TEXT,
+  ADD COLUMN "pdf_byte_size" INTEGER,
+  ADD COLUMN "pdf_checksum_sha256" TEXT,
+  ADD COLUMN "pdf_error" TEXT;
+
+ALTER TABLE "purchase_invoices"
+  ADD COLUMN "finalized_snapshot" JSONB,
+  ADD COLUMN "finalized_snapshot_hash" TEXT,
+  ADD COLUMN "rendering_version" TEXT,
+  ADD COLUMN "pdf_artifact_key" TEXT,
+  ADD COLUMN "pdf_generation_status" TEXT NOT NULL DEFAULT 'PENDING',
+  ADD COLUMN "pdf_generated_at" TIMESTAMP(3),
+  ADD COLUMN "pdf_rendering_version" TEXT,
+  ADD COLUMN "pdf_byte_size" INTEGER,
+  ADD COLUMN "pdf_checksum_sha256" TEXT,
+  ADD COLUMN "pdf_error" TEXT;
+
+CREATE UNIQUE INDEX "suppliers_tenant_id_id_key" ON "suppliers"("tenant_id", "id");
+
+CREATE TABLE "purchase_supplier_documents" (
+  "id" TEXT NOT NULL,
+  "tenant_id" TEXT NOT NULL,
+  "purchase_invoice_id" TEXT NOT NULL,
+  "supplier_id" TEXT NOT NULL,
+  "storage_key" TEXT NOT NULL,
+  "original_filename" TEXT NOT NULL,
+  "mime_type" TEXT NOT NULL,
+  "byte_size" INTEGER NOT NULL,
+  "checksum_sha256" TEXT NOT NULL,
+  "uploaded_by" TEXT NOT NULL,
+  "uploaded_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "supersedes_id" TEXT,
+  "replaced_at" TIMESTAMP(3),
+  CONSTRAINT "purchase_supplier_documents_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "purchase_supplier_documents_tenant_id_id_key"
+  ON "purchase_supplier_documents"("tenant_id", "id");
+CREATE INDEX "purchase_supplier_documents_tenant_id_purchase_invoice_id_uploaded_at_idx"
+  ON "purchase_supplier_documents"("tenant_id", "purchase_invoice_id", "uploaded_at");
+CREATE INDEX "purchase_supplier_documents_tenant_id_supplier_id_uploaded_at_idx"
+  ON "purchase_supplier_documents"("tenant_id", "supplier_id", "uploaded_at");
+CREATE INDEX "purchase_supplier_documents_tenant_id_supersedes_id_idx"
+  ON "purchase_supplier_documents"("tenant_id", "supersedes_id");
+  CREATE UNIQUE INDEX "purchase_supplier_documents_one_active_per_purchase_key"
+  ON "purchase_supplier_documents"("tenant_id", "purchase_invoice_id")
+  WHERE "replaced_at" IS NULL;
+
+ALTER TABLE "purchase_supplier_documents"
+  ADD CONSTRAINT "purchase_supplier_documents_tenant_id_fkey"
+    FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT "purchase_supplier_documents_tenant_id_purchase_invoice_id_fkey"
+    FOREIGN KEY ("tenant_id", "purchase_invoice_id") REFERENCES "purchase_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT "purchase_supplier_documents_tenant_id_supplier_id_fkey"
+    FOREIGN KEY ("tenant_id", "supplier_id") REFERENCES "suppliers"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT "purchase_supplier_documents_tenant_id_supersedes_id_fkey"
+    FOREIGN KEY ("tenant_id", "supersedes_id") REFERENCES "purchase_supplier_documents"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;

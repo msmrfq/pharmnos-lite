@@ -1,0 +1,222 @@
+- generic:
+  - generic [aria-hidden]:
+    - complementary:
+      - generic:
+        - generic:
+          - link:
+            - /url: /dashboard
+            - generic: Pharmnos Lite
+        - generic:
+          - paragraph: Business
+          - paragraph: Your Pharmacy
+        - navigation:
+          - link:
+            - /url: /dashboard
+            - generic: Dashboard
+          - link:
+            - /url: /billing
+            - generic: Billing
+          - link:
+            - /url: /purchases
+            - generic: Purchases
+          - link:
+            - /url: /inventory
+            - generic: Inventory
+          - link:
+            - /url: /customers
+            - generic: Customers
+          - link:
+            - /url: /suppliers
+            - generic: Suppliers
+          - link:
+            - /url: /reports
+            - generic: Reports
+          - link:
+            - /url: /audit
+            - generic: Audit Log
+          - generic:
+            - link:
+              - /url: /settings
+              - generic: Settings
+        - generic:
+          - button:
+            - generic: US
+            - generic:
+              - paragraph: User
+              - paragraph: Administrator
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - generic:
+              - textbox:
+                - /placeholder: Search products, customers, invoices...
+          - generic:
+            - button
+            - button:
+              - generic: US
+              - generic: User
+      - generic:
+        - generic:
+          - generic:
+            - link:
+              - /url: /billing
+            - generic:
+              - generic: New invoice
+              - paragraph: Select a customer, add items by batch (FEFO picker), and save draft. Finalize from the billing list when ready.
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic: Customer & invoice
+                - generic:
+                  - generic:
+                    - text: Customer *
+                    - combobox:
+                      - generic: Disposable Customer (CUS-E2E) · Maharashtra
+                    - combobox [aria-hidden]
+                  - generic:
+                    - text: Place of supply *
+                    - combobox [expanded]:
+                      - generic: Select the actual supply state
+                    - combobox [aria-hidden]
+                    - paragraph: Capture the transaction's actual supply state; customer billing state is not used as a fallback.
+                  - generic:
+                    - text: GST Treatment *
+                    - combobox:
+                      - generic: Select GST treatment
+                    - combobox [aria-hidden]
+                    - paragraph: Deferred categories remain visible but cannot be finalized until their rules are approved.
+                  - generic:
+                    - text: Tax mode *
+                    - combobox:
+                      - generic: Tax exclusive
+                    - combobox [aria-hidden]
+                  - generic:
+                    - text: Invoice date
+                    - textbox: 2026-11-06
+                  - generic:
+                    - text: Ref no. (optional)
+                    - textbox:
+                      - /placeholder: e.g. PO-00421
+                  - generic:
+                    - checkbox
+                    - generic: Cash sale (no receivable)
+                  - generic:
+                    - text: Notes
+                    - textbox:
+                      - /placeholder: Optional internal notes…
+              - generic:
+                - generic:
+                  - generic: Line items
+                  - button: Add item
+                - generic:
+                  - generic:
+                    - generic:
+                      - table:
+                        - rowgroup:
+                          - row:
+                            - columnheader: Product *
+                            - columnheader: Batch / FEFO
+                            - columnheader: Expiry
+                            - columnheader: Qty
+                            - columnheader: MRP
+                            - columnheader: Sale rate
+                            - columnheader: Disc %
+                            - columnheader: GST %
+                            - columnheader: Line
+                            - columnheader
+                        - rowgroup:
+                          - row:
+                            - cell:
+                              - generic:
+                                - generic:
+                                  - combobox:
+                                    - generic: Select product
+                                  - combobox [aria-hidden]
+                            - cell:
+                              - generic:
+                                - button [disabled]: Pick FEFO
+                            - cell: pick batch
+                            - cell:
+                              - generic:
+                                - spinbutton: "1"
+                            - cell:
+                              - spinbutton: "0"
+                            - cell:
+                              - spinbutton: "0"
+                            - cell:
+                              - spinbutton: "0"
+                            - cell:
+                              - spinbutton: "0"
+                            - cell: ₹ 0.00
+                            - cell:
+                              - generic:
+                                - button [disabled]
+            - generic:
+              - generic:
+                - generic:
+                  - generic: Totals
+                  - paragraph: Client-side preview — server recomputes on finalize. Tax classification unavailable (MISSING_BUYER).
+                - generic:
+                  - generic:
+                    - generic: Goods value
+                    - generic: ₹ 0.00
+                  - generic:
+                    - generic: Trade discount
+                    - generic: "- ₹ 0.00"
+                  - generic: Tax split unavailable until both supplier and customer states are valid.
+                  - generic:
+                    - generic: Round off
+                    - generic: —
+                  - generic:
+                    - generic: Grand total
+                    - generic: Unavailable
+              - generic:
+                - generic: Stock impact
+                - generic:
+                  - paragraph: Saving this form records a DRAFT. Finalize from the billing list to deduct FEFO batches, record outward stock movements, and update the customer ledger.
+                  - generic:
+                    - link:
+                      - /url: /billing
+                      - text: Cancel
+                    - button: Save draft
+  - list
+  - alert: New invoice · Pharmnos Lite
+  - listbox [ref=f30e958]:
+    - option "Andhra Pradesh (AP)" [active] [ref=f30e959] [cursor=pointer]
+    - option "Arunachal Pradesh (AR)" [ref=f30e962] [cursor=pointer]
+    - option "Assam (AS)" [ref=f30e965] [cursor=pointer]
+    - option "Bihar (BR)" [ref=f30e968] [cursor=pointer]
+    - option "Chhattisgarh (CG)" [ref=f30e971] [cursor=pointer]
+    - option "Goa (GA)" [ref=f30e974] [cursor=pointer]
+    - option "Gujarat (GJ)" [ref=f30e977] [cursor=pointer]
+    - option "Haryana (HR)" [ref=f30e980] [cursor=pointer]
+    - option "Himachal Pradesh (HP)" [ref=f30e983] [cursor=pointer]
+    - option "Jharkhand (JH)" [ref=f30e986] [cursor=pointer]
+    - option "Karnataka (KA)" [ref=f30e989] [cursor=pointer]
+    - option "Kerala (KL)" [ref=f30e992] [cursor=pointer]
+    - option "Madhya Pradesh (MP)" [ref=f30e995] [cursor=pointer]
+    - option "Maharashtra (MH)" [ref=f30e998] [cursor=pointer]
+    - option "Manipur (MN)" [ref=f30e1001] [cursor=pointer]
+    - option "Meghalaya (ML)" [ref=f30e1004] [cursor=pointer]
+    - option "Mizoram (MZ)" [ref=f30e1007] [cursor=pointer]
+    - option "Nagaland (NL)" [ref=f30e1010] [cursor=pointer]
+    - option "Odisha (OD)" [ref=f30e1013] [cursor=pointer]
+    - option "Punjab (PB)" [ref=f30e1016] [cursor=pointer]
+    - option "Rajasthan (RJ)" [ref=f30e1019] [cursor=pointer]
+    - option "Sikkim (SK)" [ref=f30e1022] [cursor=pointer]
+    - option "Tamil Nadu (TN)" [ref=f30e1025] [cursor=pointer]
+    - option "Telangana (TG)" [ref=f30e1028] [cursor=pointer]
+    - option "Tripura (TR)" [ref=f30e1031] [cursor=pointer]
+    - option "Uttar Pradesh (UP)" [ref=f30e1034] [cursor=pointer]
+    - option "Uttarakhand (UT)" [ref=f30e1037] [cursor=pointer]
+    - option "West Bengal (WB)" [ref=f30e1040] [cursor=pointer]
+    - option "Andaman and Nicobar Islands (AN)" [ref=f30e1043] [cursor=pointer]
+    - option "Chandigarh (CH)" [ref=f30e1046] [cursor=pointer]
+    - option "Dadra and Nagar Haveli and Daman and Diu (DD)" [ref=f30e1049] [cursor=pointer]
+    - option "Delhi (DL)" [ref=f30e1052] [cursor=pointer]
+    - option "Jammu and Kashmir (JK)" [ref=f30e1055] [cursor=pointer]
+    - option "Ladakh (LA)" [ref=f30e1058] [cursor=pointer]
+    - option "Lakshadweep (LD)" [ref=f30e1061] [cursor=pointer]
+    - option "Puducherry (PY)" [ref=f30e1064] [cursor=pointer]

@@ -1,0 +1,192 @@
+- generic:
+  - generic [aria-hidden]:
+    - complementary:
+      - generic:
+        - generic:
+          - link:
+            - /url: /dashboard
+            - generic: Pharmnos Lite
+        - generic:
+          - paragraph: Business
+          - paragraph: Maharashtra Pharma Distributors
+        - navigation:
+          - link:
+            - /url: /dashboard
+            - generic: Dashboard
+          - link:
+            - /url: /billing
+            - generic: Billing
+          - link:
+            - /url: /purchases
+            - generic: Purchases
+          - link:
+            - /url: /inventory
+            - generic: Inventory
+          - link:
+            - /url: /customers
+            - generic: Customers
+          - link:
+            - /url: /suppliers
+            - generic: Suppliers
+          - link:
+            - /url: /reports
+            - generic: Reports
+          - link:
+            - /url: /audit
+            - generic: Audit Log
+          - generic:
+            - link:
+              - /url: /settings
+              - generic: Settings
+        - generic:
+          - button:
+            - generic: RK
+            - generic:
+              - paragraph: Rajesh Kumar
+              - paragraph: Administrator
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - generic:
+              - textbox:
+                - /placeholder: Search products, customers, invoices...
+          - generic:
+            - button
+            - button [expanded]:
+              - generic: RK
+              - generic: Rajesh Kumar
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - heading [level=1]: Good afternoon, Rajesh.
+              - paragraph: Here's how your pharmacy is performing today — 6 November 2026.
+            - generic:
+              - link:
+                - /url: /purchases/new
+                - text: Purchase entry
+              - link:
+                - /url: /billing/new
+                - text: New invoice
+          - generic:
+            - link:
+              - /url: /billing
+              - generic:
+                - generic:
+                  - generic:
+                    - paragraph: Sales this month
+                    - generic: ₹ 0.00
+                - generic: 0 invoices · Purchase ₹ 0.00
+            - link:
+              - /url: /reports/customer-dues
+              - generic:
+                - generic:
+                  - generic:
+                    - paragraph: Receivables
+                    - generic: ₹ 0.00
+                - generic: All accounts current
+            - link:
+              - /url: /reports/stock-valuation
+              - generic:
+                - generic:
+                  - generic:
+                    - paragraph: Approved stock value
+                    - generic: ₹ 0.00
+                - generic: 1 batches pending valuation
+            - link:
+              - /url: /inventory?tab=batches
+              - generic:
+                - generic:
+                  - generic:
+                    - paragraph: Near expiry (60d)
+                    - generic: 1 batches
+                - generic: No near-expiry batches · Payables ₹ 0.00
+          - generic:
+            - generic: Quick actions
+            - link:
+              - /url: /billing/new
+              - text: New invoice
+            - link:
+              - /url: /purchases/new
+              - text: Purchase entry
+            - link:
+              - /url: /inventory/products/new
+              - text: Add product
+            - link:
+              - /url: /customers/new
+              - text: Add customer
+            - link:
+              - /url: /suppliers/new
+              - text: Add supplier
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic: Recent invoices
+                  - paragraph: Last finalized sales invoices
+                - generic:
+                  - link:
+                    - /url: /reports/sales-register
+                    - text: Register
+                  - link:
+                    - /url: /billing/new
+                    - text: New
+              - generic:
+                - generic:
+                  - table:
+                    - rowgroup:
+                      - row:
+                        - columnheader: Invoice
+                        - columnheader: Customer
+                        - columnheader: Amount
+                        - columnheader: Status
+                        - columnheader: Time
+                    - rowgroup:
+                      - row:
+                        - cell: No invoices yet — create your first invoice from the quick actions above.
+            - generic:
+              - generic:
+                - generic:
+                  - generic: Low stock queue
+                  - paragraph: Replenishment priorities
+                - link:
+                  - /url: /inventory/low-stock
+                  - text: View all
+              - generic:
+                - generic:
+                  - generic:
+                    - paragraph: 1 active SKUs
+                    - paragraph: All batches fresh
+                  - generic:
+                    - generic: 1 batches
+                    - generic: Order
+          - generic:
+            - generic:
+              - generic:
+                - generic: Recent activity
+                - paragraph: Last 10 events from audit log
+              - link:
+                - /url: /audit
+                - text: Open audit
+            - generic:
+              - generic:
+                - table:
+                  - rowgroup:
+                    - row:
+                      - columnheader: When
+                      - columnheader: User
+                      - columnheader: Module
+                      - columnheader: Action
+                      - columnheader: Reference
+                      - columnheader: Details
+                  - rowgroup:
+                    - row:
+                      - cell: No activity yet — start by creating a purchase or an invoice.
+  - list
+  - alert: Dashboard · Pharmnos Lite
+  - menu "RK Rajesh Kumar" [active] [ref=f7e255]:
+    - menuitem "My Profile" [ref=f7e256] [cursor=pointer]
+    - menuitem "Business Settings" [ref=f7e257] [cursor=pointer]
+    - separator [ref=f7e258]
+    - menuitem "Sign out" [ref=f7e259] [cursor=pointer]

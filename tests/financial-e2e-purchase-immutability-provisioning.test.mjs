@@ -10,6 +10,10 @@ const normalMigrationSource = fs.readFileSync(
     new URL("../prisma/migrations/0015_purchase_finalized_immutability/migration.sql", import.meta.url),
     "utf8",
 );
+const deleteGuardMigration = fs.readFileSync(
+    new URL("../prisma/migrations/0021_reject_finalized_purchase_deletes/migration.sql", import.meta.url),
+    "utf8",
+);
 const securityContract = fs.readFileSync(
     new URL("../prisma/financial-e2e-security-controls.review.sql", import.meta.url),
     "utf8",
@@ -126,6 +130,15 @@ test("normal migration installs the finalized purchase guards", () => {
     assert.match(normalPurchaseGuard, /IF purchase_status IS NULL[\s\S]*Purchase invoice parent is missing/);
     assert.match(normalPurchaseGuard, /IF TG_OP = 'DELETE' THEN[\s\S]*RETURN OLD;/);
     assert.match(normalMigrationSource, /REVOKE EXECUTE ON FUNCTION public\.prevent_finalized_purchase_mutation\(\) FROM PUBLIC/);
+});
+
+test("delete guard migration rejects finalized purchase deletes explicitly", () => {
+    assert.match(deleteGuardMigration, /CREATE OR REPLACE FUNCTION public\.reject_finalized_purchase_delete\(\)/);
+    assert.match(deleteGuardMigration, /Finalized purchase invoices cannot be deleted/);
+    assert.match(deleteGuardMigration, /Finalized purchase invoice items cannot be deleted/);
+    assert.match(deleteGuardMigration, /BEFORE DELETE ON public\."purchase_invoices"/);
+    assert.match(deleteGuardMigration, /BEFORE DELETE ON public\."purchase_invoice_items"/);
+    assert.match(deleteGuardMigration, /USING ERRCODE = '42501'/);
 });
 
 test("normal migration protects the finalized purchase financial and GST snapshots", () => {

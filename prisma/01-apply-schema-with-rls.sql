@@ -798,3 +798,4 @@ ALTER TABLE public.payments               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customer_ledgers       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.supplier_ledgers       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.purchase_supplier_documents ENABLE ROW LEVEL SECURITY;

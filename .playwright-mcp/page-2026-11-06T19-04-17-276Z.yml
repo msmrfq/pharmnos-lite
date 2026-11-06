@@ -1,0 +1,192 @@
+- generic:
+  - generic [aria-hidden]:
+    - complementary:
+      - generic:
+        - generic:
+          - link:
+            - /url: /dashboard
+            - generic: Pharmnos Lite
+        - generic:
+          - paragraph: Business
+          - paragraph: Your Pharmacy
+        - navigation:
+          - link:
+            - /url: /dashboard
+            - generic: Dashboard
+          - link:
+            - /url: /billing
+            - generic: Billing
+          - link:
+            - /url: /purchases
+            - generic: Purchases
+          - link:
+            - /url: /inventory
+            - generic: Inventory
+          - link:
+            - /url: /customers
+            - generic: Customers
+          - link:
+            - /url: /suppliers
+            - generic: Suppliers
+          - link:
+            - /url: /reports
+            - generic: Reports
+          - link:
+            - /url: /audit
+            - generic: Audit Log
+          - generic:
+            - link:
+              - /url: /settings
+              - generic: Settings
+        - generic:
+          - button:
+            - generic: US
+            - generic:
+              - paragraph: User
+              - paragraph: Administrator
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - generic:
+              - textbox:
+                - /placeholder: Search products, customers, invoices...
+          - generic:
+            - button
+            - button:
+              - generic: US
+              - generic: User
+      - generic:
+        - generic:
+          - generic:
+            - link:
+              - /url: /billing
+            - generic:
+              - generic: New invoice
+              - paragraph: Select a customer, add items by batch (FEFO picker), and save draft. Finalize from the billing list when ready.
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic: Customer & invoice
+                - generic:
+                  - generic:
+                    - text: Customer *
+                    - combobox:
+                      - generic: Disposable Customer (CUS-E2E) · Maharashtra
+                    - combobox [aria-hidden]
+                  - generic:
+                    - text: Place of supply *
+                    - combobox:
+                      - generic: Maharashtra (MH)
+                    - combobox [aria-hidden]
+                    - paragraph: Capture the transaction's actual supply state; customer billing state is not used as a fallback.
+                  - generic:
+                    - text: GST Treatment *
+                    - combobox:
+                      - generic: Registered Business – Regular
+                    - combobox [aria-hidden]
+                    - paragraph: Deferred categories remain visible but cannot be finalized until their rules are approved.
+                  - generic:
+                    - text: Tax mode *
+                    - combobox:
+                      - generic: Tax exclusive
+                    - combobox [aria-hidden]
+                  - generic:
+                    - text: Invoice date
+                    - textbox: 2026-11-06
+                  - generic:
+                    - text: Ref no. (optional)
+                    - textbox:
+                      - /placeholder: e.g. PO-00421
+                  - generic:
+                    - checkbox
+                    - generic: Cash sale (no receivable)
+                  - generic:
+                    - text: Notes
+                    - textbox:
+                      - /placeholder: Optional internal notes…
+              - generic:
+                - generic:
+                  - generic: Line items
+                  - button: Add item
+                - generic:
+                  - generic:
+                    - generic:
+                      - table:
+                        - rowgroup:
+                          - row:
+                            - columnheader: Product *
+                            - columnheader: Batch / FEFO
+                            - columnheader: Expiry
+                            - columnheader: Qty
+                            - columnheader: MRP
+                            - columnheader: Sale rate
+                            - columnheader: Disc %
+                            - columnheader: GST %
+                            - columnheader: Line
+                            - columnheader
+                        - rowgroup:
+                          - row:
+                            - cell:
+                              - generic:
+                                - generic:
+                                  - combobox [expanded]:
+                                    - generic: Select product
+                                  - combobox [aria-hidden]
+                            - cell:
+                              - generic:
+                                - button [disabled]: Pick FEFO
+                            - cell: pick batch
+                            - cell:
+                              - generic:
+                                - spinbutton: "1"
+                            - cell:
+                              - spinbutton: "0"
+                            - cell:
+                              - spinbutton: "0"
+                            - cell:
+                              - spinbutton: "0"
+                            - cell:
+                              - spinbutton: "0"
+                            - cell: ₹ 0.00
+                            - cell:
+                              - generic:
+                                - button [disabled]
+            - generic:
+              - generic:
+                - generic:
+                  - generic: Totals
+                  - paragraph: Client-side preview — server recomputes on finalize. Intra-state (CGST+SGST).
+                - generic:
+                  - generic:
+                    - generic: Goods value
+                    - generic: ₹ 0.00
+                  - generic:
+                    - generic: Trade discount
+                    - generic: "- ₹ 0.00"
+                  - generic:
+                    - generic: CGST
+                    - generic: + ₹ 0.00
+                  - generic:
+                    - generic: SGST
+                    - generic: + ₹ 0.00
+                  - generic:
+                    - generic: Round off
+                    - generic: —
+                  - generic:
+                    - generic: Grand total
+                    - generic: ₹ 0.00
+              - generic:
+                - generic: Stock impact
+                - generic:
+                  - paragraph: Saving this form records a DRAFT. Finalize from the billing list to deduct FEFO batches, record outward stock movements, and update the customer ledger.
+                  - generic:
+                    - link:
+                      - /url: /billing
+                      - text: Cancel
+                    - button: Save draft
+  - list
+  - alert: New invoice · Pharmnos Lite
+  - listbox [ref=f30e1079]:
+    - option "Disposable Paracetamol (SKU-E2E)" [active] [ref=f30e1080] [cursor=pointer]

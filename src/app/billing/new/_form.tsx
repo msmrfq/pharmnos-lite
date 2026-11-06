@@ -414,8 +414,6 @@ export default function BillingNewClientForm({
                   value={customerId || undefined}
                   onValueChange={(v) => {
                     setCustomerId(v);
-                    const el = document.getElementById("customer_id") as HTMLInputElement | null;
-                    if (el) el.value = v;
                   }}
                 >
                   <SelectTrigger id="customer_id_trigger">
@@ -430,7 +428,7 @@ export default function BillingNewClientForm({
                     ))}
                   </SelectContent>
                 </Select>
-                <input type="hidden" id="customer_id" name="customer_id" defaultValue="" />
+                <input type="hidden" id="customer_id" name="customer_id" value={customerId} readOnly />
                 {fieldError(errors, "customer_id") && (
                   <p className="text-caption text-destructive">{fieldError(errors, "customer_id")}</p>
                 )}

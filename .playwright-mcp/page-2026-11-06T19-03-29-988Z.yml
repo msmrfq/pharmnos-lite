@@ -1,0 +1,88 @@
+- generic [active] [ref=f30e1]:
+  - generic [ref=f30e617]:
+    - complementary [ref=f30e618]:
+      - generic [ref=f30e619]:
+        - link "Pharmnos Lite" [ref=f30e621] [cursor=pointer]:
+          - /url: /dashboard
+        - generic [ref=f30e627]:
+          - paragraph [ref=f30e628]: Business
+          - paragraph [ref=f30e629]: Your Pharmacy
+        - navigation [ref=f30e630]:
+          - link "Dashboard" [ref=f30e631] [cursor=pointer]:
+            - /url: /dashboard
+          - link "Billing" [ref=f30e638] [cursor=pointer]:
+            - /url: /billing
+          - link "Purchases" [ref=f30e643] [cursor=pointer]:
+            - /url: /purchases
+          - link "Inventory" [ref=f30e649] [cursor=pointer]:
+            - /url: /inventory
+          - link "Customers" [ref=f30e654] [cursor=pointer]:
+            - /url: /customers
+          - link "Suppliers" [ref=f30e661] [cursor=pointer]:
+            - /url: /suppliers
+          - link "Reports" [ref=f30e668] [cursor=pointer]:
+            - /url: /reports
+          - link "Audit Log" [ref=f30e672] [cursor=pointer]:
+            - /url: /audit
+          - link "Settings" [ref=f30e678] [cursor=pointer]:
+            - /url: /settings
+        - button "US User Administrator" [ref=f30e684] [cursor=pointer]:
+          - generic [ref=f30e685]: US
+          - generic [ref=f30e687]:
+            - paragraph [ref=f30e688]: User
+            - paragraph [ref=f30e689]: Administrator
+    - generic [ref=f30e692]:
+      - banner [ref=f30e693]:
+        - generic [ref=f30e694]:
+          - textbox "Search products, customers, invoices..." [ref=f30e697]
+          - generic [ref=f30e698]:
+            - button "Notifications" [ref=f30e699] [cursor=pointer]
+            - button "US User" [ref=f30e701] [cursor=pointer]:
+              - generic [ref=f30e702]: US
+              - generic [ref=f30e704]: User
+      - generic [ref=f30e705]:
+        - generic [ref=f30e706]:
+          - generic [ref=f30e707]:
+            - generic [ref=f30e708]: Billing
+            - paragraph [ref=f30e709]: Wholesale invoices deduct FEFO batches and update customer receivables on finalize.
+          - generic [ref=f30e710]:
+            - button "Filter" [disabled] [ref=f30e711] [cursor=pointer]
+            - button "Export" [ref=f30e712] [cursor=pointer]
+            - link "New invoice" [ref=f30e713] [cursor=pointer]:
+              - /url: /billing/new
+        - generic [ref=f30e714]:
+          - tablist [ref=f30e715]:
+            - tab "All" [selected] [ref=f30e716] [cursor=pointer]
+            - tab "Draft" [disabled] [ref=f30e717] [cursor=pointer]
+            - tab "Finalized" [disabled] [ref=f30e718] [cursor=pointer]
+            - tab "Returns" [disabled] [ref=f30e719] [cursor=pointer]
+          - tabpanel "All" [ref=f30e720]:
+            - table [ref=f30e724]:
+              - rowgroup [ref=f30e725]:
+                - row [ref=f30e726]:
+                  - columnheader "Invoice no." [ref=f30e727]
+                  - columnheader "Customer" [ref=f30e728]
+                  - columnheader "Ref" [ref=f30e729]
+                  - columnheader "Date" [ref=f30e730]
+                  - columnheader "Gross" [ref=f30e731]
+                  - columnheader "Tax" [ref=f30e732]
+                  - columnheader "Net" [ref=f30e733]
+                  - columnheader "Balance" [ref=f30e734]
+                  - columnheader "Status" [ref=f30e735]
+                  - columnheader "Actions" [ref=f30e736]
+              - rowgroup [ref=f30e737]:
+                - row [ref=f30e738]:
+                  - cell [ref=f30e739]:
+                    - text: No invoices yet.
+                    - link "Create your first invoice" [ref=f30e740] [cursor=pointer]:
+                      - /url: /billing/new
+            - generic [ref=f30e741]:
+              - paragraph [ref=f30e742]: Showing 0 of 0 invoices · Page 1 / 1
+              - generic [ref=f30e743]:
+                - link "Prev" [disabled]:
+                  - /url: /billing
+                - link "Next" [disabled]:
+                  - /url: /billing?page=2
+  - region "Notifications (F8)":
+    - list
+  - alert [ref=f30e249]: Billing · Pharmnos Lite

@@ -38,6 +38,7 @@ const requiredMarkers = [
 const tenantTables = [
     "tenants", "users", "memberships", "roles", "role_permissions", "business_profiles", "products",
     "product_batches", "customers", "suppliers", "purchase_invoices",
+    "purchase_supplier_documents",
     "purchase_posting_operations", "purchase_invoice_items",
     "purchase_gst_evidence_revisions", "purchase_gst_line_evidence",
     "purchase_gst_calculations", "purchase_gst_accounting_decisions",

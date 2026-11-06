@@ -1,0 +1,101 @@
+- generic [active] [ref=f30e1]:
+  - generic [ref=f30e1130]:
+    - complementary [ref=f30e1131]:
+      - generic [ref=f30e1132]:
+        - link "Pharmnos Lite" [ref=f30e1134] [cursor=pointer]:
+          - /url: /dashboard
+        - generic [ref=f30e1140]:
+          - paragraph [ref=f30e1141]: Business
+          - paragraph [ref=f30e1142]: Your Pharmacy
+        - navigation [ref=f30e1143]:
+          - link "Dashboard" [ref=f30e1144] [cursor=pointer]:
+            - /url: /dashboard
+          - link "Billing" [ref=f30e1151] [cursor=pointer]:
+            - /url: /billing
+          - link "Purchases" [ref=f30e1156] [cursor=pointer]:
+            - /url: /purchases
+          - link "Inventory" [ref=f30e1162] [cursor=pointer]:
+            - /url: /inventory
+          - link "Customers" [ref=f30e1167] [cursor=pointer]:
+            - /url: /customers
+          - link "Suppliers" [ref=f30e1174] [cursor=pointer]:
+            - /url: /suppliers
+          - link "Reports" [ref=f30e1181] [cursor=pointer]:
+            - /url: /reports
+          - link "Audit Log" [ref=f30e1185] [cursor=pointer]:
+            - /url: /audit
+          - link "Settings" [ref=f30e1191] [cursor=pointer]:
+            - /url: /settings
+        - button "US User Administrator" [ref=f30e1197] [cursor=pointer]:
+          - generic [ref=f30e1198]: US
+          - generic [ref=f30e1200]:
+            - paragraph [ref=f30e1201]: User
+            - paragraph [ref=f30e1202]: Administrator
+    - generic [ref=f30e1205]:
+      - banner [ref=f30e1206]:
+        - generic [ref=f30e1207]:
+          - textbox "Search products, customers, invoices..." [ref=f30e1210]
+          - generic [ref=f30e1211]:
+            - button "Notifications" [ref=f30e1212] [cursor=pointer]
+            - button "US User" [ref=f30e1214] [cursor=pointer]:
+              - generic [ref=f30e1215]: US
+              - generic [ref=f30e1217]: User
+      - generic [ref=f30e1218]:
+        - generic [ref=f30e1219]:
+          - generic [ref=f30e1220]:
+            - generic [ref=f30e1221]: Billing
+            - paragraph [ref=f30e1222]: Wholesale invoices deduct FEFO batches and update customer receivables on finalize.
+          - generic [ref=f30e1223]:
+            - button "Filter" [disabled] [ref=f30e1224] [cursor=pointer]
+            - button "Export" [ref=f30e1225] [cursor=pointer]
+            - link "New invoice" [ref=f30e1226] [cursor=pointer]:
+              - /url: /billing/new
+        - generic [ref=f30e1227]:
+          - tablist [ref=f30e1228]:
+            - tab "All" [selected] [ref=f30e1229] [cursor=pointer]
+            - tab "Draft" [disabled] [ref=f30e1230] [cursor=pointer]
+            - tab "Finalized" [disabled] [ref=f30e1231] [cursor=pointer]
+            - tab "Returns" [disabled] [ref=f30e1232] [cursor=pointer]
+          - tabpanel "All" [ref=f30e1233]:
+            - table [ref=f30e1237]:
+              - rowgroup [ref=f30e1238]:
+                - row [ref=f30e1239]:
+                  - columnheader "Invoice no." [ref=f30e1240]
+                  - columnheader "Customer" [ref=f30e1241]
+                  - columnheader "Ref" [ref=f30e1242]
+                  - columnheader "Date" [ref=f30e1243]
+                  - columnheader "Gross" [ref=f30e1244]
+                  - columnheader "Tax" [ref=f30e1245]
+                  - columnheader "Net" [ref=f30e1246]
+                  - columnheader "Balance" [ref=f30e1247]
+                  - columnheader "Status" [ref=f30e1248]
+                  - columnheader "Actions" [ref=f30e1249]
+              - rowgroup [ref=f30e1250]:
+                - row [ref=f30e1251]:
+                  - cell "DRAFT" [ref=f30e1252]:
+                    - link "DRAFT" [disabled]:
+                      - /url: /billing/cmw5cgyja001xm92u0omxrp7t
+                  - cell "Disposable Customer" [ref=f30e1253]
+                  - cell "—" [ref=f30e1254]
+                  - cell "06 Nov 2026" [ref=f30e1255]
+                  - cell "₹ 220.00" [ref=f30e1256]
+                  - cell "₹ 39.60" [ref=f30e1257]
+                  - cell "₹ 259.60" [ref=f30e1258]
+                  - cell "₹ 259.60" [ref=f30e1259]
+                  - cell "DRAFT" [ref=f30e1260]
+                  - cell [ref=f30e1262]:
+                    - generic [ref=f30e1263]:
+                      - button "View invoice" [disabled]
+                      - button "Finalize" [ref=f30e1264] [cursor=pointer]
+                      - button "Cancel draft" [ref=f30e1265] [cursor=pointer]: Cancel
+                      - button "Print invoice" [disabled]
+            - generic [ref=f30e1266]:
+              - paragraph [ref=f30e1267]: Showing 1 of 1 invoices · Page 1 / 1
+              - generic [ref=f30e1268]:
+                - link "Prev" [disabled]:
+                  - /url: /billing
+                - link "Next" [disabled]:
+                  - /url: /billing?page=2
+  - region "Notifications (F8)":
+    - list
+  - alert [ref=f30e249]: Billing · Pharmnos Lite

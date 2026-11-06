@@ -122,6 +122,10 @@
 -- purchase_invoices
 -- tenant_select_purchase_invoices / tenant_insert_purchase_invoices /
 -- tenant_update_purchase_invoices
+
+-- purchase_supplier_documents
+-- tenant_select_purchase_supplier_documents / tenant_insert_purchase_supplier_documents /
+-- tenant_update_purchase_supplier_documents
 -- Predicate: tenant_id::text = NULLIF(current_setting(
 --   'request.jwt.claim.tenant_id', true), '')
 -- No DELETE policy is defined. Finalized rows additionally require the

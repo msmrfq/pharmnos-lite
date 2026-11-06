@@ -43,6 +43,7 @@ const directTenantTables = [
     "customers",
     "suppliers",
     "purchase_invoices",
+    "purchase_supplier_documents",
     "purchase_posting_operations",
     "sales_posting_operations",
     "purchase_invoice_items",
@@ -529,8 +530,51 @@ const controlSql = [
      BEGIN
        IF TG_TABLE_NAME = 'sales_invoices' THEN
          IF OLD.status = 'FINALIZED'::public."InvoiceStatus" THEN
-           RAISE EXCEPTION 'Finalized sales invoice facts are immutable'
-             USING ERRCODE = '42501';
+           IF NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+              OR NEW.invoice_no IS DISTINCT FROM OLD.invoice_no
+              OR NEW.customer_id IS DISTINCT FROM OLD.customer_id
+              OR NEW.invoice_date IS DISTINCT FROM OLD.invoice_date
+              OR NEW.status IS DISTINCT FROM OLD.status
+              OR NEW.tax_data_status IS DISTINCT FROM OLD.tax_data_status
+              OR NEW.gst_treatment IS DISTINCT FROM OLD.gst_treatment
+              OR NEW.tax_mode IS DISTINCT FROM OLD.tax_mode
+              OR NEW.place_of_supply_code IS DISTINCT FROM OLD.place_of_supply_code
+              OR NEW.is_cash_sale IS DISTINCT FROM OLD.is_cash_sale
+              OR NEW.gross_amount IS DISTINCT FROM OLD.gross_amount
+              OR NEW.total_discount IS DISTINCT FROM OLD.total_discount
+              OR NEW.total_tax IS DISTINCT FROM OLD.total_tax
+              OR NEW.round_off IS DISTINCT FROM OLD.round_off
+              OR NEW.net_amount IS DISTINCT FROM OLD.net_amount
+              OR NEW.paid_amount IS DISTINCT FROM OLD.paid_amount
+              OR NEW.balance_due IS DISTINCT FROM OLD.balance_due
+              OR NEW.payment_mode IS DISTINCT FROM OLD.payment_mode
+              OR NEW.notes IS DISTINCT FROM OLD.notes
+              OR NEW.created_by IS DISTINCT FROM OLD.created_by
+              OR NEW.finalized_at IS DISTINCT FROM OLD.finalized_at
+              OR NEW.cancelled_at IS DISTINCT FROM OLD.cancelled_at
+              OR NEW.cancelled_by IS DISTINCT FROM OLD.cancelled_by
+              OR NEW.cancel_reason IS DISTINCT FROM OLD.cancel_reason
+              OR NEW.seller_name_snapshot IS DISTINCT FROM OLD.seller_name_snapshot
+              OR NEW.seller_address_line_1_snapshot IS DISTINCT FROM OLD.seller_address_line_1_snapshot
+              OR NEW.seller_address_line_2_snapshot IS DISTINCT FROM OLD.seller_address_line_2_snapshot
+              OR NEW.seller_city_snapshot IS DISTINCT FROM OLD.seller_city_snapshot
+              OR NEW.seller_state_snapshot IS DISTINCT FROM OLD.seller_state_snapshot
+              OR NEW.seller_pincode_snapshot IS DISTINCT FROM OLD.seller_pincode_snapshot
+              OR NEW.seller_gstin_snapshot IS DISTINCT FROM OLD.seller_gstin_snapshot
+              OR NEW.customer_name_snapshot IS DISTINCT FROM OLD.customer_name_snapshot
+              OR NEW.customer_address_line_1_snapshot IS DISTINCT FROM OLD.customer_address_line_1_snapshot
+              OR NEW.customer_address_line_2_snapshot IS DISTINCT FROM OLD.customer_address_line_2_snapshot
+              OR NEW.customer_city_snapshot IS DISTINCT FROM OLD.customer_city_snapshot
+              OR NEW.customer_state_snapshot IS DISTINCT FROM OLD.customer_state_snapshot
+              OR NEW.customer_pincode_snapshot IS DISTINCT FROM OLD.customer_pincode_snapshot
+              OR NEW.customer_gstin_snapshot IS DISTINCT FROM OLD.customer_gstin_snapshot
+              OR NEW.finalized_snapshot IS DISTINCT FROM OLD.finalized_snapshot
+              OR NEW.finalized_snapshot_hash IS DISTINCT FROM OLD.finalized_snapshot_hash
+              OR NEW.rendering_version IS DISTINCT FROM OLD.rendering_version
+           THEN
+             RAISE EXCEPTION 'Finalized sales invoice facts are immutable'
+               USING ERRCODE = '42501';
+           END IF;
          END IF;
        ELSE
          SELECT status INTO invoice_status

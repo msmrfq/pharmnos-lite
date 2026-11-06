@@ -165,8 +165,8 @@ async function gate() {
          JOIN pg_namespace n ON n.oid = c.relnamespace
          WHERE n.nspname = 'public' AND NOT t.tgisinternal) AS triggers
     `)).rows[0];
-    assert.equal(Number(catalog.rls_tables), 33);
-    assert.equal(Number(catalog.triggers), 16);
+    assert.equal(Number(catalog.rls_tables), 34);
+    assert.equal(Number(catalog.triggers), 17);
     return bootstrap;
   } catch (error) {
     await bootstrap.end();
@@ -480,9 +480,9 @@ async function verifyTenantIsolationAndPrivileges(bootstrap, fixture) {
       (SELECT has_table_privilege($1, 'public.tenants', 'INSERT')) AS runtime_can_insert_tenants,
       (SELECT rolcanlogin AND NOT rolsuper AND NOT rolbypassrls FROM pg_roles WHERE rolname = $1) AS restricted_runtime
   `, [APPROVED.runtimeRole]))[0];
-  assert.equal(Number(catalog.forced_rls_tables), 33);
-  assert.equal(Number(catalog.policies), 84);
-  assert.equal(Number(catalog.triggers), 16);
+  assert.equal(Number(catalog.forced_rls_tables), 34);
+  assert.equal(Number(catalog.policies), 87);
+  assert.equal(Number(catalog.triggers), 17);
   assert.equal(Number(catalog.runtime_delete_grants), 0);
   assert.equal(catalog.runtime_can_select_tenants, true);
   assert.equal(catalog.runtime_can_insert_tenants, true);

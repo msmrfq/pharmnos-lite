@@ -6,13 +6,13 @@
   "sourceSchema": {
     "path": "prisma/schema.prisma",
     "generation": "prisma migrate diff --from-empty",
-    "sha256": "e175fb2d8b023cc47b2ac6ecd1d6db22d1ab0663a187e238b3acbf7465cb057d"
+    "sha256": "bb3c1503ba237c352a5391730f75938925e6f61a71901e6b2add564a0aeaf2d4"
   },
   "artifacts": [
     {
       "order": 1,
       "path": "prisma/financial-e2e-schema-provisioning.generated.sql",
-      "sha256": "f507579e1004a6c021b4a602ffd5933c91823586aeb987bc8e99091fc7ad9f89",
+      "sha256": "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
       "classification": "executable"
     },
     {
@@ -24,7 +24,7 @@
     {
       "order": 3,
       "path": "scripts/financial-e2e-provisioning-static-guard.mjs",
-      "sha256": "d3fd847a8d900e27eeadc1b5369817fff3d3ff823a7f8df51767e64c42ba9f52",
+      "sha256": "0485013ba76ce6d32025aa1d23ebe411fc40efce62681674dfe4389ee55ca699",
       "classification": "executable"
     },
     {
@@ -42,7 +42,7 @@
     {
       "order": 6,
       "path": "scripts/financial-e2e-provision-local.mjs",
-      "sha256": "42c15ead629e1068777f93917fe24e62c8bfda126177accb08f8ab694bcdf6ba",
+      "sha256": "dd6ee5d793ff4451867ce2760fc8f3d2fbbd15787bda734fad652567ea6ab128",
       "classification": "executable"
     },
     {
@@ -73,6 +73,12 @@
       "order": 11,
       "path": "prisma/migrations/0016_supplier_invoice_trimmed_uniqueness/migration.sql",
       "sha256": "43dbb060f772346bbfb40dc444abd4f2595af7597e688d0353acf32d01302c87",
+      "classification": "executable"
+    },
+    {
+      "order": 12,
+      "path": "prisma/migrations/0020_supplier_document_rls_and_active_guard/migration.sql",
+      "sha256": "430ac6236b756e0eec1192532c69959ea4395b1884830306362a15e0a2579191",
       "classification": "executable"
     }
   ],

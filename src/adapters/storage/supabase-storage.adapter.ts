@@ -31,13 +31,15 @@ export class SupabaseStorageAdapter implements IStorageAdapter {
 
   async ensureBucket(bucket: string, isPublic = false): Promise<void> {
     const sb = this.client;
-    const { data: list } = await sb.storage.listBuckets();
-    const exists = list?.some((b) => b.name === bucket);
+    const { data: list, error: listError } = await sb.storage.listBuckets();
+    if (listError) throw listError;
+    const existing = list?.find((b) => b.name === bucket);
+    const exists = Boolean(existing);
     if (!exists) {
       const { error } = await sb.storage.createBucket(bucket, { public: isPublic });
       if (error) throw error;
-    } else if (isPublic) {
-      sb.storage.from(bucket).getPublicUrl("__probe__");
+    } else if (existing?.public !== isPublic) {
+      throw new Error(`Storage bucket "${bucket}" has an unexpected public setting.`);
     }
   }
 

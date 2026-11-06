@@ -60,6 +60,7 @@ ALTER TABLE public.payments               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customer_ledgers       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.supplier_ledgers       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.purchase_supplier_documents ENABLE ROW LEVEL SECURITY;
 
 -- ---------------------------------------------------------------------
 -- 3. Idempotent DROP IF EXISTS + CREATE POLICY on all 19 tables.
@@ -332,6 +333,7 @@ DECLARE
     'purchase_gst_accounting_decisions',
     'purchase_gst_reconciliation_events',
     'purchase_gst_reconciliation_event_lines'
+    ,'purchase_supplier_documents'
   ];
 BEGIN
   IF to_regprocedure('public.jwt_tenant_id()') IS NULL THEN

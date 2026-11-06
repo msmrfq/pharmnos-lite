@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Share2, Pill, AlertTriangle } from "lucide-react";
@@ -11,6 +12,16 @@ import { isPostgresConfigured } from "@/lib/db/prisma";
 import { cn } from "@/lib/utils";
 import { buildInvoicePrintSnapshot, selectFinalizedInvoiceValue } from "@/domain/services/gst-calculator.service";
 import { loadBillingInvoicePrintData } from "./data";
+import {
+  amountInWords,
+  PHARMNOS_PLATFORM_FOOTER,
+  stableInvoiceReferences,
+  summarizeInvoiceTax,
+} from "@/domain/services/invoice-modernization.service";
+import {
+  renderInvoiceBarcodeDataUrl,
+  renderInvoiceQrDataUrl,
+} from "@/domain/services/invoice-document.service";
 
 export const metadata: Metadata = {
   title: "Print invoice",
@@ -103,7 +114,64 @@ export default async function BillingInvoicePrintPage({
       </DashboardLayout>
     );
   }
-  const invoice: any = rawInvoice;
+  const finalizedSnapshot =
+    rawInvoice.status === "FINALIZED" &&
+    rawInvoice.finalized_snapshot &&
+    typeof rawInvoice.finalized_snapshot === "object" &&
+    rawInvoice.finalized_snapshot.kind === "sales_invoice"
+      ? rawInvoice.finalized_snapshot as Record<string, any>
+      : null;
+  const invoice: any = finalizedSnapshot
+    ? {
+        ...rawInvoice,
+        invoice_no: finalizedSnapshot.invoiceNo,
+        invoice_date: finalizedSnapshot.invoiceDate,
+        tax_data_status: "COMPLETE",
+        seller_name_snapshot: finalizedSnapshot.seller?.name ?? null,
+        seller_address_line_1_snapshot: finalizedSnapshot.seller?.addressLine1 ?? null,
+        seller_address_line_2_snapshot: finalizedSnapshot.seller?.addressLine2 ?? null,
+        seller_city_snapshot: finalizedSnapshot.seller?.city ?? null,
+        seller_state_snapshot: finalizedSnapshot.seller?.state ?? null,
+        seller_pincode_snapshot: finalizedSnapshot.seller?.pincode ?? null,
+        seller_gstin_snapshot: finalizedSnapshot.seller?.gstin ?? null,
+        customer_name_snapshot: finalizedSnapshot.buyer?.name ?? null,
+        customer_address_line_1_snapshot: finalizedSnapshot.buyer?.addressLine1 ?? null,
+        customer_address_line_2_snapshot: finalizedSnapshot.buyer?.addressLine2 ?? null,
+        customer_city_snapshot: finalizedSnapshot.buyer?.city ?? null,
+        customer_state_snapshot: finalizedSnapshot.buyer?.state ?? null,
+        customer_pincode_snapshot: finalizedSnapshot.buyer?.pincode ?? null,
+        customer_gstin_snapshot: finalizedSnapshot.buyer?.gstin ?? null,
+        place_of_supply_code: finalizedSnapshot.placeOfSupplyCode ?? null,
+        gross_amount: finalizedSnapshot.totals?.gross ?? 0,
+        total_discount: finalizedSnapshot.totals?.discount ?? 0,
+        total_tax: finalizedSnapshot.totals?.tax ?? 0,
+        round_off: finalizedSnapshot.totals?.roundOff ?? 0,
+        net_amount: finalizedSnapshot.totals?.payable ?? 0,
+        items: (finalizedSnapshot.lines ?? []).map((line: any, index: number) => ({
+          id: `${rawInvoice.id}-snapshot-${index}`,
+          product_name_snapshot: line.product,
+          generic_name_snapshot: line.genericName ?? null,
+          hsn_code_snapshot: line.hsn,
+          batch_no: line.batchNo,
+          batch_expiry_snapshot: line.expiry,
+          quantity: line.quantity,
+          free_qty: 0,
+          sale_rate: line.totalAmount && line.quantity ? Number(line.totalAmount) / Number(line.quantity) : 0,
+          line_total: line.totalAmount,
+          gst_rate: line.gstRate,
+          cgst_amount: line.cgstAmount ?? 0,
+          sgst_amount: line.sgstAmount ?? 0,
+          igst_amount: line.igstAmount ?? 0,
+          cess_amount: line.cessAmount ?? 0,
+          product: null,
+          batch: null,
+        })),
+        customer: null,
+      }
+    : rawInvoice;
+  if (finalizedSnapshot) {
+    businessProfile = null;
+  }
   const hasCompleteTaxData = invoice.tax_data_status === "COMPLETE";
   const printSnapshot = buildInvoicePrintSnapshot(
     invoice,
@@ -138,6 +206,15 @@ export default async function BillingInvoicePrintPage({
   const tax = Number(invoice.total_tax ?? 0);
   const roundOff = Number(invoice.round_off ?? 0);
   const net = Number(invoice.net_amount ?? 0);
+  const taxSummary = summarizeInvoiceTax(items.map((item: any) => ({
+    cgst: Number(item.cgst_amount ?? 0),
+    sgst: Number(item.sgst_amount ?? 0),
+    igst: Number(item.igst_amount ?? 0),
+    cess: Number(item.cess_amount ?? 0),
+  })));
+  const invoiceReferences = stableInvoiceReferences(invoice.id, invoice.invoice_no || "DRAFT");
+  const qrDataUrl = invoice.status === "FINALIZED" ? await renderInvoiceQrDataUrl(invoice.id, invoice.invoice_no) : null;
+  const barcodeDataUrl = invoice.status === "FINALIZED" ? await renderInvoiceBarcodeDataUrl(invoice.id, invoice.invoice_no) : null;
 
   const isDraftOrCancelled =
     invoice.status === "DRAFT" || invoice.status === "CANCELLED";
@@ -189,7 +266,7 @@ export default async function BillingInvoicePrintPage({
       )}
 
       {/* ═══════════════ A4 LETTERHEAD LAYOUT ═══════════════ */}
-      <div className="invoice-print mx-auto w-full max-w-[210mm] bg-canvas lg:rounded-lg lg:border lg:border-hairline lg:shadow-sm">
+      <div className="invoice-print mx-auto w-full max-w-[297mm] bg-canvas lg:rounded-lg lg:border lg:border-hairline lg:shadow-sm">
         <div className="print-break-inside-avoid p-[12mm_14mm]">
           {/* Letterhead */}
           <div className="flex items-start justify-between gap-6 border-b border-hairline pb-6">
@@ -531,6 +608,26 @@ export default async function BillingInvoicePrintPage({
                     <span className="text-muted">Tax{hasCompleteTaxData ? "" : " (unresolved)"}</span>
                     <span className="font-medium text-ink">{rupee(tax)}</span>
                   </div>
+                  {taxSummary.cgst > 0 && (
+                    <div className="flex items-center justify-between px-4 py-2.5 text-caption">
+                      <span className="text-muted">CGST</span><span>{rupee(taxSummary.cgst)}</span>
+                    </div>
+                  )}
+                  {taxSummary.sgst > 0 && (
+                    <div className="flex items-center justify-between px-4 py-2.5 text-caption">
+                      <span className="text-muted">SGST</span><span>{rupee(taxSummary.sgst)}</span>
+                    </div>
+                  )}
+                  {taxSummary.igst > 0 && (
+                    <div className="flex items-center justify-between px-4 py-2.5 text-caption">
+                      <span className="text-muted">IGST</span><span>{rupee(taxSummary.igst)}</span>
+                    </div>
+                  )}
+                  {taxSummary.cess > 0 && (
+                    <div className="flex items-center justify-between px-4 py-2.5 text-caption">
+                      <span className="text-muted">Cess</span><span>{rupee(taxSummary.cess)}</span>
+                    </div>
+                  )}
                   {roundOff !== 0 && (
                     <div className="flex items-center justify-between px-4 py-2.5 text-body-sm">
                       <span className="text-muted">Round Off</span>
@@ -592,6 +689,9 @@ export default async function BillingInvoicePrintPage({
                     </>
                   )}
                 </div>
+                <p className="px-4 py-2 text-caption text-muted">
+                  Amount in words: {amountInWords(net)}
+                </p>
               </div>
             </div>
           </div>
@@ -803,6 +903,44 @@ export default async function BillingInvoicePrintPage({
             <p className="mt-2 text-[9px] text-muted">
               — Authorised Signatory —
             </p>
+          </div>
+          <div className="mt-4 flex items-end justify-between gap-6 border-t border-hairline pt-3 text-[9px] text-muted">
+            <div>
+              <p className="font-semibold text-ink">{PHARMNOS_PLATFORM_FOOTER.attribution}</p>
+              <p>{PHARMNOS_PLATFORM_FOOTER.address}</p>
+              <p>{PHARMNOS_PLATFORM_FOOTER.supportEmail} · {PHARMNOS_PLATFORM_FOOTER.phone}</p>
+            </div>
+            <div className="text-right">
+              {barcodeDataUrl ? (
+                <Image
+                  src={barcodeDataUrl}
+                  alt={`Barcode for invoice ${invoiceReferences.barcodeValue}`}
+                  width={176}
+                  height={48}
+                  unoptimized
+                  className="ml-auto h-12 w-44 object-contain"
+                  data-invoice-barcode={invoiceReferences.barcodeValue}
+                />
+              ) : (
+                <p data-invoice-barcode={invoiceReferences.barcodeValue}>Barcode: {invoiceReferences.barcodeValue}</p>
+              )}
+              {qrDataUrl ? (
+                <Image
+                  src={qrDataUrl}
+                  alt="Internal invoice verification QR code"
+                  width={96}
+                  height={96}
+                  unoptimized
+                  className="ml-auto mt-2 h-24 w-24"
+                  data-invoice-qr={invoiceReferences.qrPayload}
+                />
+              ) : (
+                <p className="max-w-[260px] break-all" data-invoice-qr={invoiceReferences.qrPayload}>
+                  QR reference: {invoiceReferences.qrPayload}
+                </p>
+              )}
+              <p className="mt-1 text-[8px]">Internal reference, not a statutory QR code.</p>
+            </div>
           </div>
         </div>
       </div>

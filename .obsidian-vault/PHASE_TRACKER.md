@@ -11,11 +11,11 @@
 
 **Working phase numbering (PROJECT-WIDE MANDATORY):** We use 7 working phases P1…P7. The PRD `.obsidian-vault/prd-technical-architecture.md §29 Suggested Development Phases` originally proposed 6 phases (Phase 0…Phase 5). The crosswalk column below maps every working phase to its corresponding PRD coverage area so we never confuse the two. **Always use P1…P7 working phase numbers in all notes, bugs, specs, decisions, retro, TODO lists, and commit messages going forward.** Do NOT use PRD numbering in day-to-day work.
 
-**Last updated:** `Date: 2026-11-05  Time: 02-15-37 (IST)`
+**Last updated:** `Date: 2026-11-06  Time: 22-51-09 (IST)`
 
 N.B: ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. 
 
-**Current working phase:** `GST MODERNIZATION — POST-P7 PRE-PRODUCTION VALIDATION — CURRENT-SOURCE ENGINEERING GATES PASS; T19 RUNTIME, BROWSER E2E, INDEPENDENT ACCEPTANCE, AND PRODUCTION GATES OPEN.`
+**Current working phase:** `GST MODERNIZATION — POST-P7 PRE-PRODUCTION VALIDATION — CURRENT-SOURCE ENGINEERING GATES PASS; INVOICE DOCUMENT RUNTIME, T19 RUNTIME, BROWSER E2E, INDEPENDENT ACCEPTANCE, AND PRODUCTION GATES OPEN.`
 
 > **GST specification review state:** the latest current-source campaign passes T13 12/12, T25 297/297, focused financial-integrity contracts 22/22, closure-hardening contracts 19/19, full JavaScript regression 274/274, typecheck, lint, build, safe-placeholder Prisma validation, provisioning static guard, artifact-manifest verification, and `git diff --check`. Artifact package `0.1.2` contains 11 executable artifacts and excludes review-only SQL. Current-source target-bound T19 was not rerun because no fresh immutable disposable-target contract was supplied; browser E2E, separate technical acceptance, professional/statutory confirmation, migration/recovery proof, and production readiness remain open. The separate technical acceptance is **NOT ACCEPTED** and production readiness is **NO-GO**. The equal-count 25/25 report is historical and not the current closure decision.
 

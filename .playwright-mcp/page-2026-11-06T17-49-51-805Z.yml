@@ -1,0 +1,160 @@
+- generic [active] [ref=f13e1]:
+  - generic [ref=f13e2]:
+    - complementary [ref=f13e3]:
+      - generic [ref=f13e4]:
+        - link "Pharmnos Lite" [ref=f13e6] [cursor=pointer]:
+          - /url: /dashboard
+        - generic [ref=f13e12]:
+          - paragraph [ref=f13e13]: Business
+          - paragraph [ref=f13e14]: Your Pharmacy
+        - navigation [ref=f13e15]:
+          - link "Dashboard" [ref=f13e16] [cursor=pointer]:
+            - /url: /dashboard
+          - link "Billing" [ref=f13e23] [cursor=pointer]:
+            - /url: /billing
+          - link "Purchases" [ref=f13e28] [cursor=pointer]:
+            - /url: /purchases
+          - link "Inventory" [ref=f13e34] [cursor=pointer]:
+            - /url: /inventory
+          - link "Customers" [ref=f13e39] [cursor=pointer]:
+            - /url: /customers
+          - link "Suppliers" [ref=f13e46] [cursor=pointer]:
+            - /url: /suppliers
+          - link "Reports" [ref=f13e53] [cursor=pointer]:
+            - /url: /reports
+          - link "Audit Log" [ref=f13e57] [cursor=pointer]:
+            - /url: /audit
+          - link "Settings" [ref=f13e63] [cursor=pointer]:
+            - /url: /settings
+        - button "US User Administrator" [ref=f13e69] [cursor=pointer]:
+          - generic [ref=f13e70]: US
+          - generic [ref=f13e72]:
+            - paragraph [ref=f13e73]: User
+            - paragraph [ref=f13e74]: Administrator
+    - generic [ref=f13e77]:
+      - banner [ref=f13e78]:
+        - generic [ref=f13e79]:
+          - textbox "Search products, customers, invoices..." [ref=f13e82]
+          - generic [ref=f13e83]:
+            - button "Notifications" [ref=f13e84] [cursor=pointer]
+            - button "US User" [ref=f13e86] [cursor=pointer]:
+              - generic [ref=f13e87]: US
+              - generic [ref=f13e89]: User
+      - generic [ref=f13e90]:
+        - generic [ref=f13e92]:
+          - link "Back" [ref=f13e93] [cursor=pointer]:
+            - /url: /billing
+          - generic [ref=f13e94]:
+            - generic [ref=f13e95]: New invoice
+            - paragraph [ref=f13e96]: Select a customer, add items by batch (FEFO picker), and save draft. Finalize from the billing list when ready.
+        - generic [ref=f13e98]:
+          - generic [ref=f13e99]:
+            - generic [ref=f13e100]:
+              - generic [ref=f13e101]: Customer & invoice
+              - generic [ref=f13e103]:
+                - generic [ref=f13e104]:
+                  - text: Customer *
+                  - combobox [ref=f13e105] [cursor=pointer]:
+                    - generic: Select customer
+                  - combobox [aria-hidden] [ref=f13e108]
+                - generic [ref=f13e109]:
+                  - text: Place of supply *
+                  - combobox "Place of supply *" [ref=f13e110] [cursor=pointer]:
+                    - generic: Select the actual supply state
+                  - combobox [aria-hidden] [ref=f13e113]
+                  - paragraph [ref=f13e114]: Capture the transaction's actual supply state; customer billing state is not used as a fallback.
+                - generic [ref=f13e115]:
+                  - text: GST Treatment *
+                  - combobox "GST Treatment *" [ref=f13e116] [cursor=pointer]:
+                    - generic: Select GST treatment
+                  - combobox [aria-hidden] [ref=f13e119]
+                  - paragraph [ref=f13e120]: Deferred categories remain visible but cannot be finalized until their rules are approved.
+                - generic [ref=f13e121]:
+                  - text: Tax mode *
+                  - combobox "Tax mode *" [ref=f13e122] [cursor=pointer]
+                  - combobox [aria-hidden] [ref=f13e125]
+                - generic [ref=f13e126]:
+                  - text: Invoice date
+                  - textbox "Invoice date" [ref=f13e127]: 2026-11-06
+                - generic [ref=f13e128]:
+                  - text: Ref no. (optional)
+                  - textbox "Ref no. (optional)" [ref=f13e129]:
+                    - /placeholder: e.g. PO-00421
+                - generic [ref=f13e130]:
+                  - checkbox "Cash sale (no receivable)" [ref=f13e131]
+                  - generic [ref=f13e132] [cursor=pointer]: Cash sale (no receivable)
+                - generic [ref=f13e133]:
+                  - text: Notes
+                  - textbox "Notes" [ref=f13e134]:
+                    - /placeholder: Optional internal notes…
+            - generic [ref=f13e135]:
+              - generic [ref=f13e136]:
+                - generic [ref=f13e137]: Line items
+                - button "Add item" [ref=f13e138] [cursor=pointer]
+              - table [ref=f13e142]:
+                - rowgroup [ref=f13e143]:
+                  - row [ref=f13e144]:
+                    - columnheader "Product *" [ref=f13e145]
+                    - columnheader "Batch / FEFO" [ref=f13e146]
+                    - columnheader "Expiry" [ref=f13e147]
+                    - columnheader "Qty" [ref=f13e148]
+                    - columnheader "MRP" [ref=f13e149]
+                    - columnheader "Sale rate" [ref=f13e150]
+                    - columnheader "Disc %" [ref=f13e151]
+                    - columnheader "GST %" [ref=f13e152]
+                    - columnheader "Line" [ref=f13e153]
+                    - columnheader [ref=f13e154]
+                - rowgroup [ref=f13e155]:
+                  - row [ref=f13e156]:
+                    - cell [ref=f13e157]:
+                      - generic [ref=f13e163]:
+                        - combobox [ref=f13e164] [cursor=pointer]:
+                          - generic: Select product
+                        - combobox [aria-hidden] [ref=f13e167]
+                    - cell [ref=f13e168]:
+                      - generic [ref=f13e169]:
+                        - button "Pick FEFO" [disabled]
+                    - cell "pick batch" [ref=f13e170]
+                    - cell [ref=f13e171]:
+                      - spinbutton [ref=f13e173]: "1"
+                    - cell [ref=f13e174]:
+                      - spinbutton [ref=f13e175]: "0"
+                    - cell [ref=f13e176]:
+                      - spinbutton [ref=f13e177]: "0"
+                    - cell [ref=f13e178]:
+                      - spinbutton [ref=f13e179]: "0"
+                    - cell [ref=f13e180]:
+                      - spinbutton [ref=f13e181]: "0"
+                    - cell "₹ 0.00" [ref=f13e182]
+                    - cell [ref=f13e183]:
+                      - generic [ref=f13e184]:
+                        - button "Remove line" [disabled]
+          - generic [ref=f13e185]:
+            - generic [ref=f13e186]:
+              - generic [ref=f13e187]:
+                - generic [ref=f13e188]: Totals
+                - paragraph [ref=f13e189]: Client-side preview — server recomputes on finalize. Tax classification unavailable (MISSING_BUYER).
+              - generic [ref=f13e190]:
+                - generic [ref=f13e191]:
+                  - generic [ref=f13e192]: Goods value
+                  - generic [ref=f13e193]: ₹ 0.00
+                - generic [ref=f13e194]:
+                  - generic [ref=f13e195]: Trade discount
+                  - generic [ref=f13e196]: "- ₹ 0.00"
+                - generic [ref=f13e197]: Tax split unavailable until both supplier and customer states are valid.
+                - generic [ref=f13e198]:
+                  - generic [ref=f13e199]: Round off
+                  - generic [ref=f13e200]: —
+                - generic [ref=f13e201]:
+                  - generic [ref=f13e202]: Grand total
+                  - generic [ref=f13e203]: Unavailable
+            - generic [ref=f13e204]:
+              - generic [ref=f13e205]: Stock impact
+              - generic [ref=f13e207]:
+                - paragraph [ref=f13e208]: Saving this form records a DRAFT. Finalize from the billing list to deduct FEFO batches, record outward stock movements, and update the customer ledger.
+                - generic [ref=f13e209]:
+                  - link "Cancel" [ref=f13e210] [cursor=pointer]:
+                    - /url: /billing
+                  - button "Save draft" [ref=f13e211] [cursor=pointer]
+  - region "Notifications (F8)":
+    - list

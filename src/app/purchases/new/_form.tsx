@@ -112,6 +112,7 @@ export default function PurchasesNewClientForm({ suppliers, products }: Props) {
   const { toast } = useToast();
   const params = useSearchParams();
   const [lines, setLines] = useState<LineRow[]>(() => [emptyLine()]);
+  const [supplierId, setSupplierId] = useState("");
 
   useEffect(() => {
     const first = document.querySelector<HTMLElement>('[data-field-error="true"]');
@@ -189,8 +190,7 @@ export default function PurchasesNewClientForm({ suppliers, products }: Props) {
                 <Label htmlFor="supplier_id">Supplier *</Label>
                 <Select
                   onValueChange={(v) => {
-                    const el = document.getElementById("supplier_id") as HTMLInputElement | null;
-                    if (el) el.value = v;
+                    setSupplierId(v);
                   }}
                 >
                   <SelectTrigger id="supplier_id_trigger">
@@ -204,7 +204,7 @@ export default function PurchasesNewClientForm({ suppliers, products }: Props) {
                     ))}
                   </SelectContent>
                 </Select>
-                <input type="hidden" id="supplier_id" name="supplier_id" defaultValue="" />
+                <input type="hidden" id="supplier_id" name="supplier_id" value={supplierId} readOnly />
                 {fieldError(errors, "supplier_id") && (
                   <p className="text-caption text-destructive">{fieldError(errors, "supplier_id")}</p>
                 )}
@@ -223,6 +223,16 @@ export default function PurchasesNewClientForm({ suppliers, products }: Props) {
               <div className="space-y-2">
                 <Label htmlFor="supplier_invoice_no">Supplier invoice no.</Label>
                 <Input id="supplier_invoice_no" name="supplier_invoice_no" placeholder="e.g. INV/CIP/00219" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="supplier_invoice_file">Supplier invoice document</Label>
+                <Input
+                  id="supplier_invoice_file"
+                  name="supplier_invoice_file"
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                />
+                <p className="text-caption text-muted-foreground">Optional PDF or image, maximum 10 MB.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="declared_taxable_value">Supplier taxable value</Label>

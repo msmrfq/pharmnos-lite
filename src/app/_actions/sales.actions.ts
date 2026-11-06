@@ -48,6 +48,11 @@ import {
   resolveApprovedGstRule,
 } from "@/lib/gst/rule-governance";
 import { decimalOrZero, sumDecimals } from "@/lib/decimal";
+import {
+  createImmutableInvoiceSnapshot,
+  INVOICE_RENDERING_VERSION,
+  amountInWords,
+} from "@/domain/services/invoice-modernization.service";
 
 const __SalesStatusDRAFT: InvoiceStatus = "DRAFT";
 const __SalesStatusFINALIZED: InvoiceStatus = "FINALIZED";
@@ -805,6 +810,65 @@ export async function finalizeSalesInvoiceAction(
       }
 
       const balanceBefore = decimalOrZero(await lockCustomerBalance(tx, ctx.tenantId, cust.id));
+      const finalizedSnapshot = createImmutableInvoiceSnapshot({
+        kind: "sales_invoice",
+        invoiceId: existing.id,
+        invoiceNo: finalInvoiceNo,
+        invoiceDate: existing.invoice_date.toISOString(),
+        classification: existing.is_cash_sale ? "CASH_MEMO" : "TAX_INVOICE",
+        seller: {
+          name: tenant?.business_name ?? null,
+          addressLine1: profile?.address_line_1 ?? null,
+          addressLine2: profile?.address_line_2 ?? null,
+          city: profile?.city ?? null,
+          state: normalizeState(profile?.state) ?? profile?.state ?? null,
+          pincode: profile?.pincode ?? null,
+          gstin: profile?.gstin ?? null,
+        },
+        buyer: {
+          name: cust.business_name,
+          addressLine1: cust.billing_address_1 ?? null,
+          addressLine2: cust.billing_address_2 ?? null,
+          city: cust.billing_city ?? null,
+          state: normalizeState(cust.billing_state) ?? cust.billing_state ?? null,
+          pincode: cust.billing_pincode ?? null,
+          gstin: cust.gstin ?? null,
+        },
+        placeOfSupplyCode: persistedPlaceOfSupplyCode,
+        lines: items.map((line, index) => ({
+          product: line.product?.name ?? null,
+          manufacturer: line.product?.manufacturer ?? null,
+          batchNo: line.batch_no,
+          expiry: line.batch?.expiry_date?.toISOString?.() ?? null,
+          quantity: line.quantity,
+          packSize: line.product?.pack_size ?? null,
+          mrp: line.mrp?.toString?.() ?? null,
+          discountAmount: line.discount_amount?.toString?.() ?? null,
+          taxableAmount: serverGst.lines[index]?.taxable_value?.toString?.() ?? null,
+          hsn: governedLines[index]?.hsn_code_snapshot ?? null,
+          gstRate: line.gst_rate?.toString?.() ?? null,
+          gstAmount: decimalOrZero(serverGst.lines[index]?.cgst_amount ?? 0)
+            .add(serverGst.lines[index]?.sgst_amount ?? 0)
+            .add(serverGst.lines[index]?.igst_amount ?? 0)
+            .add(serverGst.lines[index]?.cess_amount ?? 0)
+            .toString(),
+          cgstAmount: decimalOrZero(serverGst.lines[index]?.cgst_amount ?? 0).toString(),
+          sgstAmount: decimalOrZero(serverGst.lines[index]?.sgst_amount ?? 0).toString(),
+          igstAmount: decimalOrZero(serverGst.lines[index]?.igst_amount ?? 0).toString(),
+          cessAmount: decimalOrZero(serverGst.lines[index]?.cess_amount ?? 0).toString(),
+          totalAmount: serverGst.lines[index]?.line_total?.toString?.() ?? null,
+        })),
+        totals: {
+          gross: serverGst.total_taxable.toString(),
+          discount: String(existing.total_discount ?? 0),
+          taxable: serverGst.total_taxable.toString(),
+          tax: serverGst.total_tax.toString(),
+          roundOff: serverGst.round_off_applied.toString(),
+          payable: serverGst.grand_total.toString(),
+        },
+        amountInWords: amountInWords(Number(serverGst.grand_total)),
+        renderingVersion: INVOICE_RENDERING_VERSION,
+      });
 
       const updated = await tx.sales_invoices.update({
         where: { id: existing.id, tenant_id: ctx.tenantId },
@@ -834,6 +898,10 @@ export async function finalizeSalesInvoiceAction(
           round_off: serverGst.round_off_applied,
           net_amount: serverGst.grand_total,
           balance_due: serverGst.grand_total,
+          finalized_snapshot: finalizedSnapshot.snapshot as Prisma.InputJsonValue,
+          finalized_snapshot_hash: finalizedSnapshot.hash,
+          rendering_version: INVOICE_RENDERING_VERSION,
+          pdf_generation_status: "PENDING",
           updated_at: new Date(),
         },
       });

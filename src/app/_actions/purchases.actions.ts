@@ -46,6 +46,11 @@ import { validateGstTreatment } from "@/lib/gst/treatment";
 import { resolvePurchaseSupplyFacts } from "@/lib/gst/place-of-supply";
 import { isApprovedGstClassification, resolveApprovedGstRule } from "@/lib/gst/rule-governance";
 import { Decimal, decimalOrZero } from "@/lib/decimal";
+import {
+  createImmutableInvoiceSnapshot,
+  INVOICE_RENDERING_VERSION,
+} from "@/domain/services/invoice-modernization.service";
+import { persistSupplierInvoiceDocument } from "@/app/_actions/invoice-document.actions";
 
 const __PurchaseStatusDRAFT: InvoiceStatus = "DRAFT";
 const __PurchaseStatusFINALIZED: InvoiceStatus = "FINALIZED";
@@ -776,6 +781,17 @@ export async function createPurchaseDraftAction(
 
     revalidatePath("/purchases");
     revalidatePath("/dashboard");
+    const supplierFile = formData.get("supplier_invoice_file");
+    if (supplierFile instanceof File && supplierFile.size > 0) {
+      const upload = await persistSupplierInvoiceDocument(ctx, invoice.id, supplierFile);
+      if (!upload.ok) {
+        return {
+          ok: false,
+          data: invoice,
+          message: `Purchase created, but supplier invoice upload failed: ${upload.error}`,
+        };
+      }
+    }
     redirect(`/purchases?created=${encodeURIComponent(invoice.id)}`);
   } catch (e: any) {
     if (e?.message && typeof e.message === "string" && e.message.includes("NEXT_REDIRECT")) throw e;
@@ -1731,6 +1747,41 @@ export async function finalizePurchaseAction(
         }
       }
 
+      const finalizedSnapshot = createImmutableInvoiceSnapshot({
+        kind: "internal_purchase_record",
+        purchaseId: existing.id,
+        invoiceNo: finalInvoiceNo,
+        invoiceDate: existing.invoice_date.toISOString(),
+        supplier: {
+          id: existing.supplier_id,
+          name: existing.supplier.business_name,
+          supplierInvoiceNo: existing.supplier_invoice_no,
+        },
+        lines: items.map((line) => ({
+          productId: line.product_id,
+          batchNo: line.batch_no,
+          expiry: line.expiry_date?.toISOString?.() ?? null,
+          quantity: line.quantity,
+          purchaseRate: line.purchase_rate?.toString?.() ?? null,
+          discountAmount: line.discount_amount?.toString?.() ?? null,
+          gstRate: line.gst_rate?.toString?.() ?? null,
+          acceptedTaxableValue: line.accepted_taxable_value?.toString?.() ?? null,
+          acceptedCgst: line.accepted_cgst?.toString?.() ?? null,
+          acceptedSgst: line.accepted_sgst?.toString?.() ?? null,
+          acceptedIgst: line.accepted_igst?.toString?.() ?? null,
+          acceptedCess: line.accepted_cess?.toString?.() ?? null,
+          acceptedLineTotal: line.accepted_line_total?.toString?.() ?? null,
+        })),
+        totals: {
+          gross: postingTotals.gross_amount.toString(),
+          discount: postingTotals.total_discount.toString(),
+          tax: postingTotals.total_tax.toString(),
+          roundOff: postingTotals.round_off.toString(),
+          payable: postingTotals.net_amount.toString(),
+        },
+        renderingVersion: INVOICE_RENDERING_VERSION,
+      });
+
       const updated = await tx.purchase_invoices.update({
         where: { id: existing.id, tenant_id: ctx.tenantId },
         data: {
@@ -1742,6 +1793,10 @@ export async function finalizePurchaseAction(
           total_tax: postingTotals.total_tax,
           round_off: postingTotals.round_off,
           net_amount: postingTotals.net_amount,
+          finalized_snapshot: finalizedSnapshot.snapshot as Prisma.InputJsonValue,
+          finalized_snapshot_hash: finalizedSnapshot.hash,
+          rendering_version: INVOICE_RENDERING_VERSION,
+          pdf_generation_status: "PENDING",
           updated_at: new Date(),
         },
       });

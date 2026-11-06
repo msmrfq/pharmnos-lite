@@ -215,6 +215,7 @@ model tenants {
   customers           customers[]
   suppliers           suppliers[]
   purchase_invoices   purchase_invoices[]
+  purchase_supplier_documents purchase_supplier_documents[]
   sales_invoices      sales_invoices[]
   stock_movements       stock_movements[]
   customer_ledger       customer_ledgers[]
@@ -467,8 +468,10 @@ model suppliers {
   batches         product_batches[]
   ledger          supplier_ledgers[]
   payments        payments[]
+  supplier_documents purchase_supplier_documents[]
 
   @@unique([tenant_id, code])
+  @@unique([tenant_id, id])
   @@index([tenant_id])
   @@index([tenant_id, business_name])
 }
@@ -505,6 +508,16 @@ model purchase_invoices {
   cancelled_by    String?
   created_at      DateTime      @default(now())
   updated_at      DateTime      @updatedAt
+  finalized_snapshot Json?
+  finalized_snapshot_hash String?
+  rendering_version String?
+  pdf_artifact_key String?
+  pdf_generation_status String @default("PENDING")
+  pdf_generated_at DateTime?
+  pdf_rendering_version String?
+  pdf_byte_size Int?
+  pdf_checksum_sha256 String?
+  pdf_error String?
 
   tenant   tenants                @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   supplier suppliers              @relation(fields: [supplier_id], references: [id], onDelete: Restrict)
@@ -520,6 +533,7 @@ model purchase_invoices {
   gst_reconciliation_events purchase_gst_reconciliation_events[] @relation("purchase_gst_event_purchase")
   posting_operations purchase_posting_operations[]
   inventory_valuation_decisions inventory_valuation_decisions[]
+  supplier_documents purchase_supplier_documents[]
 
   @@unique([tenant_id, invoice_no])
   @@unique([tenant_id, id])
@@ -530,6 +544,33 @@ model purchase_invoices {
   @@index([tenant_id, status])
   @@index([tenant_id, supplier_id])
   @@index([tenant_id, invoice_date])
+}
+
+model purchase_supplier_documents {
+  id                 String   @id @default(cuid())
+  tenant_id          String
+  purchase_invoice_id String
+  supplier_id        String
+  storage_key        String
+  original_filename  String
+  mime_type          String
+  byte_size          Int
+  checksum_sha256    String
+  uploaded_by        String
+  uploaded_at        DateTime @default(now())
+  supersedes_id      String?
+  replaced_at        DateTime?
+
+  tenant   tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  purchase purchase_invoices @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict)
+  supplier suppliers         @relation(fields: [tenant_id, supplier_id], references: [tenant_id, id], onDelete: Restrict)
+  supersedes purchase_supplier_documents? @relation("supplier_document_replacements", fields: [tenant_id, supersedes_id], references: [tenant_id, id], onDelete: Restrict)
+  replacements purchase_supplier_documents[] @relation("supplier_document_replacements")
+
+  @@unique([tenant_id, id])
+  @@index([tenant_id, purchase_invoice_id, uploaded_at])
+  @@index([tenant_id, supplier_id, uploaded_at])
+  @@index([tenant_id, supersedes_id])
 }
 
 model purchase_posting_operations {
@@ -1009,6 +1050,16 @@ model sales_invoices {
   customer_gstin_snapshot String?
   created_at      DateTime      @default(now())
   updated_at      DateTime      @updatedAt
+  finalized_snapshot Json?
+  finalized_snapshot_hash String?
+  rendering_version String?
+  pdf_artifact_key String?
+  pdf_generation_status String @default("PENDING")
+  pdf_generated_at DateTime?
+  pdf_rendering_version String?
+  pdf_byte_size Int?
+  pdf_checksum_sha256 String?
+  pdf_error String?
 
   tenant   tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   customer customers?          @relation(fields: [customer_id], references: [id])
