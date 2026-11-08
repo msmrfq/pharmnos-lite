@@ -1,0 +1,66 @@
+{
+  "campaign": "Financial Reconciliation - Classified Runtime Candidates",
+  "runId": "replay86e7403b9bf5",
+  "target": "pharmnos_financial_e2e_replay86e7403b9bf5",
+  "results": [
+    {
+      "id": "S-01",
+      "status": "FAIL",
+      "operation": "customer advance creation and idempotent retry",
+      "boundary": "payment action with guarded synthetic session and restricted role; metadata update stubbed",
+      "fixture": {
+        "party": "campaign_customer_70068f435798455d90e07ed8c69b73e4",
+        "initialBalance": 0,
+        "amount": 500
+      },
+      "first": {
+        "ok": false,
+        "message": "\nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `42501`. Message: `ERROR: permission denied for table payment_receipt_sequences`"
+      },
+      "replay": {
+        "ok": false,
+        "message": "\nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `42501`. Message: `ERROR: permission denied for table payment_receipt_sequences`"
+      },
+      "persisted": null,
+      "derived": {
+        "gross": 0,
+        "unapplied": 500,
+        "net": -500,
+        "usable": 500,
+        "refundable": 500
+      }
+    },
+    {
+      "id": "S-04",
+      "status": "FAIL",
+      "operation": "supplier advance creation and idempotent retry",
+      "boundary": "payment action with guarded synthetic session and restricted role; metadata update stubbed",
+      "fixture": {
+        "party": "campaign_supplier_ca8be43ac5a34bf087ca7352c75e3bf7",
+        "initialBalance": 0,
+        "amount": 1000
+      },
+      "first": {
+        "ok": false,
+        "message": "\nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `42501`. Message: `ERROR: permission denied for table payment_receipt_sequences`"
+      },
+      "replay": {
+        "ok": false,
+        "message": "\nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `42501`. Message: `ERROR: permission denied for table payment_receipt_sequences`"
+      },
+      "persisted": null,
+      "derived": {
+        "gross": 0,
+        "unapplied": 1000,
+        "net": -1000,
+        "usable": 1000,
+        "refundable": 1000
+      }
+    }
+  ],
+  "error": "\nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `42501`. Message: `ERROR: permission denied for table payment_receipt_sequences`",
+  "summary": {
+    "pass": 0,
+    "fail": 2
+  }
+}

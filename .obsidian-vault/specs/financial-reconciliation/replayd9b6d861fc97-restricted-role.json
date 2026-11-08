@@ -1,0 +1,195 @@
+{
+  "evidenceVersion": 1,
+  "phase": "SUITE_EXECUTION",
+  "status": "PASS",
+  "runId": "replayd9b6d861fc97",
+  "targetBinding": "1|replayd9b6d861fc97|127.0.0.1|50949|pharmnos_financial_e2e_replayd9b6d861fc97|pharmnos_e2e|pharmnos_e2e_runtime|FINANCIAL_E2E_DB_PASSWORD|FINANCIAL_E2E_RUNTIME_DB_PASSWORD|DATABASE_AUTH_CONTEXT_SIGNING_SECRET|pharmnos-financial-e2e|pharmnoslite-financial-e2e-replayd9b6d861fc97|financial-e2e-postgres|cfedef0aacd7e42ee2beb1c70e192decac10d5d6600cfb877700801f54eb70fe|PRISMA_MIGRATIONS_REPLAYED|35f42eef7bd099c83c87c3fcf68b25e5b73c4f6d0e07bbfc605216d166131bc8",
+  "targetFingerprint": "ea4534918021bc7339b0e4cb581ece0541d0cdfaad84ae72357f03a67d348e79",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 50949,
+    "databaseName": "pharmnos_financial_e2e_replayd9b6d861fc97",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "composeProject": "pharmnoslite-financial-e2e-replayd9b6d861fc97",
+    "composeService": "financial-e2e-postgres",
+    "composeProfile": "financial-e2e",
+    "schemaArtifactHash": "cfedef0aacd7e42ee2beb1c70e192decac10d5d6600cfb877700801f54eb70fe"
+  },
+  "recordedAt": 1794154349252,
+  "details": {
+    "databaseName": "pharmnos_financial_e2e_replayd9b6d861fc97",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "fixtureCleanup": true,
+    "remainingRows": {
+      "tenants": 0,
+      "users": 0,
+      "customers": 0,
+      "suppliers": 0,
+      "payments": 0,
+      "payment_allocations": 0,
+      "allocation_reversals": 0,
+      "payment_refunds": 0,
+      "audit_logs": 0
+    },
+    "results": [
+      {
+        "id": "restricted-role-attributes-and-grants",
+        "expected": "LOGIN/NOSUPERUSER/NOBYPASSRLS; scoped DML",
+        "observed": {
+          "currentRole": "pharmnos_e2e_runtime",
+          "canLogin": true,
+          "superuser": false,
+          "bypassRls": false,
+          "canSelectPayments": true,
+          "canInsertPayments": true,
+          "canDeletePayments": false
+        },
+        "status": "PASS"
+      },
+      {
+        "id": "same-tenant-financial-operations",
+        "expected": "read and write own customer, supplier, payment, allocation, reversal, refund and audit",
+        "observed": {
+          "counts": {
+            "customers": 1,
+            "suppliers": 1,
+            "payments": 1,
+            "payment_allocations": 1,
+            "allocation_reversals": 1,
+            "payment_refunds": 1,
+            "audit_logs": 1
+          },
+          "customerUpdate": 1,
+          "supplierUpdate": 1,
+          "paymentUpdate": 1,
+          "allocationUpdate": 1,
+          "reversalUpdate": 1,
+          "refundUpdate": 1,
+          "auditInsert": 1
+        },
+        "status": "PASS"
+      },
+      {
+        "id": "same-tenant-b-financial-operations",
+        "expected": "tenant B can read its own financial records and update its customer",
+        "observed": {
+          "counts": {
+            "customers": 1,
+            "suppliers": 1,
+            "payments": 1,
+            "payment_allocations": 1,
+            "allocation_reversals": 1,
+            "payment_refunds": 1,
+            "audit_logs": 1
+          },
+          "customerUpdate": 1
+        },
+        "status": "PASS"
+      },
+      {
+        "id": "cross-tenant-financial-isolation-b-to-a",
+        "expected": "no cross-tenant reads or writes for protected financial records",
+        "observed": {
+          "counts": {
+            "customers": 0,
+            "suppliers": 0,
+            "payments": 0,
+            "payment_allocations": 0,
+            "allocation_reversals": 0,
+            "payment_refunds": 0,
+            "audit_logs": 0
+          },
+          "customerUpdate": 0,
+          "supplierUpdate": 0,
+          "paymentUpdate": 0,
+          "allocationUpdate": 0,
+          "reversalUpdate": 0,
+          "refundUpdate": 0
+        },
+        "status": "PASS"
+      },
+      {
+        "id": "cross-tenant-financial-isolation-a-to-b",
+        "expected": "no cross-tenant reads or writes for protected financial records",
+        "observed": {
+          "counts": {
+            "customers": 0,
+            "suppliers": 0,
+            "payments": 0,
+            "payment_allocations": 0,
+            "allocation_reversals": 0,
+            "payment_refunds": 0,
+            "audit_logs": 0
+          },
+          "customerUpdate": 0,
+          "supplierUpdate": 0,
+          "paymentUpdate": 0,
+          "allocationUpdate": 0,
+          "reversalUpdate": 0,
+          "refundUpdate": 0
+        },
+        "status": "PASS"
+      },
+      {
+        "id": "cross-tenant-payment-insert",
+        "expected": "RLS denial",
+        "observed": "42501:new row violates row-level security policy for table \"payments\"",
+        "status": "PASS"
+      },
+      {
+        "id": "cross-tenant-audit-insert",
+        "expected": "RLS denial",
+        "observed": "42501:new row violates row-level security policy for table \"audit_logs\"",
+        "status": "PASS"
+      },
+      {
+        "id": "cross-tenant-counterparty-reference",
+        "expected": "composite tenant FK denial",
+        "observed": "23503:insert or update on table \"payments\" violates foreign key constraint \"payments_tenant_customer_fkey\"",
+        "status": "PASS"
+      },
+      {
+        "id": "cross-tenant-allocation-reference",
+        "expected": "composite tenant FK denial",
+        "observed": "23503:insert or update on table \"payment_allocations\" violates foreign key constraint \"payment_allocations_payment_fkey\"",
+        "status": "PASS"
+      },
+      {
+        "id": "cross-tenant-refund-reference",
+        "expected": "composite tenant FK denial",
+        "observed": "23503:insert or update on table \"payment_refunds\" violates foreign key constraint \"payment_refunds_payment_fkey\"",
+        "status": "PASS"
+      },
+      {
+        "id": "cross-tenant-financial-state-unchanged",
+        "expected": "both tenants' financial and audit records remain unchanged",
+        "observed": {
+          "before": "173b459de9e682b06d56a9c32226f64a02c898e510a29165f4a115ba6f67c225",
+          "after": "173b459de9e682b06d56a9c32226f64a02c898e510a29165f4a115ba6f67c225"
+        },
+        "status": "PASS"
+      },
+      {
+        "id": "restricted-role-fixture-cleanup",
+        "expected": "all campaign fixture rows removed",
+        "observed": {
+          "fixtureCleanup": true,
+          "remainingRows": {
+            "tenants": 0,
+            "users": 0,
+            "customers": 0,
+            "suppliers": 0,
+            "payments": 0,
+            "payment_allocations": 0,
+            "allocation_reversals": 0,
+            "payment_refunds": 0,
+            "audit_logs": 0
+          }
+        },
+        "status": "PASS"
+      }
+    ],
+    "applicationAuthentication": "Signed database context exercised; Supabase Auth not exercised."
+  }
+}

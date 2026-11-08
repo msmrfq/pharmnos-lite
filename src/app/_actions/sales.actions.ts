@@ -53,6 +53,7 @@ import {
   INVOICE_RENDERING_VERSION,
   amountInWords,
 } from "@/domain/services/invoice-modernization.service";
+import { allocatePaymentReceiptNo } from "@/repositories/payment.repository";
 
 const __SalesStatusDRAFT: InvoiceStatus = "DRAFT";
 const __SalesStatusFINALIZED: InvoiceStatus = "FINALIZED";
@@ -1099,6 +1100,7 @@ export async function createCustomerPaymentAction(
             request_payload_hash: requestHash,
             created_by: ctx.userId,
             created_at: new Date(),
+            receipt_no: await allocatePaymentReceiptNo(tx, "PAY", ctx.tenantId),
           },
         });
 
@@ -1241,6 +1243,7 @@ export async function createSupplierPaymentAction(
             request_payload_hash: requestHash,
             created_by: ctx.userId,
             created_at: new Date(),
+            receipt_no: await allocatePaymentReceiptNo(tx, "PAY", ctx.tenantId),
           },
         });
 

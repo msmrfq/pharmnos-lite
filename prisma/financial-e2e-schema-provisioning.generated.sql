@@ -1,4 +1,5 @@
 -- Generated offline from the current Prisma schema plus checked HSN/SAC governance controls; complete baseline.
+
 -- CreateEnum
 CREATE TYPE "SystemRole" AS ENUM ('ADMIN', 'BILLING', 'INVENTORY', 'MANAGER');
 
@@ -18,6 +19,15 @@ CREATE TYPE "PurchaseGstReconciliationStatus" AS ENUM ('NOT_RECONCILED', 'MATCHE
 CREATE TYPE "PurchaseGstAccountingAcceptanceStatus" AS ENUM ('NOT_ACCEPTED', 'ACCEPTED');
 
 -- CreateEnum
+CREATE TYPE "InventoryValuationDecisionStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'SUPERSEDED', 'REVERSED');
+
+-- CreateEnum
+CREATE TYPE "InventoryValuationAccountingStatus" AS ENUM ('NOT_APPLICABLE', 'PENDING_POLICY', 'POSTED', 'REVERSED');
+
+-- CreateEnum
+CREATE TYPE "InventoryValuationAdjustmentKind" AS ENUM ('CORRECTION', 'REVERSAL');
+
+-- CreateEnum
 CREATE TYPE "PurchaseGstEvidenceRevisionKind" AS ENUM ('INITIAL', 'CORRECTION');
 
 -- CreateEnum
@@ -30,7 +40,7 @@ CREATE TYPE "GstApprovalStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 CREATE TYPE "PaymentMode" AS ENUM ('CASH', 'CARD', 'UPI', 'CHEQUE', 'BANK_TRANSFER', 'NEFT', 'CREDIT', 'MIXED');
 
 -- CreateEnum
-CREATE TYPE "FinancialRefundStatus" AS ENUM ('REQUESTED', 'APPROVED', 'COMPLETED', 'CANCELLED');
+CREATE TYPE "FinancialRefundStatus" AS ENUM ('REQUESTED', 'APPROVED', 'REJECTED', 'COMPLETED', 'CANCELLED');
 
 -- CreateEnum
 CREATE TYPE "FinancialReversalStatus" AS ENUM ('COMPLETED');
@@ -42,7 +52,7 @@ CREATE TYPE "StockMovementType" AS ENUM ('PURCHASE_IN', 'SALE_OUT', 'ADJUSTMENT_
 CREATE TYPE "ScheduleClass" AS ENUM ('H', 'H1', 'X', 'SCHEDULE_H', 'SCHEDULE_H1', 'SCHEDULE_X', 'OTC', 'OTHER');
 
 -- CreateEnum
-CREATE TYPE "AuditEventType" AS ENUM ('AUTH_LOGIN', 'AUTH_LOGOUT', 'USER_INVITED', 'USER_ROLE_CHANGED', 'BUSINESS_PROFILE_UPDATED', 'INVOICE_CREATED', 'INVOICE_FINALIZED', 'INVOICE_CANCELLED', 'PURCHASE_CREATED', 'PURCHASE_FINALIZED', 'STOCK_ADJUSTED', 'PRICE_UPDATED', 'PRODUCT_CREATED', 'PRODUCT_UPDATED', 'CUSTOMER_DEACTIVATED', 'SUPPLIER_DEACTIVATED');
+CREATE TYPE "AuditEventType" AS ENUM ('AUTH_LOGIN', 'AUTH_LOGOUT', 'USER_INVITED', 'USER_ROLE_CHANGED', 'BUSINESS_PROFILE_UPDATED', 'INVOICE_CREATED', 'INVOICE_FINALIZED', 'INVOICE_CANCELLED', 'PURCHASE_CREATED', 'PURCHASE_FINALIZED', 'STOCK_ADJUSTED', 'PRICE_UPDATED', 'PRODUCT_CREATED', 'PRODUCT_UPDATED', 'CUSTOMER_DEACTIVATED', 'SUPPLIER_DEACTIVATED', 'ALLOCATION_CREATED', 'ALLOCATION_REVERSED', 'REFUND_REQUESTED', 'REFUND_APPROVED', 'REFUND_REJECTED', 'REFUND_CANCELLED', 'REFUND_COMPLETED', 'PAYMENT_REVERSED');
 
 -- CreateEnum
 CREATE TYPE "LedgerEntryType" AS ENUM ('INVOICE', 'PAYMENT_RECEIVED', 'CREDIT_NOTE', 'PURCHASE', 'PAYMENT_MADE', 'DEBIT_NOTE', 'OPENING_BALANCE');
@@ -250,6 +260,7 @@ CREATE TABLE "purchase_invoices" (
     "supplier_id" TEXT NOT NULL,
     "supplier_invoice_no" TEXT,
     "invoice_date" TIMESTAMP(3) NOT NULL,
+    "due_date" TIMESTAMP(3),
     "status" "InvoiceStatus" NOT NULL DEFAULT 'DRAFT',
     "gst_reconciliation_status" "PurchaseGstReconciliationStatus" NOT NULL DEFAULT 'NOT_RECONCILED',
     "gst_accounting_acceptance_status" "PurchaseGstAccountingAcceptanceStatus" NOT NULL DEFAULT 'NOT_ACCEPTED',
@@ -271,8 +282,37 @@ CREATE TABLE "purchase_invoices" (
     "cancelled_by" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "finalized_snapshot" JSONB,
+    "finalized_snapshot_hash" TEXT,
+    "rendering_version" TEXT,
+    "pdf_artifact_key" TEXT,
+    "pdf_generation_status" TEXT NOT NULL DEFAULT 'PENDING',
+    "pdf_generated_at" TIMESTAMP(3),
+    "pdf_rendering_version" TEXT,
+    "pdf_byte_size" INTEGER,
+    "pdf_checksum_sha256" TEXT,
+    "pdf_error" TEXT,
 
     CONSTRAINT "purchase_invoices_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "purchase_supplier_documents" (
+    "id" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "purchase_invoice_id" TEXT NOT NULL,
+    "supplier_id" TEXT NOT NULL,
+    "storage_key" TEXT NOT NULL,
+    "original_filename" TEXT NOT NULL,
+    "mime_type" TEXT NOT NULL,
+    "byte_size" INTEGER NOT NULL,
+    "checksum_sha256" TEXT NOT NULL,
+    "uploaded_by" TEXT NOT NULL,
+    "uploaded_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "supersedes_id" TEXT,
+    "replaced_at" TIMESTAMP(3),
+
+    CONSTRAINT "purchase_supplier_documents_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -413,6 +453,55 @@ CREATE TABLE "purchase_invoice_items" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "purchase_invoice_items_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "inventory_valuation_decisions" (
+    "id" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "purchase_invoice_id" TEXT NOT NULL,
+    "purchase_invoice_item_id" TEXT NOT NULL,
+    "product_batch_id" TEXT NOT NULL,
+    "stock_movement_id" TEXT,
+    "status" "InventoryValuationDecisionStatus" NOT NULL DEFAULT 'PENDING',
+    "accounting_status" "InventoryValuationAccountingStatus" NOT NULL DEFAULT 'PENDING_POLICY',
+    "eligibility_status" TEXT NOT NULL,
+    "accepted_taxable_value" DECIMAL(20,4) NOT NULL,
+    "accepted_gst" DECIMAL(20,4) NOT NULL,
+    "recoverable_itc" DECIMAL(65,30),
+    "non_recoverable_gst" DECIMAL(65,30),
+    "direct_acquisition_cost" DECIMAL(20,4) NOT NULL DEFAULT 0,
+    "inventory_acquisition_cost" DECIMAL(65,30),
+    "policy_version" TEXT NOT NULL,
+    "decision_reference" TEXT NOT NULL,
+    "rationale" TEXT NOT NULL,
+    "idempotency_key" TEXT NOT NULL,
+    "request_payload_hash" TEXT NOT NULL,
+    "supersedes_decision_id" TEXT,
+    "decided_by_membership_id" TEXT NOT NULL,
+    "decided_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "inventory_valuation_decisions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "inventory_valuation_adjustments" (
+    "id" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "prior_decision_id" TEXT NOT NULL,
+    "resulting_decision_id" TEXT NOT NULL,
+    "adjustment_kind" "InventoryValuationAdjustmentKind" NOT NULL,
+    "recoverable_itc_delta" DECIMAL(20,4) NOT NULL,
+    "non_recoverable_gst_delta" DECIMAL(20,4) NOT NULL,
+    "inventory_cost_delta" DECIMAL(20,4) NOT NULL,
+    "reason" TEXT NOT NULL,
+    "idempotency_key" TEXT NOT NULL,
+    "request_payload_hash" TEXT NOT NULL,
+    "adjusted_by_membership_id" TEXT NOT NULL,
+    "adjusted_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "inventory_valuation_adjustments_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -565,6 +654,7 @@ CREATE TABLE "sales_invoices" (
     "invoice_no" TEXT NOT NULL,
     "customer_id" TEXT,
     "invoice_date" TIMESTAMP(3) NOT NULL,
+    "due_date" TIMESTAMP(3),
     "status" "InvoiceStatus" NOT NULL DEFAULT 'DRAFT',
     "tax_data_status" "TaxDataStatus",
     "gst_treatment" TEXT,
@@ -601,6 +691,16 @@ CREATE TABLE "sales_invoices" (
     "customer_gstin_snapshot" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "finalized_snapshot" JSONB,
+    "finalized_snapshot_hash" TEXT,
+    "rendering_version" TEXT,
+    "pdf_artifact_key" TEXT,
+    "pdf_generation_status" TEXT NOT NULL DEFAULT 'PENDING',
+    "pdf_generated_at" TIMESTAMP(3),
+    "pdf_rendering_version" TEXT,
+    "pdf_byte_size" INTEGER,
+    "pdf_checksum_sha256" TEXT,
+    "pdf_error" TEXT,
 
     CONSTRAINT "sales_invoices_pkey" PRIMARY KEY ("id")
 );
@@ -670,10 +770,96 @@ CREATE TABLE "payments" (
     "notes" TEXT,
     "idempotency_key" TEXT,
     "request_payload_hash" TEXT,
+    "receipt_no" TEXT,
     "created_by" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "payments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "payment_receipt_sequences" (
+    "tenant_id" TEXT NOT NULL,
+    "prefix" TEXT NOT NULL,
+    "next_value" INTEGER NOT NULL DEFAULT 1,
+
+    CONSTRAINT "payment_receipt_sequences_pkey" PRIMARY KEY ("tenant_id","prefix"),
+    CONSTRAINT "payment_receipt_sequences_next_value_check"
+    CHECK ("next_value" > 0)
+);
+
+-- CreateTable
+CREATE TABLE "payment_allocations" (
+    "id" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "payment_id" TEXT NOT NULL,
+    "sales_invoice_id" TEXT,
+    "purchase_invoice_id" TEXT,
+    "amount" DECIMAL(14,2) NOT NULL,
+    "idempotency_key" TEXT NOT NULL,
+    "request_payload_hash" TEXT NOT NULL,
+    "allocated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "allocated_by" TEXT,
+    "legacy_unallocated" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "payment_allocations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "allocation_reversals" (
+    "id" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "allocation_id" TEXT NOT NULL,
+    "amount" DECIMAL(14,2) NOT NULL,
+    "idempotency_key" TEXT NOT NULL,
+    "request_payload_hash" TEXT NOT NULL,
+    "reversed_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "reversed_by" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "allocation_reversals_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "payment_refunds" (
+    "id" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "payment_id" TEXT NOT NULL,
+    "amount" DECIMAL(14,2) NOT NULL,
+    "status" "FinancialRefundStatus" NOT NULL DEFAULT 'REQUESTED',
+    "idempotency_key" TEXT NOT NULL,
+    "request_payload_hash" TEXT NOT NULL,
+    "requested_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "approved_at" TIMESTAMP(3),
+    "rejected_at" TIMESTAMP(3),
+    "completed_at" TIMESTAMP(3),
+    "cancelled_at" TIMESTAMP(3),
+    "requested_by" TEXT,
+    "approved_by" TEXT,
+    "rejected_by" TEXT,
+    "completed_by" TEXT,
+    "cancelled_by" TEXT,
+    "reason" TEXT,
+    "resolution_reason" TEXT,
+
+    CONSTRAINT "payment_refunds_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "payment_reversals" (
+    "id" TEXT NOT NULL,
+    "tenant_id" TEXT NOT NULL,
+    "payment_id" TEXT NOT NULL,
+    "amount" DECIMAL(14,2) NOT NULL,
+    "status" "FinancialReversalStatus" NOT NULL DEFAULT 'COMPLETED',
+    "idempotency_key" TEXT NOT NULL,
+    "request_payload_hash" TEXT NOT NULL,
+    "reversed_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "reversed_by" TEXT,
+    "reason" TEXT,
+
+    CONSTRAINT "payment_reversals_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -815,6 +1001,9 @@ CREATE INDEX "product_batches_tenant_id_available_qty_idx" ON "product_batches"(
 CREATE UNIQUE INDEX "product_batches_tenant_id_product_id_batch_no_key" ON "product_batches"("tenant_id", "product_id", "batch_no");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "product_batches_tenant_id_id_key" ON "product_batches"("tenant_id", "id");
+
+-- CreateIndex
 CREATE INDEX "customers_tenant_id_idx" ON "customers"("tenant_id");
 
 -- CreateIndex
@@ -824,6 +1013,9 @@ CREATE INDEX "customers_tenant_id_business_name_idx" ON "customers"("tenant_id",
 CREATE UNIQUE INDEX "customers_tenant_id_code_key" ON "customers"("tenant_id", "code");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "customers_tenant_id_id_key" ON "customers"("tenant_id", "id");
+
+-- CreateIndex
 CREATE INDEX "suppliers_tenant_id_idx" ON "suppliers"("tenant_id");
 
 -- CreateIndex
@@ -831,6 +1023,9 @@ CREATE INDEX "suppliers_tenant_id_business_name_idx" ON "suppliers"("tenant_id",
 
 -- CreateIndex
 CREATE UNIQUE INDEX "suppliers_tenant_id_code_key" ON "suppliers"("tenant_id", "code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "suppliers_tenant_id_id_key" ON "suppliers"("tenant_id", "id");
 
 -- CreateIndex
 CREATE INDEX "purchase_invoices_tenant_id_idx" ON "purchase_invoices"("tenant_id");
@@ -858,6 +1053,18 @@ CREATE UNIQUE INDEX "purchase_invoices_tenant_id_id_current_gst_calculation_id_k
 
 -- CreateIndex
 CREATE UNIQUE INDEX "purchase_invoices_tenant_id_id_current_gst_accounting_decis_key" ON "purchase_invoices"("tenant_id", "id", "current_gst_accounting_decision_id");
+
+-- CreateIndex
+CREATE INDEX "purchase_supplier_documents_tenant_id_purchase_invoice_id_u_idx" ON "purchase_supplier_documents"("tenant_id", "purchase_invoice_id", "uploaded_at");
+
+-- CreateIndex
+CREATE INDEX "purchase_supplier_documents_tenant_id_supplier_id_uploaded__idx" ON "purchase_supplier_documents"("tenant_id", "supplier_id", "uploaded_at");
+
+-- CreateIndex
+CREATE INDEX "purchase_supplier_documents_tenant_id_supersedes_id_idx" ON "purchase_supplier_documents"("tenant_id", "supersedes_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "purchase_supplier_documents_tenant_id_id_key" ON "purchase_supplier_documents"("tenant_id", "id");
 
 -- CreateIndex
 CREATE INDEX "purchase_posting_operations_tenant_id_purchase_invoice_id_s_idx" ON "purchase_posting_operations"("tenant_id", "purchase_invoice_id", "status");
@@ -908,10 +1115,34 @@ CREATE INDEX "purchase_invoice_items_purchase_id_idx" ON "purchase_invoice_items
 CREATE INDEX "purchase_invoice_items_product_id_idx" ON "purchase_invoice_items"("product_id");
 
 -- CreateIndex
-CREATE INDEX "purchase_invoice_items_accepted_decision_idx" ON "purchase_invoice_items"("tenant_id", "purchase_id", "accepted_decision_id");
+CREATE UNIQUE INDEX "purchase_invoice_items_tenant_id_purchase_id_id_key" ON "purchase_invoice_items"("tenant_id", "purchase_id", "id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "purchase_invoice_items_tenant_id_purchase_id_id_key" ON "purchase_invoice_items"("tenant_id", "purchase_id", "id");
+CREATE INDEX "inventory_valuation_decisions_tenant_id_purchase_invoice_id_idx" ON "inventory_valuation_decisions"("tenant_id", "purchase_invoice_id", "purchase_invoice_item_id");
+
+-- CreateIndex
+CREATE INDEX "inventory_valuation_decisions_tenant_id_product_batch_id_cr_idx" ON "inventory_valuation_decisions"("tenant_id", "product_batch_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "inventory_valuation_decisions_tenant_id_status_created_at_idx" ON "inventory_valuation_decisions"("tenant_id", "status", "created_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "inventory_valuation_decisions_tenant_id_id_key" ON "inventory_valuation_decisions"("tenant_id", "id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "inventory_valuation_decision_idempotency_key" ON "inventory_valuation_decisions"("tenant_id", "idempotency_key");
+
+-- CreateIndex
+CREATE INDEX "inventory_valuation_adjustments_tenant_id_prior_decision_id_idx" ON "inventory_valuation_adjustments"("tenant_id", "prior_decision_id");
+
+-- CreateIndex
+CREATE INDEX "inventory_valuation_adjustments_tenant_id_resulting_decisio_idx" ON "inventory_valuation_adjustments"("tenant_id", "resulting_decision_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "inventory_valuation_adjustments_tenant_id_id_key" ON "inventory_valuation_adjustments"("tenant_id", "id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "inventory_valuation_adjustment_idempotency_key" ON "inventory_valuation_adjustments"("tenant_id", "idempotency_key");
 
 -- CreateIndex
 CREATE INDEX "purchase_gst_evidence_captured_at_idx" ON "purchase_gst_evidence_revisions"("tenant_id", "purchase_invoice_id", "captured_at");
@@ -1043,6 +1274,54 @@ CREATE INDEX "payments_tenant_id_payment_date_idx" ON "payments"("tenant_id", "p
 CREATE UNIQUE INDEX "payments_tenant_idempotency_key" ON "payments"("tenant_id", "idempotency_key");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "payments_tenant_receipt_no" ON "payments"("tenant_id", "receipt_no");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payments_tenant_id_id_key" ON "payments"("tenant_id", "id");
+
+-- CreateIndex
+CREATE INDEX "payment_allocations_tenant_id_payment_id_allocated_at_idx" ON "payment_allocations"("tenant_id", "payment_id", "allocated_at");
+
+-- CreateIndex
+CREATE INDEX "payment_allocations_tenant_id_sales_invoice_id_allocated_at_idx" ON "payment_allocations"("tenant_id", "sales_invoice_id", "allocated_at");
+
+-- CreateIndex
+CREATE INDEX "payment_allocations_tenant_id_purchase_invoice_id_allocated_idx" ON "payment_allocations"("tenant_id", "purchase_invoice_id", "allocated_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payment_allocations_tenant_id_id_key" ON "payment_allocations"("tenant_id", "id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payment_allocations_tenant_idempotency_key" ON "payment_allocations"("tenant_id", "idempotency_key");
+
+-- CreateIndex
+CREATE INDEX "allocation_reversals_tenant_id_allocation_id_reversed_at_idx" ON "allocation_reversals"("tenant_id", "allocation_id", "reversed_at");
+
+-- CreateIndex
+CREATE INDEX "allocation_reversals_tenant_id_reversed_at_idx" ON "allocation_reversals"("tenant_id", "reversed_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "allocation_reversals_tenant_idempotency_key" ON "allocation_reversals"("tenant_id", "idempotency_key");
+
+-- CreateIndex
+CREATE INDEX "payment_refunds_tenant_id_payment_id_status_idx" ON "payment_refunds"("tenant_id", "payment_id", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payment_refunds_tenant_id_id_key" ON "payment_refunds"("tenant_id", "id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payment_refunds_tenant_idempotency_key" ON "payment_refunds"("tenant_id", "idempotency_key");
+
+-- CreateIndex
+CREATE INDEX "payment_reversals_tenant_id_reversed_at_idx" ON "payment_reversals"("tenant_id", "reversed_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payment_reversal_once" ON "payment_reversals"("tenant_id", "payment_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "payment_reversals_tenant_idempotency_key" ON "payment_reversals"("tenant_id", "idempotency_key");
+
+-- CreateIndex
 CREATE INDEX "stock_movements_tenant_id_idx" ON "stock_movements"("tenant_id");
 
 -- CreateIndex
@@ -1056,6 +1335,9 @@ CREATE INDEX "stock_movements_tenant_id_movement_type_idx" ON "stock_movements"(
 
 -- CreateIndex
 CREATE INDEX "stock_movements_tenant_id_created_at_idx" ON "stock_movements"("tenant_id", "created_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "stock_movements_tenant_id_id_key" ON "stock_movements"("tenant_id", "id");
 
 -- CreateIndex
 CREATE INDEX "customer_ledgers_tenant_id_idx" ON "customer_ledgers"("tenant_id");
@@ -1086,92 +1368,6 @@ CREATE INDEX "audit_logs_tenant_id_created_at_idx" ON "audit_logs"("tenant_id", 
 
 -- CreateIndex
 CREATE INDEX "audit_logs_tenant_id_actor_id_idx" ON "audit_logs"("tenant_id", "actor_id");
-
--- CreateTable
-CREATE TABLE "payment_allocations" (
-  "id" TEXT NOT NULL,
-  "tenant_id" TEXT NOT NULL,
-  "payment_id" TEXT NOT NULL,
-  "sales_invoice_id" TEXT,
-  "purchase_invoice_id" TEXT,
-  "amount" DECIMAL(14,2) NOT NULL,
-  "idempotency_key" TEXT NOT NULL,
-  "request_payload_hash" TEXT NOT NULL,
-  "allocated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "allocated_by" TEXT,
-  "legacy_unallocated" BOOLEAN NOT NULL DEFAULT false,
-  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "payment_allocations_pkey" PRIMARY KEY ("id"),
-  CONSTRAINT "payment_allocations_tenant_id_id_key" UNIQUE ("tenant_id", "id"),
-  CONSTRAINT "payment_allocations_amount_check" CHECK ("amount" > 0),
-  CONSTRAINT "payment_allocations_one_invoice_check"
-    CHECK (("sales_invoice_id" IS NOT NULL)::int + ("purchase_invoice_id" IS NOT NULL)::int = 1)
-);
-
--- CreateTable
-CREATE TABLE "allocation_reversals" (
-  "id" TEXT NOT NULL,
-  "tenant_id" TEXT NOT NULL,
-  "allocation_id" TEXT NOT NULL,
-  "amount" DECIMAL(14,2) NOT NULL,
-  "idempotency_key" TEXT NOT NULL,
-  "request_payload_hash" TEXT NOT NULL,
-  "reversed_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "reversed_by" TEXT,
-  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "allocation_reversals_pkey" PRIMARY KEY ("id"),
-  CONSTRAINT "allocation_reversals_amount_check" CHECK ("amount" > 0)
-);
-
--- CreateTable
-CREATE TABLE "payment_refunds" (
-  "id" TEXT NOT NULL,
-  "tenant_id" TEXT NOT NULL,
-  "payment_id" TEXT NOT NULL,
-  "amount" DECIMAL(14,2) NOT NULL,
-  "status" "FinancialRefundStatus" NOT NULL DEFAULT 'REQUESTED',
-  "idempotency_key" TEXT NOT NULL,
-  "request_payload_hash" TEXT NOT NULL,
-  "requested_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "completed_at" TIMESTAMP(3),
-  "requested_by" TEXT,
-  "completed_by" TEXT,
-  "reason" TEXT,
-  CONSTRAINT "payment_refunds_pkey" PRIMARY KEY ("id"),
-  CONSTRAINT "payment_refunds_amount_check" CHECK ("amount" > 0)
-);
-
--- CreateTable
-CREATE TABLE "payment_reversals" (
-  "id" TEXT NOT NULL,
-  "tenant_id" TEXT NOT NULL,
-  "payment_id" TEXT NOT NULL,
-  "amount" DECIMAL(14,2) NOT NULL,
-  "status" "FinancialReversalStatus" NOT NULL DEFAULT 'COMPLETED',
-  "idempotency_key" TEXT NOT NULL,
-  "request_payload_hash" TEXT NOT NULL,
-  "reversed_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "reversed_by" TEXT,
-  "reason" TEXT,
-  CONSTRAINT "payment_reversals_pkey" PRIMARY KEY ("id"),
-  CONSTRAINT "payment_reversals_amount_check" CHECK ("amount" > 0)
-);
-
--- CreateIndex
-CREATE UNIQUE INDEX "payment_allocations_tenant_idempotency_key" ON "payment_allocations"("tenant_id", "idempotency_key");
-CREATE UNIQUE INDEX "allocation_reversal_once" ON "allocation_reversals"("tenant_id", "allocation_id");
-CREATE UNIQUE INDEX "allocation_reversals_tenant_idempotency_key" ON "allocation_reversals"("tenant_id", "idempotency_key");
-CREATE UNIQUE INDEX "payment_refunds_tenant_idempotency_key" ON "payment_refunds"("tenant_id", "idempotency_key");
-CREATE UNIQUE INDEX "payment_reversal_once" ON "payment_reversals"("tenant_id", "payment_id");
-CREATE UNIQUE INDEX "payment_reversals_tenant_idempotency_key" ON "payment_reversals"("tenant_id", "idempotency_key");
-
--- CreateIndex
-CREATE INDEX "payment_allocations_tenant_payment_allocated_at_idx" ON "payment_allocations"("tenant_id", "payment_id", "allocated_at");
-CREATE INDEX "payment_allocations_tenant_sales_allocated_at_idx" ON "payment_allocations"("tenant_id", "sales_invoice_id", "allocated_at");
-CREATE INDEX "payment_allocations_tenant_purchase_allocated_at_idx" ON "payment_allocations"("tenant_id", "purchase_invoice_id", "allocated_at");
-CREATE INDEX "allocation_reversals_tenant_reversed_at_idx" ON "allocation_reversals"("tenant_id", "reversed_at");
-CREATE INDEX "payment_refunds_tenant_payment_status_idx" ON "payment_refunds"("tenant_id", "payment_id", "status");
-CREATE INDEX "payment_reversals_tenant_reversed_at_idx" ON "payment_reversals"("tenant_id", "reversed_at");
 
 -- AddForeignKey
 ALTER TABLE "memberships" ADD CONSTRAINT "memberships_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1225,6 +1421,18 @@ ALTER TABLE "purchase_invoices" ADD CONSTRAINT "purchase_invoices_current_gst_ca
 ALTER TABLE "purchase_invoices" ADD CONSTRAINT "purchase_invoices_current_gst_accounting_decision_fkey" FOREIGN KEY ("tenant_id", "id", "current_gst_accounting_decision_id") REFERENCES "purchase_gst_accounting_decisions"("tenant_id", "purchase_invoice_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "purchase_supplier_documents" ADD CONSTRAINT "purchase_supplier_documents_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "purchase_supplier_documents" ADD CONSTRAINT "purchase_supplier_documents_tenant_id_purchase_invoice_id_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id") REFERENCES "purchase_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "purchase_supplier_documents" ADD CONSTRAINT "purchase_supplier_documents_tenant_id_supplier_id_fkey" FOREIGN KEY ("tenant_id", "supplier_id") REFERENCES "suppliers"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "purchase_supplier_documents" ADD CONSTRAINT "purchase_supplier_documents_tenant_id_supersedes_id_fkey" FOREIGN KEY ("tenant_id", "supersedes_id") REFERENCES "purchase_supplier_documents"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "purchase_posting_operations" ADD CONSTRAINT "purchase_posting_operations_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1265,6 +1473,39 @@ ALTER TABLE "purchase_invoice_items" ADD CONSTRAINT "purchase_line_acceptance_ac
 
 -- AddForeignKey
 ALTER TABLE "purchase_invoice_items" ADD CONSTRAINT "purchase_line_acceptance_decision_fkey" FOREIGN KEY ("tenant_id", "purchase_id", "accepted_decision_id") REFERENCES "purchase_gst_accounting_decisions"("tenant_id", "purchase_invoice_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inventory_valuation_decisions" ADD CONSTRAINT "inventory_valuation_decisions_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inventory_valuation_decisions" ADD CONSTRAINT "inventory_valuation_decisions_purchase_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id") REFERENCES "purchase_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inventory_valuation_decisions" ADD CONSTRAINT "inventory_valuation_decisions_purchase_item_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id", "purchase_invoice_item_id") REFERENCES "purchase_invoice_items"("tenant_id", "purchase_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inventory_valuation_decisions" ADD CONSTRAINT "inventory_valuation_decisions_batch_fkey" FOREIGN KEY ("tenant_id", "product_batch_id") REFERENCES "product_batches"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inventory_valuation_decisions" ADD CONSTRAINT "inventory_valuation_decisions_movement_fkey" FOREIGN KEY ("tenant_id", "stock_movement_id") REFERENCES "stock_movements"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inventory_valuation_decisions" ADD CONSTRAINT "inventory_valuation_decisions_tenant_id_decided_by_members_fkey" FOREIGN KEY ("tenant_id", "decided_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inventory_valuation_decisions" ADD CONSTRAINT "inventory_valuation_decisions_tenant_id_supersedes_decisio_fkey" FOREIGN KEY ("tenant_id", "supersedes_decision_id") REFERENCES "inventory_valuation_decisions"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inventory_valuation_adjustments" ADD CONSTRAINT "inventory_valuation_adjustments_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inventory_valuation_adjustments" ADD CONSTRAINT "inventory_valuation_adjustments_tenant_id_prior_decision_i_fkey" FOREIGN KEY ("tenant_id", "prior_decision_id") REFERENCES "inventory_valuation_decisions"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inventory_valuation_adjustments" ADD CONSTRAINT "inventory_valuation_adjustments_tenant_id_resulting_decisi_fkey" FOREIGN KEY ("tenant_id", "resulting_decision_id") REFERENCES "inventory_valuation_decisions"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inventory_valuation_adjustments" ADD CONSTRAINT "inventory_valuation_adjustments_tenant_id_adjusted_by_memb_fkey" FOREIGN KEY ("tenant_id", "adjusted_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "purchase_gst_evidence_revisions" ADD CONSTRAINT "purchase_gst_evidence_purchase_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id") REFERENCES "purchase_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -1348,13 +1589,46 @@ ALTER TABLE "sales_invoice_items" ADD CONSTRAINT "sales_invoice_items_batch_id_f
 ALTER TABLE "payments" ADD CONSTRAINT "payments_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "payments" ADD CONSTRAINT "payments_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "payments" ADD CONSTRAINT "payments_tenant_customer_fkey" FOREIGN KEY ("tenant_id", "customer_id") REFERENCES "customers"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "payments" ADD CONSTRAINT "payments_supplier_id_fkey" FOREIGN KEY ("supplier_id") REFERENCES "suppliers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "payments" ADD CONSTRAINT "payments_tenant_supplier_fkey" FOREIGN KEY ("tenant_id", "supplier_id") REFERENCES "suppliers"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "payments" ADD CONSTRAINT "payments_invoice_id_fkey" FOREIGN KEY ("invoice_id") REFERENCES "sales_invoices"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_receipt_sequences" ADD CONSTRAINT "payment_receipt_sequences_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_allocations" ADD CONSTRAINT "payment_allocations_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_allocations" ADD CONSTRAINT "payment_allocations_tenant_id_payment_id_fkey" FOREIGN KEY ("tenant_id", "payment_id") REFERENCES "payments"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_allocations" ADD CONSTRAINT "payment_allocations_tenant_id_sales_invoice_id_fkey" FOREIGN KEY ("tenant_id", "sales_invoice_id") REFERENCES "sales_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_allocations" ADD CONSTRAINT "payment_allocations_tenant_id_purchase_invoice_id_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id") REFERENCES "purchase_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "allocation_reversals" ADD CONSTRAINT "allocation_reversals_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "allocation_reversals" ADD CONSTRAINT "allocation_reversals_tenant_id_allocation_id_fkey" FOREIGN KEY ("tenant_id", "allocation_id") REFERENCES "payment_allocations"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_refunds" ADD CONSTRAINT "payment_refunds_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_refunds" ADD CONSTRAINT "payment_refunds_tenant_id_payment_id_fkey" FOREIGN KEY ("tenant_id", "payment_id") REFERENCES "payments"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_reversals" ADD CONSTRAINT "payment_reversals_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payment_reversals" ADD CONSTRAINT "payment_reversals_tenant_id_payment_id_fkey" FOREIGN KEY ("tenant_id", "payment_id") REFERENCES "payments"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1485,189 +1759,128 @@ BEGIN
 END;
 $grant$;
 
-CREATE TYPE "InventoryValuationDecisionStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'SUPERSEDED', 'REVERSED');
-CREATE TYPE "InventoryValuationAccountingStatus" AS ENUM ('NOT_APPLICABLE', 'PENDING_POLICY', 'POSTED', 'REVERSED');
-CREATE TYPE "InventoryValuationAdjustmentKind" AS ENUM ('CORRECTION', 'REVERSAL');
+ALTER TABLE "payments" ADD CONSTRAINT "payments_one_counterparty_check" CHECK (("customer_id" IS NOT NULL)::int + ("supplier_id" IS NOT NULL)::int = 1);
 
-ALTER TABLE "product_batches"
-  ADD CONSTRAINT "product_batches_tenant_id_id_key" UNIQUE ("tenant_id", "id");
-ALTER TABLE "stock_movements"
-  ADD CONSTRAINT "stock_movements_tenant_id_id_key" UNIQUE ("tenant_id", "id");
+ALTER TABLE "payment_refunds" ADD CONSTRAINT "payment_refunds_approved_actor_pair_check" CHECK (("approved_at" IS NULL) = ("approved_by" IS NULL));
 
-CREATE TABLE "inventory_valuation_decisions" (
-  "id" TEXT NOT NULL,
-  "tenant_id" TEXT NOT NULL,
-  "purchase_invoice_id" TEXT NOT NULL,
-  "purchase_invoice_item_id" TEXT NOT NULL,
-  "product_batch_id" TEXT NOT NULL,
-  "stock_movement_id" TEXT,
-  "status" "InventoryValuationDecisionStatus" NOT NULL DEFAULT 'PENDING',
-  "accounting_status" "InventoryValuationAccountingStatus" NOT NULL DEFAULT 'PENDING_POLICY',
-  "eligibility_status" TEXT NOT NULL,
-  "accepted_taxable_value" DECIMAL(20,4) NOT NULL,
-  "accepted_gst" DECIMAL(20,4) NOT NULL,
-  "recoverable_itc" DECIMAL(20,4),
-  "non_recoverable_gst" DECIMAL(20,4),
-  "direct_acquisition_cost" DECIMAL(20,4) NOT NULL DEFAULT 0,
-  "inventory_acquisition_cost" DECIMAL(20,4),
-  "policy_version" TEXT NOT NULL,
-  "decision_reference" TEXT NOT NULL,
-  "rationale" TEXT NOT NULL,
-  "idempotency_key" TEXT NOT NULL,
-  "request_payload_hash" TEXT NOT NULL,
-  "supersedes_decision_id" TEXT,
-  "decided_by_membership_id" TEXT NOT NULL,
-  "decided_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "inventory_valuation_decisions_pkey" PRIMARY KEY ("id")
-);
+ALTER TABLE "payment_refunds" ADD CONSTRAINT "payment_refunds_rejected_actor_pair_check" CHECK (("rejected_at" IS NULL) = ("rejected_by" IS NULL));
 
-CREATE TABLE "inventory_valuation_adjustments" (
-  "id" TEXT NOT NULL,
-  "tenant_id" TEXT NOT NULL,
-  "prior_decision_id" TEXT NOT NULL,
-  "resulting_decision_id" TEXT NOT NULL,
-  "adjustment_kind" "InventoryValuationAdjustmentKind" NOT NULL,
-  "recoverable_itc_delta" DECIMAL(20,4) NOT NULL,
-  "non_recoverable_gst_delta" DECIMAL(20,4) NOT NULL,
-  "inventory_cost_delta" DECIMAL(20,4) NOT NULL,
-  "reason" TEXT NOT NULL,
-  "idempotency_key" TEXT NOT NULL,
-  "request_payload_hash" TEXT NOT NULL,
-  "adjusted_by_membership_id" TEXT NOT NULL,
-  "adjusted_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "inventory_valuation_adjustments_pkey" PRIMARY KEY ("id")
-);
+ALTER TABLE "payment_refunds" ADD CONSTRAINT "payment_refunds_cancelled_actor_pair_check" CHECK (("cancelled_at" IS NULL) = ("cancelled_by" IS NULL));
 
-CREATE UNIQUE INDEX "inventory_valuation_decision_tenant_idempotency_key"
-  ON "inventory_valuation_decisions"("tenant_id", "idempotency_key");
-CREATE UNIQUE INDEX "inventory_valuation_adjustment_tenant_idempotency_key"
-  ON "inventory_valuation_adjustments"("tenant_id", "idempotency_key");
-CREATE UNIQUE INDEX "inventory_valuation_decisions_tenant_id_key"
-  ON "inventory_valuation_decisions"("tenant_id", "id");
-CREATE UNIQUE INDEX "inventory_valuation_adjustments_tenant_id_key"
-  ON "inventory_valuation_adjustments"("tenant_id", "id");
-CREATE INDEX "inventory_valuation_decisions_target_idx"
-  ON "inventory_valuation_decisions"("tenant_id", "purchase_invoice_id", "purchase_invoice_item_id");
-CREATE INDEX "inventory_valuation_decisions_batch_created_idx"
-  ON "inventory_valuation_decisions"("tenant_id", "product_batch_id", "created_at");
-CREATE INDEX "inventory_valuation_decisions_status_created_idx"
-  ON "inventory_valuation_decisions"("tenant_id", "status", "created_at");
-CREATE INDEX "inventory_valuation_adjustments_prior_idx"
-  ON "inventory_valuation_adjustments"("tenant_id", "prior_decision_id");
-CREATE INDEX "inventory_valuation_adjustments_resulting_idx"
-  ON "inventory_valuation_adjustments"("tenant_id", "resulting_decision_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "audit_logs_refund_lifecycle_idempotency_key"
+  ON "audit_logs" ("tenant_id", (("metadata" ->> 'idempotencyKey')))
+  WHERE "target_type" = 'payment_refund'
+    AND "metadata" ->> 'refundLifecycleVersion' = '1';
 
-ALTER TABLE "inventory_valuation_decisions"
-  ADD CONSTRAINT "inventory_valuation_decisions_tenant_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT "inventory_valuation_decisions_purchase_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id") REFERENCES "purchase_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
-  ADD CONSTRAINT "inventory_valuation_decisions_purchase_item_fkey" FOREIGN KEY ("tenant_id", "purchase_invoice_id", "purchase_invoice_item_id") REFERENCES "purchase_invoice_items"("tenant_id", "purchase_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
-  ADD CONSTRAINT "inventory_valuation_decisions_batch_fkey" FOREIGN KEY ("tenant_id", "product_batch_id") REFERENCES "product_batches"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
-  ADD CONSTRAINT "inventory_valuation_decisions_movement_fkey" FOREIGN KEY ("tenant_id", "stock_movement_id") REFERENCES "stock_movements"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
-  ADD CONSTRAINT "inventory_valuation_decisions_actor_fkey" FOREIGN KEY ("tenant_id", "decided_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
-  ADD CONSTRAINT "inventory_valuation_decisions_supersedes_fkey" FOREIGN KEY ("tenant_id", "supersedes_decision_id") REFERENCES "inventory_valuation_decisions"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+CREATE OR REPLACE FUNCTION public.guard_payment_refund_lifecycle()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public
+AS $function$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.status::text <> 'REQUESTED'
+       OR NEW.approved_at IS NOT NULL
+       OR NEW.rejected_at IS NOT NULL
+       OR NEW.completed_at IS NOT NULL
+       OR NEW.cancelled_at IS NOT NULL
+       OR NEW.approved_by IS NOT NULL
+       OR NEW.rejected_by IS NOT NULL
+       OR NEW.completed_by IS NOT NULL
+       OR NEW.cancelled_by IS NOT NULL
+       OR NEW.requested_by IS NULL
+       OR NEW.resolution_reason IS NOT NULL THEN
+      RAISE EXCEPTION 'Refunds must be created as REQUESTED'
+        USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+  END IF;
 
-ALTER TABLE "inventory_valuation_adjustments"
-  ADD CONSTRAINT "inventory_valuation_adjustments_tenant_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT "inventory_valuation_adjustments_prior_fkey" FOREIGN KEY ("tenant_id", "prior_decision_id") REFERENCES "inventory_valuation_decisions"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
-  ADD CONSTRAINT "inventory_valuation_adjustments_resulting_fkey" FOREIGN KEY ("tenant_id", "resulting_decision_id") REFERENCES "inventory_valuation_decisions"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
-  ADD CONSTRAINT "inventory_valuation_adjustments_actor_fkey" FOREIGN KEY ("tenant_id", "adjusted_by_membership_id") REFERENCES "memberships"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+  IF NEW.id IS DISTINCT FROM OLD.id
+     OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+     OR NEW.payment_id IS DISTINCT FROM OLD.payment_id
+     OR NEW.amount IS DISTINCT FROM OLD.amount
+     OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
+     OR NEW.request_payload_hash IS DISTINCT FROM OLD.request_payload_hash
+     OR NEW.requested_at IS DISTINCT FROM OLD.requested_at
+     OR NEW.requested_by IS DISTINCT FROM OLD.requested_by
+     OR NEW.reason IS DISTINCT FROM OLD.reason THEN
+    RAISE EXCEPTION 'Refund request facts are immutable'
+      USING ERRCODE = '23514';
+  END IF;
 
--- Invoice modernization artifact fields.
-ALTER TABLE "sales_invoices"
-  ADD COLUMN "finalized_snapshot" JSONB,
-  ADD COLUMN "finalized_snapshot_hash" TEXT,
-  ADD COLUMN "rendering_version" TEXT,
-  ADD COLUMN "pdf_artifact_key" TEXT,
-  ADD COLUMN "pdf_generation_status" TEXT NOT NULL DEFAULT 'PENDING',
-  ADD COLUMN "pdf_generated_at" TIMESTAMP(3),
-  ADD COLUMN "pdf_rendering_version" TEXT,
-  ADD COLUMN "pdf_byte_size" INTEGER,
-  ADD COLUMN "pdf_checksum_sha256" TEXT,
-  ADD COLUMN "pdf_error" TEXT;
+  IF OLD.status::text = 'REQUESTED'
+     AND NEW.status::text = 'APPROVED'
+     AND NEW.approved_by IS NOT NULL
+     AND NEW.approved_at IS NOT NULL
+     AND NEW.rejected_at IS NULL
+     AND NEW.completed_at IS NULL
+     AND NEW.cancelled_at IS NULL
+     AND NEW.rejected_by IS NULL
+     AND NEW.completed_by IS NULL
+     AND NEW.cancelled_by IS NULL THEN
+    RETURN NEW;
+  END IF;
 
-ALTER TABLE "purchase_invoices"
-  ADD COLUMN "finalized_snapshot" JSONB,
-  ADD COLUMN "finalized_snapshot_hash" TEXT,
-  ADD COLUMN "rendering_version" TEXT,
-  ADD COLUMN "pdf_artifact_key" TEXT,
-  ADD COLUMN "pdf_generation_status" TEXT NOT NULL DEFAULT 'PENDING',
-  ADD COLUMN "pdf_generated_at" TIMESTAMP(3),
-  ADD COLUMN "pdf_rendering_version" TEXT,
-  ADD COLUMN "pdf_byte_size" INTEGER,
-  ADD COLUMN "pdf_checksum_sha256" TEXT,
-  ADD COLUMN "pdf_error" TEXT;
+  IF OLD.status::text = 'REQUESTED'
+     AND NEW.status::text = 'REJECTED'
+     AND NEW.rejected_by IS NOT NULL
+     AND NEW.rejected_at IS NOT NULL
+     AND NEW.approved_at IS NULL
+     AND NEW.completed_at IS NULL
+     AND NEW.cancelled_at IS NULL
+     AND NEW.approved_by IS NULL
+     AND NEW.completed_by IS NULL
+     AND NEW.cancelled_by IS NULL THEN
+    RETURN NEW;
+  END IF;
 
-CREATE UNIQUE INDEX "suppliers_tenant_id_id_key" ON "suppliers"("tenant_id", "id");
+  IF OLD.status::text = 'REQUESTED'
+     AND NEW.status::text = 'CANCELLED'
+     AND NEW.cancelled_by IS NOT NULL
+     AND NEW.cancelled_at IS NOT NULL
+     AND NEW.approved_at IS NULL
+     AND NEW.rejected_at IS NULL
+     AND NEW.completed_at IS NULL
+     AND NEW.approved_by IS NULL
+     AND NEW.rejected_by IS NULL
+     AND NEW.completed_by IS NULL THEN
+    RETURN NEW;
+  END IF;
 
-CREATE TABLE "purchase_supplier_documents" (
-  "id" TEXT NOT NULL,
-  "tenant_id" TEXT NOT NULL,
-  "purchase_invoice_id" TEXT NOT NULL,
-  "supplier_id" TEXT NOT NULL,
-  "storage_key" TEXT NOT NULL,
-  "original_filename" TEXT NOT NULL,
-  "mime_type" TEXT NOT NULL,
-  "byte_size" INTEGER NOT NULL,
-  "checksum_sha256" TEXT NOT NULL,
-  "uploaded_by" TEXT NOT NULL,
-  "uploaded_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "supersedes_id" TEXT,
-  "replaced_at" TIMESTAMP(3),
-  CONSTRAINT "purchase_supplier_documents_pkey" PRIMARY KEY ("id")
-);
+  IF OLD.status::text = 'APPROVED'
+     AND NEW.status::text = 'COMPLETED'
+     AND NEW.approved_by IS NOT NULL
+     AND NEW.approved_at IS NOT NULL
+     AND NEW.completed_by IS NOT NULL
+     AND NEW.completed_at IS NOT NULL
+     AND NEW.rejected_at IS NULL
+     AND NEW.cancelled_at IS NULL
+     AND NEW.rejected_by IS NULL
+     AND NEW.cancelled_by IS NULL THEN
+    RETURN NEW;
+  END IF;
 
-CREATE UNIQUE INDEX "purchase_supplier_documents_tenant_id_id_key"
-  ON "purchase_supplier_documents"("tenant_id", "id");
-CREATE INDEX "purchase_supplier_documents_tenant_id_purchase_invoice_id_uploaded_at_idx"
-  ON "purchase_supplier_documents"("tenant_id", "purchase_invoice_id", "uploaded_at");
-CREATE INDEX "purchase_supplier_documents_tenant_id_supplier_id_uploaded_at_idx"
-  ON "purchase_supplier_documents"("tenant_id", "supplier_id", "uploaded_at");
-CREATE INDEX "purchase_supplier_documents_tenant_id_supersedes_id_idx"
-  ON "purchase_supplier_documents"("tenant_id", "supersedes_id");
-  CREATE UNIQUE INDEX "purchase_supplier_documents_one_active_per_purchase_key"
-  ON "purchase_supplier_documents"("tenant_id", "purchase_invoice_id")
-  WHERE "replaced_at" IS NULL;
+  IF OLD.status::text = 'APPROVED'
+     AND NEW.status::text = 'CANCELLED'
+     AND NEW.approved_by IS NOT NULL
+     AND NEW.approved_at IS NOT NULL
+     AND NEW.cancelled_by IS NOT NULL
+     AND NEW.cancelled_at IS NOT NULL
+     AND NEW.rejected_at IS NULL
+     AND NEW.completed_at IS NULL
+     AND NEW.completed_by IS NULL
+     AND NEW.rejected_by IS NULL THEN
+    RETURN NEW;
+  END IF;
 
-ALTER TABLE "purchase_supplier_documents"
-  ADD CONSTRAINT "purchase_supplier_documents_tenant_id_fkey"
-    FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT "purchase_supplier_documents_tenant_id_purchase_invoice_id_fkey"
-    FOREIGN KEY ("tenant_id", "purchase_invoice_id") REFERENCES "purchase_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
-  ADD CONSTRAINT "purchase_supplier_documents_tenant_id_supplier_id_fkey"
-    FOREIGN KEY ("tenant_id", "supplier_id") REFERENCES "suppliers"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
-  ADD CONSTRAINT "purchase_supplier_documents_tenant_id_supersedes_id_fkey"
-    FOREIGN KEY ("tenant_id", "supersedes_id") REFERENCES "purchase_supplier_documents"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+  RAISE EXCEPTION 'Invalid or immutable refund lifecycle transition: % to %',
+    OLD.status, NEW.status
+    USING ERRCODE = '23514';
+END;
+$function$;
 
-CREATE UNIQUE INDEX "customers_tenant_id_id_key" ON "customers"("tenant_id", "id");
-CREATE UNIQUE INDEX "payments_tenant_id_id_key" ON "payments"("tenant_id", "id");
-ALTER TABLE "sales_invoices" ADD COLUMN "due_date" TIMESTAMP(3);
-ALTER TABLE "purchase_invoices" ADD COLUMN "due_date" TIMESTAMP(3);
-
-ALTER TABLE "payment_allocations"
-  ADD CONSTRAINT "payment_allocations_tenant_id_fkey"
-    FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT "payment_allocations_payment_fkey"
-    FOREIGN KEY ("tenant_id", "payment_id") REFERENCES "payments"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
-  ADD CONSTRAINT "payment_allocations_sales_invoice_fkey"
-    FOREIGN KEY ("tenant_id", "sales_invoice_id") REFERENCES "sales_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE,
-  ADD CONSTRAINT "payment_allocations_purchase_invoice_fkey"
-    FOREIGN KEY ("tenant_id", "purchase_invoice_id") REFERENCES "purchase_invoices"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
-ALTER TABLE "allocation_reversals"
-  ADD CONSTRAINT "allocation_reversals_tenant_id_fkey"
-    FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT "allocation_reversals_allocation_fkey"
-    FOREIGN KEY ("tenant_id", "allocation_id") REFERENCES "payment_allocations"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
-ALTER TABLE "payment_refunds"
-  ADD CONSTRAINT "payment_refunds_tenant_id_fkey"
-    FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT "payment_refunds_payment_fkey"
-    FOREIGN KEY ("tenant_id", "payment_id") REFERENCES "payments"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
-ALTER TABLE "payment_reversals"
-  ADD CONSTRAINT "payment_reversals_tenant_id_fkey"
-    FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT "payment_reversals_payment_fkey"
-    FOREIGN KEY ("tenant_id", "payment_id") REFERENCES "payments"("tenant_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
+CREATE TRIGGER "payment_refunds_lifecycle_guard"
+      BEFORE INSERT OR UPDATE ON "payment_refunds"
+      FOR EACH ROW
+      EXECUTE FUNCTION public.guard_payment_refund_lifecycle();

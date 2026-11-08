@@ -1,0 +1,126 @@
+{
+  "campaign": "Financial Reconciliation - Classified Runtime Candidates",
+  "runId": "replay14b78951703d",
+  "target": "pharmnos_financial_e2e_replay14b78951703d",
+  "results": [
+    {
+      "id": "S-01",
+      "status": "PASS",
+      "operation": "customer advance creation and idempotent retry",
+      "boundary": "payment action with guarded synthetic session and restricted role; metadata update stubbed",
+      "fixture": {
+        "party": "campaign_customer_8b74e145247445e5987ac68f691188eb",
+        "initialBalance": 0,
+        "amount": 500
+      },
+      "first": {
+        "ok": true,
+        "data": {
+          "id": "cmw80z3wa0003145bledft5u7"
+        }
+      },
+      "replay": {
+        "ok": true,
+        "data": {
+          "id": "cmw80z3wa0003145bledft5u7"
+        }
+      },
+      "persisted": {
+        "id": "cmw80z3wa0003145bledft5u7",
+        "amount": "500.00",
+        "receipt_no": "PAY-00001",
+        "balance": "-500.00",
+        "ledger_rows": 1,
+        "ledger_amount": "500.00",
+        "payment_rows": 1,
+        "allocations": 0,
+        "invoices": 0,
+        "refunds": 0,
+        "reversals": 0,
+        "audits": 0
+      },
+      "sequenceAfterFirst": [
+        {
+          "next_value": 2
+        }
+      ],
+      "sequenceAfterReplay": [
+        {
+          "next_value": 2
+        }
+      ],
+      "derived": {
+        "gross": 0,
+        "unapplied": 500,
+        "net": -500,
+        "usable": 500,
+        "refundable": 500
+      }
+    },
+    {
+      "id": "S-04",
+      "status": "PASS",
+      "operation": "supplier advance creation and idempotent retry",
+      "boundary": "payment action with guarded synthetic session and restricted role; metadata update stubbed",
+      "fixture": {
+        "party": "campaign_supplier_b5dc108dd0044afb988be4e6244c3de3",
+        "initialBalance": 0,
+        "amount": 1000
+      },
+      "first": {
+        "ok": true,
+        "data": {
+          "id": "cmw80z3y3000b145buenawaee"
+        }
+      },
+      "replay": {
+        "ok": true,
+        "data": {
+          "id": "cmw80z3y3000b145buenawaee"
+        }
+      },
+      "persisted": {
+        "id": "cmw80z3y3000b145buenawaee",
+        "amount": "1000.00",
+        "receipt_no": "PAY-00002",
+        "balance": "-1000.00",
+        "ledger_rows": 1,
+        "ledger_amount": "1000.00",
+        "payment_rows": 1,
+        "allocations": 0,
+        "invoices": 0,
+        "refunds": 0,
+        "reversals": 0,
+        "audits": 0
+      },
+      "sequenceAfterFirst": [
+        {
+          "next_value": 3
+        }
+      ],
+      "sequenceAfterReplay": [
+        {
+          "next_value": 3
+        }
+      ],
+      "derived": {
+        "gross": 0,
+        "unapplied": 1000,
+        "net": -1000,
+        "usable": 1000,
+        "refundable": 1000
+      }
+    },
+    {
+      "id": "S-28",
+      "status": "FAIL",
+      "operation": "barrier-synchronized tenant receipt allocation",
+      "error": "\nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `40001`. Message: `could not serialize access due to concurrent update`"
+    }
+  ],
+  "error": null,
+  "summary": {
+    "pass": 2,
+    "fail": 1
+  }
+}

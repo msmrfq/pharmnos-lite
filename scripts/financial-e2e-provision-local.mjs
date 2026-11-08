@@ -58,6 +58,7 @@ const directTenantTables = [
     "sales_invoices",
     "sales_invoice_items",
     "payments",
+    "payment_receipt_sequences",
     "payment_allocations",
     "allocation_reversals",
     "payment_refunds",
@@ -99,6 +100,7 @@ const enumTypes = [
     "PurchaseGstEvidenceRevisionKind",
     "PurchaseGstReconciliationEventKind",
     "PaymentMode",
+    "FinancialRefundStatus",
     "StockMovementType",
     "ScheduleClass",
     "AuditEventType",
@@ -110,6 +112,23 @@ const enumTypes = [
 
 function ident(value) {
     return `"${value.replaceAll("\"", "\"\"")}"`;
+}
+
+function policyIfMissing(table, name, statement) {
+    const policyName = name.replaceAll("'", "''");
+    const sql = statement.replaceAll("'", "''");
+    return `DO $policy$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_policies
+          WHERE schemaname = 'public'
+            AND tablename = '${table}'
+            AND policyname = '${policyName}'
+        ) THEN
+          EXECUTE '${sql}';
+        END IF;
+      END;
+      $policy$`;
 }
 
 function directPredicate(table) {
@@ -179,12 +198,24 @@ function policyStatements() {
         statements.push(
             `ALTER TABLE public.${ident(table)} ENABLE ROW LEVEL SECURITY`,
             `ALTER TABLE public.${ident(table)} FORCE ROW LEVEL SECURITY`,
-            `CREATE POLICY ${ident(`tenant_select_${table}`)} ON public.${ident(table)} FOR SELECT TO ${ident(RUNTIME_ROLE)} USING (${selectPredicate})`,
-            `CREATE POLICY ${ident(`tenant_insert_${table}`)} ON public.${ident(table)} FOR INSERT TO ${ident(RUNTIME_ROLE)} WITH CHECK (${writePredicate})`,
+            policyIfMissing(
+                table,
+                `tenant_select_${table}`,
+                `CREATE POLICY ${ident(`tenant_select_${table}`)} ON public.${ident(table)} FOR SELECT TO ${ident(RUNTIME_ROLE)} USING (${selectPredicate})`,
+            ),
+            policyIfMissing(
+                table,
+                `tenant_insert_${table}`,
+                `CREATE POLICY ${ident(`tenant_insert_${table}`)} ON public.${ident(table)} FOR INSERT TO ${ident(RUNTIME_ROLE)} WITH CHECK (${writePredicate})`,
+            ),
         );
         if (!immutableTables.includes(table) && table !== "audit_logs") {
             statements.push(
-                `CREATE POLICY ${ident(`tenant_update_${table}`)} ON public.${ident(table)} FOR UPDATE TO ${ident(RUNTIME_ROLE)} USING (${writePredicate}) WITH CHECK (${writePredicate})`,
+                policyIfMissing(
+                    table,
+                    `tenant_update_${table}`,
+                    `CREATE POLICY ${ident(`tenant_update_${table}`)} ON public.${ident(table)} FOR UPDATE TO ${ident(RUNTIME_ROLE)} USING (${writePredicate}) WITH CHECK (${writePredicate})`,
+                ),
             );
         }
     }
@@ -193,7 +224,11 @@ function policyStatements() {
         statements.push(
             `ALTER TABLE public.${ident(table)} ENABLE ROW LEVEL SECURITY`,
             `ALTER TABLE public.${ident(table)} FORCE ROW LEVEL SECURITY`,
-            `CREATE POLICY ${ident(`tenant_select_${table}`)} ON public.${ident(table)} FOR SELECT TO ${ident(RUNTIME_ROLE)} USING (${predicate})`,
+            policyIfMissing(
+                table,
+                `tenant_select_${table}`,
+                `CREATE POLICY ${ident(`tenant_select_${table}`)} ON public.${ident(table)} FOR SELECT TO ${ident(RUNTIME_ROLE)} USING (${predicate})`,
+            ),
         );
     }
     return statements;
@@ -207,10 +242,14 @@ function grantStatements() {
         `ALTER DEFAULT PRIVILEGES FOR ROLE ${ident(BOOTSTRAP_ROLE)} IN SCHEMA public REVOKE ALL ON TABLES FROM PUBLIC`,
         `ALTER DEFAULT PRIVILEGES FOR ROLE ${ident(BOOTSTRAP_ROLE)} IN SCHEMA public REVOKE ALL ON SEQUENCES FROM PUBLIC`,
         `ALTER DEFAULT PRIVILEGES FOR ROLE ${ident(BOOTSTRAP_ROLE)} IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC`,
-        `GRANT SELECT, INSERT, UPDATE ON TABLE ${allTenantTables.map((table) => `public.${ident(table)}`).join(", ")} TO ${ident(RUNTIME_ROLE)}`,
+        `GRANT SELECT, INSERT, UPDATE ON TABLE ${allTenantTables.filter((table) => table !== "payment_receipt_sequences").map((table) => `public.${ident(table)}`).join(", ")} TO ${ident(RUNTIME_ROLE)}`,
+        `REVOKE ALL ON TABLE public.${ident("payment_receipt_sequences")} FROM PUBLIC, ${ident(RUNTIME_ROLE)}`,
+        `GRANT SELECT, INSERT ON TABLE public.${ident("payment_receipt_sequences")} TO ${ident(RUNTIME_ROLE)}`,
+        `GRANT UPDATE (next_value) ON TABLE public.${ident("payment_receipt_sequences")} TO ${ident(RUNTIME_ROLE)}`,
         `GRANT SELECT ON TABLE ${catalogReadTables.map((table) => `public.${ident(table)}`).join(", ")} TO ${ident(RUNTIME_ROLE)}`,
         `REVOKE UPDATE, DELETE ON TABLE ${immutableTables.map((table) => `public.${ident(table)}`).join(", ")} FROM ${ident(RUNTIME_ROLE)}`,
         `REVOKE DELETE ON TABLE public.${ident("audit_logs")} FROM ${ident(RUNTIME_ROLE)}`,
+        `REVOKE UPDATE ON TABLE public.${ident("audit_logs")} FROM ${ident(RUNTIME_ROLE)}`,
         `REVOKE DELETE ON TABLE public.${ident("purchase_invoices")}, public.${ident("purchase_invoice_items")} FROM ${ident(RUNTIME_ROLE)}`,
             `REVOKE UPDATE ON TABLE public.${ident("sales_posting_operations")} FROM ${ident(RUNTIME_ROLE)}`,
             `GRANT UPDATE (status, result_invoice_no, result_sales_id, updated_at)
@@ -880,6 +919,29 @@ async function assertEmpty(client) {
     }
 }
 
+async function assertPrismaMigrationsApplied(client) {
+    const directories = (await fs.readdir(new URL("../prisma/migrations/", import.meta.url), {
+        withFileTypes: true,
+    }))
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort();
+    const rows = await queryRows(client, `
+        SELECT migration_name, finished_at, rolled_back_at
+        FROM public."_prisma_migrations"
+        ORDER BY migration_name
+    `);
+    const applied = rows
+        .filter((row) => row.finished_at !== null && row.rolled_back_at === null)
+        .map((row) => row.migration_name)
+        .sort();
+    if (JSON.stringify(applied) !== JSON.stringify(directories) ||
+        rows.length !== directories.length ||
+        !applied.includes("0027_refund_lifecycle")) {
+        throw new Error("The disposable target does not have a complete, current Prisma migration history.");
+    }
+}
+
 const RUN_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{2,63}$/;
 
 export function classifyProvisioningFailure({
@@ -1036,6 +1098,10 @@ export function validateConnectedInitializationRequest({
 async function main() {
     const lifecycle = loadAuthorizedTargetLifecycle({ phase: "SCHEMA_INITIALIZATION" });
     Object.assign(process.env, lifecycle.environment);
+    const schemaMode = lifecycle.contract.schemaMode;
+    if (!["EMPTY_BASELINE", "PRISMA_MIGRATIONS_REPLAYED"].includes(schemaMode)) {
+        throw new Error("FINANCIAL_E2E_SCHEMA_MODE must be EMPTY_BASELINE or PRISMA_MIGRATIONS_REPLAYED.");
+    }
     const contextSigningSecret = process.env.DATABASE_AUTH_CONTEXT_SIGNING_SECRET;
     if (!contextSigningSecret || contextSigningSecret.length < 32) {
         throw new Error("DATABASE_AUTH_CONTEXT_SIGNING_SECRET must be configured with at least 32 characters.");
@@ -1185,7 +1251,8 @@ async function main() {
         if (bootstrapFlags[0]?.rolcanlogin !== true) {
             throw new Error("Bootstrap role is not a login role.");
         }
-        await assertEmpty(client);
+        if (schemaMode === "EMPTY_BASELINE") await assertEmpty(client);
+        else await assertPrismaMigrationsApplied(client);
         const existingRuntimeRole = await queryRows(
             client,
             "SELECT 1 FROM pg_roles WHERE rolname = $1",
@@ -1213,13 +1280,17 @@ async function main() {
             }
         }
 
-        const baseline = (await fs.readFile(BASELINE_PATH, "utf8")).replace(/^\uFEFF/, "");
-        if (baseline.includes("\\ir ") || !baseline.includes("CREATE TABLE")) {
+        const baseline = schemaMode === "EMPTY_BASELINE"
+            ? (await fs.readFile(BASELINE_PATH, "utf8")).replace(/^\uFEFF/, "")
+            : null;
+        if (baseline && (baseline.includes("\\ir ") || !baseline.includes("CREATE TABLE"))) {
             throw new Error("Baseline artifact is not a self-contained SQL baseline.");
         }
         await client.query("BEGIN");
         transactionStarted = true;
-        await client.query(baseline);
+        if (baseline) {
+            await client.query(baseline);
+        }
         await client.query(
             `DO $$
              BEGIN
@@ -1354,7 +1425,10 @@ async function main() {
             evidence: initializationEvidence,
         });
         console.log("PROVISIONING=PASS");
-        console.log("BASELINE_APPLIED=financial-e2e-schema-provisioning.generated.sql");
+        console.log(`SCHEMA_MODE=${schemaMode}`);
+        if (schemaMode === "EMPTY_BASELINE") {
+            console.log("BASELINE_APPLIED=financial-e2e-schema-provisioning.generated.sql");
+        }
         console.log("SECURITY_CONTROLS_APPLIED=grants,rls,immutable-history,finalized-invoice,posting-transition");
         console.log(`TARGET_DATABASE=${databaseName}`);
         console.log(`TARGET_BOOTSTRAP_ROLE=${BOOTSTRAP_ROLE}`);
@@ -1364,7 +1438,7 @@ async function main() {
         console.log(`TRIGGERS=${row.trigger_count}`);
         console.log(`CONSTRAINTS=${row.constraint_count}`);
         console.log(`RUNTIME_DELETE_PRIVILEGES=${row.runtime_delete_privileges}`);
-        console.log("RUNTIME_RLS=VERIFIED_EMPTY_TARGET");
+        console.log(`RUNTIME_RLS=VERIFIED_${schemaMode}`);
         console.log("GST_SCENARIOS=NOT_EXECUTED");
     } catch (error) {
         let rollbackSucceeded = false;

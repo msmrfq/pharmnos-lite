@@ -1,10 +1,9 @@
-import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import {
   loadTargetContractFromEnv,
-  schemaArtifactHash,
   targetContractBinding,
+  targetContractFingerprint,
   validateTargetContract,
 } from "./financial-e2e-target-contract.mjs";
 
@@ -63,34 +62,7 @@ export function loadFinancialE2eEnvironment(base = process.env) {
   return environment;
 }
 
-function canonicalContract(contract) {
-  return {
-    version: contract.version,
-    runId: contract.runId,
-    host: contract.host,
-    port: contract.port,
-    databaseName: contract.databaseName,
-    bootstrapRole: contract.bootstrapRole,
-    runtimeRole: contract.runtimeRole,
-    bootstrapCredentialSource: contract.bootstrapCredentialSource,
-    runtimeCredentialSource: contract.runtimeCredentialSource,
-    marker: contract.marker,
-    composeProject: contract.composeProject,
-    composeService: contract.composeService,
-    composeProfile: contract.composeProfile,
-    schemaArtifactPath: contract.schemaArtifact,
-    schemaArtifactHash: contract.schemaArtifactHash,
-    authorizedAt: contract.authorizedAt,
-    expiresAt: contract.expiresAt,
-  };
-}
-
-export function targetContractFingerprint(contract) {
-  return crypto
-    .createHash("sha256")
-    .update(JSON.stringify(canonicalContract(contract)))
-    .digest("hex");
-}
+export { targetContractFingerprint };
 
 function phaseEvidencePath(environment, phase) {
   const variable = PHASE_EVIDENCE_FILES[phase];
@@ -249,7 +221,6 @@ export function loadAuthorizedTargetLifecycle({
   if (!REQUIRED_PHASES.has(phase)) throw new Error(`Unknown financial E2E lifecycle phase: ${phase}.`);
   const environment = loadFinancialE2eEnvironment(env);
   const contract = loadTargetContractFromEnv(environment);
-  const actualSchemaArtifactHash = schemaArtifactHash(contract.schemaArtifact);
   const validation = validateTargetContract({
     contract,
     targetUrl: environment.TEST_DATABASE_URL,
@@ -258,9 +229,6 @@ export function loadAuthorizedTargetLifecycle({
     now,
   });
   const errors = validation.ok ? [] : [...validation.errors];
-  if (actualSchemaArtifactHash !== contract.schemaArtifactHash) {
-    errors.push("Target contract schema artifact fingerprint does not match the checked-in artifact.");
-  }
   errors.push(...assertContractEnvironment(environment, contract));
   const binding = targetContractBinding(contract);
   const fingerprint = targetContractFingerprint(contract);

@@ -1,0 +1,105 @@
+{
+  "runId": "recon20261108ak",
+  "customer": {
+    "before": [
+      {
+        "paymentId": "customer_payment_0e48334d652d47e9a855786b352f905b",
+        "paymentDate": "2026-11-08T18:16:02.971Z",
+        "amount": 500,
+        "unappliedAmount": 500,
+        "referenceNo": null
+      }
+    ],
+    "partial": [
+      {
+        "paymentId": "customer_payment_0e48334d652d47e9a855786b352f905b",
+        "paymentDate": "2026-11-08T18:16:02.971Z",
+        "amount": 500,
+        "unappliedAmount": 250,
+        "referenceNo": null
+      }
+    ],
+    "restored": [
+      {
+        "paymentId": "customer_payment_0e48334d652d47e9a855786b352f905b",
+        "paymentDate": "2026-11-08T18:16:02.971Z",
+        "amount": 500,
+        "unappliedAmount": 500,
+        "referenceNo": null
+      }
+    ]
+  },
+  "supplier": {
+    "before": [
+      {
+        "paymentId": "supplier_payment_0c4c51e1913b466680430af76d7b9825",
+        "paymentDate": "2026-11-08T18:16:02.971Z",
+        "amount": 1000,
+        "unappliedAmount": 1000,
+        "referenceNo": null
+      }
+    ],
+    "partial": [
+      {
+        "paymentId": "supplier_payment_0c4c51e1913b466680430af76d7b9825",
+        "paymentDate": "2026-11-08T18:16:02.971Z",
+        "amount": 1000,
+        "unappliedAmount": 600,
+        "referenceNo": null
+      }
+    ],
+    "restored": [
+      {
+        "paymentId": "supplier_payment_0c4c51e1913b466680430af76d7b9825",
+        "paymentDate": "2026-11-08T18:16:02.971Z",
+        "amount": 1000,
+        "unappliedAmount": 1000,
+        "referenceNo": null
+      }
+    ]
+  },
+  "receipts": {
+    "values": [
+      "PAY-00001",
+      "PAY-00002",
+      "PAY-00003",
+      "PAY-00004"
+    ],
+    "unique": true,
+    "sequence": [
+      {
+        "tenant_id": "tenant_0d5816883d2e472dbe7780c61f266f4a",
+        "prefix": "PAY",
+        "next_value": 5
+      }
+    ]
+  },
+  "auditRows": [
+    {
+      "event_type": "ALLOCATION_CREATED",
+      "target_type": "payment_allocation",
+      "target_id": "cmw7tsuq30002lkwlvwdut5z5"
+    },
+    {
+      "event_type": "ALLOCATION_CREATED",
+      "target_type": "payment_allocation",
+      "target_id": "cmw7tsur70007lkwlk8st1fzd"
+    },
+    {
+      "event_type": "ALLOCATION_REVERSED",
+      "target_type": "allocation_reversal",
+      "target_id": "cmw7tsus8000clkwlvvwqybxx"
+    },
+    {
+      "event_type": "ALLOCATION_REVERSED",
+      "target_type": "allocation_reversal",
+      "target_id": "cmw7tsusz000hlkwlfmnud1kz"
+    }
+  ],
+  "assertions": {
+    "customerProjection": true,
+    "supplierProjection": true,
+    "receiptUniqueness": true,
+    "auditEvents": true
+  }
+}

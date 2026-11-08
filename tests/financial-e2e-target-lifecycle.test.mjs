@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
   createTargetContract,
+  governanceArtifactHash,
+  migrationInventoryHash,
   schemaArtifactHash,
   targetContractBinding,
 } from "../scripts/financial-e2e-target-contract.mjs";
@@ -28,6 +31,8 @@ function createFixture() {
     databaseName: "pharmnos_financial_e2e_lifecycle",
     composeProject: "pharmnoslite-financial-e2e-lifecycle-test",
     schemaArtifactHash: schemaArtifactHash(),
+    schemaMode: "PRISMA_MIGRATIONS_REPLAYED",
+    migrationInventoryHash: migrationInventoryHash(),
     authorizedAt: Date.now() - 1_000,
     expiresAt: Date.now() + 60 * 60 * 1000,
   });
@@ -50,6 +55,7 @@ function createFixture() {
     FINANCIAL_E2E_RUNTIME_DATABASE_URL: "postgresql://pharmnos_e2e_runtime@127.0.0.1:55491/pharmnos_financial_e2e_lifecycle",
     FINANCIAL_E2E_COMPOSE_PROJECT: contract.composeProject,
     FINANCIAL_E2E_TARGET_CONTRACT: JSON.stringify(contract),
+    FINANCIAL_E2E_SCHEMA_MODE: contract.schemaMode,
     FINANCIAL_E2E_RUN_ID: contract.runId,
     FINANCIAL_E2E_TARGET_APPROVED: "true",
     FINANCIAL_E2E_AUTHORIZED_TARGET_BINDING: binding,
@@ -124,6 +130,22 @@ test("accepts a missing ordinary database URL without using it as a runtime depe
   }));
 });
 
+test("security harness preserves explicit environment rather than loading unrelated default files", () => {
+  const cwd = fs.mkdtempSync(path.join(tempRoot, "security-env-"));
+  fs.writeFileSync(path.join(cwd, ".env.financial-e2e"), "FINANCIAL_E2E_TARGET_CONTRACT=\n");
+  fs.writeFileSync(path.join(cwd, ".env.local"), "FINANCIAL_E2E_TARGET_CONTRACT=\n");
+  const child = spawnSync(process.execPath, [
+    path.resolve("scripts/financial-e2e-security-behavior.mjs"),
+  ], {
+    cwd,
+    env: { ...process.env, FINANCIAL_E2E_ENV_FILE: path.join(cwd, "missing"),
+      FINANCIAL_E2E_TARGET_CONTRACT: "not-json" },
+    encoding: "utf8",
+  });
+  assert.equal(child.status, 1);
+  assert.match(child.stderr, /FINANCIAL_E2E_TARGET_CONTRACT is invalid JSON/);
+});
+
 test("rejects a missing full-contract fingerprint", () => {
   const fixture = createFixture();
   delete fixture.environment.FINANCIAL_E2E_AUTHORIZED_TARGET_FINGERPRINT;
@@ -153,6 +175,131 @@ test("rejects a contract whose schema artifact fingerprint is stale", () => {
     () => loadAuthorizedTargetLifecycle({ env: fixture.environment, phase: "TARGET_VALIDATION" }),
     /schema artifact fingerprint/,
   );
+});
+
+test("binds explicit migration replay and its current inventory to the contract", () => {
+  const fixture = createFixture();
+  const replay = {
+    ...fixture.contract,
+    schemaMode: "PRISMA_MIGRATIONS_REPLAYED",
+    migrationInventoryHash: migrationInventoryHash(),
+  };
+  const env = fixture.environment;
+  env.FINANCIAL_E2E_TARGET_CONTRACT = JSON.stringify(replay);
+  env.FINANCIAL_E2E_AUTHORIZED_TARGET_BINDING = targetContractBinding(replay);
+  env.FINANCIAL_E2E_AUTHORIZED_TARGET_FINGERPRINT = targetContractFingerprint(replay);
+  env.FINANCIAL_E2E_SCHEMA_MODE = replay.schemaMode;
+  assert.doesNotThrow(() => loadAuthorizedTargetLifecycle({ env }));
+  delete env.FINANCIAL_E2E_SCHEMA_MODE;
+  assert.throws(() => loadAuthorizedTargetLifecycle({ env }), /SCHEMA_MODE/);
+  env.FINANCIAL_E2E_SCHEMA_MODE = "EMPTY_BASELINE";
+  assert.throws(() => loadAuthorizedTargetLifecycle({ env }), /SCHEMA_MODE/);
+  env.FINANCIAL_E2E_SCHEMA_MODE = replay.schemaMode;
+  const stale = { ...replay, migrationInventoryHash: "0".repeat(64) };
+  env.FINANCIAL_E2E_TARGET_CONTRACT = JSON.stringify(stale);
+  env.FINANCIAL_E2E_AUTHORIZED_TARGET_BINDING = targetContractBinding(stale);
+  env.FINANCIAL_E2E_AUTHORIZED_TARGET_FINGERPRINT = targetContractFingerprint(stale);
+  assert.throws(() => loadAuthorizedTargetLifecycle({ env }), /migration inventory fingerprint/);
+});
+
+test("rejects invalid migration replay contracts at construction", () => {
+  const fixture = createFixture();
+  assert.throws(() => createTargetContract({
+    runId: fixture.contract.runId,
+    targetUrl: fixture.environment.TEST_DATABASE_URL,
+    runtimeUrl: fixture.environment.FINANCIAL_E2E_RUNTIME_DATABASE_URL,
+    databaseName: fixture.contract.databaseName,
+    composeProject: fixture.contract.composeProject,
+    schemaArtifactHash: schemaArtifactHash(),
+    schemaMode: "EMPTY_BASELINE",
+    migrationInventoryHash: migrationInventoryHash(),
+    expiresAt: Date.now() + 60_000,
+  }), /governance artifact fingerprint and no migration inventory/);
+});
+
+test("binds a serialized empty baseline contract to both artifacts and every lifecycle authorization", () => {
+  const fixture = createFixture();
+  const { migrationInventoryHash: unused, ...base } = fixture.contract;
+  const empty = { ...base, schemaMode: "EMPTY_BASELINE", governanceArtifactHash: governanceArtifactHash() };
+  const env = fixture.environment;
+  env.FINANCIAL_E2E_TARGET_CONTRACT = JSON.stringify(empty);
+  env.FINANCIAL_E2E_SCHEMA_MODE = empty.schemaMode;
+  env.FINANCIAL_E2E_AUTHORIZED_TARGET_BINDING = targetContractBinding(empty);
+  env.FINANCIAL_E2E_AUTHORIZED_TARGET_FINGERPRINT = targetContractFingerprint(empty);
+  const lifecycle = loadAuthorizedTargetLifecycle({ env });
+  assert.equal(lifecycle.contract.schemaMode, "EMPTY_BASELINE");
+  assert.equal(lifecycle.contract.governanceArtifactHash, governanceArtifactHash());
+  assert.equal(Object.isFrozen(lifecycle.contract), true);
+
+  for (const patch of [
+    { governanceArtifactHash: undefined },
+    { governanceArtifactHash: "0".repeat(64) },
+    { schemaArtifactHash: "0".repeat(64) },
+    { migrationInventoryHash: migrationInventoryHash() },
+    { schemaMode: "UNKNOWN" },
+    { schemaMode: undefined },
+    { unexpected: true },
+  ]) {
+    env.FINANCIAL_E2E_TARGET_CONTRACT = JSON.stringify({ ...empty, ...patch });
+    assert.throws(() => loadAuthorizedTargetLifecycle({ env }));
+  }
+  env.FINANCIAL_E2E_TARGET_CONTRACT = JSON.stringify({ ...empty, expiresAt: empty.expiresAt + 1 });
+  assert.throws(() => loadAuthorizedTargetLifecycle({ env }), /BINDING/);
+  env.FINANCIAL_E2E_TARGET_CONTRACT = JSON.stringify(empty);
+  env.FINANCIAL_E2E_SCHEMA_MODE = "PRISMA_MIGRATIONS_REPLAYED";
+  assert.throws(() => loadAuthorizedTargetLifecycle({ env }), /SCHEMA_MODE/);
+});
+
+test("rejects altered empty baseline authorization before initialization", () => {
+  const fixture = createFixture();
+  const { migrationInventoryHash: unused, ...base } = fixture.contract;
+  const empty = { ...base, schemaMode: "EMPTY_BASELINE", governanceArtifactHash: governanceArtifactHash() };
+  const env = fixture.environment;
+  env.FINANCIAL_E2E_TARGET_CONTRACT = JSON.stringify(empty);
+  env.FINANCIAL_E2E_SCHEMA_MODE = empty.schemaMode;
+  env.FINANCIAL_E2E_AUTHORIZED_TARGET_BINDING = targetContractBinding(empty);
+  env.FINANCIAL_E2E_AUTHORIZED_TARGET_FINGERPRINT = targetContractFingerprint(empty);
+  const upstream = JSON.parse(fs.readFileSync(fixture.infrastructureEvidence, "utf8"));
+  upstream.targetBinding = targetContractBinding(empty);
+  upstream.targetFingerprint = targetContractFingerprint(empty);
+  fs.writeFileSync(fixture.infrastructureEvidence, JSON.stringify(upstream));
+  env.FINANCIAL_E2E_AUTHORIZED_TARGET_FINGERPRINT = "0".repeat(64);
+  const child = spawnSync(process.execPath, ["scripts/financial-e2e-provision-local.mjs"], {
+    env: { ...process.env, ...env },
+    encoding: "utf8",
+  });
+  assert.equal(child.status, 1);
+  assert.match(child.stderr, /AUTHORIZED_TARGET_FINGERPRINT/);
+});
+
+test("rejects reused infrastructure evidence across runs and targets", () => {
+  const first = createFixture();
+  const second = createFixture();
+  const other = { ...second.contract, runId: "another_run", port: 55493 };
+  const env = second.environment;
+  env.TEST_DATABASE_URL = env.TEST_DATABASE_URL.replace(":55491", ":55493");
+  env.FINANCIAL_E2E_RUNTIME_DATABASE_URL = env.FINANCIAL_E2E_RUNTIME_DATABASE_URL.replace(":55491", ":55493");
+  env.FINANCIAL_E2E_DB_PORT = "55493";
+  env.FINANCIAL_E2E_RUN_ID = other.runId;
+  env.FINANCIAL_E2E_TARGET_CONTRACT = JSON.stringify(other);
+  env.FINANCIAL_E2E_AUTHORIZED_TARGET_BINDING = targetContractBinding(other);
+  env.FINANCIAL_E2E_AUTHORIZED_TARGET_FINGERPRINT = targetContractFingerprint(other);
+  env.FINANCIAL_E2E_INFRASTRUCTURE_EVIDENCE_FILE = first.infrastructureEvidence;
+  assert.throws(() => loadAuthorizedTargetLifecycle({ env, phase: "SCHEMA_INITIALIZATION" }),
+    /different target contract|exact isolated Compose target/);
+});
+
+test("rejects unauthorized infrastructure, suite, and cleanup phases", () => {
+  const fixture = createFixture();
+  for (const [phase, variable] of [
+    ["INFRASTRUCTURE_CREATION", "FINANCIAL_E2E_INFRASTRUCTURE_AUTHORIZED"],
+    ["SUITE_EXECUTION", "FINANCIAL_E2E_EXECUTION_AUTHORIZED"],
+    ["CLEANUP_AUTHORIZATION", "FINANCIAL_E2E_CLEANUP_AUTHORIZED"],
+  ]) {
+    const env = { ...fixture.environment, [variable]: "false",
+      FINANCIAL_E2E_CLEANUP_EVIDENCE_FILE: path.join(tempRoot, "cleanup.json") };
+    assert.throws(() => loadAuthorizedTargetLifecycle({ env, phase }), /authorization is required/);
+  }
 });
 
 test("rejects a generic environment URL that resolves to the disposable target", () => {

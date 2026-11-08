@@ -1,10 +1,10 @@
 ---
 title: Financial Reconciliation Accounting Invariants
 date: 2026-11-08
-status: Documented - Pending Owner Approval
+status: Owner Approved Policy - Runtime Incomplete
 ---
 
-`Documented` means this document is prepared. It does not mean implemented, runtime-verified, independently accepted, or owner-approved.
+The owner approved Decisions A–O and the 13 scenario resolutions on 2026-11-08. Approval does not mean every workflow is implemented, runtime-verified, or independently accepted. Historical source observations below are retained as a point-in-time baseline, not a current implementation inventory.
 
 ## Signed balance terminology
 
@@ -22,7 +22,7 @@ Examples:
 3. Allocate ₹500: gross AR ₹300, credit ₹0, net position **₹300**. Allocation changes invoice/open-credit composition, not the net position.
 4. Supplier payment ₹1,000 before invoices: gross AP ₹0, advance ₹1,000, net position **-₹1,000**.
 
-## Proposed future equations (Pending)
+## Approved equations
 
 - Invoice outstanding = finalized invoice exposure + approved adjustments − valid allocations.
 - Payment usable amount = source payment amount − valid allocations − completed refunds/reversals.
@@ -31,9 +31,9 @@ Examples:
 - Net customer position = gross customer receivable − unapplied customer credit.
 - Net supplier position = gross supplier payable − unapplied supplier advance.
 
-These are future policy equations. The current schema has no allocation/refund model and current payment actions remain account-level.
+These equations govern scenario expectations; implementation and runtime evidence must be verified separately.
 
-## Current verified source behavior
+## Historical source behavior at initial audit
 
 - Payment, subledger row, and cached counterparty update are written transactionally in active payment actions.
 - Payment retries use tenant-scoped idempotency keys and payload hashes.
@@ -43,7 +43,7 @@ These are future policy equations. The current schema has no allocation/refund m
 - Payment and ledger repository mutation is blocked, but reversal workflows are absent.
 - Stock changes are inventory safeguards, not accounting reconciliation evidence.
 
-## Proposed allocation/refund invariants
+## Approved allocation/refund invariants
 
 - Allocation amount > 0 and <= both payment usable amount and invoice outstanding at commit.
 - Refund of allocated money reverses the corresponding allocation in the same transaction before recording the completed refund.

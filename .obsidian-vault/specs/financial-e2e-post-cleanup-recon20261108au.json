@@ -1,0 +1,15 @@
+{
+  "runId": "recon20261108au",
+  "target": {
+    "databaseName": "pharmnos_financial_e2e_recon20261108au",
+    "port": 55637,
+    "composeProject": "pharmnoslite-financial-e2e-recon20261108au"
+  },
+  "cleanupEvidenceFile": ".obsidian-vault\\specs\\financial-e2e-cleanup-evidence-recon20261108au.json",
+  "composeDownPassed": true,
+  "containerAbsence": true,
+  "networkAbsence": true,
+  "containerCheckExitCode": 0,
+  "networkCheckExitCode": 0,
+  "checkedAt": "2026-11-08T13:26:10.345Z"
+}

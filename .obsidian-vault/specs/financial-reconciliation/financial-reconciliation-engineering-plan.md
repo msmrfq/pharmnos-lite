@@ -1,7 +1,7 @@
 ---
 title: Financial Reconciliation Engineering Plan
 date: 2026-11-08
-status: Pending Policy Approval
+status: Owner Approved Policy - Runtime Incomplete
 ---
 
 ## Goal
@@ -14,8 +14,8 @@ Sequence safe corrections without silently choosing accounting policy.
 4. Reject invalid movement quantities and prevent new-batch double counting.
 5. Add focused regression contracts.
 
-## Decision gate before implementation
-The accounting decision pack, policy matrix, scenario matrix, and decision log are Pending owner approval. No allocation, advance, overpayment, refund, reversal, aging, authoritative-balance, or database-integrity implementation may begin until the owner approves or amends Decisions A-O.
+## Decision gate
+Decisions A–O and the 13 scenario resolutions were owner-approved on 2026-11-08. The approval authorizes policy direction, not a claim that the workflows below are implemented or independently accepted. Commercial credit-note and debit-adjustment workflows remain outside the receipt-provisioning correction.
 
 ## Next work after approval
 1. Audit existing payments for null/duplicate idempotency keys, invalid party combinations, and cache/ledger mismatches without inferring historical allocations.
@@ -45,7 +45,7 @@ The accounting decision pack, policy matrix, scenario matrix, and decision log a
 Decision J recommends retaining the prior stock movement safeguards as a separate inventory-integrity workstream. They must not be counted as accounting-policy closure evidence.
 
 ## Dependencies
-Policy approval precedes allocation/reversal schema work. Data audit precedes strict constraints or backfills. Runtime evidence must use an explicitly authorized disposable target.
+Data audit precedes strict constraints or backfills. Runtime evidence must use an explicitly authorized disposable target. S-09 multi-invoice allocation must be atomic, S-10 uses a single ₹700 payment, and S-18 commercial credit-note review must not be coupled to GST. S-37 distinguishes invoice face from outstanding; S-38 reduces a ₹2,000 payable by ₹100 to ₹1,900.
 
 ## Explicit non-goals
 Do not redesign into a general ledger, add provider recovery work, run production migrations, infer historical allocations, or claim complete financial reconciliation from static tests.

@@ -75,7 +75,7 @@ export function validateComposeInspection(snapshot, contract) {
   return validateComposeTargetSnapshot(snapshot, contract);
 }
 
-function inspectExactTarget(environment, lifecycle, runner) {
+export function inspectExactTarget(environment, lifecycle, runner = spawnSync) {
   const ids = commandResult(
     "docker",
     buildComposeArgs({

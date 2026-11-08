@@ -264,11 +264,12 @@ export class SupplierLedgerRepository extends BaseRepository<
         due_date: { not: null, lt: asOf },
       },
       orderBy: { due_date: "asc" },
-      select: { due_date: true, net_amount: true, payment_allocations: { where: { reversal: null }, select: { amount: true } } },
+      select: { due_date: true, net_amount: true, payment_allocations: { select: { amount: true, reversal: { select: { amount: true } } } } },
     });
     if (rows.length === 0) return 0;
     const oldestUnpaid = rows.find((row) =>
-      Number(row.net_amount) - row.payment_allocations.reduce((sum: number, allocation: any) => sum + Number(allocation.amount), 0) > 0,
+      Number(row.net_amount) - row.payment_allocations.reduce((sum: number, allocation: any) =>
+        sum + Number(allocation.amount) - allocation.reversal.reduce((reversed: number, entry: any) => reversed + Number(entry.amount), 0), 0) > 0,
     )?.due_date;
     if (!oldestUnpaid) return 0;
     const todayMs = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate()).getTime();
@@ -302,13 +303,14 @@ export class SupplierLedgerRepository extends BaseRepository<
         status: "FINALIZED",
         due_date: { not: null },
       },
-      select: { due_date: true, net_amount: true, payment_allocations: { where: { reversal: null }, select: { amount: true } } },
+      select: { due_date: true, net_amount: true, payment_allocations: { select: { amount: true, reversal: { select: { amount: true } } } } },
     });
     let current = 0, b30 = 0, b60 = 0, b90 = 0, over90 = 0;
     for (const row of rows) {
       const dueDate = row.due_date;
       if (!dueDate) continue;
-      const bal = Number(row.net_amount) - row.payment_allocations.reduce((sum: number, allocation: any) => sum + Number(allocation.amount), 0);
+      const bal = Number(row.net_amount) - row.payment_allocations.reduce((sum: number, allocation: any) =>
+        sum + Number(allocation.amount) - allocation.reversal.reduce((reversed: number, entry: any) => reversed + Number(entry.amount), 0), 0);
       if (bal <= 0) continue;
       if (dueDate >= d30) current += bal;
       else if (dueDate >= d60) b30 += bal;

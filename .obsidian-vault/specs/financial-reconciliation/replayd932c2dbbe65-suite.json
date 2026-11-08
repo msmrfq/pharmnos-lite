@@ -1,0 +1,190 @@
+{
+  "campaign": "Financial Reconciliation - Classified Runtime Candidates",
+  "runId": "replayd932c2dbbe65",
+  "target": "pharmnos_financial_e2e_replayd932c2dbbe65",
+  "results": [
+    {
+      "id": "S-01",
+      "status": "PASS",
+      "operation": "customer advance creation and idempotent retry",
+      "boundary": "payment action with guarded synthetic session and restricted role; metadata update stubbed",
+      "fixture": {
+        "party": "campaign_customer_746a423c66a34cad903c998a02bfb447",
+        "initialBalance": 0,
+        "amount": 500
+      },
+      "first": {
+        "ok": true,
+        "data": {
+          "id": "cmw818coi0003hnk659t2jr4s"
+        }
+      },
+      "replay": {
+        "ok": true,
+        "data": {
+          "id": "cmw818coi0003hnk659t2jr4s"
+        }
+      },
+      "persisted": {
+        "id": "cmw818coi0003hnk659t2jr4s",
+        "amount": "500.00",
+        "receipt_no": "PAY-00001",
+        "balance": "-500.00",
+        "ledger_rows": 1,
+        "ledger_amount": "500.00",
+        "payment_rows": 1,
+        "allocations": 0,
+        "invoices": 0,
+        "refunds": 0,
+        "reversals": 0,
+        "audits": 0
+      },
+      "sequenceAfterFirst": [
+        {
+          "next_value": 2
+        }
+      ],
+      "sequenceAfterReplay": [
+        {
+          "next_value": 2
+        }
+      ],
+      "derived": {
+        "gross": 0,
+        "unapplied": 500,
+        "net": -500,
+        "usable": 500,
+        "refundable": 500
+      }
+    },
+    {
+      "id": "S-04",
+      "status": "PASS",
+      "operation": "supplier advance creation and idempotent retry",
+      "boundary": "payment action with guarded synthetic session and restricted role; metadata update stubbed",
+      "fixture": {
+        "party": "campaign_supplier_12f880176db7478c8290f4d836e847a7",
+        "initialBalance": 0,
+        "amount": 1000
+      },
+      "first": {
+        "ok": true,
+        "data": {
+          "id": "cmw818cq2000bhnk6yjhnu6lm"
+        }
+      },
+      "replay": {
+        "ok": true,
+        "data": {
+          "id": "cmw818cq2000bhnk6yjhnu6lm"
+        }
+      },
+      "persisted": {
+        "id": "cmw818cq2000bhnk6yjhnu6lm",
+        "amount": "1000.00",
+        "receipt_no": "PAY-00002",
+        "balance": "-1000.00",
+        "ledger_rows": 1,
+        "ledger_amount": "1000.00",
+        "payment_rows": 1,
+        "allocations": 0,
+        "invoices": 0,
+        "refunds": 0,
+        "reversals": 0,
+        "audits": 0
+      },
+      "sequenceAfterFirst": [
+        {
+          "next_value": 3
+        }
+      ],
+      "sequenceAfterReplay": [
+        {
+          "next_value": 3
+        }
+      ],
+      "derived": {
+        "gross": 0,
+        "unapplied": 1000,
+        "net": -1000,
+        "usable": 1000,
+        "refundable": 1000
+      }
+    },
+    {
+      "id": "S-28",
+      "status": "PASS",
+      "operation": "barrier-synchronized tenant receipt allocation",
+      "boundary": "receipt sequence repository using action-equivalent default-isolation restricted-role transactions and signed synthetic context",
+      "fixture": {
+        "receiptTenant": "campaign_receipt_tenant_aafd4ff77af84601bdc35dad48061180"
+      },
+      "barrierArrivals": 4,
+      "receipts": [
+        "PAY-00001",
+        "PAY-00004",
+        "PAY-00003",
+        "PAY-00002"
+      ],
+      "failures": [],
+      "persisted": {
+        "next_value": 5,
+        "payments": 0,
+        "customer_ledgers": 0,
+        "supplier_ledgers": 0
+      },
+      "serializable": {
+        "barrierArrivals": 4,
+        "attemptCounts": [
+          2,
+          4,
+          1,
+          3
+        ],
+        "receipts": [
+          "SERIAL-00002",
+          "SERIAL-00004",
+          "SERIAL-00001",
+          "SERIAL-00003"
+        ],
+        "failures": [],
+        "persisted": [
+          {
+            "next_value": 5
+          }
+        ]
+      },
+      "catalog": {
+        "enabled": true,
+        "forced": true,
+        "can_delete": false,
+        "can_update_tenant": false,
+        "can_update_value": true
+      },
+      "isolation": {
+        "visible": 0,
+        "updated": 0
+      },
+      "crossInsertError": "\nInvalid `prisma.$executeRaw()` invocation:\n\n\nRaw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table \"payment_receipt_sequences\"`",
+      "crossAfter": [
+        {
+          "prefix": "OTHER",
+          "next_value": 9
+        }
+      ],
+      "rollbackError": "controlled receipt rollback",
+      "rollbackUpdated": 1,
+      "rollback": [
+        {
+          "receivable_balance": "0.00",
+          "sequences": 0
+        }
+      ]
+    }
+  ],
+  "error": null,
+  "summary": {
+    "pass": 3,
+    "fail": 0
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "campaign": "Generated-Baseline Runtime Verification",
+  "recordedAtIST": "2026-11-08 23-27-12",
+  "ownerAuthorization": "Fresh disposable local PostgreSQL target, explicit EMPTY_BASELINE mode",
+  "preflightCandidateId": "emptyad48ef872215",
+  "candidateStatus": "NOT_CREATED",
+  "connectionAttempted": false,
+  "schemaMode": "EMPTY_BASELINE",
+  "outcome": "BLOCKED",
+  "error": "Migration-replay contracts require the explicit mode and migration inventory fingerprint.",
+  "cause": "The target contract validator rejects any explicitly bound mode except PRISMA_MIGRATIONS_REPLAYED.",
+  "guardBypassed": false,
+  "initializationAttempted": false,
+  "cleanupRequired": false,
+  "sourceHashes": {
+    "prisma/schema.prisma": "b5df6127efb3b8ba1c35e73534511f1da65fc25900642fea94073ca8f0eb4f30",
+    "prisma/financial-e2e-schema-provisioning.generated.sql": "b2173962d25936214ab90f6bbf600093b39248442c75eed243d31b37da3e4662",
+    "prisma/financial-e2e-schema-governance-controls.sql": "7400be6ff47377f531498543da94c5c973b380071a16445bb600a97b9ab62e1a",
+    "prisma/migrations/0025_payment_receipt_sequence/migration.sql": "fc319b75ed580018eedba7846c1589c2a4a1ae9ac6168639aaab028750529f04",
+    "scripts/generate-financial-e2e-schema.mjs": "7272a4582cca96cb5a88f9c280d3484f3162f20cc560acbca03cc3b473354476",
+    "scripts/financial-e2e-target-contract.mjs": "0eedbe43d885641b8af79e988b4d1aaa626a24d1e6b8e3852e949589338b869e",
+    "scripts/financial-e2e-target-lifecycle.mjs": "b0ebc653e179a9f1069a6aa4d464c463dc58cc02d3c3c6c5675a07278493b475"
+  }
+}

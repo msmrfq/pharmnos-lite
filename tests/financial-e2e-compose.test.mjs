@@ -13,7 +13,7 @@ import {
 import {
   targetContractFingerprint,
 } from "../scripts/financial-e2e-target-lifecycle.mjs";
-import { createTargetContract, schemaArtifactHash } from "../scripts/financial-e2e-target-contract.mjs";
+import { createTargetContract, migrationInventoryHash, schemaArtifactHash } from "../scripts/financial-e2e-target-contract.mjs";
 
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pharmnos-financial-e2e-compose-"));
 test.after(() => fs.rmSync(tempRoot, { recursive: true, force: true }));
@@ -26,6 +26,8 @@ function environment(overrides = {}) {
     databaseName: "pharmnos_financial_e2e_compose",
     composeProject: "pharmnoslite-financial-e2e-compose-test",
     schemaArtifactHash: schemaArtifactHash(),
+    schemaMode: "PRISMA_MIGRATIONS_REPLAYED",
+    migrationInventoryHash: migrationInventoryHash(),
     authorizedAt: Date.now() - 1_000,
     expiresAt: Date.now() + 60_000,
   });
@@ -42,6 +44,7 @@ function environment(overrides = {}) {
     FINANCIAL_E2E_RUNTIME_DATABASE_URL: "postgresql://pharmnos_e2e_runtime@127.0.0.1:55492/pharmnos_financial_e2e_compose",
     FINANCIAL_E2E_COMPOSE_PROJECT: contract.composeProject,
     FINANCIAL_E2E_TARGET_CONTRACT: JSON.stringify(contract),
+    FINANCIAL_E2E_SCHEMA_MODE: contract.schemaMode,
     FINANCIAL_E2E_RUN_ID: contract.runId,
     FINANCIAL_E2E_TARGET_APPROVED: "true",
     FINANCIAL_E2E_AUTHORIZED_TARGET_BINDING: targetContractBinding(contract),

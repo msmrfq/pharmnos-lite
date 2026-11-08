@@ -1,0 +1,36 @@
+{
+  "evidenceVersion": 1,
+  "phase": "INFRASTRUCTURE_CREATION",
+  "status": "PASS",
+  "runId": "recon20261108ah",
+  "targetBinding": "1|recon20261108ah|127.0.0.1|55624|pharmnos_financial_e2e_recon20261108ah|pharmnos_e2e|pharmnos_e2e_runtime|FINANCIAL_E2E_DB_PASSWORD|FINANCIAL_E2E_RUNTIME_DB_PASSWORD|DATABASE_AUTH_CONTEXT_SIGNING_SECRET|pharmnos-financial-e2e|pharmnoslite-financial-e2e-recon20261108ah|financial-e2e-postgres|02310ad970f58850ce589e484eb4d776f69c3571c1fa281150d77d340717dbd8",
+  "targetFingerprint": "fa9eb1e6ec2d75d501814a4ee83eeac4dbd589b3c7d7e8b20879da68db6f7337",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 55624,
+    "databaseName": "pharmnos_financial_e2e_recon20261108ah",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "composeProject": "pharmnoslite-financial-e2e-recon20261108ah",
+    "composeService": "financial-e2e-postgres",
+    "composeProfile": "financial-e2e",
+    "schemaArtifactHash": "02310ad970f58850ce589e484eb4d776f69c3571c1fa281150d77d340717dbd8"
+  },
+  "recordedAt": 1794141898516,
+  "details": {
+    "composeProject": "pharmnoslite-financial-e2e-recon20261108ah",
+    "action": "up",
+    "project": "pharmnoslite-financial-e2e-recon20261108ah",
+    "service": "financial-e2e-postgres",
+    "profile": "financial-e2e",
+    "image": "postgres:17-alpine",
+    "host": "127.0.0.1",
+    "port": "55624",
+    "containerPort": 5432,
+    "restartPolicy": "no",
+    "storage": "tmpfs",
+    "isolationLabel": "financial-e2e-isolated",
+    "containerCount": 1,
+    "containerId": "f73ad22848d94727bc19946b6ea3b21fc81e68550ac98ffb9c10f9d50ec47005"
+  }
+}

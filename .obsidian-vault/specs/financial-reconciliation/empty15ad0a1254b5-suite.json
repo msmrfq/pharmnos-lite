@@ -1,0 +1,349 @@
+{
+  "campaign": "Financial Reconciliation - Classified Runtime Candidates",
+  "runId": "empty15ad0a1254b5",
+  "target": "pharmnos_financial_e2e_empty15ad0a1254b5",
+  "results": [
+    {
+      "id": "S-01",
+      "status": "PASS",
+      "operation": "customer advance creation and idempotent retry",
+      "boundary": "payment action with guarded synthetic session and restricted role; metadata update stubbed",
+      "fixture": {
+        "party": "campaign_customer_bf45f6ec654140f2ac469b4d9b30f691",
+        "initialBalance": 0,
+        "amount": 500
+      },
+      "first": {
+        "ok": true,
+        "data": {
+          "id": "cmw85fza10003148aglwqsib8"
+        }
+      },
+      "replay": {
+        "ok": true,
+        "data": {
+          "id": "cmw85fza10003148aglwqsib8"
+        }
+      },
+      "persisted": {
+        "id": "cmw85fza10003148aglwqsib8",
+        "amount": "500.00",
+        "receipt_no": "PAY-00001",
+        "balance": "-500.00",
+        "ledger_rows": 1,
+        "ledger_amount": "500.00",
+        "payment_rows": 1,
+        "allocations": 0,
+        "invoices": 0,
+        "refunds": 0,
+        "reversals": 0,
+        "audits": 0
+      },
+      "sequenceAfterFirst": [
+        {
+          "next_value": 2
+        }
+      ],
+      "sequenceAfterReplay": [
+        {
+          "next_value": 2
+        }
+      ],
+      "derived": {
+        "gross": 0,
+        "unapplied": 500,
+        "net": -500,
+        "usable": 500,
+        "refundable": 500
+      }
+    },
+    {
+      "id": "S-04",
+      "status": "PASS",
+      "operation": "supplier advance creation and idempotent retry",
+      "boundary": "payment action with guarded synthetic session and restricted role; metadata update stubbed",
+      "fixture": {
+        "party": "campaign_supplier_9bf46e63a81e49beb4cc846f52c83a4b",
+        "initialBalance": 0,
+        "amount": 1000
+      },
+      "first": {
+        "ok": true,
+        "data": {
+          "id": "cmw85fzbt000b148a1o0vefx2"
+        }
+      },
+      "replay": {
+        "ok": true,
+        "data": {
+          "id": "cmw85fzbt000b148a1o0vefx2"
+        }
+      },
+      "persisted": {
+        "id": "cmw85fzbt000b148a1o0vefx2",
+        "amount": "1000.00",
+        "receipt_no": "PAY-00002",
+        "balance": "-1000.00",
+        "ledger_rows": 1,
+        "ledger_amount": "1000.00",
+        "payment_rows": 1,
+        "allocations": 0,
+        "invoices": 0,
+        "refunds": 0,
+        "reversals": 0,
+        "audits": 0
+      },
+      "sequenceAfterFirst": [
+        {
+          "next_value": 3
+        }
+      ],
+      "sequenceAfterReplay": [
+        {
+          "next_value": 3
+        }
+      ],
+      "derived": {
+        "gross": 0,
+        "unapplied": 1000,
+        "net": -1000,
+        "usable": 1000,
+        "refundable": 1000
+      }
+    },
+    {
+      "id": "S-28",
+      "status": "PASS",
+      "operation": "barrier-synchronized tenant receipt allocation",
+      "boundary": "receipt sequence repository using action-equivalent default-isolation restricted-role transactions and signed synthetic context",
+      "fixture": {
+        "receiptTenant": "campaign_receipt_tenant_88c6a2dad8454031b9b47220fb59ba39"
+      },
+      "barrierArrivals": 4,
+      "receipts": [
+        "PAY-00001",
+        "PAY-00003",
+        "PAY-00002",
+        "PAY-00004"
+      ],
+      "failures": [],
+      "persisted": {
+        "next_value": 5,
+        "payments": 0,
+        "customer_ledgers": 0,
+        "supplier_ledgers": 0
+      },
+      "serializable": {
+        "barrierArrivals": 4,
+        "attemptCounts": [
+          2,
+          4,
+          3,
+          1
+        ],
+        "receipts": [
+          "SERIAL-00002",
+          "SERIAL-00004",
+          "SERIAL-00003",
+          "SERIAL-00001"
+        ],
+        "failures": [],
+        "outcomes": [
+          {
+            "caller": 1,
+            "status": "fulfilled",
+            "attempts": [
+              {
+                "attempt": 1,
+                "isolation": "serializable",
+                "backend_pid": 95,
+                "transaction_id": "815",
+                "tenant": "campaign_receipt_tenant_88c6a2dad8454031b9b47220fb59ba39",
+                "prefix": "SERIAL",
+                "error": {
+                  "code": "P2010",
+                  "sqlstate": "40001",
+                  "message": "\nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `40001`. Message: `could not serialize access due to concurrent update`"
+                }
+              },
+              {
+                "attempt": 2,
+                "isolation": "serializable",
+                "backend_pid": 96,
+                "transaction_id": "822",
+                "tenant": "campaign_receipt_tenant_88c6a2dad8454031b9b47220fb59ba39",
+                "prefix": "SERIAL",
+                "receipt": "SERIAL-00002"
+              }
+            ],
+            "receipt": "SERIAL-00002"
+          },
+          {
+            "caller": 2,
+            "status": "fulfilled",
+            "attempts": [
+              {
+                "attempt": 1,
+                "isolation": "serializable",
+                "backend_pid": 94,
+                "transaction_id": "812",
+                "tenant": "campaign_receipt_tenant_88c6a2dad8454031b9b47220fb59ba39",
+                "prefix": "SERIAL",
+                "error": {
+                  "code": "P2010",
+                  "sqlstate": "40001",
+                  "message": "\nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `40001`. Message: `could not serialize access due to concurrent update`"
+                }
+              },
+              {
+                "attempt": 2,
+                "isolation": "serializable",
+                "backend_pid": 95,
+                "transaction_id": "820",
+                "tenant": "campaign_receipt_tenant_88c6a2dad8454031b9b47220fb59ba39",
+                "prefix": "SERIAL",
+                "error": {
+                  "code": "P2010",
+                  "sqlstate": "40001",
+                  "message": "\nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `40001`. Message: `could not serialize access due to concurrent update`"
+                }
+              },
+              {
+                "attempt": 3,
+                "isolation": "serializable",
+                "backend_pid": 95,
+                "transaction_id": "827",
+                "tenant": "campaign_receipt_tenant_88c6a2dad8454031b9b47220fb59ba39",
+                "prefix": "SERIAL",
+                "error": {
+                  "code": "P2010",
+                  "sqlstate": "40001",
+                  "message": "\nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `40001`. Message: `could not serialize access due to concurrent update`"
+                }
+              },
+              {
+                "attempt": 4,
+                "isolation": "serializable",
+                "backend_pid": 95,
+                "transaction_id": "830",
+                "tenant": "campaign_receipt_tenant_88c6a2dad8454031b9b47220fb59ba39",
+                "prefix": "SERIAL",
+                "receipt": "SERIAL-00004"
+              }
+            ],
+            "receipt": "SERIAL-00004"
+          },
+          {
+            "caller": 3,
+            "status": "fulfilled",
+            "attempts": [
+              {
+                "attempt": 1,
+                "isolation": "serializable",
+                "backend_pid": 96,
+                "transaction_id": "813",
+                "tenant": "campaign_receipt_tenant_88c6a2dad8454031b9b47220fb59ba39",
+                "prefix": "SERIAL",
+                "error": {
+                  "code": "P2010",
+                  "sqlstate": "40001",
+                  "message": "\nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `40001`. Message: `could not serialize access due to concurrent update`"
+                }
+              },
+              {
+                "attempt": 2,
+                "isolation": "serializable",
+                "backend_pid": 94,
+                "transaction_id": "821",
+                "tenant": "campaign_receipt_tenant_88c6a2dad8454031b9b47220fb59ba39",
+                "prefix": "SERIAL",
+                "error": {
+                  "code": "P2010",
+                  "sqlstate": "40001",
+                  "message": "\nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `40001`. Message: `could not serialize access due to concurrent update`"
+                }
+              },
+              {
+                "attempt": 3,
+                "isolation": "serializable",
+                "backend_pid": 94,
+                "transaction_id": "826",
+                "tenant": "campaign_receipt_tenant_88c6a2dad8454031b9b47220fb59ba39",
+                "prefix": "SERIAL",
+                "receipt": "SERIAL-00003"
+              }
+            ],
+            "receipt": "SERIAL-00003"
+          },
+          {
+            "caller": 4,
+            "status": "fulfilled",
+            "attempts": [
+              {
+                "attempt": 1,
+                "isolation": "serializable",
+                "backend_pid": 93,
+                "transaction_id": "814",
+                "tenant": "campaign_receipt_tenant_88c6a2dad8454031b9b47220fb59ba39",
+                "prefix": "SERIAL",
+                "receipt": "SERIAL-00001"
+              }
+            ],
+            "receipt": "SERIAL-00001"
+          }
+        ],
+        "persisted": [
+          {
+            "next_value": 5
+          }
+        ],
+        "exhaustedAttempts": 5,
+        "exhaustedError": {
+          "code": "P2010",
+          "meta": {
+            "code": "40001"
+          }
+        },
+        "exhaustedState": [
+          {
+            "receivable_balance": "0.00",
+            "sequences": 0
+          }
+        ],
+        "nonRetryableAttempts": 1,
+        "nonRetryableError": "controlled non-retryable failure"
+      },
+      "catalog": {
+        "enabled": true,
+        "forced": true,
+        "can_delete": false,
+        "can_update_tenant": false,
+        "can_update_value": true
+      },
+      "isolation": {
+        "visible": 0,
+        "updated": 0
+      },
+      "crossInsertError": "\nInvalid `prisma.$executeRaw()` invocation:\n\n\nRaw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table \"payment_receipt_sequences\"`",
+      "crossAfter": [
+        {
+          "prefix": "OTHER",
+          "next_value": 9
+        }
+      ],
+      "rollbackError": "controlled receipt rollback",
+      "rollbackUpdated": 1,
+      "rollback": [
+        {
+          "receivable_balance": "0.00",
+          "sequences": 0
+        }
+      ]
+    }
+  ],
+  "error": null,
+  "summary": {
+    "pass": 3,
+    "fail": 0
+  }
+}

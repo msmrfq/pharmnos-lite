@@ -153,6 +153,7 @@ enum PaymentMode {
 enum FinancialRefundStatus {
   REQUESTED
   APPROVED
+  REJECTED
   COMPLETED
   CANCELLED
 }
@@ -199,6 +200,14 @@ enum AuditEventType {
   PRODUCT_UPDATED
   CUSTOMER_DEACTIVATED
   SUPPLIER_DEACTIVATED
+  ALLOCATION_CREATED
+  ALLOCATION_REVERSED
+  REFUND_REQUESTED
+  REFUND_APPROVED
+  REFUND_REJECTED
+  REFUND_CANCELLED
+  REFUND_COMPLETED
+  PAYMENT_REVERSED
 }
 
 enum LedgerEntryType {
@@ -236,6 +245,7 @@ model tenants {
   supplier_ledger                    supplier_ledgers[]
   audit_logs                         audit_logs[]
   payments                           payments[]
+  payment_receipt_sequences          payment_receipt_sequences[]
   payment_allocations                payment_allocations[]
   payment_refunds                    payment_refunds[]
   payment_reversals                  payment_reversals[]
@@ -1174,24 +1184,36 @@ model payments {
   notes                String?
   idempotency_key      String?
   request_payload_hash String?
+  receipt_no           String?
   created_by           String?
   created_at           DateTime        @default(now())
 
   tenant      tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  customer    customers?            @relation(fields: [customer_id], references: [id])
-  supplier    suppliers?            @relation(fields: [supplier_id], references: [id])
+  customer    customers?            @relation(fields: [tenant_id, customer_id], references: [tenant_id, id], onDelete: Restrict, map: "payments_tenant_customer_fkey")
+  supplier    suppliers?            @relation(fields: [tenant_id, supplier_id], references: [tenant_id, id], onDelete: Restrict, map: "payments_tenant_supplier_fkey")
   invoice     sales_invoices?       @relation(fields: [invoice_id], references: [id])
   allocations payment_allocations[]
   refunds     payment_refunds[]
   reversals   payment_reversals[]
 
   @@unique([tenant_id, idempotency_key], map: "payments_tenant_idempotency_key")
+  @@unique([tenant_id, receipt_no], map: "payments_tenant_receipt_no")
   @@unique([tenant_id, id])
   @@index([tenant_id])
   @@index([tenant_id, customer_id])
   @@index([tenant_id, supplier_id])
   @@index([tenant_id, invoice_id])
   @@index([tenant_id, payment_date])
+}
+
+model payment_receipt_sequences {
+  tenant_id  String
+  prefix     String
+  next_value Int @default(1)
+
+  tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([tenant_id, prefix])
 }
 
 model payment_allocations {
@@ -1212,7 +1234,7 @@ model payment_allocations {
   payment          payments              @relation(fields: [tenant_id, payment_id], references: [tenant_id, id], onDelete: Restrict)
   sales_invoice    sales_invoices?       @relation(fields: [tenant_id, sales_invoice_id], references: [tenant_id, id], onDelete: Restrict)
   purchase_invoice purchase_invoices?    @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict)
-  reversal         allocation_reversals?
+  reversal         allocation_reversals[]
 
   @@unique([tenant_id, id])
   @@unique([tenant_id, idempotency_key], map: "payment_allocations_tenant_idempotency_key")
@@ -1235,8 +1257,8 @@ model allocation_reversals {
   tenant     tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   allocation payment_allocations @relation(fields: [tenant_id, allocation_id], references: [tenant_id, id], onDelete: Restrict)
 
-  @@unique([tenant_id, allocation_id], map: "allocation_reversal_once")
   @@unique([tenant_id, idempotency_key], map: "allocation_reversals_tenant_idempotency_key")
+  @@index([tenant_id, allocation_id, reversed_at])
   @@index([tenant_id, reversed_at])
 }
 
@@ -1249,10 +1271,17 @@ model payment_refunds {
   idempotency_key      String
   request_payload_hash String
   requested_at         DateTime              @default(now())
+  approved_at          DateTime?
+  rejected_at          DateTime?
   completed_at         DateTime?
+  cancelled_at         DateTime?
   requested_by         String?
+  approved_by          String?
+  rejected_by          String?
   completed_by         String?
+  cancelled_by         String?
   reason               String?
+  resolution_reason    String?
 
   tenant  tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   payment payments @relation(fields: [tenant_id, payment_id], references: [tenant_id, id], onDelete: Restrict)

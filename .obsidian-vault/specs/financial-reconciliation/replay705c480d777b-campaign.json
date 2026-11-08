@@ -1,0 +1,176 @@
+{
+  "runId": "replay705c480d777b",
+  "port": 51494,
+  "database": "pharmnos_financial_e2e_replay705c480d777b",
+  "project": "pharmnoslite-financial-e2e-replay705c480d777b",
+  "contract": {
+    "version": 1,
+    "runId": "replay705c480d777b",
+    "host": "127.0.0.1",
+    "port": 51494,
+    "databaseName": "pharmnos_financial_e2e_replay705c480d777b",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "bootstrapCredentialSource": "FINANCIAL_E2E_DB_PASSWORD",
+    "runtimeCredentialSource": "FINANCIAL_E2E_RUNTIME_DB_PASSWORD",
+    "contextSecretSource": "DATABASE_AUTH_CONTEXT_SIGNING_SECRET",
+    "marker": "pharmnos-financial-e2e",
+    "composeProject": "pharmnoslite-financial-e2e-replay705c480d777b",
+    "composeService": "financial-e2e-postgres",
+    "composeProfile": "financial-e2e",
+    "schemaArtifact": "prisma/financial-e2e-schema-provisioning.generated.sql",
+    "schemaArtifactHash": "cfedef0aacd7e42ee2beb1c70e192decac10d5d6600cfb877700801f54eb70fe",
+    "authorizedAt": 1794151032834,
+    "expiresAt": 1794165432834,
+    "schemaMode": "PRISMA_MIGRATIONS_REPLAYED",
+    "migrationInventoryHash": "35f42eef7bd099c83c87c3fcf68b25e5b73c4f6d0e07bbfc605216d166131bc8"
+  },
+  "fingerprint": "53d8e2ae632eaeea1a46183d186f6033fc0c19b0973f1f1141f718b7ffcb2fa0",
+  "outcomes": {
+    "infrastructure": "PASS",
+    "emptyDatabase": "PASS",
+    "migrationReplay": "PASS",
+    "initialization": "PASS",
+    "restrictedRole": "PASS",
+    "suite": "FAIL",
+    "cleanup": "PASS"
+  },
+  "migrationInventory": [
+    {
+      "name": "0001_baseline",
+      "checksum": "d7d618cb6e5f30a1f62efbdf2fdf36dc7eb5b557de4da417ee8165f551512c1d"
+    },
+    {
+      "name": "0002_purchase_line_gst_model",
+      "checksum": "f6a618c230128e230b62b1fe358c3d623be2c428b6b5c7b0df19a952c1d86c4f"
+    },
+    {
+      "name": "0003_gst_treatment_facts",
+      "checksum": "2fd3452ed8063a9eaf82c9624b8e6b5e5eab92dfe5fb6b92379956c0894ed626"
+    },
+    {
+      "name": "0004_gst_catalog_and_rules",
+      "checksum": "6547957ae30c63771871f15ce0d467a76b24654c6331ab06971a0af530e26f5e"
+    },
+    {
+      "name": "0005_sales_gst_rule_snapshots",
+      "checksum": "79c8cc3353c5c901984216246fbc11ddf8a5de0751eadd14419aeba25f449d65"
+    },
+    {
+      "name": "0006_purchase_gst_rule_snapshots",
+      "checksum": "e01ba8fcce9f934e73db85b37e49772f59ee1d2206b012f2853cdd3cbe968c69"
+    },
+    {
+      "name": "0007_gst_governance_controls",
+      "checksum": "9d2ad769aeee2e5eead741d174b1bd83b921f76687446c3d4d7b69d8b564a5e1"
+    },
+    {
+      "name": "0008_hsn_governance_integrity",
+      "checksum": "a52333f0526cf512588f488ca2c488d2322f211ca7a81505dad381bda111e047"
+    },
+    {
+      "name": "0009_purchase_gst_line_acceptance",
+      "checksum": "44fe339fee5c3ab1cb810084256e2f274414ca909029eae4cbd81874bb101c1e"
+    },
+    {
+      "name": "0010_inventory_valuation_pending_state",
+      "checksum": "d9fd9a9c9bf1e9d5b0a2761cc2478c5ee2e94133bdb4064b99691b1cb70976e3"
+    },
+    {
+      "name": "0011_inventory_valuation_decision_history",
+      "checksum": "d7148f60b6cfb2493af7c8a5216778de80acd7c8e17127350daa7231fffab768"
+    },
+    {
+      "name": "0012_payment_integrity",
+      "checksum": "6da50f365d40b3c4e81854ffd9bffb31725f3b31afed5fb0979ca4c2caadf953"
+    },
+    {
+      "name": "0013_payment_permission_backfill",
+      "checksum": "fde67e64a30e06e687d3f81b692957dafb9368c772d3c532d594bf3bbb25e790"
+    },
+    {
+      "name": "0014_supplier_invoice_uniqueness",
+      "checksum": "5a22265f196e8a68077703cbe19268e514c78148ad4f1490b26a8ed2afdfa4b5"
+    },
+    {
+      "name": "0015_purchase_finalized_immutability",
+      "checksum": "58078a5e79953fa68f010a289c6860fa9e5ba8ab2239670d452f59725e169111"
+    },
+    {
+      "name": "0016_supplier_invoice_trimmed_uniqueness",
+      "checksum": "43dbb060f772346bbfb40dc444abd4f2595af7597e688d0353acf32d01302c87"
+    },
+    {
+      "name": "0017_invoice_modernization_artifacts",
+      "checksum": "3928e3f7e12944ef9973b5a6f6e7332f5606347c683278d7697e6aff9639a37b"
+    },
+    {
+      "name": "0018_supplier_invoice_documents",
+      "checksum": "05400bd904bb02fee654b73b258d5dfdaf502fedf736da843e82b5a01b6cce4a"
+    },
+    {
+      "name": "0019_invoice_document_lifecycle_metadata",
+      "checksum": "2396285527c7e20fad6bb74f969c0c372b1b368cecbcb6a7d60bed2e47d01acb"
+    },
+    {
+      "name": "0020_supplier_document_rls_and_active_guard",
+      "checksum": "430ac6236b756e0eec1192532c69959ea4395b1884830306362a15e0a2579191"
+    },
+    {
+      "name": "0021_reject_finalized_purchase_deletes",
+      "checksum": "1784222808c72b8a94ea84d06f9ebca04add8bf88200f0f6000ebe81acebc600"
+    },
+    {
+      "name": "0022_financial_reconciliation_foundation",
+      "checksum": "25ec235e9b5144442e3930094b7223ab71dc89e654f260f28d5bde337c83685f"
+    },
+    {
+      "name": "0023_allow_multiple_allocation_reversals",
+      "checksum": "d267875e0b8845e8f5b105d0cf1c2a433080e19b679e17874a305894fb738d6a"
+    },
+    {
+      "name": "0024_add_reconciliation_audit_event",
+      "checksum": "86c067b91d5fc846fc6792e9bf3aec82a942fb151e2a68f00dfd8722a735c3d0"
+    },
+    {
+      "name": "0025_payment_receipt_sequence",
+      "checksum": "fc319b75ed580018eedba7846c1589c2a4a1ae9ac6168639aaab028750529f04"
+    },
+    {
+      "name": "0026_add_reconciliation_audit_events",
+      "checksum": "5acf2401f78e766be07188b5371832ec416fbe7150cebf777c75be0e138c4df7"
+    },
+    {
+      "name": "0027_refund_lifecycle",
+      "checksum": "e909c150783f11bb4afde91190f21a062f9f09cb2d35e7ae25ae1dca94116315"
+    }
+  ],
+  "sourceHashes": {
+    "prisma/schema.prisma": "3917351f2542a10a9c9f286c2ad043501bfe4a2ed451d8d7aae8379e19b2bbb7",
+    "src/domain/services/financial-reconciliation.service.ts": "9114bf9ff77833b119fe1a03885903e1364a95e4f9b536bdf86ca6452ad1400d",
+    "src/app/_actions/reconciliation.actions.ts": "f2efdbcbade1ce885331417a2c777abb207eaa2cf548b770fb591616494eae59",
+    "scripts/financial-reconciliation-runtime-harness.cjs": "aa5ad3c96b7071a2ce7a2f33da3732e29a6d99f59c183416a64d76c252f3bfff",
+    "scripts/financial-e2e-security-behavior.mjs": "92dab70a45a349852e3dbb20788b2d77cc640e450eb45df14da13aa4545ec377"
+  },
+  "migrationOutput": {
+    "status": 0,
+    "stdout": "Prisma schema loaded from prisma\\schema.prisma\nDatasource \"db\": PostgreSQL database \"pharmnos_financial_e2e_replay705c480d777b\", schema \"public\" at \"127.0.0.1:51494\"\n\n27 migrations found in prisma/migrations\n\nApplying migration `0001_baseline`\nApplying migration `0002_purchase_line_gst_model`\nApplying migration `0003_gst_treatment_facts`\nApplying migration `0004_gst_catalog_and_rules`\nApplying migration `0005_sales_gst_rule_snapshots`\nApplying migration `0006_purchase_gst_rule_snapshots`\nApplying migration `0007_gst_governance_controls`\nApplying migration `0008_hsn_governance_integrity`\nApplying migration `0009_purchase_gst_line_acceptance`\nApplying migration `0010_inventory_valuation_pending_state`\nApplying migration `0011_inventory_valuation_decision_history`\nApplying migration `0012_payment_integrity`\nApplying migration `0013_payment_permission_backfill`\nApplying migration `0014_supplier_invoice_uniqueness`\nApplying migration `0015_purchase_finalized_immutability`\nApplying migration `0016_supplier_invoice_trimmed_uniqueness`\nApplying migration `0017_invoice_modernization_artifacts`\nApplying migration `0018_supplier_invoice_documents`\nApplying migration `0019_invoice_document_lifecycle_metadata`\nApplying migration `0020_supplier_document_rls_and_active_guard`\nApplying migration `0021_reject_finalized_purchase_deletes`\nApplying migration `0022_financial_reconciliation_foundation`\nApplying migration `0023_allow_multiple_allocation_reversals`\nApplying migration `0024_add_reconciliation_audit_event`\nApplying migration `0025_payment_receipt_sequence`\nApplying migration `0026_add_reconciliation_audit_events`\nApplying migration `0027_refund_lifecycle`\n\nThe following migration(s) have been applied:\n\nmigrations/\n  └─ 0001_baseline/\n    └─ migration.sql\n  └─ 0002_purchase_line_gst_model/\n    └─ migration.sql\n  └─ 0003_gst_treatment_facts/\n    └─ migration.sql\n  └─ 0004_gst_catalog_and_rules/\n    └─ migration.sql\n  └─ 0005_sales_gst_rule_snapshots/\n    └─ migration.sql\n  └─ 0006_purchase_gst_rule_snapshots/\n    └─ migration.sql\n  └─ 0007_gst_governance_controls/\n    └─ migration.sql\n  └─ 0008_hsn_governance_integrity/\n    └─ migration.sql\n  └─ 0009_purchase_gst_line_acceptance/\n    └─ migration.sql\n  └─ 0010_inventory_valuation_pending_state/\n    └─ migration.sql\n  └─ 0011_inventory_valuation_decision_history/\n    └─ migration.sql\n  └─ 0012_payment_integrity/\n    └─ migration.sql\n  └─ 0013_payment_permission_backfill/\n    └─ migration.sql\n  └─ 0014_supplier_invoice_uniqueness/\n    └─ migration.sql\n  └─ 0015_purchase_finalized_immutability/\n    └─ migration.sql\n  └─ 0016_supplier_invoice_trimmed_uniqueness/\n    └─ migration.sql\n  └─ 0017_invoice_modernization_artifacts/\n    └─ migration.sql\n  └─ 0018_supplier_invoice_documents/\n    └─ migration.sql\n  └─ 0019_invoice_document_lifecycle_metadata/\n    └─ migration.sql\n  └─ 0020_supplier_document_rls_and_active_guard/\n    └─ migration.sql\n  └─ 0021_reject_finalized_purchase_deletes/\n    └─ migration.sql\n  └─ 0022_financial_reconciliation_foundation/\n    └─ migration.sql\n  └─ 0023_allow_multiple_allocation_reversals/\n    └─ migration.sql\n  └─ 0024_add_reconciliation_audit_event/\n    └─ migration.sql\n  └─ 0025_payment_receipt_sequence/\n    └─ migration.sql\n  └─ 0026_add_reconciliation_audit_events/\n    └─ migration.sql\n  └─ 0027_refund_lifecycle/\n    └─ migration.sql\n      \nAll migrations have been successfully applied.\n",
+    "stderr": ""
+  },
+  "initializationOutput": {
+    "status": 0,
+    "stdout": "PROVISIONING=PASS\nSCHEMA_MODE=PRISMA_MIGRATIONS_REPLAYED\nSECURITY_CONTROLS_APPLIED=grants,rls,immutable-history,finalized-invoice,posting-transition\nTARGET_DATABASE=pharmnos_financial_e2e_replay705c480d777b\nTARGET_BOOTSTRAP_ROLE=pharmnos_e2e\nTARGET_RUNTIME_ROLE=pharmnos_e2e_runtime\nRLS_TABLES=38\nPOLICIES=100\nTRIGGERS=20\nCONSTRAINTS=160\nRUNTIME_DELETE_PRIVILEGES=0\nRUNTIME_RLS=VERIFIED_PRISMA_MIGRATIONS_REPLAYED\nGST_SCENARIOS=NOT_EXECUTED\n",
+    "stderr": ""
+  },
+  "securityOutput": {
+    "status": 0,
+    "stdout": "{\n  \"run\": \"security-1794151041724\",\n  \"databaseName\": \"pharmnos_financial_e2e_replay705c480d777b\",\n  \"runtimeRole\": \"pharmnos_e2e_runtime\",\n  \"fixtureCleanup\": true,\n  \"remainingRows\": {\n    \"tenants\": 0,\n    \"users\": 0,\n    \"customers\": 0,\n    \"suppliers\": 0,\n    \"payments\": 0,\n    \"payment_allocations\": 0,\n    \"allocation_reversals\": 0,\n    \"payment_refunds\": 0,\n    \"audit_logs\": 0\n  },\n  \"results\": [\n    {\n      \"id\": \"restricted-role-attributes-and-grants\",\n      \"expected\": \"LOGIN/NOSUPERUSER/NOBYPASSRLS; scoped DML\",\n      \"observed\": {\n        \"currentRole\": \"pharmnos_e2e_runtime\",\n        \"canLogin\": true,\n        \"superuser\": false,\n        \"bypassRls\": false,\n        \"canSelectPayments\": true,\n        \"canInsertPayments\": true,\n        \"canDeletePayments\": false\n      },\n      \"status\": \"PASS\"\n    },\n    {\n      \"id\": \"same-tenant-financial-operations\",\n      \"expected\": \"read and write own customer, supplier, payment, allocation, reversal, refund and audit\",\n      \"observed\": {\n        \"counts\": {\n          \"customers\": 1,\n          \"suppliers\": 1,\n          \"payments\": 1,\n          \"payment_allocations\": 1,\n          \"allocation_reversals\": 1,\n          \"payment_refunds\": 1,\n          \"audit_logs\": 1\n        },\n        \"customerUpdate\": 1,\n        \"supplierUpdate\": 1,\n        \"paymentUpdate\": 1,\n        \"allocationUpdate\": 1,\n        \"reversalUpdate\": 1,\n        \"refundUpdate\": 1,\n        \"auditInsert\": 1\n      },\n      \"status\": \"PASS\"\n    },\n    {\n      \"id\": \"same-tenant-b-financial-operations\",\n      \"expected\": \"tenant B can read its own financial records and update its customer\",\n      \"observed\": {\n        \"counts\": {\n          \"customers\": 1,\n          \"suppliers\": 1,\n          \"payments\": 1,\n          \"payment_allocations\": 1,\n          \"allocation_reversals\": 1,\n          \"payment_refunds\": 1,\n          \"audit_logs\": 1\n        },\n        \"customerUpdate\": 1\n      },\n      \"status\": \"PASS\"\n    },\n    {\n      \"id\": \"cross-tenant-financial-isolation-b-to-a\",\n      \"expected\": \"no cross-tenant reads or writes for protected financial records\",\n      \"observed\": {\n        \"counts\": {\n          \"customers\": 0,\n          \"suppliers\": 0,\n          \"payments\": 0,\n          \"payment_allocations\": 0,\n          \"allocation_reversals\": 0,\n          \"payment_refunds\": 0,\n          \"audit_logs\": 0\n        },\n        \"customerUpdate\": 0,\n        \"supplierUpdate\": 0,\n        \"paymentUpdate\": 0,\n        \"allocationUpdate\": 0,\n        \"reversalUpdate\": 0,\n        \"refundUpdate\": 0\n      },\n      \"status\": \"PASS\"\n    },\n    {\n      \"id\": \"cross-tenant-financial-isolation-a-to-b\",\n      \"expected\": \"no cross-tenant reads or writes for protected financial records\",\n      \"observed\": {\n        \"counts\": {\n          \"customers\": 0,\n          \"suppliers\": 0,\n          \"payments\": 0,\n          \"payment_allocations\": 0,\n          \"allocation_reversals\": 0,\n          \"payment_refunds\": 0,\n          \"audit_logs\": 0\n        },\n        \"customerUpdate\": 0,\n        \"supplierUpdate\": 0,\n        \"paymentUpdate\": 0,\n        \"allocationUpdate\": 0,\n        \"reversalUpdate\": 0,\n        \"refundUpdate\": 0\n      },\n      \"status\": \"PASS\"\n    },\n    {\n      \"id\": \"cross-tenant-payment-insert\",\n      \"expected\": \"RLS denial\",\n      \"observed\": \"42501:new row violates row-level security policy for table \\\"payments\\\"\",\n      \"status\": \"PASS\"\n    },\n    {\n      \"id\": \"cross-tenant-audit-insert\",\n      \"expected\": \"RLS denial\",\n      \"observed\": \"42501:new row violates row-level security policy for table \\\"audit_logs\\\"\",\n      \"status\": \"PASS\"\n    },\n    {\n      \"id\": \"cross-tenant-counterparty-reference\",\n      \"expected\": \"composite tenant FK denial\",\n      \"observed\": \"23503:insert or update on table \\\"payments\\\" violates foreign key constraint \\\"payments_tenant_customer_fkey\\\"\",\n      \"status\": \"PASS\"\n    },\n    {\n      \"id\": \"cross-tenant-allocation-reference\",\n      \"expected\": \"composite tenant FK denial\",\n      \"observed\": \"23503:insert or update on table \\\"payment_allocations\\\" violates foreign key constraint \\\"payment_allocations_payment_fkey\\\"\",\n      \"status\": \"PASS\"\n    },\n    {\n      \"id\": \"cross-tenant-refund-reference\",\n      \"expected\": \"composite tenant FK denial\",\n      \"observed\": \"23503:insert or update on table \\\"payment_refunds\\\" violates foreign key constraint \\\"payment_refunds_payment_fkey\\\"\",\n      \"status\": \"PASS\"\n    },\n    {\n      \"id\": \"cross-tenant-financial-state-unchanged\",\n      \"expected\": \"both tenants' financial and audit records remain unchanged\",\n      \"observed\": {\n        \"before\": \"1afd9338539b27984202d87d78e492779a7f4ce16f949603f654cb629604aea0\",\n        \"after\": \"1afd9338539b27984202d87d78e492779a7f4ce16f949603f654cb629604aea0\"\n      },\n      \"status\": \"PASS\"\n    },\n    {\n      \"id\": \"restricted-role-fixture-cleanup\",\n      \"expected\": \"all campaign fixture rows removed\",\n      \"observed\": {\n        \"fixtureCleanup\": true,\n        \"remainingRows\": {\n          \"tenants\": 0,\n          \"users\": 0,\n          \"customers\": 0,\n          \"suppliers\": 0,\n          \"payments\": 0,\n          \"payment_allocations\": 0,\n          \"allocation_reversals\": 0,\n          \"payment_refunds\": 0,\n          \"audit_logs\": 0\n        }\n      },\n      \"status\": \"PASS\"\n    }\n  ],\n  \"applicationAuthentication\": \"Signed database context exercised; Supabase Auth not exercised.\"\n}\n",
+    "stderr": ""
+  },
+  "suiteOutput": {
+    "status": 1,
+    "stdout": "prisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `40001`. Message: `could not serialize access due to concurrent update`\nprisma:error \nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `40001`. Message: `could not serialize access due to read/write dependencies among transactions`\n{\"pass\":25,\"fail\":1,\"blocked\":26}\n",
+    "stderr": ""
+  },
+  "error": "Reconciliation harness failed with exit 1."
+}

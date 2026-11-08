@@ -65,6 +65,14 @@ It is a complete baseline, not a safe additive migration for a populated
 database. A future additive wrapper must perform catalog and data guards before
 creating or altering any object.
 
+For current receipt-sequence parity, regenerate offline with
+`node scripts/generate-financial-e2e-schema.mjs --write` and verify with
+`node scripts/generate-financial-e2e-schema.mjs --check`. The generator combines
+Prisma's from-empty output, the positive sequence check from migration 0025,
+and the unchanged governance controls source. It does not authorize or execute
+database initialization. Generated-baseline runtime verification requires a
+separately authorized disposable target.
+
 `prisma/financial-e2e-additive-provisioning.review.sql` is the corresponding
 review wrapper. It stops on a non-empty public schema, includes the generated
 baseline for static review, and deliberately rolls back. It is not executable

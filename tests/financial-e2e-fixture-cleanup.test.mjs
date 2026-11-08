@@ -6,7 +6,7 @@ import {
     createFixtureManifest,
     recordFixtureIdentifiers,
 } from "../scripts/financial-e2e-fixture-lifecycle.mjs";
-import { createTargetContract, schemaArtifactHash, targetContractBinding } from "../scripts/financial-e2e-target-contract.mjs";
+import { createTargetContract, migrationInventoryHash, schemaArtifactHash, targetContractBinding } from "../scripts/financial-e2e-target-contract.mjs";
 
 const targetUrl = "postgresql://pharmnos_e2e@127.0.0.1:55435/pharmnos_financial_e2e_0419";
 const runtimeUrl = "postgresql://pharmnos_e2e_runtime@127.0.0.1:55435/pharmnos_financial_e2e_0419";
@@ -19,6 +19,8 @@ const contract = createTargetContract({
     databaseName: "pharmnos_financial_e2e_0419",
     composeProject: "pharmnoslite-financial-e2e-0419",
     schemaArtifactHash: schemaArtifactHash(),
+    schemaMode: "PRISMA_MIGRATIONS_REPLAYED",
+    migrationInventoryHash: migrationInventoryHash(),
     expiresAt: Date.now() + 60_000,
 });
 const identityEvidence = {
@@ -90,6 +92,13 @@ test("rejects target-contract mismatch", async () => {
     await assert.rejects(
         cleanup({ targetContract: { ...contract, databaseName: "pharmnos_financial_e2e_other" } }),
         /target contract|does not match/i,
+    );
+});
+
+test("rejects a contract with altered authorization times at fixture cleanup", async () => {
+    await assert.rejects(
+        cleanup({ targetContract: { ...contract, expiresAt: contract.expiresAt + 1000 } }),
+        /not bound to the approved test target/i,
     );
 });
 

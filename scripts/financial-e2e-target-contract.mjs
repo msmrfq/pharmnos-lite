@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
+import path from "node:path";
 import { isBlockedHost } from "./financial-e2e-safety.mjs";
 
 export const TARGET_CONTRACT_VERSION = 1;
@@ -12,6 +13,7 @@ export const REQUIRED_BOOTSTRAP_CREDENTIAL_SOURCE = "FINANCIAL_E2E_DB_PASSWORD";
 export const REQUIRED_RUNTIME_CREDENTIAL_SOURCE = "FINANCIAL_E2E_RUNTIME_DB_PASSWORD";
 export const REQUIRED_CONTEXT_SECRET_SOURCE = "DATABASE_AUTH_CONTEXT_SIGNING_SECRET";
 export const REQUIRED_SCHEMA_ARTIFACT = "prisma/financial-e2e-schema-provisioning.generated.sql";
+export const REQUIRED_GOVERNANCE_ARTIFACT = "prisma/financial-e2e-schema-governance-controls.sql";
 
 function isLoopbackHost(host) {
     return ["127.0.0.1", "::1", "localhost"].includes(String(host ?? "").toLowerCase());
@@ -50,7 +52,7 @@ function exactRunId(value) {
 }
 
 function exactProject(value) {
-    return /^pharmnoslite(?:-financial-e2e(?:-[a-z0-9][a-z0-9_-]*)?)?$/.test(String(value ?? ""));
+    return /^pharmnoslite-financial-e2e-[a-z0-9][a-z0-9_-]*$/.test(String(value ?? ""));
 }
 
 function freeze(value) {
@@ -62,7 +64,7 @@ function freeze(value) {
 
 export function targetContractBinding(contract) {
     if (!contract || typeof contract !== "object") return null;
-    return [
+    const values = [
         contract.version,
         contract.runId,
         contract.host,
@@ -76,8 +78,42 @@ export function targetContractBinding(contract) {
         contract.marker,
         contract.composeProject,
         contract.composeService,
+        contract.composeProfile,
+        contract.schemaArtifact,
         contract.schemaArtifactHash,
-    ].join("|");
+        contract.authorizedAt,
+        contract.expiresAt,
+    ];
+    values.push(contract.schemaMode);
+    if (contract.schemaMode === "EMPTY_BASELINE") values.push(contract.governanceArtifactHash);
+    if (contract.schemaMode === "PRISMA_MIGRATIONS_REPLAYED") values.push(contract.migrationInventoryHash);
+    return values.join("|");
+}
+
+export function targetContractFingerprint(contract) {
+    const canonical = {
+        version: contract.version,
+        runId: contract.runId,
+        host: contract.host,
+        port: contract.port,
+        databaseName: contract.databaseName,
+        bootstrapRole: contract.bootstrapRole,
+        runtimeRole: contract.runtimeRole,
+        bootstrapCredentialSource: contract.bootstrapCredentialSource,
+        runtimeCredentialSource: contract.runtimeCredentialSource,
+        marker: contract.marker,
+        composeProject: contract.composeProject,
+        composeService: contract.composeService,
+        composeProfile: contract.composeProfile,
+        schemaArtifactPath: contract.schemaArtifact,
+        schemaArtifactHash: contract.schemaArtifactHash,
+        authorizedAt: contract.authorizedAt,
+        expiresAt: contract.expiresAt,
+        schemaMode: contract.schemaMode,
+    };
+    if (contract.schemaMode === "EMPTY_BASELINE") canonical.governanceArtifactHash = contract.governanceArtifactHash;
+    if (contract.schemaMode === "PRISMA_MIGRATIONS_REPLAYED") canonical.migrationInventoryHash = contract.migrationInventoryHash;
+    return crypto.createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
 }
 
 export function createTargetContract({
@@ -95,6 +131,9 @@ export function createTargetContract({
     composeService = REQUIRED_TARGET_SERVICE,
     composeProfile = REQUIRED_TARGET_PROFILE,
     schemaArtifactHash,
+    schemaMode,
+    migrationInventoryHash,
+    governanceArtifactHash,
     authorizedAt = Date.now(),
     expiresAt,
 } = {}) {
@@ -120,6 +159,9 @@ export function createTargetContract({
         authorizedAt,
         expiresAt,
     };
+    contract.schemaMode = schemaMode;
+    if (migrationInventoryHash !== undefined) contract.migrationInventoryHash = migrationInventoryHash;
+    if (governanceArtifactHash !== undefined) contract.governanceArtifactHash = governanceArtifactHash;
     const result = validateTargetContract({
         contract,
         targetUrl,
@@ -147,7 +189,7 @@ export function validateTargetContract({
     if (!Number.isInteger(contract.port) || contract.port <= 0 || contract.port > 65535 || contract.port === 5432) {
         errors.push("Target contract port must be a non-default disposable port.");
     }
-    if (!/^pharmnos_financial_e2e(?:_[a-z0-9][a-z0-9_-]*)?$/.test(contract.databaseName ?? "")) {
+    if (!/^pharmnos_financial_e2e_[a-z0-9][a-z0-9_-]*$/.test(contract.databaseName ?? "")) {
         errors.push("Target contract database name is not disposable.");
     }
     if (contract.bootstrapRole !== REQUIRED_BOOTSTRAP_ROLE ||
@@ -169,6 +211,32 @@ export function validateTargetContract({
     if (contract.schemaArtifact !== REQUIRED_SCHEMA_ARTIFACT ||
         !/^[a-f0-9]{64}$/.test(contract.schemaArtifactHash ?? "")) {
         errors.push("Target contract schema artifact fingerprint is invalid.");
+    } else if (schemaArtifactHash() !== contract.schemaArtifactHash) {
+        errors.push("Target contract schema artifact fingerprint does not match the checked-in artifact.");
+    }
+    const permitted = new Set([
+        "version", "runId", "host", "port", "databaseName", "bootstrapRole", "runtimeRole",
+        "bootstrapCredentialSource", "runtimeCredentialSource", "contextSecretSource", "marker",
+        "composeProject", "composeService", "composeProfile", "schemaArtifact", "schemaArtifactHash",
+        "authorizedAt", "expiresAt", "schemaMode", "migrationInventoryHash", "governanceArtifactHash",
+    ]);
+    if (Object.keys(contract).some((key) => !permitted.has(key))) errors.push("Target contract contains unknown fields.");
+    if (contract.schemaMode === "PRISMA_MIGRATIONS_REPLAYED") {
+        if (!/^[a-f0-9]{64}$/.test(contract.migrationInventoryHash ?? "") ||
+            Object.hasOwn(contract, "governanceArtifactHash")) {
+            errors.push("Migration-replay contracts require the explicit mode and migration inventory fingerprint, without baseline-only fields.");
+        } else if (migrationInventoryHash() !== contract.migrationInventoryHash) {
+            errors.push("Target contract migration inventory fingerprint does not match the current migrations.");
+        }
+    } else if (contract.schemaMode === "EMPTY_BASELINE") {
+        if (!/^[a-f0-9]{64}$/.test(contract.governanceArtifactHash ?? "") ||
+            Object.hasOwn(contract, "migrationInventoryHash")) {
+            errors.push("EMPTY_BASELINE contracts require a governance artifact fingerprint and no migration inventory.");
+        } else if (governanceArtifactHash() !== contract.governanceArtifactHash) {
+            errors.push("Target contract governance artifact fingerprint does not match the checked-in artifact.");
+        }
+    } else {
+        errors.push("Target contract requires an explicit supported schema mode.");
     }
     if (!Number.isFinite(contract.authorizedAt) || contract.authorizedAt > now) {
         errors.push("Target contract authorization time is invalid.");
@@ -227,11 +295,39 @@ export function loadTargetContractFromEnv(env = process.env) {
         ordinaryUrl: env.DATABASE_URL,
     });
     if (!result.ok) throw new Error(result.errors.join(" "));
+    if (env.FINANCIAL_E2E_SCHEMA_MODE !== contract.schemaMode) {
+        throw new Error("FINANCIAL_E2E_SCHEMA_MODE does not match the immutable target contract.");
+    }
+    if (env.FINANCIAL_E2E_AUTHORIZED_TARGET_BINDING !== targetContractBinding(contract)) {
+        throw new Error("FINANCIAL_E2E_AUTHORIZED_TARGET_BINDING does not match the immutable target contract.");
+    }
+    if (env.FINANCIAL_E2E_AUTHORIZED_TARGET_FINGERPRINT !== targetContractFingerprint(contract)) {
+        throw new Error("FINANCIAL_E2E_AUTHORIZED_TARGET_FINGERPRINT does not match the immutable target contract.");
+    }
     return freeze(contract);
 }
 
 export function schemaArtifactHash(path = REQUIRED_SCHEMA_ARTIFACT) {
     return crypto.createHash("sha256").update(fs.readFileSync(path)).digest("hex");
+}
+
+export function governanceArtifactHash() {
+    return schemaArtifactHash(REQUIRED_GOVERNANCE_ARTIFACT);
+}
+
+export function migrationInventoryHash(directory = "prisma/migrations") {
+    const entries = fs.readdirSync(directory, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort()
+        .map((name) => ({
+            name,
+            sha256: crypto.createHash("sha256")
+                .update(fs.readFileSync(path.join(directory, name, "migration.sql")))
+                .digest("hex"),
+        }));
+    if (entries.length === 0) throw new Error("The Prisma migration inventory is empty.");
+    return crypto.createHash("sha256").update(JSON.stringify(entries)).digest("hex");
 }
 
 export async function verifyTargetSchema(client, contract) {

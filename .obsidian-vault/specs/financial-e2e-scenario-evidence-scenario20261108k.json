@@ -1,0 +1,287 @@
+{
+  "campaign": "Financial Reconciliation - Runtime Scenario Harness",
+  "target": "run-scoped disposable PostgreSQL only",
+  "fixture": {
+    "tenants": {
+      "a": "tenant_a_scenario20261108k_44ab413e26e643a7ad548669fc3f3846",
+      "b": "tenant_b_scenario20261108k_deba00db76324b0bb99dada1217a6966"
+    }
+  },
+  "results": [
+    {
+      "id": "S-02",
+      "status": "PASS",
+      "operation": "allocatePayment",
+      "persisted": {
+        "payments": 3800,
+        "allocations": 400,
+        "refunds": 0,
+        "reversals": 0,
+        "allocation_reversals": 0,
+        "sales_paid": 400,
+        "sales_due": 600
+      },
+      "allocationId": "cmw7p1wj50002tlqadx7huw7c"
+    },
+    {
+      "id": "S-03",
+      "status": "PASS",
+      "operation": "conflicting idempotency payload rejected"
+    },
+    {
+      "id": "S-14",
+      "status": "PASS",
+      "operation": "reverseAllocation",
+      "persisted": {
+        "payments": 3800,
+        "allocations": 400,
+        "refunds": 0,
+        "reversals": 0,
+        "allocation_reversals": 1,
+        "sales_paid": 0,
+        "sales_due": 1000
+      },
+      "reversalId": "cmw7p1wl00007tlqavj9qsaxs"
+    },
+    {
+      "id": "S-11",
+      "status": "PASS",
+      "operation": "completeRefund",
+      "persisted": {
+        "payments": 3800,
+        "allocations": 400,
+        "refunds": 200,
+        "reversals": 0,
+        "allocation_reversals": 1,
+        "sales_paid": 0,
+        "sales_due": 1000
+      },
+      "refundId": "cmw7p1wlx000atlqavxkuzk56"
+    },
+    {
+      "id": "S-12",
+      "status": "PASS",
+      "operation": "partial allocation refund and idempotent retry",
+      "persisted": {
+        "paymentAmount": 1000,
+        "activeAllocations": 400,
+        "refunds": 200,
+        "paymentReversals": 0,
+        "allocationReversals": 200,
+        "invoicePaid": 400,
+        "invoiceDue": 200,
+        "usable": 400
+      },
+      "allocationId": "cmw7p1wmw000ftlqajkszg0nz",
+      "refundId": "cmw7p1wo1000ktlqam8idv3e5"
+    },
+    {
+      "id": "S-13",
+      "status": "PASS",
+      "operation": "full refund after partial refund and idempotent retry",
+      "persisted": {
+        "paymentAmount": 1000,
+        "activeAllocations": 0,
+        "refunds": 1000,
+        "paymentReversals": 0,
+        "allocationReversals": 600,
+        "invoicePaid": 0,
+        "invoiceDue": 600,
+        "usable": 0
+      },
+      "refundId": "cmw7p1wp7000stlqa5r31mxn3"
+    },
+    {
+      "id": "S-05",
+      "status": "PASS",
+      "operation": "supplier allocation"
+    },
+    {
+      "id": "S-15",
+      "status": "PASS",
+      "operation": "payment reversal and idempotent retry",
+      "persisted": {
+        "reversal_amount": "1200.00",
+        "allocation_reversals": "1",
+        "active_allocations": "0.00"
+      },
+      "reversalId": "cmw7p1wql0011tlqa1701a06t"
+    },
+    {
+      "id": "S-27",
+      "status": "PASS",
+      "operation": "cross-tenant allocation rejected"
+    },
+    {
+      "id": "S-29",
+      "status": "PASS",
+      "operation": "concurrent competing allocations",
+      "fulfilled": 0,
+      "rejected": 2,
+      "rejectionReasons": [
+        "Allocation exceeds the invoice's eligible outstanding amount.",
+        "Allocation exceeds the invoice's eligible outstanding amount."
+      ],
+      "persisted": {
+        "payments": 3800,
+        "allocations": 1600,
+        "refunds": 1200,
+        "reversals": 1200,
+        "allocation_reversals": 4,
+        "sales_paid": 0,
+        "sales_due": 1000,
+        "targetInvoice": {
+          "allocation_count": 0,
+          "allocation_total": "0",
+          "invoice_due": "600.00"
+        }
+      }
+    },
+    {
+      "id": "S-16",
+      "status": "PASS",
+      "operation": "controlled transaction rollback"
+    },
+    {
+      "id": "S-01",
+      "status": "BLOCKED",
+      "operation": "Customer advance projection and customer-credit ledger boundary are not implemented."
+    },
+    {
+      "id": "S-04",
+      "status": "BLOCKED",
+      "operation": "Supplier advance projection and supplier-advance ledger boundary are not implemented."
+    },
+    {
+      "id": "S-06",
+      "status": "BLOCKED",
+      "operation": "Multi-step supplier allocation fixture and persisted AP assertions are not implemented in this harness."
+    },
+    {
+      "id": "S-07",
+      "status": "BLOCKED",
+      "operation": "Independent partial customer settlement fixture and persisted AR assertions are not implemented in this harness."
+    },
+    {
+      "id": "S-08",
+      "status": "BLOCKED",
+      "operation": "Multi-payment allocation boundary and persisted per-payment assertions are not implemented in this harness."
+    },
+    {
+      "id": "S-09",
+      "status": "BLOCKED",
+      "operation": "Multi-invoice allocation boundary is not exposed by the application service."
+    },
+    {
+      "id": "S-10",
+      "status": "BLOCKED",
+      "operation": "Repeated allocation fixture and per-payment idempotency assertions are not implemented in this harness."
+    },
+    {
+      "id": "S-17",
+      "status": "BLOCKED",
+      "operation": "Payment reversal repost boundary is not implemented."
+    },
+    {
+      "id": "S-18",
+      "status": "BLOCKED",
+      "operation": "Credit-note policy and mutation boundary are outside the implemented reconciliation subledger."
+    },
+    {
+      "id": "S-19",
+      "status": "BLOCKED",
+      "operation": "Finalized-invoice mutation rejection lacks a callable application boundary in this harness."
+    },
+    {
+      "id": "S-20",
+      "status": "BLOCKED",
+      "operation": "Strict event-time/recorded-time as-of reporting is not implemented."
+    },
+    {
+      "id": "S-21",
+      "status": "BLOCKED",
+      "operation": "Finalized due-date immutability lacks a callable application boundary in this harness."
+    },
+    {
+      "id": "S-22",
+      "status": "BLOCKED",
+      "operation": "Competing allocation runtime fixture requires a fresh disposable PostgreSQL target."
+    },
+    {
+      "id": "S-23",
+      "status": "BLOCKED",
+      "operation": "Competing allocation runtime fixture requires a fresh disposable PostgreSQL target."
+    },
+    {
+      "id": "S-24",
+      "status": "BLOCKED",
+      "operation": "Competing allocation runtime fixture requires a fresh disposable PostgreSQL target."
+    },
+    {
+      "id": "S-25",
+      "status": "BLOCKED",
+      "operation": "Legacy-unallocated cutover boundary and configured cutoff are not implemented."
+    },
+    {
+      "id": "S-26",
+      "status": "BLOCKED",
+      "operation": "Audited legacy reclassification boundary is not implemented."
+    },
+    {
+      "id": "S-28",
+      "status": "BLOCKED",
+      "operation": "Receipt-number serialization boundary is not implemented."
+    },
+    {
+      "id": "S-30",
+      "status": "BLOCKED",
+      "operation": "Payment currency field and unsupported-currency validation boundary are not implemented."
+    },
+    {
+      "id": "S-31",
+      "status": "BLOCKED",
+      "operation": "Supplier partial allocation fixture and persisted AP assertions are not implemented in this harness."
+    },
+    {
+      "id": "S-32",
+      "status": "BLOCKED",
+      "operation": "Supplier multi-payment allocation boundary is not implemented."
+    },
+    {
+      "id": "S-33",
+      "status": "BLOCKED",
+      "operation": "Supplier refund persisted assertions require a fresh disposable PostgreSQL run."
+    },
+    {
+      "id": "S-34",
+      "status": "BLOCKED",
+      "operation": "Supplier allocation reversal persisted assertions require a fresh disposable PostgreSQL run."
+    },
+    {
+      "id": "S-35",
+      "status": "BLOCKED",
+      "operation": "Supplier payment reversal persisted assertions require a fresh disposable PostgreSQL run."
+    },
+    {
+      "id": "S-36",
+      "status": "BLOCKED",
+      "operation": "Supplier payment reversal repost boundary is not implemented."
+    },
+    {
+      "id": "S-37",
+      "status": "BLOCKED",
+      "operation": "Supplier concurrency fixture requires a fresh disposable PostgreSQL target."
+    },
+    {
+      "id": "S-38",
+      "status": "BLOCKED",
+      "operation": "Supplier debit-adjustment boundary is not implemented."
+    }
+  ],
+  "summary": {
+    "pass": 11,
+    "fail": 0,
+    "blocked": 27
+  },
+  "note": "Blocked scenarios are not credited as verified. Credentials and full connection strings are intentionally excluded."
+}

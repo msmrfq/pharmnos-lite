@@ -1,0 +1,198 @@
+{
+  "campaign": "Financial Reconciliation - Classified Runtime Candidates",
+  "runId": "replayd9b6d861fc97",
+  "target": "pharmnos_financial_e2e_replayd9b6d861fc97",
+  "results": [
+    {
+      "id": "S-01",
+      "status": "PASS",
+      "operation": "customer advance creation and idempotent retry",
+      "boundary": "payment action with guarded synthetic session and restricted role; metadata update stubbed",
+      "fixture": {
+        "party": "campaign_customer_5ad77cba10194167845d24f0a37c90a3",
+        "initialBalance": 0,
+        "amount": 500
+      },
+      "first": {
+        "ok": true,
+        "data": {
+          "id": "cmw816cw0000376ojm0vge8jq"
+        }
+      },
+      "replay": {
+        "ok": true,
+        "data": {
+          "id": "cmw816cw0000376ojm0vge8jq"
+        }
+      },
+      "persisted": {
+        "id": "cmw816cw0000376ojm0vge8jq",
+        "amount": "500.00",
+        "receipt_no": "PAY-00001",
+        "balance": "-500.00",
+        "ledger_rows": 1,
+        "ledger_amount": "500.00",
+        "payment_rows": 1,
+        "allocations": 0,
+        "invoices": 0,
+        "refunds": 0,
+        "reversals": 0,
+        "audits": 0
+      },
+      "sequenceAfterFirst": [
+        {
+          "next_value": 2
+        }
+      ],
+      "sequenceAfterReplay": [
+        {
+          "next_value": 2
+        }
+      ],
+      "derived": {
+        "gross": 0,
+        "unapplied": 500,
+        "net": -500,
+        "usable": 500,
+        "refundable": 500
+      }
+    },
+    {
+      "id": "S-04",
+      "status": "PASS",
+      "operation": "supplier advance creation and idempotent retry",
+      "boundary": "payment action with guarded synthetic session and restricted role; metadata update stubbed",
+      "fixture": {
+        "party": "campaign_supplier_f2bb733ee992465da5e1148323620c22",
+        "initialBalance": 0,
+        "amount": 1000
+      },
+      "first": {
+        "ok": true,
+        "data": {
+          "id": "cmw816cxm000b76ojcmhnmyeq"
+        }
+      },
+      "replay": {
+        "ok": true,
+        "data": {
+          "id": "cmw816cxm000b76ojcmhnmyeq"
+        }
+      },
+      "persisted": {
+        "id": "cmw816cxm000b76ojcmhnmyeq",
+        "amount": "1000.00",
+        "receipt_no": "PAY-00002",
+        "balance": "-1000.00",
+        "ledger_rows": 1,
+        "ledger_amount": "1000.00",
+        "payment_rows": 1,
+        "allocations": 0,
+        "invoices": 0,
+        "refunds": 0,
+        "reversals": 0,
+        "audits": 0
+      },
+      "sequenceAfterFirst": [
+        {
+          "next_value": 3
+        }
+      ],
+      "sequenceAfterReplay": [
+        {
+          "next_value": 3
+        }
+      ],
+      "derived": {
+        "gross": 0,
+        "unapplied": 1000,
+        "net": -1000,
+        "usable": 1000,
+        "refundable": 1000
+      }
+    },
+    {
+      "id": "S-28",
+      "status": "FAIL",
+      "operation": "barrier-synchronized tenant receipt allocation",
+      "boundary": "receipt sequence repository using action-equivalent default-isolation restricted-role transactions and signed synthetic context",
+      "fixture": {
+        "receiptTenant": "campaign_receipt_tenant_6f7c188a9465474ea1399a03baa8f79b"
+      },
+      "barrierArrivals": 4,
+      "receipts": [
+        "PAY-00001",
+        "PAY-00002",
+        "PAY-00003",
+        "PAY-00004"
+      ],
+      "failures": [],
+      "persisted": {
+        "next_value": 5,
+        "payments": 0,
+        "customer_ledgers": 0,
+        "supplier_ledgers": 0
+      },
+      "serializable": {
+        "barrierArrivals": 4,
+        "attemptCounts": [
+          2,
+          3,
+          3,
+          1
+        ],
+        "receipts": [
+          "SERIAL-00002",
+          "SERIAL-00003",
+          "SERIAL-00001"
+        ],
+        "failures": [
+          {
+            "message": "\nInvalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `40001`. Message: `could not serialize access due to concurrent update`",
+            "code": "P2010",
+            "meta": {
+              "code": "40001",
+              "message": "could not serialize access due to concurrent update"
+            }
+          }
+        ],
+        "persisted": [
+          {
+            "next_value": 4
+          }
+        ]
+      },
+      "catalog": {
+        "enabled": true,
+        "forced": true,
+        "can_delete": false,
+        "can_update_tenant": false,
+        "can_update_value": true
+      },
+      "isolation": {
+        "visible": 0,
+        "updated": 0
+      },
+      "crossInsertError": "\nInvalid `prisma.$executeRaw()` invocation:\n\n\nRaw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table \"payment_receipt_sequences\"`",
+      "crossAfter": [
+        {
+          "prefix": "OTHER",
+          "next_value": 9
+        }
+      ],
+      "rollbackError": "controlled receipt rollback",
+      "rollbackUpdated": 1,
+      "rollback": [
+        {
+          "receivable_balance": "0.00",
+          "sequences": 0
+        }
+      ]
+    }
+  ],
+  "error": null,
+  "summary": {
+    "pass": 2,
+    "fail": 1
+  }
+}

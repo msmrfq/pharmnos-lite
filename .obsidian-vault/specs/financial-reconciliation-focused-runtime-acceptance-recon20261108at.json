@@ -1,0 +1,973 @@
+{
+  "campaign": "Financial Reconciliation — Focused Runtime Acceptance",
+  "runId": "recon20261108at",
+  "recordedAt": "2026-11-08T13:24:29.453Z",
+  "ownerAuthorization": {
+    "status": "OWNER-APPROVED",
+    "date": "2026-11-08",
+    "decisionLog": ".obsidian-vault/specs/financial-reconciliation/financial-reconciliation-decision-log.md",
+    "decisions": "A–O approved as written; no amendments stated by owner."
+  },
+  "gitBaselineFile": "session-state/files/financial-recon-acceptance-baseline-20261108am.json",
+  "target": {
+    "database": "pharmnos_financial_e2e_recon20261108at",
+    "bootstrapRole": "pharmnos_e2e",
+    "serverAddressInsideContainer": "172.30.0.2/32",
+    "serverPortInsideContainer": 5432,
+    "targetEndpoint": "127.0.0.1:55636",
+    "marker": "pharmnos-financial-e2e",
+    "composeProject": "pharmnoslite-financial-e2e-recon20261108at"
+  },
+  "prismaMigrations": {
+    "deployExitCode": 0,
+    "count": 26,
+    "finishedCount": 26,
+    "first": "0001_baseline",
+    "last": "0026_add_reconciliation_audit_events",
+    "names": [
+      "0001_baseline",
+      "0002_purchase_line_gst_model",
+      "0003_gst_treatment_facts",
+      "0004_gst_catalog_and_rules",
+      "0005_sales_gst_rule_snapshots",
+      "0006_purchase_gst_rule_snapshots",
+      "0007_gst_governance_controls",
+      "0008_hsn_governance_integrity",
+      "0009_purchase_gst_line_acceptance",
+      "0010_inventory_valuation_pending_state",
+      "0011_inventory_valuation_decision_history",
+      "0012_payment_integrity",
+      "0013_payment_permission_backfill",
+      "0014_supplier_invoice_uniqueness",
+      "0015_purchase_finalized_immutability",
+      "0016_supplier_invoice_trimmed_uniqueness",
+      "0017_invoice_modernization_artifacts",
+      "0018_supplier_invoice_documents",
+      "0019_invoice_document_lifecycle_metadata",
+      "0020_supplier_document_rls_and_active_guard",
+      "0021_reject_finalized_purchase_deletes",
+      "0022_financial_reconciliation_foundation",
+      "0023_allow_multiple_allocation_reversals",
+      "0024_add_reconciliation_audit_event",
+      "0025_payment_receipt_sequence",
+      "0026_add_reconciliation_audit_events"
+    ],
+    "outputTail": [
+      "  └─ 0006_purchase_gst_rule_snapshots/",
+      "    └─ migration.sql",
+      "  └─ 0007_gst_governance_controls/",
+      "    └─ migration.sql",
+      "  └─ 0008_hsn_governance_integrity/",
+      "    └─ migration.sql",
+      "  └─ 0009_purchase_gst_line_acceptance/",
+      "    └─ migration.sql",
+      "  └─ 0010_inventory_valuation_pending_state/",
+      "    └─ migration.sql",
+      "  └─ 0011_inventory_valuation_decision_history/",
+      "    └─ migration.sql",
+      "  └─ 0012_payment_integrity/",
+      "    └─ migration.sql",
+      "  └─ 0013_payment_permission_backfill/",
+      "    └─ migration.sql",
+      "  └─ 0014_supplier_invoice_uniqueness/",
+      "    └─ migration.sql",
+      "  └─ 0015_purchase_finalized_immutability/",
+      "    └─ migration.sql",
+      "  └─ 0016_supplier_invoice_trimmed_uniqueness/",
+      "    └─ migration.sql",
+      "  └─ 0017_invoice_modernization_artifacts/",
+      "    └─ migration.sql",
+      "  └─ 0018_supplier_invoice_documents/",
+      "    └─ migration.sql",
+      "  └─ 0019_invoice_document_lifecycle_metadata/",
+      "    └─ migration.sql",
+      "  └─ 0020_supplier_document_rls_and_active_guard/",
+      "    └─ migration.sql",
+      "  └─ 0021_reject_finalized_purchase_deletes/",
+      "    └─ migration.sql",
+      "  └─ 0022_financial_reconciliation_foundation/",
+      "    └─ migration.sql",
+      "  └─ 0023_allow_multiple_allocation_reversals/",
+      "    └─ migration.sql",
+      "  └─ 0024_add_reconciliation_audit_event/",
+      "    └─ migration.sql",
+      "  └─ 0025_payment_receipt_sequence/",
+      "    └─ migration.sql",
+      "  └─ 0026_add_reconciliation_audit_events/",
+      "    └─ migration.sql",
+      "      ",
+      "All migrations have been successfully applied.",
+      ""
+    ],
+    "stderrTail": [
+      ""
+    ]
+  },
+  "runtimeRole": null,
+  "testSessionBoundary": "Existing target-gated SupabaseAuthAdapter E2E session helper; user, membership, role, and permissions persisted in the target. Application actions run under bootstrap DB role; this is not restricted-role RLS evidence.",
+  "probe": {
+    "exitCode": 1,
+    "result": {
+      "runId": "recon20261108at",
+      "boundary": "Target-gated E2E synthetic auth session; server actions, service path, repository read/write, and persisted PostgreSQL readback; bootstrap role bypasses RLS.",
+      "databaseIdentity": {
+        "database_name": "pharmnos_financial_e2e_recon20261108at",
+        "current_role": "pharmnos_e2e",
+        "server_address": "172.30.0.2/32",
+        "server_port": 5432
+      },
+      "fixture": {
+        "tenantIds": [
+          "1095d821-d691-4220-ae9b-cd2ff94ba7d7",
+          "d88b0eae-e47c-456b-a859-87829fb4f386"
+        ],
+        "appUsers": {
+          "a": "1add161b-23f8-4ea7-82c7-37a09f7ad6b6",
+          "b": "0e5d7664-a07c-420a-b9c7-49b4dda5b8b7",
+          "denied": "32c052dc-91a0-4cc8-924e-583a6f7bd4c3"
+        },
+        "paymentIds": [
+          "cmw7v4z540007d0gwlhlhuplz",
+          "cmw7v4z62000ed0gweb7x6at4",
+          "f64bd4b8-3ee3-4629-af1e-005b23a9e3a8",
+          "cmw7v4zeq0024d0gwkbvriqwr",
+          "cmw7v4zfg002bd0gwdlg1qffx",
+          "cmw7v4ze0001zd0gwyfro06am"
+        ],
+        "receiptEvidence": {
+          "customerActionReceipt": "PAY-00001",
+          "supplierActionReceipt": "PAY-00002",
+          "concurrentUniqueReceipts": [
+            "PAY-00003",
+            "PAY-00005",
+            "PAY-00006",
+            "PAY-00004"
+          ],
+          "tenantASequenceNextValue": 7,
+          "tenantBReceipt": "PAY-00001"
+        }
+      },
+      "checks": [
+        {
+          "id": "PAYMENT_AUTHORIZATION",
+          "status": "PASS",
+          "details": {
+            "message": "You are not authorized to perform this action."
+          }
+        },
+        {
+          "id": "PAYMENT_TENANT_OWNERSHIP",
+          "status": "PASS",
+          "details": {
+            "message": "Customer not found."
+          }
+        },
+        {
+          "id": "CUSTOMER_PAYMENT_ACTION",
+          "status": "PASS",
+          "details": {
+            "message": null
+          }
+        },
+        {
+          "id": "SUPPLIER_PAYMENT_ACTION",
+          "status": "PASS",
+          "details": {
+            "message": null
+          }
+        },
+        {
+          "id": "RECEIPT_CONCURRENT_UNIQUENESS",
+          "status": "PASS",
+          "details": {
+            "outcomes": [
+              {
+                "ok": true,
+                "message": null
+              },
+              {
+                "ok": true,
+                "message": null
+              },
+              {
+                "ok": true,
+                "message": null
+              },
+              {
+                "ok": true,
+                "message": null
+              }
+            ],
+            "receipts": [
+              "PAY-00003",
+              "PAY-00005",
+              "PAY-00006",
+              "PAY-00004"
+            ]
+          }
+        },
+        {
+          "id": "RECEIPT_PERSISTENCE_TENANT_SEQUENCE",
+          "status": "PASS",
+          "details": {
+            "mainCustomer": "PAY-00001",
+            "mainSupplier": "PAY-00002",
+            "allReceipts": [
+              "PAY-00001",
+              "PAY-00002",
+              "PAY-00003",
+              "PAY-00004",
+              "PAY-00005",
+              "PAY-00006"
+            ],
+            "nextValue": 7
+          }
+        },
+        {
+          "id": "PAYMENT_IDEMPOTENCY_RETRY",
+          "status": "PASS",
+          "details": {
+            "returnedId": "cmw7v4z540007d0gwlhlhuplz",
+            "originalId": "cmw7v4z540007d0gwlhlhuplz",
+            "countBefore": 6,
+            "countAfter": 6
+          }
+        },
+        {
+          "id": "PAYMENT_RECEIPT_NORMAL_READBACK",
+          "status": "PASS",
+          "details": {
+            "receiptNo": "PAY-00001",
+            "persistedReceiptNo": "PAY-00001"
+          }
+        },
+        {
+          "id": "RECEIPT_TENANT_PREFIX_ISOLATION",
+          "status": "PASS",
+          "details": {
+            "receiptNo": "PAY-00001",
+            "nextValue": 2
+          }
+        },
+        {
+          "id": "CUSTOMER_PAYMENT_ROLLBACK",
+          "status": "PASS",
+          "details": {
+            "message": "\nInvalid `tx.customer_ledgers.create()` invocation in\nE:\\PharmnosLite\\src\\app\\_actions\\sales.actions.ts:1107:35\n\n  1104   },\n  1105 });\n  1106 \n→ 1107 await tx.customer_ledgers.create(\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"P0001\", message: \"controlled receipt rollback\", severity: \"ERROR\", detail: None, column: None, hint: None }), transient: false })",
+            "before": {
+              "sequence": 7,
+              "payments": 7,
+              "customerLedger": 4,
+              "supplierLedger": 4
+            },
+            "after": {
+              "sequence": 7,
+              "payments": 7,
+              "customerLedger": 4,
+              "supplierLedger": 4
+            }
+          }
+        },
+        {
+          "id": "SUPPLIER_PAYMENT_ROLLBACK",
+          "status": "PASS",
+          "details": {
+            "message": "\nInvalid `tx.supplier_ledgers.create()` invocation in\nE:\\PharmnosLite\\src\\app\\_actions\\sales.actions.ts:1250:35\n\n  1247   },\n  1248 });\n  1249 \n→ 1250 await tx.supplier_ledgers.create(\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"P0001\", message: \"controlled receipt rollback\", severity: \"ERROR\", detail: None, column: None, hint: None }), transient: false })",
+            "before": {
+              "sequence": 7,
+              "payments": 7,
+              "customerLedger": 4,
+              "supplierLedger": 4
+            },
+            "after": {
+              "sequence": 7,
+              "payments": 7,
+              "customerLedger": 4,
+              "supplierLedger": 4
+            }
+          }
+        },
+        {
+          "id": "GENERIC_REPOSITORY_NULL_RECEIPT",
+          "status": "PASS",
+          "details": {
+            "paymentId": "cmw7v4ze0001zd0gwyfro06am",
+            "receiptNo": null,
+            "contract": "receipt_no nullable; app payment actions allocate receipts, generic repository create preserves null."
+          }
+        },
+        {
+          "id": "REFUND_PAYMENT_FIXTURES",
+          "status": "PASS",
+          "details": {
+            "customerMessage": null,
+            "supplierMessage": null
+          }
+        },
+        {
+          "id": "S29_DETERMINISTIC_ALLOCATION_BARRIER",
+          "status": "PASS",
+          "details": {
+            "barrierArrivals": [
+              {
+                "requestIndex": 0,
+                "arrivedAt": 1794144208738
+              },
+              {
+                "requestIndex": 1,
+                "arrivedAt": 1794144208738
+              }
+            ],
+            "barrierRelease": [
+              {
+                "requestIndex": 0,
+                "releasedAt": 1794144208738
+              },
+              {
+                "requestIndex": 1,
+                "releasedAt": 1794144208738
+              }
+            ],
+            "outcomes": [
+              {
+                "status": "rejected",
+                "error": "Payment does not have enough usable unapplied funds."
+              },
+              {
+                "status": "fulfilled",
+                "id": "cmw7v4zga002hd0gw80as51oy",
+                "replayed": false
+              }
+            ],
+            "persistedAllocations": [
+              {
+                "id": "cmw7v4zga002hd0gw80as51oy",
+                "payment_id": "f64bd4b8-3ee3-4629-af1e-005b23a9e3a8",
+                "sales_invoice_id": "6521707d-23f8-473c-9407-745462014c62",
+                "amount": "400.00",
+                "idempotency_key": "recon20261108at-race-winner-b-05a79851-7e52-4c6f-89d0-efb4f6d3e0dd"
+              }
+            ],
+            "persistedState": {
+              "invoice_outstanding": "200.00",
+              "consumed": "400.00",
+              "payment_amount": "600.00",
+              "audit_count": 1
+            }
+          }
+        },
+        {
+          "id": "S29_WINNING_KEY_RETRY",
+          "status": "PASS",
+          "details": {
+            "winningIdempotencyKey": "recon20261108at-race-winner-b-05a79851-7e52-4c6f-89d0-efb4f6d3e0dd",
+            "returned": {
+              "id": "cmw7v4zga002hd0gw80as51oy",
+              "replayed": true
+            },
+            "before": {
+              "allocations": 1,
+              "reversals": 0,
+              "audits": 1,
+              "invoiceOutstanding": 200
+            },
+            "after": {
+              "allocations": 1,
+              "reversals": 0,
+              "audits": 1,
+              "invoiceOutstanding": 200
+            }
+          }
+        },
+        {
+          "id": "CANONICAL_MATRIX_S29_CROSS_TENANT_ALLOCATION",
+          "status": "PASS",
+          "details": {
+            "inputPaymentTenant": "d88b0eae-e47c-456b-a859-87829fb4f386",
+            "inputInvoiceTenant": "1095d821-d691-4220-ae9b-cd2ff94ba7d7",
+            "error": "Invoice does not belong to this tenant.",
+            "before": {
+              "allocations": 0,
+              "audits": 0
+            },
+            "after": {
+              "allocations": 0,
+              "audits": 0
+            }
+          }
+        },
+        {
+          "id": "CUSTOMER_ALLOCATION_ACTION",
+          "status": "PASS",
+          "details": {
+            "allocationId": "cmw7v4zju002rd0gw759peli9"
+          }
+        },
+        {
+          "id": "SUPPLIER_ALLOCATION_ACTION",
+          "status": "PASS",
+          "details": {
+            "allocationId": "cmw7v4zku002xd0gw71uario4"
+          }
+        },
+        {
+          "id": "CUSTOMER_REFUND_DIRECT_COMPLETION",
+          "status": "PASS",
+          "details": {
+            "result": {
+              "id": "cmw7v4zmp0039d0gw6v2a7sus",
+              "replayed": false
+            },
+            "persisted": {
+              "id": "cmw7v4zmp0039d0gw6v2a7sus",
+              "status": "COMPLETED",
+              "amount": "200.00",
+              "requested_by": "1add161b-23f8-4ea7-82c7-37a09f7ad6b6",
+              "completed_by": "1add161b-23f8-4ea7-82c7-37a09f7ad6b6",
+              "requested_at": "2026-11-08T07:53:28.993Z",
+              "completed_at": "2026-11-08T07:53:28.992Z"
+            },
+            "lifecycleGap": "No request/approval action or status transition is exposed; completion records the same actor as requester and completer."
+          }
+        },
+        {
+          "id": "SUPPLIER_REFUND_DIRECT_COMPLETION",
+          "status": "PASS",
+          "details": {
+            "result": {
+              "id": "cmw7v4znm003ld0gwbsqn3ra2",
+              "replayed": false
+            },
+            "persisted": {
+              "id": "cmw7v4znm003ld0gwbsqn3ra2",
+              "status": "COMPLETED",
+              "amount": "200.00",
+              "requested_by": "1add161b-23f8-4ea7-82c7-37a09f7ad6b6",
+              "completed_by": "1add161b-23f8-4ea7-82c7-37a09f7ad6b6",
+              "requested_at": "2026-11-08T07:53:29.026Z",
+              "completed_at": "2026-11-08T07:53:29.026Z"
+            },
+            "lifecycleGap": "No request/approval action or status transition is exposed; completion records the same actor as requester and completer."
+          }
+        },
+        {
+          "id": "CUSTOMER_REFUND_PROJECTION_AND_AUDIT",
+          "status": "PASS",
+          "details": {
+            "beforeCredit": {
+              "rows": [
+                {
+                  "paymentId": "cmw7v4zeq0024d0gwkbvriqwr",
+                  "paymentDate": "2026-11-08T00:00:00.000Z",
+                  "amount": 600,
+                  "unappliedAmount": 200,
+                  "referenceNo": "ref--payment"
+                }
+              ],
+              "total": 200
+            },
+            "afterCredit": {
+              "rows": [
+                {
+                  "paymentId": "cmw7v4zeq0024d0gwkbvriqwr",
+                  "paymentDate": "2026-11-08T00:00:00.000Z",
+                  "amount": 600,
+                  "unappliedAmount": 200,
+                  "referenceNo": "ref--payment"
+                }
+              ],
+              "total": 200
+            },
+            "persisted": {
+              "cached_balance": "200.00",
+              "invoice_outstanding": "400.00",
+              "active_allocation": "200.00"
+            },
+            "beforeRefundSnapshot": {
+              "customer_balance": "0.00",
+              "supplier_balance": "-400.00",
+              "sales_outstanding": "200.00",
+              "purchase_total": "600.00",
+              "purchase_allocated": "400.00"
+            }
+          }
+        },
+        {
+          "id": "SUPPLIER_REFUND_PROJECTION_AND_AUDIT",
+          "status": "FAIL",
+          "details": {
+            "beforeAdvance": {
+              "rows": [
+                {
+                  "paymentId": "cmw7v4zfg002bd0gwdlg1qffx",
+                  "paymentDate": "2026-11-08T00:00:00.000Z",
+                  "amount": 600,
+                  "unappliedAmount": 200,
+                  "referenceNo": "ref--payment"
+                }
+              ],
+              "total": 200
+            },
+            "afterAdvance": {
+              "rows": [
+                {
+                  "paymentId": "cmw7v4zfg002bd0gwdlg1qffx",
+                  "paymentDate": "2026-11-08T00:00:00.000Z",
+                  "amount": 600,
+                  "unappliedAmount": 200,
+                  "referenceNo": "ref--payment"
+                }
+              ],
+              "total": 200
+            },
+            "persisted": {
+              "cached_balance": "-200.00",
+              "invoice_total": "600.00",
+              "active_allocation": "200.00"
+            },
+            "expectedSupplierCachedBalance": 200,
+            "note": "The test is designed to expose persisted payable divergence if payment/allocation posting double-counts."
+          }
+        },
+        {
+          "id": "CUSTOMER_REFUND_IDEMPOTENT_RETRY",
+          "status": "PASS",
+          "details": {
+            "retry": {
+              "id": "cmw7v4zmp0039d0gw6v2a7sus",
+              "replayed": true
+            },
+            "auditsBefore": 1
+          }
+        },
+        {
+          "id": "SUPPLIER_REFUND_IDEMPOTENT_RETRY",
+          "status": "PASS",
+          "details": {
+            "retry": {
+              "id": "cmw7v4znm003ld0gwbsqn3ra2",
+              "replayed": true
+            },
+            "auditsBefore": 1
+          }
+        },
+        {
+          "id": "REFUND_CROSS_TENANT_ISOLATION",
+          "status": "PASS",
+          "details": {
+            "error": "Payment does not belong to this tenant or has no valid counterparty.",
+            "tenantBRefundsBefore": 0,
+            "tenantBRefundsAfter": 0
+          }
+        },
+        {
+          "id": "REFUND_TRANSACTION_ROLLBACK",
+          "status": "PASS",
+          "details": [
+            {
+              "kind": "customer",
+              "status": "PASS",
+              "error": "\nInvalid `tx.customer_ledgers.create()` invocation in\nE:\\PharmnosLite\\src\\domain\\services\\financial-reconciliation.service.ts:468:33\n\n  465   },\n  466 });\n  467 if (payment.counterpartyKind === \"customer\") {\n→ 468   await tx.customer_ledgers.create(\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"P0001\", message: \"controlled refund rollback\", severity: \"ERROR\", detail: None, column: None, hint: None }), transient: false })",
+              "before": {
+                "refunds": 1,
+                "reversals": 1,
+                "audits": 7,
+                "projection": 200,
+                "invoice": 400
+              },
+              "after": {
+                "refunds": 1,
+                "reversals": 1,
+                "audits": 7,
+                "projection": 200,
+                "invoice": 400
+              }
+            },
+            {
+              "kind": "supplier",
+              "status": "PASS",
+              "error": "\nInvalid `tx.supplier_ledgers.create()` invocation in\nE:\\PharmnosLite\\src\\domain\\services\\financial-reconciliation.service.ts:491:33\n\n  488     data: { receivable_balance: money(customer?.receivable_balance).add(amount).toNumber() },\n  489   });\n  490 } else {\n→ 491   await tx.supplier_ledgers.create(\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"P0001\", message: \"controlled refund rollback\", severity: \"ERROR\", detail: None, column: None, hint: None }), transient: false })",
+              "before": {
+                "refunds": 1,
+                "reversals": 1,
+                "audits": 7,
+                "projection": 200,
+                "invoice": 600
+              },
+              "after": {
+                "refunds": 1,
+                "reversals": 1,
+                "audits": 7,
+                "projection": 200,
+                "invoice": 600
+              }
+            }
+          ]
+        },
+        {
+          "id": "CUSTOMER_UNALLOCATED_REFUND_PROJECTION",
+          "status": "PASS",
+          "details": {
+            "before": {
+              "rows": [
+                {
+                  "paymentId": "cmw7v4zu8004ud0gwzw2hlefv",
+                  "paymentDate": "2026-11-08T00:00:00.000Z",
+                  "amount": 200,
+                  "unappliedAmount": 200,
+                  "referenceNo": "ref-b65e7feb"
+                }
+              ],
+              "total": 200
+            },
+            "after": {
+              "rows": [],
+              "total": 0
+            },
+            "refund": {
+              "id": "cmw7v4zwh005ad0gwg1qxhuhr",
+              "replayed": false
+            }
+          }
+        },
+        {
+          "id": "SUPPLIER_UNALLOCATED_REFUND_PROJECTION",
+          "status": "PASS",
+          "details": {
+            "before": {
+              "rows": [
+                {
+                  "paymentId": "cmw7v4zuw0051d0gw0flbalfd",
+                  "paymentDate": "2026-11-08T00:00:00.000Z",
+                  "amount": 200,
+                  "unappliedAmount": 200,
+                  "referenceNo": "ref-3e4053a3"
+                }
+              ],
+              "total": 200
+            },
+            "after": {
+              "rows": [],
+              "total": 0
+            },
+            "refund": {
+              "id": "cmw7v4zx8005id0gwe2326gxh",
+              "replayed": false
+            }
+          }
+        }
+      ],
+      "s29": [
+        {
+          "id": "S29_DETERMINISTIC_ALLOCATION_BARRIER",
+          "status": "PASS",
+          "details": {
+            "barrierArrivals": [
+              {
+                "requestIndex": 0,
+                "arrivedAt": 1794144208738
+              },
+              {
+                "requestIndex": 1,
+                "arrivedAt": 1794144208738
+              }
+            ],
+            "barrierRelease": [
+              {
+                "requestIndex": 0,
+                "releasedAt": 1794144208738
+              },
+              {
+                "requestIndex": 1,
+                "releasedAt": 1794144208738
+              }
+            ],
+            "outcomes": [
+              {
+                "status": "rejected",
+                "error": "Payment does not have enough usable unapplied funds."
+              },
+              {
+                "status": "fulfilled",
+                "id": "cmw7v4zga002hd0gw80as51oy",
+                "replayed": false
+              }
+            ],
+            "persistedAllocations": [
+              {
+                "id": "cmw7v4zga002hd0gw80as51oy",
+                "payment_id": "f64bd4b8-3ee3-4629-af1e-005b23a9e3a8",
+                "sales_invoice_id": "6521707d-23f8-473c-9407-745462014c62",
+                "amount": "400.00",
+                "idempotency_key": "recon20261108at-race-winner-b-05a79851-7e52-4c6f-89d0-efb4f6d3e0dd"
+              }
+            ],
+            "persistedState": {
+              "invoice_outstanding": "200.00",
+              "consumed": "400.00",
+              "payment_amount": "600.00",
+              "audit_count": 1
+            }
+          }
+        },
+        {
+          "id": "S29_WINNING_KEY_RETRY",
+          "status": "PASS",
+          "details": {
+            "winningIdempotencyKey": "recon20261108at-race-winner-b-05a79851-7e52-4c6f-89d0-efb4f6d3e0dd",
+            "returned": {
+              "id": "cmw7v4zga002hd0gw80as51oy",
+              "replayed": true
+            },
+            "before": {
+              "allocations": 1,
+              "reversals": 0,
+              "audits": 1,
+              "invoiceOutstanding": 200
+            },
+            "after": {
+              "allocations": 1,
+              "reversals": 0,
+              "audits": 1,
+              "invoiceOutstanding": 200
+            }
+          }
+        }
+      ],
+      "refunds": {
+        "customerAllocated": {
+          "paymentId": "cmw7v4zeq0024d0gwkbvriqwr",
+          "initialAllocationId": "cmw7v4zju002rd0gw759peli9",
+          "refundId": "cmw7v4zmp0039d0gw6v2a7sus",
+          "persisted": {
+            "id": "cmw7v4zmp0039d0gw6v2a7sus",
+            "status": "COMPLETED",
+            "amount": "200.00",
+            "requested_by": "1add161b-23f8-4ea7-82c7-37a09f7ad6b6",
+            "completed_by": "1add161b-23f8-4ea7-82c7-37a09f7ad6b6",
+            "requested_at": "2026-11-08T07:53:28.993Z",
+            "completed_at": "2026-11-08T07:53:28.992Z"
+          },
+          "projectionBefore": {
+            "rows": [
+              {
+                "paymentId": "cmw7v4zeq0024d0gwkbvriqwr",
+                "paymentDate": "2026-11-08T00:00:00.000Z",
+                "amount": 600,
+                "unappliedAmount": 200,
+                "referenceNo": "ref--payment"
+              }
+            ],
+            "total": 200
+          },
+          "projectionAfter": {
+            "rows": [
+              {
+                "paymentId": "cmw7v4zeq0024d0gwkbvriqwr",
+                "paymentDate": "2026-11-08T00:00:00.000Z",
+                "amount": 600,
+                "unappliedAmount": 200,
+                "referenceNo": "ref--payment"
+              }
+            ],
+            "total": 200
+          },
+          "persistedStateAfter": {
+            "cached_balance": "200.00",
+            "invoice_outstanding": "400.00",
+            "active_allocation": "200.00"
+          }
+        },
+        "supplierAllocated": {
+          "paymentId": "cmw7v4zfg002bd0gwdlg1qffx",
+          "initialAllocationId": "cmw7v4zku002xd0gw71uario4",
+          "refundId": "cmw7v4znm003ld0gwbsqn3ra2",
+          "persisted": {
+            "id": "cmw7v4znm003ld0gwbsqn3ra2",
+            "status": "COMPLETED",
+            "amount": "200.00",
+            "requested_by": "1add161b-23f8-4ea7-82c7-37a09f7ad6b6",
+            "completed_by": "1add161b-23f8-4ea7-82c7-37a09f7ad6b6",
+            "requested_at": "2026-11-08T07:53:29.026Z",
+            "completed_at": "2026-11-08T07:53:29.026Z"
+          },
+          "projectionBefore": {
+            "rows": [
+              {
+                "paymentId": "cmw7v4zfg002bd0gwdlg1qffx",
+                "paymentDate": "2026-11-08T00:00:00.000Z",
+                "amount": 600,
+                "unappliedAmount": 200,
+                "referenceNo": "ref--payment"
+              }
+            ],
+            "total": 200
+          },
+          "projectionAfter": {
+            "rows": [
+              {
+                "paymentId": "cmw7v4zfg002bd0gwdlg1qffx",
+                "paymentDate": "2026-11-08T00:00:00.000Z",
+                "amount": 600,
+                "unappliedAmount": 200,
+                "referenceNo": "ref--payment"
+              }
+            ],
+            "total": 200
+          },
+          "persistedStateAfter": {
+            "cached_balance": "-200.00",
+            "invoice_total": "600.00",
+            "active_allocation": "200.00"
+          }
+        },
+        "unallocatedCustomer": {
+          "before": {
+            "rows": [
+              {
+                "paymentId": "cmw7v4zu8004ud0gwzw2hlefv",
+                "paymentDate": "2026-11-08T00:00:00.000Z",
+                "amount": 200,
+                "unappliedAmount": 200,
+                "referenceNo": "ref-b65e7feb"
+              }
+            ],
+            "total": 200
+          },
+          "after": {
+            "rows": [],
+            "total": 0
+          },
+          "refundId": "cmw7v4zwh005ad0gwg1qxhuhr"
+        },
+        "unallocatedSupplier": {
+          "before": {
+            "rows": [
+              {
+                "paymentId": "cmw7v4zuw0051d0gw0flbalfd",
+                "paymentDate": "2026-11-08T00:00:00.000Z",
+                "amount": 200,
+                "unappliedAmount": 200,
+                "referenceNo": "ref-3e4053a3"
+              }
+            ],
+            "total": 200
+          },
+          "after": {
+            "rows": [],
+            "total": 0
+          },
+          "refundId": "cmw7v4zx8005id0gwe2326gxh"
+        },
+        "auditEvents": [
+          {
+            "event_type": "REFUND_COMPLETED",
+            "target_type": "payment_refund",
+            "target_id": "cmw7v4zmp0039d0gw6v2a7sus",
+            "actor_id": "1add161b-23f8-4ea7-82c7-37a09f7ad6b6",
+            "metadata": {
+              "amount": 200,
+              "paymentId": "cmw7v4zeq0024d0gwkbvriqwr",
+              "idempotencyKey": "recon20261108at-customer-refund-56563f44-1455-48a3-bf30-43dda768028f"
+            }
+          },
+          {
+            "event_type": "REFUND_COMPLETED",
+            "target_type": "payment_refund",
+            "target_id": "cmw7v4znm003ld0gwbsqn3ra2",
+            "actor_id": "1add161b-23f8-4ea7-82c7-37a09f7ad6b6",
+            "metadata": {
+              "amount": 200,
+              "paymentId": "cmw7v4zfg002bd0gwdlg1qffx",
+              "idempotencyKey": "recon20261108at-supplier-refund-108bc2a0-9363-4e27-ac91-1891f4c0649a"
+            }
+          }
+        ],
+        "rollback": [
+          {
+            "kind": "customer",
+            "status": "PASS",
+            "error": "\nInvalid `tx.customer_ledgers.create()` invocation in\nE:\\PharmnosLite\\src\\domain\\services\\financial-reconciliation.service.ts:468:33\n\n  465   },\n  466 });\n  467 if (payment.counterpartyKind === \"customer\") {\n→ 468   await tx.customer_ledgers.create(\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"P0001\", message: \"controlled refund rollback\", severity: \"ERROR\", detail: None, column: None, hint: None }), transient: false })",
+            "before": {
+              "refunds": 1,
+              "reversals": 1,
+              "audits": 7,
+              "projection": 200,
+              "invoice": 400
+            },
+            "after": {
+              "refunds": 1,
+              "reversals": 1,
+              "audits": 7,
+              "projection": 200,
+              "invoice": 400
+            }
+          },
+          {
+            "kind": "supplier",
+            "status": "PASS",
+            "error": "\nInvalid `tx.supplier_ledgers.create()` invocation in\nE:\\PharmnosLite\\src\\domain\\services\\financial-reconciliation.service.ts:491:33\n\n  488     data: { receivable_balance: money(customer?.receivable_balance).add(amount).toNumber() },\n  489   });\n  490 } else {\n→ 491   await tx.supplier_ledgers.create(\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"P0001\", message: \"controlled refund rollback\", severity: \"ERROR\", detail: None, column: None, hint: None }), transient: false })",
+            "before": {
+              "refunds": 1,
+              "reversals": 1,
+              "audits": 7,
+              "projection": 200,
+              "invoice": 600
+            },
+            "after": {
+              "refunds": 1,
+              "reversals": 1,
+              "audits": 7,
+              "projection": 200,
+              "invoice": 600
+            }
+          }
+        ],
+        "refundActions": [
+          "completeRefundAction"
+        ],
+        "supportedStatuses": [
+          "REQUESTED",
+          "APPROVED",
+          "COMPLETED",
+          "CANCELLED"
+        ],
+        "missingStages": [
+          "request creation",
+          "approval/authorization",
+          "rejection/cancellation action",
+          "separate completion actor",
+          "refund reversal/correction action"
+        ]
+      },
+      "errors": [
+        "SUPPLIER_REFUND_PROJECTION_AND_AUDIT"
+      ]
+    },
+    "stderrTail": [
+      ""
+    ]
+  },
+  "existingHarness": {
+    "status": "BLOCKED",
+    "reason": "The existing harness requires a runtime-role connection; that role is absent after Prisma-only migration replay and must not be synthesized by applying generated RLS provisioning.",
+    "evidenceFile": null,
+    "note": "The existing harness S-29 Promise.allSettled result is not deterministic-barrier evidence."
+  },
+  "decisionContract": {
+    "references": [
+      ".obsidian-vault/specs/financial-reconciliation/financial-reconciliation-accounting-decision-pack.md",
+      ".obsidian-vault/specs/financial-reconciliation/financial-reconciliation-accounting-invariants.md",
+      ".obsidian-vault/specs/financial-reconciliation/financial-reconciliation-policy-matrix.md",
+      ".obsidian-vault/specs/financial-reconciliation/financial-reconciliation-scenario-matrix.md",
+      ".obsidian-vault/specs/financial-reconciliation/financial-reconciliation-engineering-plan.md",
+      ".obsidian-vault/specs/financial-reconciliation/financial-reconciliation-architecture.md"
+    ]
+  },
+  "execution": {
+    "targetInitializedFromPrismaMigrations": true,
+    "generatedProvisioningSqlUsedAsMigrationSubstitute": false,
+    "implementationFilesModified": false,
+    "sourceAssertions": []
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "evidenceVersion": 1,
+  "phase": "CLEANUP_AUTHORIZATION",
+  "status": "PASS",
+  "runId": "replay5d1b46962e3d",
+  "targetBinding": "1|replay5d1b46962e3d|127.0.0.1|57566|pharmnos_financial_e2e_replay5d1b46962e3d|pharmnos_e2e|pharmnos_e2e_runtime|FINANCIAL_E2E_DB_PASSWORD|FINANCIAL_E2E_RUNTIME_DB_PASSWORD|DATABASE_AUTH_CONTEXT_SIGNING_SECRET|pharmnos-financial-e2e|pharmnoslite-financial-e2e-replay5d1b46962e3d|financial-e2e-postgres|cfedef0aacd7e42ee2beb1c70e192decac10d5d6600cfb877700801f54eb70fe|PRISMA_MIGRATIONS_REPLAYED|35f42eef7bd099c83c87c3fcf68b25e5b73c4f6d0e07bbfc605216d166131bc8",
+  "targetFingerprint": "bf6c109dbe6c097a3871f291a184fd02fb8958dfa9d02442c2f041144f92d0f2",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 57566,
+    "databaseName": "pharmnos_financial_e2e_replay5d1b46962e3d",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "composeProject": "pharmnoslite-financial-e2e-replay5d1b46962e3d",
+    "composeService": "financial-e2e-postgres",
+    "composeProfile": "financial-e2e",
+    "schemaArtifactHash": "cfedef0aacd7e42ee2beb1c70e192decac10d5d6600cfb877700801f54eb70fe"
+  },
+  "recordedAt": 1794151841192,
+  "details": {
+    "composeProject": "pharmnoslite-financial-e2e-replay5d1b46962e3d",
+    "action": "down",
+    "verifiedAbsent": true
+  }
+}

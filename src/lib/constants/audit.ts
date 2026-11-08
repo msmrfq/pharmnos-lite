@@ -21,6 +21,14 @@ export const AUDIT_BADGE_MAP: Record<AuditEventType, BadgeVariant> = {
   PRODUCT_UPDATED: "success",
   CUSTOMER_DEACTIVATED: "warning",
   SUPPLIER_DEACTIVATED: "warning",
+  ALLOCATION_CREATED: "success",
+  ALLOCATION_REVERSED: "warning",
+  REFUND_REQUESTED: "default",
+  REFUND_APPROVED: "success",
+  REFUND_REJECTED: "destructive",
+  REFUND_CANCELLED: "secondary",
+  REFUND_COMPLETED: "warning",
+  PAYMENT_REVERSED: "warning",
 };
 
 export const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
@@ -40,4 +48,12 @@ export const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
   PRODUCT_UPDATED: "Product updated",
   CUSTOMER_DEACTIVATED: "Customer deactivated",
   SUPPLIER_DEACTIVATED: "Supplier deactivated",
+  ALLOCATION_CREATED: "Payment allocation created",
+  ALLOCATION_REVERSED: "Payment allocation reversed",
+  REFUND_REQUESTED: "Payment refund requested",
+  REFUND_APPROVED: "Payment refund approved",
+  REFUND_REJECTED: "Payment refund rejected",
+  REFUND_CANCELLED: "Payment refund cancelled",
+  REFUND_COMPLETED: "Payment refund completed",
+  PAYMENT_REVERSED: "Payment reversed",
 };

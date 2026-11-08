@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
     createTargetContract,
+    governanceArtifactHash,
     loadTargetContractFromEnv,
+    migrationInventoryHash,
     schemaArtifactHash,
     targetContractBinding,
     validateTargetContract,
@@ -21,6 +23,8 @@ function contract() {
         databaseName: "pharmnos_financial_e2e_0419",
         composeProject: "pharmnoslite-financial-e2e-0419",
         schemaArtifactHash: schemaArtifactHash(),
+        schemaMode: "PRISMA_MIGRATIONS_REPLAYED",
+        migrationInventoryHash: migrationInventoryHash(),
         authorizedAt: now - 1000,
         expiresAt: now + 60_000,
     });
@@ -39,6 +43,39 @@ test("accepts one authorized target for bootstrap and runtime", () => {
     assert.equal(targetContractBinding(value), targetContractBinding(Object.freeze({ ...value })));
 });
 
+test("creates an explicitly bound empty-baseline contract and rejects contradictory or stale inputs", () => {
+    const options = {
+        runId: "run_0419",
+        targetUrl,
+        runtimeUrl,
+        databaseName: "pharmnos_financial_e2e_0419",
+        composeProject: "pharmnoslite-financial-e2e-0419",
+        schemaMode: "EMPTY_BASELINE",
+        schemaArtifactHash: schemaArtifactHash(),
+        governanceArtifactHash: governanceArtifactHash(),
+        authorizedAt: now - 1000,
+        expiresAt: now + 60_000,
+    };
+    const value = createTargetContract(options);
+    assert.equal(value.schemaMode, "EMPTY_BASELINE");
+    assert.equal(Object.hasOwn(value, "migrationInventoryHash"), false);
+    assert.equal(Object.isFrozen(value), true);
+    for (const patch of [
+        { schemaMode: undefined },
+        { schemaMode: "UNKNOWN" },
+        { schemaArtifactHash: undefined },
+        { schemaArtifactHash: "0".repeat(64) },
+        { governanceArtifactHash: undefined },
+        { governanceArtifactHash: "0".repeat(64) },
+        { migrationInventoryHash: migrationInventoryHash() },
+    ]) assert.throws(() => createTargetContract({ ...options, ...patch }));
+    assert.throws(() => createTargetContract({
+        ...options,
+        schemaMode: "PRISMA_MIGRATIONS_REPLAYED",
+        governanceArtifactHash: undefined,
+    }), /migration inventory fingerprint/);
+});
+
 test("rejects a mismatched port before execution", () => {
     const result = validateTargetContract({
         contract: contract(),
@@ -49,6 +86,14 @@ test("rejects a mismatched port before execution", () => {
     });
     assert.equal(result.ok, false);
     assert.match(result.errors.join(" "), /does not match the authorized target contract/);
+});
+
+test("rejects unsuffixed shared database and Compose identities", () => {
+    const value = { ...contract(), databaseName: "pharmnos_financial_e2e", composeProject: "pharmnoslite" };
+    const result = validateTargetContract({ contract: value, targetUrl, runtimeUrl, ordinaryUrl, now });
+    assert.equal(result.ok, false);
+    assert.match(result.errors.join(" "), /database name is not disposable/);
+    assert.match(result.errors.join(" "), /Compose project is invalid/);
 });
 
 test("rejects a mismatched database name before execution", () => {

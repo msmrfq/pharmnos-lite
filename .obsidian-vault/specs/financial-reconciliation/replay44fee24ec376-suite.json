@@ -1,0 +1,1430 @@
+{
+  "campaign": "Financial Reconciliation - Runtime Scenario Harness",
+  "target": "run-scoped disposable PostgreSQL only",
+  "fixture": {
+    "tenants": {
+      "a": "tenant_a_replay44fee24ec376_6a1d98855edd448aaa73a31aacf5adc0",
+      "b": "tenant_b_replay44fee24ec376_1130f0ae10214742b7268534be56d7b7"
+    }
+  },
+  "runId": "replay44fee24ec376",
+  "recordedAt": "2026-11-08T15:21:19.502Z",
+  "expectationReference": ".obsidian-vault/specs/financial-reconciliation/financial-reconciliation-scenario-matrix.md",
+  "results": [
+    {
+      "id": "customer-refund-terminal-transitions-regression",
+      "status": "PASS",
+      "operation": "request to rejection or cancellation; approved to cancellation; invalid and cross-tenant transitions",
+      "passed": true,
+      "before": {
+        "paymentAmount": 600,
+        "activeAllocations": 0,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "allocationReversals": 0,
+        "invoicePaid": 0,
+        "invoiceDue": 1000,
+        "usable": 600
+      },
+      "after": {
+        "paymentAmount": 600,
+        "activeAllocations": 0,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "allocationReversals": 0,
+        "invoicePaid": 0,
+        "invoiceDue": 1000,
+        "usable": 600
+      },
+      "ledgerBefore": {
+        "customer_rows": 0,
+        "supplier_rows": 0
+      },
+      "ledgerAfter": {
+        "customer_rows": 0,
+        "supplier_rows": 0
+      },
+      "transitions": [
+        {
+          "terminal": "REJECTED",
+          "requestReplay": true,
+          "approvalReplay": null,
+          "transitionReplay": true,
+          "matchingId": true,
+          "premature": "Only an approved refund can be completed; current status is REQUESTED.",
+          "invalid": "Refund cannot transition from REJECTED to APPROVED.",
+          "crossTenant": "Refund does not belong to this tenant.",
+          "persisted": {
+            "status": "REJECTED",
+            "audit_rows": 2
+          }
+        },
+        {
+          "terminal": "CANCELLED",
+          "requestReplay": true,
+          "approvalReplay": null,
+          "transitionReplay": true,
+          "matchingId": true,
+          "premature": "Only an approved refund can be completed; current status is REQUESTED.",
+          "invalid": "Refund cannot transition from CANCELLED to APPROVED.",
+          "crossTenant": "Refund does not belong to this tenant.",
+          "persisted": {
+            "status": "CANCELLED",
+            "audit_rows": 2
+          }
+        },
+        {
+          "terminal": "APPROVED_CANCELLED",
+          "requestReplay": true,
+          "approvalReplay": true,
+          "transitionReplay": true,
+          "matchingId": true,
+          "premature": "Only an approved refund can be completed; current status is REQUESTED.",
+          "invalid": "Refund cannot transition from CANCELLED to APPROVED.",
+          "crossTenant": "Refund does not belong to this tenant.",
+          "persisted": {
+            "status": "CANCELLED",
+            "audit_rows": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "supplier-refund-terminal-transitions-regression",
+      "status": "PASS",
+      "operation": "request to rejection or cancellation; approved to cancellation; invalid and cross-tenant transitions",
+      "passed": true,
+      "before": {
+        "paymentAmount": 600,
+        "activeAllocations": 0,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "usable": 600,
+        "supplierAdvance": 600,
+        "invoiceDue": 600,
+        "netAP": 0,
+        "supplierPayable": 0,
+        "allocationCount": 0
+      },
+      "after": {
+        "paymentAmount": 600,
+        "activeAllocations": 0,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "usable": 600,
+        "supplierAdvance": 600,
+        "invoiceDue": 600,
+        "netAP": 0,
+        "supplierPayable": 0,
+        "allocationCount": 0
+      },
+      "ledgerBefore": {
+        "customer_rows": 0,
+        "supplier_rows": 0
+      },
+      "ledgerAfter": {
+        "customer_rows": 0,
+        "supplier_rows": 0
+      },
+      "transitions": [
+        {
+          "terminal": "REJECTED",
+          "requestReplay": true,
+          "approvalReplay": null,
+          "transitionReplay": true,
+          "matchingId": true,
+          "premature": "Only an approved refund can be completed; current status is REQUESTED.",
+          "invalid": "Refund cannot transition from REJECTED to APPROVED.",
+          "crossTenant": "Refund does not belong to this tenant.",
+          "persisted": {
+            "status": "REJECTED",
+            "audit_rows": 2
+          }
+        },
+        {
+          "terminal": "CANCELLED",
+          "requestReplay": true,
+          "approvalReplay": null,
+          "transitionReplay": true,
+          "matchingId": true,
+          "premature": "Only an approved refund can be completed; current status is REQUESTED.",
+          "invalid": "Refund cannot transition from CANCELLED to APPROVED.",
+          "crossTenant": "Refund does not belong to this tenant.",
+          "persisted": {
+            "status": "CANCELLED",
+            "audit_rows": 2
+          }
+        },
+        {
+          "terminal": "APPROVED_CANCELLED",
+          "requestReplay": true,
+          "approvalReplay": true,
+          "transitionReplay": true,
+          "matchingId": true,
+          "premature": "Only an approved refund can be completed; current status is REQUESTED.",
+          "invalid": "Refund cannot transition from CANCELLED to APPROVED.",
+          "crossTenant": "Refund does not belong to this tenant.",
+          "persisted": {
+            "status": "CANCELLED",
+            "audit_rows": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "S-02",
+      "status": "PASS",
+      "operation": "independent customer advance allocation and idempotent retry",
+      "passed": true,
+      "before": {
+        "paymentAmount": 500,
+        "activeAllocations": 0,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "allocationReversals": 0,
+        "invoicePaid": 0,
+        "invoiceDue": 800,
+        "usable": 500
+      },
+      "after": {
+        "paymentAmount": 500,
+        "activeAllocations": 500,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "allocationReversals": 0,
+        "invoicePaid": 500,
+        "invoiceDue": 300,
+        "usable": 0
+      },
+      "persisted": {
+        "receivable_balance": "300.00",
+        "allocations": 1,
+        "audit_rows": 1
+      },
+      "allocationId": "cmw7zchkg002g106c9ec5gsy7",
+      "replay": {
+        "id": "cmw7zchkg002g106c9ec5gsy7",
+        "replayed": true
+      },
+      "refundable": 500,
+      "initialRefundable": 500,
+      "boundary": "reconciliation service with synthetic persisted fixture and restricted application role"
+    },
+    {
+      "id": "S-03",
+      "status": "PASS",
+      "operation": "independent customer advance allocation and idempotent retry",
+      "passed": true,
+      "before": {
+        "paymentAmount": 500,
+        "activeAllocations": 0,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "allocationReversals": 0,
+        "invoicePaid": 0,
+        "invoiceDue": 800,
+        "usable": 500
+      },
+      "after": {
+        "paymentAmount": 500,
+        "activeAllocations": 300,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "allocationReversals": 0,
+        "invoicePaid": 300,
+        "invoiceDue": 500,
+        "usable": 200
+      },
+      "persisted": {
+        "receivable_balance": "300.00",
+        "allocations": 1,
+        "audit_rows": 1
+      },
+      "allocationId": "cmw7zchly002m106c231b1651",
+      "replay": {
+        "id": "cmw7zchly002m106c231b1651",
+        "replayed": true
+      },
+      "refundable": 500,
+      "initialRefundable": 500,
+      "boundary": "reconciliation service with synthetic persisted fixture and restricted application role"
+    },
+    {
+      "id": "S-05",
+      "status": "PASS",
+      "operation": "independent supplier advance allocation and idempotent retry",
+      "passed": true,
+      "before": {
+        "paymentAmount": 1000,
+        "activeAllocations": 0,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "usable": 1000,
+        "supplierAdvance": 1000,
+        "invoiceDue": 2000,
+        "netAP": 1000,
+        "supplierPayable": 1000,
+        "allocationCount": 0
+      },
+      "after": {
+        "paymentAmount": 1000,
+        "activeAllocations": 600,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "usable": 400,
+        "supplierAdvance": 400,
+        "invoiceDue": 1400,
+        "netAP": 1000,
+        "supplierPayable": 1000,
+        "allocationCount": 1
+      },
+      "allocationId": "cmw7zchn8002s106cx1nl06m5",
+      "replay": {
+        "id": "cmw7zchn8002s106cx1nl06m5",
+        "replayed": true
+      },
+      "audit": {
+        "count": 1
+      },
+      "overAllocation": null,
+      "refundable": 1000,
+      "boundary": "reconciliation service with synthetic persisted fixture and restricted application role"
+    },
+    {
+      "id": "S-06",
+      "status": "PASS",
+      "operation": "independent supplier advance allocation and idempotent retry",
+      "passed": true,
+      "before": {
+        "paymentAmount": 1000,
+        "activeAllocations": 600,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "usable": 400,
+        "supplierAdvance": 400,
+        "invoiceDue": 1400,
+        "netAP": 1000,
+        "supplierPayable": 1000,
+        "allocationCount": 1
+      },
+      "after": {
+        "paymentAmount": 1000,
+        "activeAllocations": 1000,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "usable": 0,
+        "supplierAdvance": 0,
+        "invoiceDue": 1000,
+        "netAP": 1000,
+        "supplierPayable": 1000,
+        "allocationCount": 2
+      },
+      "allocationId": "cmw7zchou0033106ck2956h24",
+      "replay": {
+        "id": "cmw7zchou0033106ck2956h24",
+        "replayed": true
+      },
+      "audit": {
+        "count": 1
+      },
+      "overAllocation": "Payment does not have enough usable unapplied funds.",
+      "refundable": 1000,
+      "boundary": "reconciliation service with synthetic persisted fixture and restricted application role"
+    },
+    {
+      "id": "S-34",
+      "status": "PASS",
+      "operation": "independent supplier advance allocation and idempotent retry",
+      "passed": true,
+      "before": {
+        "paymentAmount": 1000,
+        "activeAllocations": 0,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "usable": 1000,
+        "supplierAdvance": 1000,
+        "invoiceDue": 1400,
+        "netAP": 400,
+        "supplierPayable": 400,
+        "allocationCount": 0
+      },
+      "after": {
+        "paymentAmount": 1000,
+        "activeAllocations": 600,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "usable": 400,
+        "supplierAdvance": 400,
+        "invoiceDue": 800,
+        "netAP": 400,
+        "supplierPayable": 400,
+        "allocationCount": 1
+      },
+      "allocationId": "cmw7zchq9003a106crd2q2kwh",
+      "replay": {
+        "id": "cmw7zchq9003a106crd2q2kwh",
+        "replayed": true
+      },
+      "audit": {
+        "count": 1
+      },
+      "overAllocation": null,
+      "refundable": 1000,
+      "boundary": "reconciliation service with synthetic persisted fixture and restricted application role"
+    },
+    {
+      "id": "S-35",
+      "status": "PASS",
+      "operation": "independent supplier advance allocation and idempotent retry",
+      "passed": true,
+      "before": {
+        "paymentAmount": 1000,
+        "activeAllocations": 0,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "usable": 1000,
+        "supplierAdvance": 1000,
+        "invoiceDue": 1000,
+        "netAP": 0,
+        "supplierPayable": 0,
+        "allocationCount": 0
+      },
+      "after": {
+        "paymentAmount": 1000,
+        "activeAllocations": 1000,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "usable": 0,
+        "supplierAdvance": 0,
+        "invoiceDue": 0,
+        "netAP": 0,
+        "supplierPayable": 0,
+        "allocationCount": 1
+      },
+      "allocationId": "cmw7zchr6003g106cmq33l5ju",
+      "replay": {
+        "id": "cmw7zchr6003g106cmq33l5ju",
+        "replayed": true
+      },
+      "audit": {
+        "count": 1
+      },
+      "overAllocation": null,
+      "refundable": 1000,
+      "boundary": "reconciliation service with synthetic persisted fixture and restricted application role"
+    },
+    {
+      "id": "S-11",
+      "status": "PASS",
+      "operation": "complete unapplied refund and idempotent retry without allocation",
+      "scenario": "S-11",
+      "passed": true,
+      "financial": {
+        "amount": "200.00",
+        "refunded": "200.00",
+        "status": "COMPLETED",
+        "payment_id": "customer_unapplied_payment_921ecffd024441898430befb8dd3f24f",
+        "allocations": 0,
+        "audit_rows": 3
+      },
+      "ledger": {
+        "balance": "0.00",
+        "ledger_rows": 1,
+        "posting_amount": "200.00"
+      },
+      "replay": {
+        "id": "cmw7zchry003m106cxfeq79k9",
+        "replayed": true
+      },
+      "paymentId": "customer_unapplied_payment_921ecffd024441898430befb8dd3f24f",
+      "refundId": "cmw7zchry003m106cxfeq79k9",
+      "usable": 0,
+      "boundary": "reconciliation service with synthetic persisted fixture and restricted application role"
+    },
+    {
+      "id": "S-36",
+      "status": "PASS",
+      "operation": "complete unapplied refund and idempotent retry without allocation",
+      "scenario": "S-36",
+      "passed": true,
+      "financial": {
+        "amount": "300.00",
+        "refunded": "300.00",
+        "status": "COMPLETED",
+        "payment_id": "supplier_unapplied_payment_ea0621a82b9b42a4a877a98c59381bc1",
+        "allocations": 0,
+        "audit_rows": 3
+      },
+      "ledger": {
+        "balance": "0.00",
+        "ledger_rows": 1,
+        "posting_amount": "300.00"
+      },
+      "replay": {
+        "id": "cmw7zchuw0042106cd41lhsjk",
+        "replayed": true
+      },
+      "paymentId": "supplier_unapplied_payment_ea0621a82b9b42a4a877a98c59381bc1",
+      "refundId": "cmw7zchuw0042106cd41lhsjk",
+      "usable": 0,
+      "boundary": "reconciliation service with synthetic persisted fixture and restricted application role"
+    },
+    {
+      "id": "S-12",
+      "status": "PASS",
+      "operation": "fully allocated customer payment refund and idempotent retry",
+      "passed": true,
+      "before": {
+        "paymentAmount": 1000,
+        "activeAllocations": 1000,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "allocationReversals": 0,
+        "invoicePaid": 1000,
+        "invoiceDue": 0,
+        "usable": 0
+      },
+      "beforeReplay": {
+        "paymentAmount": 1000,
+        "activeAllocations": 800,
+        "refunds": 200,
+        "paymentReversals": 0,
+        "allocationReversals": 200,
+        "invoicePaid": 800,
+        "invoiceDue": 200,
+        "usable": 0
+      },
+      "after": {
+        "paymentAmount": 1000,
+        "activeAllocations": 800,
+        "refunds": 200,
+        "paymentReversals": 0,
+        "allocationReversals": 200,
+        "invoicePaid": 800,
+        "invoiceDue": 200,
+        "usable": 0
+      },
+      "persisted": {
+        "receivable_balance": "200.00",
+        "reversals": 1,
+        "ledger_rows": 1,
+        "ledger_debit": "200.00",
+        "refund_audits": 3
+      },
+      "replay": {
+        "id": "cmw7zchz7004n106ct2zlpdaa",
+        "replayed": true
+      },
+      "excess": null,
+      "paymentId": "s12_payment_079c5d4823184d0c99ecfd330a70f6b8",
+      "allocationId": "cmw7zchya004i106counom7js",
+      "refundId": "cmw7zchz7004n106ct2zlpdaa",
+      "boundary": "reconciliation service with synthetic persisted fixture and restricted application role"
+    },
+    {
+      "id": "S-13",
+      "status": "PASS",
+      "operation": "fully allocated customer payment refund and idempotent retry",
+      "passed": true,
+      "before": {
+        "paymentAmount": 1000,
+        "activeAllocations": 1000,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "allocationReversals": 0,
+        "invoicePaid": 1000,
+        "invoiceDue": 0,
+        "usable": 0
+      },
+      "beforeReplay": {
+        "paymentAmount": 1000,
+        "activeAllocations": 0,
+        "refunds": 1000,
+        "paymentReversals": 0,
+        "allocationReversals": 1000,
+        "invoicePaid": 0,
+        "invoiceDue": 1000,
+        "usable": 0
+      },
+      "after": {
+        "paymentAmount": 1000,
+        "activeAllocations": 0,
+        "refunds": 1000,
+        "paymentReversals": 0,
+        "allocationReversals": 1000,
+        "invoicePaid": 0,
+        "invoiceDue": 1000,
+        "usable": 0
+      },
+      "persisted": {
+        "receivable_balance": "1000.00",
+        "reversals": 1,
+        "ledger_rows": 1,
+        "ledger_debit": "1000.00",
+        "refund_audits": 3
+      },
+      "replay": {
+        "id": "cmw7zci41005c106c60ax70re",
+        "replayed": true
+      },
+      "excess": "Refund exceeds the payment's refundable amount.",
+      "paymentId": "s13_payment_5af84290495944919cec8cc0a8197a97",
+      "allocationId": "cmw7zci390057106cc0urx48h",
+      "refundId": "cmw7zci41005c106c60ax70re",
+      "boundary": "reconciliation service with synthetic persisted fixture and restricted application role"
+    },
+    {
+      "id": "S-17",
+      "status": "PASS",
+      "operation": "fully allocated customer payment refund and idempotent retry",
+      "passed": true,
+      "before": {
+        "paymentAmount": 1000,
+        "activeAllocations": 1000,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "allocationReversals": 0,
+        "invoicePaid": 1000,
+        "invoiceDue": 0,
+        "usable": 0
+      },
+      "beforeReplay": {
+        "paymentAmount": 1000,
+        "activeAllocations": 800,
+        "refunds": 200,
+        "paymentReversals": 0,
+        "allocationReversals": 200,
+        "invoicePaid": 800,
+        "invoiceDue": 200,
+        "usable": 0
+      },
+      "after": {
+        "paymentAmount": 1000,
+        "activeAllocations": 800,
+        "refunds": 200,
+        "paymentReversals": 0,
+        "allocationReversals": 200,
+        "invoicePaid": 800,
+        "invoiceDue": 200,
+        "usable": 0
+      },
+      "persisted": {
+        "receivable_balance": "200.00",
+        "reversals": 1,
+        "ledger_rows": 1,
+        "ledger_debit": "200.00",
+        "refund_audits": 3
+      },
+      "replay": {
+        "id": "cmw7zci8y0062106cg0r1ac3e",
+        "replayed": true
+      },
+      "excess": null,
+      "paymentId": "s17_payment_b89a31f74eaf4475b66b4f4aeb8e34f8",
+      "allocationId": "cmw7zci83005x106cg1ier6cx",
+      "refundId": "cmw7zci8y0062106cg0r1ac3e",
+      "boundary": "reconciliation service with synthetic persisted fixture and restricted application role"
+    },
+    {
+      "id": "S-14",
+      "status": "PASS",
+      "operation": "customer allocation or payment reversal and idempotent retry",
+      "passed": true,
+      "before": {
+        "paymentAmount": 400,
+        "activeAllocations": 400,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "allocationReversals": 0,
+        "invoicePaid": 400,
+        "invoiceDue": 600,
+        "usable": 0
+      },
+      "after": {
+        "paymentAmount": 400,
+        "activeAllocations": 0,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "allocationReversals": 400,
+        "invoicePaid": 0,
+        "invoiceDue": 1000,
+        "usable": 400
+      },
+      "persisted": {
+        "receivable_balance": "600.00",
+        "allocation_reversals": 1,
+        "reversal_ledger_rows": 0,
+        "reversal_debit": "0",
+        "refund_ledger_rows": 0,
+        "reversal_audits": 1
+      },
+      "replay": {
+        "id": "cmw7zcidd006r106c6bm0ihfr",
+        "replayed": true
+      },
+      "paymentId": "s14_payment_31634fd9f0ff4e808ca84060017bda4f",
+      "allocationId": "cmw7zcicn006m106c00vawb9e",
+      "reversalId": "cmw7zcidd006r106c6bm0ihfr",
+      "boundary": "reconciliation service with synthetic persisted fixture and restricted application role"
+    },
+    {
+      "id": "S-15",
+      "status": "PASS",
+      "operation": "customer allocation or payment reversal and idempotent retry",
+      "passed": true,
+      "before": {
+        "paymentAmount": 1000,
+        "activeAllocations": 1000,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "allocationReversals": 0,
+        "invoicePaid": 1000,
+        "invoiceDue": 0,
+        "usable": 0
+      },
+      "after": {
+        "paymentAmount": 1000,
+        "activeAllocations": 0,
+        "refunds": 0,
+        "paymentReversals": 1000,
+        "allocationReversals": 1000,
+        "invoicePaid": 0,
+        "invoiceDue": 1000,
+        "usable": 0
+      },
+      "persisted": {
+        "receivable_balance": "1000.00",
+        "allocation_reversals": 1,
+        "reversal_ledger_rows": 1,
+        "reversal_debit": "1000.00",
+        "refund_ledger_rows": 0,
+        "reversal_audits": 1
+      },
+      "replay": {
+        "id": "cmw7zcif50072106c3nib2lvz",
+        "replayed": true
+      },
+      "paymentId": "s15_payment_758b08a2accb41cda70af56e4dc82a0d",
+      "allocationId": "cmw7zcief006x106csuerqfuv",
+      "reversalId": "cmw7zcif50072106c3nib2lvz",
+      "boundary": "reconciliation service with synthetic persisted fixture and restricted application role"
+    },
+    {
+      "id": "allocation-idempotency-replay-regression",
+      "status": "PASS",
+      "operation": "allocatePayment",
+      "persisted": {
+        "payments": 13100,
+        "allocations": 8800,
+        "refunds": 1900,
+        "reversals": 1000,
+        "allocation_reversals": 5,
+        "sales_paid": 400,
+        "sales_due": 600
+      },
+      "allocationId": "cmw7zcigd007e106ciiyp4ogi"
+    },
+    {
+      "id": "allocation-idempotency-payload-conflict-regression",
+      "status": "PASS",
+      "operation": "conflicting idempotency payload rejected",
+      "expected": "conflicting payload rejected with one original financial mutation",
+      "inputs": {
+        "original": {
+          "tenantId": "tenant_a_replay44fee24ec376_6a1d98855edd448aaa73a31aacf5adc0",
+          "subjectId": "subject_a_replay44fee24ec376_137665a6c272459394e912122a2dd221",
+          "actorId": "subject_a_replay44fee24ec376_137665a6c272459394e912122a2dd221",
+          "paymentId": "payment_a_145c4de64f9c4766bd5760bd2e10d0bb",
+          "invoiceId": "sales_a_e096c94cda86489e9dc66d7344c4f655",
+          "invoiceKind": "sales",
+          "amount": 400,
+          "idempotencyKey": "allocation_363fde4051c4444188784d160fdb065d"
+        },
+        "conflicting": {
+          "tenantId": "tenant_a_replay44fee24ec376_6a1d98855edd448aaa73a31aacf5adc0",
+          "subjectId": "subject_a_replay44fee24ec376_137665a6c272459394e912122a2dd221",
+          "actorId": "subject_a_replay44fee24ec376_137665a6c272459394e912122a2dd221",
+          "paymentId": "payment_a_145c4de64f9c4766bd5760bd2e10d0bb",
+          "invoiceId": "sales_a_e096c94cda86489e9dc66d7344c4f655",
+          "invoiceKind": "sales",
+          "amount": 401,
+          "idempotencyKey": "allocation_363fde4051c4444188784d160fdb065d"
+        }
+      },
+      "error": "Allocation idempotency key was reused with a different payload.",
+      "before": {
+        "payment": {
+          "paymentAmount": 1000,
+          "activeAllocations": 400,
+          "refunds": 0,
+          "paymentReversals": 0,
+          "allocationReversals": 0,
+          "invoicePaid": 400,
+          "invoiceDue": 600,
+          "usable": 600
+        },
+        "audits": {
+          "count": 48
+        },
+        "allocationAudit": {
+          "count": 1
+        }
+      },
+      "after": {
+        "payment": {
+          "paymentAmount": 1000,
+          "activeAllocations": 400,
+          "refunds": 0,
+          "paymentReversals": 0,
+          "allocationReversals": 0,
+          "invoicePaid": 400,
+          "invoiceDue": 600,
+          "usable": 600
+        },
+        "allocations": {
+          "count": 1
+        },
+        "audits": {
+          "count": 48
+        }
+      },
+      "auditRecord": {
+        "originalAllocation": {
+          "count": 1
+        },
+        "afterConflict": {
+          "count": 1
+        }
+      }
+    },
+    {
+      "id": "customer-allocation-reversal-regression",
+      "status": "PASS",
+      "operation": "reverseAllocation",
+      "persisted": {
+        "payments": 13100,
+        "allocations": 8800,
+        "refunds": 1900,
+        "reversals": 1000,
+        "allocation_reversals": 6,
+        "sales_paid": 0,
+        "sales_due": 1000
+      },
+      "ownReversal": {
+        "count": 1,
+        "amount": "400.00"
+      },
+      "reversalId": "cmw7zcihk007l106c01drwh71"
+    },
+    {
+      "id": "customer-refund-lifecycle-regression",
+      "status": "PASS",
+      "operation": "customer request, approval, completion, concurrency, and idempotency",
+      "expected": "one persisted lifecycle and ledger event; request does not consume funds; duplicate completion has one winner",
+      "inputs": {
+        "paymentId": "payment_b_d98deb5bbefb4e7b908bbcbb03dc67e3",
+        "amount": 200
+      },
+      "before": {
+        "paymentAmount": 600,
+        "activeAllocations": 0,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "allocationReversals": 0,
+        "invoicePaid": 0,
+        "invoiceDue": 600,
+        "usable": 600
+      },
+      "after": {
+        "paymentAmount": 600,
+        "activeAllocations": 0,
+        "refunds": 200,
+        "paymentReversals": 0,
+        "allocationReversals": 0,
+        "invoicePaid": 0,
+        "invoiceDue": 600,
+        "usable": 400
+      },
+      "refund": {
+        "id": "cmw7zciie007q106cs5rxz2pd",
+        "amount": "200.00",
+        "status": "COMPLETED",
+        "idempotency_key": "customer-refund-request_cc69ef4e9d0c4b929aed086dacc2a252",
+        "approved_at": "2026-11-08T09:51:18.559Z",
+        "completed_at": "2026-11-08T09:51:18.630Z"
+      },
+      "audit": [
+        {
+          "event_type": "REFUND_COMPLETED",
+          "count": 1
+        },
+        {
+          "event_type": "REFUND_REQUESTED",
+          "count": 1
+        },
+        {
+          "event_type": "REFUND_APPROVED",
+          "count": 1
+        }
+      ],
+      "ledger": {
+        "count": 1,
+        "debit": "200.00"
+      },
+      "requestConflict": "Refund idempotency key was reused with a different payload.",
+      "completionConflict": "Refund idempotency key was reused with a different action or payload.",
+      "completionResults": [
+        {
+          "id": "cmw7zciie007q106cs5rxz2pd",
+          "replayed": false
+        },
+        {
+          "id": "cmw7zciie007q106cs5rxz2pd",
+          "replayed": true
+        }
+      ],
+      "refundId": "cmw7zciie007q106cs5rxz2pd"
+    },
+    {
+      "id": "refund request terminal transitions",
+      "status": "PASS",
+      "operation": "cancel unapproved request and reject request",
+      "persisted": [
+        {
+          "id": "cmw7zcipb008e106c52rgzedx",
+          "status": "CANCELLED"
+        },
+        {
+          "id": "cmw7zciqp008m106cc0snqyzp",
+          "status": "REJECTED"
+        }
+      ]
+    },
+    {
+      "id": "customer-partial-refund-regression",
+      "status": "PASS",
+      "operation": "partial allocation refund and idempotent retry",
+      "persisted": {
+        "paymentAmount": 1000,
+        "activeAllocations": 400,
+        "refunds": 200,
+        "paymentReversals": 0,
+        "allocationReversals": 200,
+        "invoicePaid": 400,
+        "invoiceDue": 200,
+        "usable": 400
+      },
+      "allocationId": "cmw7zciod0089106cd0fvik5f",
+      "refundId": "cmw7zcish008u106ca9slkzg6"
+    },
+    {
+      "id": "customer-full-refund-regression",
+      "status": "PASS",
+      "operation": "full refund after partial refund and idempotent retry",
+      "persisted": {
+        "paymentAmount": 1000,
+        "activeAllocations": 0,
+        "refunds": 1000,
+        "paymentReversals": 0,
+        "allocationReversals": 600,
+        "invoicePaid": 0,
+        "invoiceDue": 600,
+        "usable": 0
+      },
+      "refundId": "cmw7zciw2009e106cpgw8of3q"
+    },
+    {
+      "id": "supplier-allocation-cache-neutrality-regression",
+      "status": "PASS",
+      "operation": "supplier allocation",
+      "expected": "₹400 allocation against ₹600 supplier invoice; ₹200 usable, ₹200 invoice due, and no net AP cache change",
+      "before": {
+        "paymentAmount": 600,
+        "activeAllocations": 0,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "usable": 600,
+        "supplierAdvance": 600,
+        "invoiceDue": 600,
+        "netAP": 0,
+        "supplierPayable": 0,
+        "allocationCount": 0
+      },
+      "after": {
+        "paymentAmount": 600,
+        "activeAllocations": 400,
+        "refunds": 0,
+        "paymentReversals": 0,
+        "usable": 200,
+        "supplierAdvance": 200,
+        "invoiceDue": 200,
+        "netAP": 0,
+        "supplierPayable": 0,
+        "allocationCount": 1
+      },
+      "allocationId": "cmw7zcizr009y106c7h3e9jnb",
+      "auditBoundary": "No supplier-ledger allocation row is written by the reconciliation service.",
+      "supplierLedgerRows": {
+        "count": 0
+      }
+    },
+    {
+      "id": "supplier-refund-payable-cache-regression",
+      "status": "PASS",
+      "operation": "supplier refund request, approval, completion, net AP, persisted ledger and audit",
+      "expected": "Net AP = gross AP 400 - unapplied advance 200 = 200; payment 600, active allocation 200, completed refund 200; exactly one refund ledger posting",
+      "before": {
+        "initial": {
+          "paymentAmount": 600,
+          "activeAllocations": 0,
+          "refunds": 0,
+          "paymentReversals": 0,
+          "usable": 600,
+          "supplierAdvance": 600,
+          "invoiceDue": 600,
+          "netAP": 0,
+          "supplierPayable": 0,
+          "allocationCount": 0
+        },
+        "afterAllocation": {
+          "paymentAmount": 600,
+          "activeAllocations": 400,
+          "refunds": 0,
+          "paymentReversals": 0,
+          "usable": 200,
+          "supplierAdvance": 200,
+          "invoiceDue": 200,
+          "netAP": 0,
+          "supplierPayable": 0,
+          "allocationCount": 1
+        },
+        "requested": {
+          "state": {
+            "paymentAmount": 600,
+            "activeAllocations": 400,
+            "refunds": 0,
+            "paymentReversals": 0,
+            "usable": 200,
+            "supplierAdvance": 200,
+            "invoiceDue": 200,
+            "netAP": 0,
+            "supplierPayable": 0,
+            "allocationCount": 1
+          },
+          "persisted": {
+            "status": "REQUESTED",
+            "ledger_rows": 0,
+            "audit_rows": 1
+          }
+        },
+        "approved": {
+          "state": {
+            "paymentAmount": 600,
+            "activeAllocations": 400,
+            "refunds": 0,
+            "paymentReversals": 0,
+            "usable": 200,
+            "supplierAdvance": 200,
+            "invoiceDue": 200,
+            "netAP": 0,
+            "supplierPayable": 0,
+            "allocationCount": 1
+          },
+          "persisted": {
+            "status": "APPROVED",
+            "ledger_rows": 0,
+            "audit_rows": 2
+          }
+        }
+      },
+      "after": {
+        "paymentAmount": 600,
+        "activeAllocations": 200,
+        "refunds": 200,
+        "paymentReversals": 0,
+        "usable": 200,
+        "supplierAdvance": 200,
+        "invoiceDue": 400,
+        "netAP": 200,
+        "supplierPayable": 200,
+        "allocationCount": 1
+      },
+      "persisted": {
+        "status": "COMPLETED",
+        "amount": "200.00",
+        "payable_balance": "200.00",
+        "ledger_rows": 1,
+        "ledger_credit": "200.00",
+        "audit_rows": 3
+      },
+      "refundId": "cmw7zcj0f00a3106cnbayoubk",
+      "replay": {
+        "id": "cmw7zcj0f00a3106cnbayoubk",
+        "replayed": true
+      }
+    },
+    {
+      "id": "supplier-payment-reversal-regression",
+      "status": "PASS",
+      "operation": "payment reversal and idempotent retry",
+      "persisted": {
+        "reversal_amount": "400.00",
+        "allocation_reversals": "2",
+        "active_allocations": "0.00"
+      },
+      "reversalId": "cmw7zcj4g00an106cisayy4sg"
+    },
+    {
+      "id": "S-29",
+      "status": "PASS",
+      "operation": "cross-tenant payment and invoice ownership rejected",
+      "tenants": {
+        "tenantA": "tenant_a_replay44fee24ec376_6a1d98855edd448aaa73a31aacf5adc0",
+        "tenantB": "tenant_b_replay44fee24ec376_1130f0ae10214742b7268534be56d7b7"
+      },
+      "inputs": [
+        {
+          "tenantId": "tenant_b_replay44fee24ec376_1130f0ae10214742b7268534be56d7b7",
+          "subjectId": "subject_b_replay44fee24ec376_2b08fbca43554c6c87697781311202fd",
+          "actorId": "subject_a_replay44fee24ec376_137665a6c272459394e912122a2dd221",
+          "paymentId": "payment_a_145c4de64f9c4766bd5760bd2e10d0bb",
+          "invoiceId": "sales_tenant_b_3ec39bfedca740919f30894c1f430895",
+          "invoiceKind": "sales",
+          "amount": 400,
+          "idempotencyKey": "cross-tenant-payment_4c0c9df6a9c5407db82620018acafe7b"
+        },
+        {
+          "tenantId": "tenant_a_replay44fee24ec376_6a1d98855edd448aaa73a31aacf5adc0",
+          "subjectId": "subject_a_replay44fee24ec376_137665a6c272459394e912122a2dd221",
+          "actorId": "subject_a_replay44fee24ec376_137665a6c272459394e912122a2dd221",
+          "paymentId": "payment_a_145c4de64f9c4766bd5760bd2e10d0bb",
+          "invoiceId": "sales_tenant_b_3ec39bfedca740919f30894c1f430895",
+          "invoiceKind": "sales",
+          "amount": 400,
+          "idempotencyKey": "cross-tenant-invoice_0a3a6a327c824c24b275165fae48fff0"
+        }
+      ],
+      "errors": {
+        "paymentOwnership": "Payment does not belong to this tenant or has no valid counterparty.",
+        "invoiceOwnership": "Invoice does not belong to this tenant."
+      },
+      "before": {
+        "payment": {
+          "paymentAmount": 1000,
+          "activeAllocations": 0,
+          "refunds": 0,
+          "paymentReversals": 0,
+          "allocationReversals": 400,
+          "invoicePaid": 0,
+          "invoiceDue": 1000,
+          "usable": 1000
+        },
+        "tenantBInvoice": {
+          "balance_due": "600.00"
+        },
+        "tenantBAllocations": {
+          "allocations": 0
+        },
+        "auditCounts": {
+          "tenantA": 72,
+          "tenantB": 0
+        },
+        "financialRows": {
+          "allocations": "15",
+          "refunds": "17",
+          "customer_ledgers": "8",
+          "supplier_ledgers": "3"
+        }
+      },
+      "after": {
+        "payment": {
+          "paymentAmount": 1000,
+          "activeAllocations": 0,
+          "refunds": 0,
+          "paymentReversals": 0,
+          "allocationReversals": 400,
+          "invoicePaid": 0,
+          "invoiceDue": 1000,
+          "usable": 1000
+        },
+        "tenantBInvoice": {
+          "balance_due": "600.00"
+        },
+        "tenantBAllocations": {
+          "allocations": 0
+        },
+        "auditCounts": {
+          "tenantA": 72,
+          "tenantB": 0
+        },
+        "financialRows": {
+          "allocations": "15",
+          "refunds": "17",
+          "customer_ledgers": "8",
+          "supplier_ledgers": "3"
+        }
+      },
+      "validRetry": {
+        "input": {
+          "tenantId": "tenant_a_replay44fee24ec376_6a1d98855edd448aaa73a31aacf5adc0",
+          "subjectId": "subject_a_replay44fee24ec376_137665a6c272459394e912122a2dd221",
+          "actorId": "subject_a_replay44fee24ec376_137665a6c272459394e912122a2dd221",
+          "paymentId": "payment_a_145c4de64f9c4766bd5760bd2e10d0bb",
+          "invoiceId": "sales_a_e096c94cda86489e9dc66d7344c4f655",
+          "invoiceKind": "sales",
+          "amount": 400,
+          "idempotencyKey": "cross-tenant-invoice_0a3a6a327c824c24b275165fae48fff0"
+        },
+        "result": {
+          "id": "cmw7zcj6c00b1106cmaqfmga6",
+          "replayed": false
+        },
+        "persisted": [
+          {
+            "id": "cmw7zcj6c00b1106cmaqfmga6",
+            "amount": "400.00"
+          }
+        ]
+      },
+      "auditBoundary": "No audit/security event row is written by the reconciliation service."
+    },
+    {
+      "id": "allocation-concurrency-regression",
+      "status": "PASS",
+      "operation": "concurrent competing allocations",
+      "expected": "two barrier-synchronized ₹400 requests; exactly one succeeds; winner retry replays; invoice due is ₹200",
+      "inputs": [
+        {
+          "tenantId": "tenant_a_replay44fee24ec376_6a1d98855edd448aaa73a31aacf5adc0",
+          "subjectId": "subject_a_replay44fee24ec376_137665a6c272459394e912122a2dd221",
+          "actorId": "subject_a_replay44fee24ec376_137665a6c272459394e912122a2dd221",
+          "paymentId": "payment_a_145c4de64f9c4766bd5760bd2e10d0bb",
+          "invoiceId": "sales_b_50ec397c755b43acb10b04499359ffba",
+          "invoiceKind": "sales",
+          "amount": 400,
+          "idempotencyKey": "race-a_ff746484611d4c6c924683b73ea1945b"
+        },
+        {
+          "tenantId": "tenant_a_replay44fee24ec376_6a1d98855edd448aaa73a31aacf5adc0",
+          "subjectId": "subject_a_replay44fee24ec376_137665a6c272459394e912122a2dd221",
+          "actorId": "subject_a_replay44fee24ec376_137665a6c272459394e912122a2dd221",
+          "paymentId": "payment_a_145c4de64f9c4766bd5760bd2e10d0bb",
+          "invoiceId": "sales_b_50ec397c755b43acb10b04499359ffba",
+          "invoiceKind": "sales",
+          "amount": 400,
+          "idempotencyKey": "race-b_71c2e3ae5a0646a2bd922e91e71003b2"
+        }
+      ],
+      "outcomes": [
+        {
+          "status": "fulfilled",
+          "value": {
+            "id": "cmw7zcj7900b7106cxxphbajs",
+            "replayed": false
+          }
+        },
+        {
+          "status": "rejected",
+          "error": "Payment does not have enough usable unapplied funds."
+        }
+      ],
+      "fulfilled": 1,
+      "rejected": 1,
+      "winningIdempotencyKey": "race-a_ff746484611d4c6c924683b73ea1945b",
+      "winnerReplay": {
+        "id": "cmw7zcj7900b7106cxxphbajs",
+        "replayed": true
+      },
+      "rejectionReasons": [
+        "Payment does not have enough usable unapplied funds."
+      ],
+      "persisted": {
+        "targetInvoice": {
+          "allocation_count": 1,
+          "allocation_total": "400.00",
+          "invoice_due": "200.00"
+        },
+        "payment": {
+          "paymentAmount": 1000,
+          "activeAllocations": 800,
+          "refunds": 0,
+          "paymentReversals": 0,
+          "allocationReversals": 400,
+          "invoicePaid": 400,
+          "invoiceDue": 200,
+          "usable": 200
+        }
+      }
+    },
+    {
+      "id": "allocation-transaction-rollback-regression",
+      "status": "PASS",
+      "operation": "controlled transaction rollback",
+      "failurePoint": "after payment_allocations INSERT, before transaction commit",
+      "error": "controlled rollback",
+      "before": {
+        "allocations": {
+          "count": 17
+        },
+        "audits": {
+          "count": 74
+        },
+        "payment": {
+          "paymentAmount": 1000,
+          "activeAllocations": 800,
+          "refunds": 0,
+          "paymentReversals": 0,
+          "allocationReversals": 400,
+          "invoicePaid": 400,
+          "invoiceDue": 200,
+          "usable": 200
+        }
+      },
+      "after": {
+        "allocations": {
+          "count": 17
+        },
+        "audits": {
+          "count": 74
+        },
+        "payment": {
+          "paymentAmount": 1000,
+          "activeAllocations": 800,
+          "refunds": 0,
+          "paymentReversals": 0,
+          "allocationReversals": 400,
+          "invoicePaid": 400,
+          "invoiceDue": 200,
+          "usable": 200
+        }
+      },
+      "auditBoundary": "No audit row is written by the reconciliation service."
+    },
+    {
+      "id": "S-01",
+      "status": "BLOCKED",
+      "operation": "Exact customer advance and customer-credit ledger fixture is not implemented."
+    },
+    {
+      "id": "S-04",
+      "status": "BLOCKED",
+      "operation": "Exact supplier advance and supplier-advance ledger fixture is not implemented."
+    },
+    {
+      "id": "S-07",
+      "status": "BLOCKED",
+      "operation": "Exact customer partial-settlement fixture is not implemented."
+    },
+    {
+      "id": "S-08",
+      "status": "BLOCKED",
+      "operation": "Two customer payments allocated to one invoice are not implemented."
+    },
+    {
+      "id": "S-09",
+      "status": "BLOCKED",
+      "operation": "One customer payment allocated across two invoices is not implemented."
+    },
+    {
+      "id": "S-10",
+      "status": "BLOCKED",
+      "operation": "Multiple customer payments against one invoice and third-allocation rejection are not implemented."
+    },
+    {
+      "id": "S-16",
+      "status": "BLOCKED",
+      "operation": "Refund-ledger failure rollback after allocation reversal is not implemented; the available rollback regression inserts an allocation."
+    },
+    {
+      "id": "S-18",
+      "status": "BLOCKED",
+      "operation": "Credit-note rejection/approval and audit boundary is not implemented."
+    },
+    {
+      "id": "S-19",
+      "status": "BLOCKED",
+      "operation": "Finalized customer invoice mutation rejection is not asserted by this harness."
+    },
+    {
+      "id": "S-20",
+      "status": "BLOCKED",
+      "operation": "Effective-time versus recorded-time as-of reporting is not implemented."
+    },
+    {
+      "id": "S-21",
+      "status": "BLOCKED",
+      "operation": "Finalized customer invoice due-date immutability is not asserted by this harness."
+    },
+    {
+      "id": "S-22",
+      "status": "BLOCKED",
+      "operation": "Exact same-payment/same-invoice ₹400 concurrency fixture with ₹500 payment is not implemented."
+    },
+    {
+      "id": "S-23",
+      "status": "BLOCKED",
+      "operation": "Exact two-payment/same-invoice concurrency fixture is not implemented."
+    },
+    {
+      "id": "S-24",
+      "status": "BLOCKED",
+      "operation": "Exact stale-read concurrency fixture with controlled pre-lock reads is not implemented."
+    },
+    {
+      "id": "S-25",
+      "status": "BLOCKED",
+      "operation": "Legacy payment cutover and opening-ledger boundary is not implemented."
+    },
+    {
+      "id": "S-26",
+      "status": "BLOCKED",
+      "operation": "Audited legacy-payment reclassification is not implemented."
+    },
+    {
+      "id": "S-27",
+      "status": "BLOCKED",
+      "operation": "Unsupported Cheque rejection before persistence is not asserted by this harness."
+    },
+    {
+      "id": "S-28",
+      "status": "BLOCKED",
+      "operation": "Concurrent tenant receipt-number serialization is not implemented."
+    },
+    {
+      "id": "S-30",
+      "status": "BLOCKED",
+      "operation": "Unsupported payment-currency rejection is not implemented."
+    },
+    {
+      "id": "S-31",
+      "status": "BLOCKED",
+      "operation": "Two supplier payments allocated to one invoice are not implemented."
+    },
+    {
+      "id": "S-32",
+      "status": "BLOCKED",
+      "operation": "One supplier payment allocated across two invoices is not implemented."
+    },
+    {
+      "id": "S-33",
+      "status": "BLOCKED",
+      "operation": "Exact supplier partial-settlement fixture with a ₹2,000 invoice and ₹750 payment is not implemented."
+    },
+    {
+      "id": "S-37",
+      "status": "BLOCKED",
+      "operation": "Supplier payment reversal followed by corrected payment repost is not implemented."
+    },
+    {
+      "id": "S-38",
+      "status": "BLOCKED",
+      "operation": "Supplier debit-adjustment workflow and audit boundary is not implemented."
+    }
+  ],
+  "summary": {
+    "pass": 28,
+    "fail": 0,
+    "blocked": 24
+  },
+  "note": "Blocked scenarios are not credited as verified. Credentials and full connection strings are intentionally excluded."
+}

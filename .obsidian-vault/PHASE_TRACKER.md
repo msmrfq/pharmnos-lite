@@ -15,7 +15,7 @@
 
 N.B: ALWAYS USE INDIAN STANDARD TIMING, EVERY WHERE IT IS NEEDED. FOR THE DATE USE `YYYY-MM-DD` AND TIME USE `HH-MM-SS` FORMAT. 
 
-**Current working phase:** `GST MODERNIZATION — POST-P7 PRE-PRODUCTION VALIDATION — CURRENT-SOURCE ENGINEERING GATES PASS; INVOICE DOCUMENT RUNTIME, T19 RUNTIME, BROWSER E2E, INDEPENDENT ACCEPTANCE, AND PRODUCTION GATES OPEN.`
+**Current working phase:** `POST-P7 PRE-PRODUCTION VALIDATION`
 
 > **GST specification review state:** the latest current-source campaign passes T13 12/12, T25 297/297, focused financial-integrity contracts 22/22, closure-hardening contracts 19/19, full JavaScript regression 274/274, typecheck, lint, build, safe-placeholder Prisma validation, provisioning static guard, artifact-manifest verification, and `git diff --check`. Artifact package `0.1.2` contains 11 executable artifacts and excludes review-only SQL. Current-source target-bound T19 was not rerun because no fresh immutable disposable-target contract was supplied; browser E2E, separate technical acceptance, professional/statutory confirmation, migration/recovery proof, and production readiness remain open. The separate technical acceptance is **NOT ACCEPTED** and production readiness is **NO-GO**. The equal-count 25/25 report is historical and not the current closure decision.
 
@@ -137,7 +137,7 @@ decision.
 The following seven stages are overview milestones only. Their authoritative
 tasks and statuses live in Layer A; no underlying task is duplicated.
 
-### 1. GST Modernization — `████████████░░░░░░░░` 60% — `CURRENT-SOURCE ENGINEERING VERIFIED; RUNTIME AND RELEASE GATES OPEN`
+### 1. GST Modernization — `████████████░░░░░░░░░` 60% — `CURRENT-SOURCE ENGINEERING VERIFIED; RUNTIME AND RELEASE GATES OPEN`
 
 - **Authoritative source:** `.obsidian-vault/specs/domestic-gst-modernization.md`.
 - **Scope:** implement the specification's hybrid GST architecture for
@@ -178,7 +178,7 @@ tasks and statuses live in Layer A; no underlying task is duplicated.
 - **Required coverage:** GST sales and purchase workflows; inventory, batches, FEFO, and stock movements; customer and supplier ledgers and payments; invoice numbering, rollback, concurrency, transaction integrity, and idempotency; tenant isolation, permissions, RLS, historical invoice snapshot immutability, reprinting, schema rollout, and legacy compatibility.
 - **Dependency/next action:** begin only after GST Modernization completion and acceptance; separately authorize, execute, and accept the broader harness before Invoice Modernization begins.
 
-### 3. Invoice Modernization — `░░░░░░░░░░░░░░░░░░░░` 0% — `PENDING`
+### 3. Invoice Modernization — ``████████████████` 100% — `DONE`
 
 - **Authoritative workstreams:** 6 and 10, with invoice UI/printing work represented by the existing P6/P7 records.
 - **Substeps:** invoice UI/workflow audit, GST alignment, A4/80 mm print validation, invoice regression, and separate invoice-sequence rollback.

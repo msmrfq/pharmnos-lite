@@ -1,0 +1,112 @@
+{
+  "campaign": "Financial Reconciliation - Classified Runtime Candidates",
+  "runId": "replay90e2ad24bdf3",
+  "target": "pharmnos_financial_e2e_replay90e2ad24bdf3",
+  "results": [
+    {
+      "id": "S-16",
+      "status": "PASS",
+      "operation": "controlled customer refund ledger insert failure and retry",
+      "boundary": "reconciliation service restricted-role transaction; target-specific temporary fault trigger",
+      "fixture": {
+        "paymentId": "campaign_rollback_payment_bbc41d4654324df4a2f9933f3cf35479",
+        "allocationId": "cmw804c580002oyi085bc16m9",
+        "refundId": "cmw804c680007oyi09f7w6crq"
+      },
+      "failure": "\nInvalid `tx.customer_ledgers.create()` invocation in\nE:\\PharmnosLite\\src\\domain\\services\\financial-reconciliation.service.ts:784:33\n\n  781   reason: input.reason ?? null,\n  782 });\n  783 if (payment.counterpartyKind === \"customer\") {\n→ 784   await tx.customer_ledgers.create(\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"P0001\", message: \"campaign controlled ledger failure\", severity: \"ERROR\", detail: None, column: None, hint: None }), transient: false })",
+      "before": {
+        "state": {
+          "paymentAmount": 1000,
+          "activeAllocations": 1000,
+          "refunds": 0,
+          "paymentReversals": 0,
+          "allocationReversals": 0,
+          "invoicePaid": 1000,
+          "invoiceDue": 0,
+          "usable": 0
+        },
+        "persisted": {
+          "status": "APPROVED",
+          "audits": 3,
+          "reversals": 0,
+          "ledger_rows": 0,
+          "ledger_net": "0.00",
+          "balance": "0.00"
+        }
+      },
+      "afterFailure": {
+        "state": {
+          "paymentAmount": 1000,
+          "activeAllocations": 1000,
+          "refunds": 0,
+          "paymentReversals": 0,
+          "allocationReversals": 0,
+          "invoicePaid": 1000,
+          "invoiceDue": 0,
+          "usable": 0
+        },
+        "persisted": {
+          "status": "APPROVED",
+          "audits": 3,
+          "reversals": 0,
+          "ledger_rows": 0,
+          "ledger_net": "0.00",
+          "balance": "0.00"
+        }
+      },
+      "retry": {
+        "id": "cmw804c680007oyi09f7w6crq",
+        "replayed": false
+      },
+      "afterRetry": {
+        "state": {
+          "paymentAmount": 1000,
+          "activeAllocations": 800,
+          "refunds": 200,
+          "paymentReversals": 0,
+          "allocationReversals": 200,
+          "invoicePaid": 800,
+          "invoiceDue": 200,
+          "usable": 0
+        },
+        "persisted": {
+          "status": "COMPLETED",
+          "audits": 5,
+          "reversals": 1,
+          "ledger_rows": 1,
+          "ledger_net": "200.00",
+          "balance": "200.00"
+        }
+      },
+      "replay": {
+        "id": "cmw804c680007oyi09f7w6crq",
+        "replayed": true
+      },
+      "afterReplay": {
+        "state": {
+          "paymentAmount": 1000,
+          "activeAllocations": 800,
+          "refunds": 200,
+          "paymentReversals": 0,
+          "allocationReversals": 200,
+          "invoicePaid": 800,
+          "invoiceDue": 200,
+          "usable": 0
+        },
+        "persisted": {
+          "status": "COMPLETED",
+          "audits": 5,
+          "reversals": 1,
+          "ledger_rows": 1,
+          "ledger_net": "200.00",
+          "balance": "200.00"
+        }
+      }
+    }
+  ],
+  "error": null,
+  "summary": {
+    "pass": 1,
+    "fail": 0
+  }
+}
