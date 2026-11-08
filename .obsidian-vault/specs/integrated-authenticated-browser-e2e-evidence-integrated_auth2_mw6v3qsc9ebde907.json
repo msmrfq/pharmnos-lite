@@ -1,0 +1,60 @@
+{
+  "campaign": "integrated_auth2_mw6v3qsc9ebde907",
+  "source_revision": "worktree-current",
+  "target": {
+    "financial_database": "pharmnos_financial_e2e_mw6v3qsc9ebde907",
+    "financial_port": 55610,
+    "auth_port": 55611,
+    "application_port": 3110,
+    "financial_compose_project": "pharmnoslite-financial-e2e-mw6v3qsc9ebde907",
+    "auth_compose_project": "pharmnoslite-authinfra_mw6v3qsc9ebde907"
+  },
+  "provisioning": {
+    "financial_compose": "PASS",
+    "financial_schema_initialization": "PASS",
+    "restricted_runtime_role": "LOGIN,NOSUPERUSER,NOBYPASSRLS",
+    "auth_compose": "PASS",
+    "synthetic_users": 2,
+    "tenant_fixtures": 2
+  },
+  "browser": {
+    "unauthenticated_protected_route_redirect": "PASS",
+    "owner_one_login": "PASS",
+    "owner_one_dashboard": "PASS",
+    "owner_one_purchase_page": "PASS",
+    "owner_one_purchase_draft_submission": "PASS",
+    "owner_two_independent_login": "PASS",
+    "owner_two_tenant_supplier_and_product_isolation": "PASS",
+    "owner_two_logout_and_post_logout_protection": "PASS"
+  },
+  "persistence": {
+    "purchase_invoice_id": "cmw6wbjvz000fnqo7qvsz69qm",
+    "purchase_invoice_count_for_tenant": 1,
+    "purchase_status": "DRAFT",
+    "tenant": "cuid_e2_tenant_g",
+    "item_count": 1,
+    "quantity": 2,
+    "gross_amount": "200.00",
+    "total_tax": "36.00",
+    "net_amount": "236.00",
+    "calculated_taxable_value": "200.0000",
+    "calculated_cgst": "18.0000",
+    "calculated_sgst": "18.0000",
+    "calculated_igst": "0.0000",
+    "fresh_readback": "PASS"
+  },
+  "cleanup": {
+    "status": "PASS",
+    "financial_compose_down": "PASS",
+    "auth_compose_down": "PASS",
+    "campaign_containers_absent": true,
+    "campaign_networks_absent": true,
+    "preexisting_resources_modified": false
+  },
+  "disposition": {
+    "criterion": "ST3-H",
+    "status": "CONDITIONALLY_ACCEPTED",
+    "independent_review": "CONDITIONAL_ACCEPTANCE",
+    "reason": "Browser, session, tenant isolation, authenticated purchase persistence, fresh readback, and exact cleanup passed. Independent review found no vulnerabilities but requires independently verifiable browser/request/database artifacts before unconditional acceptance."
+  }
+}

@@ -58,6 +58,10 @@ const directTenantTables = [
     "sales_invoices",
     "sales_invoice_items",
     "payments",
+    "payment_allocations",
+    "allocation_reversals",
+    "payment_refunds",
+    "payment_reversals",
     "stock_movements",
     "customer_ledgers",
     "supplier_ledgers",
@@ -110,23 +114,23 @@ function ident(value) {
 
 function directPredicate(table) {
     if (table === "tenants") {
-        return `id::text = NULLIF(current_setting('request.jwt.claim.tenant_id', true), '')`;
+        return `id::text = public.financial_context_tenant_id()`;
     }
     if (table === "users") {
-        return `external_id = NULLIF(current_setting('request.jwt.claim.sub', true), '')`;
+        return `external_id = public.financial_context_subject()`;
     }
     if (table === "role_permissions") {
         return `EXISTS (
             SELECT 1 FROM public.roles AS r
             WHERE r.id = role_permissions.role_id
-              AND r.tenant_id::text = NULLIF(current_setting('request.jwt.claim.tenant_id', true), '')
+              AND r.tenant_id::text = public.financial_context_tenant_id()
         )`;
     }
-    return `tenant_id::text = NULLIF(current_setting('request.jwt.claim.tenant_id', true), '')`;
+    return `tenant_id::text = public.financial_context_tenant_id()`;
 }
 
 function subjectPredicate(table) {
-    const subject = `NULLIF(current_setting('request.jwt.claim.sub', true), '')`;
+    const subject = `public.financial_context_subject()`;
     if (table === "users") {
         return `external_id = ${subject}`;
     }
@@ -135,6 +139,7 @@ function subjectPredicate(table) {
             SELECT 1 FROM public.users AS u
             WHERE u.id = memberships.user_id
               AND u.external_id = ${subject}
+              AND memberships.tenant_id::text = public.financial_context_tenant_id()
         )`;
     }
     if (table === "roles") {
@@ -144,6 +149,7 @@ function subjectPredicate(table) {
             WHERE m.role_id = roles.id
               AND m.status = 'active'
               AND u.external_id = ${subject}
+              AND m.tenant_id::text = public.financial_context_tenant_id()
         )`;
     }
     if (table === "role_permissions") {
@@ -154,6 +160,7 @@ function subjectPredicate(table) {
             WHERE r.id = role_permissions.role_id
               AND m.status = 'active'
               AND u.external_id = ${subject}
+              AND m.tenant_id::text = public.financial_context_tenant_id()
         )`;
     }
     return null;
@@ -166,15 +173,18 @@ function policyStatements() {
         const selectPredicate = subjectPredicate(table)
             ? `(${predicate}) OR (${subjectPredicate(table)})`
             : predicate;
+        const writePredicate = ["memberships", "roles", "role_permissions"].includes(table)
+            ? `(${predicate}) AND public.financial_context_is_admin()`
+            : predicate;
         statements.push(
             `ALTER TABLE public.${ident(table)} ENABLE ROW LEVEL SECURITY`,
             `ALTER TABLE public.${ident(table)} FORCE ROW LEVEL SECURITY`,
             `CREATE POLICY ${ident(`tenant_select_${table}`)} ON public.${ident(table)} FOR SELECT TO ${ident(RUNTIME_ROLE)} USING (${selectPredicate})`,
-            `CREATE POLICY ${ident(`tenant_insert_${table}`)} ON public.${ident(table)} FOR INSERT TO ${ident(RUNTIME_ROLE)} WITH CHECK (${predicate})`,
+            `CREATE POLICY ${ident(`tenant_insert_${table}`)} ON public.${ident(table)} FOR INSERT TO ${ident(RUNTIME_ROLE)} WITH CHECK (${writePredicate})`,
         );
         if (!immutableTables.includes(table) && table !== "audit_logs") {
             statements.push(
-                `CREATE POLICY ${ident(`tenant_update_${table}`)} ON public.${ident(table)} FOR UPDATE TO ${ident(RUNTIME_ROLE)} USING (${predicate}) WITH CHECK (${predicate})`,
+                `CREATE POLICY ${ident(`tenant_update_${table}`)} ON public.${ident(table)} FOR UPDATE TO ${ident(RUNTIME_ROLE)} USING (${writePredicate}) WITH CHECK (${writePredicate})`,
             );
         }
     }
@@ -210,8 +220,152 @@ function grantStatements() {
     return statements;
 }
 
-const controlSql = [
+function buildControlSql(contextSigningSecret) {
+    return [
     `CREATE EXTENSION IF NOT EXISTS btree_gist`,
+    `CREATE EXTENSION IF NOT EXISTS pgcrypto`,
+    `CREATE SCHEMA IF NOT EXISTS pharmnos_private`,
+    `CREATE TABLE IF NOT EXISTS pharmnos_private.auth_context_keys (
+       key_name text PRIMARY KEY,
+       signing_secret text NOT NULL
+     )`,
+    `CREATE TABLE IF NOT EXISTS pharmnos_private.auth_context_replays (
+       nonce text PRIMARY KEY,
+       first_transaction_id bigint NOT NULL,
+       first_seen_at timestamptz NOT NULL DEFAULT clock_timestamp()
+     )`,
+    `REVOKE ALL ON SCHEMA pharmnos_private FROM PUBLIC, ${ident(RUNTIME_ROLE)}`,
+    `REVOKE ALL ON TABLE pharmnos_private.auth_context_keys FROM PUBLIC, ${ident(RUNTIME_ROLE)}`,
+    `REVOKE ALL ON TABLE pharmnos_private.auth_context_replays FROM PUBLIC, ${ident(RUNTIME_ROLE)}`,
+    `INSERT INTO pharmnos_private.auth_context_keys (key_name, signing_secret)
+     VALUES ('financial-auth-context', '${contextSigningSecret.replaceAll("'", "''")}')
+     ON CONFLICT (key_name) DO UPDATE SET signing_secret = EXCLUDED.signing_secret`,
+    `CREATE OR REPLACE FUNCTION pharmnos_private.verify_auth_context(context text)
+     RETURNS TABLE(subject_id text, tenant_id text)
+     LANGUAGE plpgsql
+     SECURITY DEFINER
+     SET search_path = pg_catalog, pharmnos_private
+     AS $function$
+     DECLARE
+       payload text;
+       supplied_signature text;
+       expected_signature text;
+       signing_secret text;
+       expires_at bigint;
+       context_nonce text;
+       accepted_transaction_id bigint;
+       context_subject text;
+       context_tenant text;
+     BEGIN
+       IF context IS NULL OR split_part(context, '.', 2) = '' THEN RETURN; END IF;
+       payload := split_part(context, '.', 1);
+       supplied_signature := split_part(context, '.', 2);
+       SELECT k.signing_secret INTO signing_secret
+       FROM pharmnos_private.auth_context_keys AS k
+       WHERE k.key_name = 'financial-auth-context';
+       IF signing_secret IS NULL THEN RETURN; END IF;
+       expected_signature := encode(public.hmac(payload, signing_secret, 'sha256'), 'hex');
+       IF supplied_signature <> expected_signature THEN RETURN; END IF;
+       IF split_part(payload, '|', 1) <> 'v1' THEN RETURN; END IF;
+       expires_at := split_part(payload, '|', 4)::bigint;
+       IF expires_at <= extract(epoch FROM clock_timestamp())::bigint THEN RETURN; END IF;
+       context_nonce := split_part(payload, '|', 5);
+       IF context_nonce !~ '^[0-9a-f]{32}$' THEN RETURN; END IF;
+       context_subject := NULLIF(split_part(payload, '|', 2), '');
+       context_tenant := NULLIF(split_part(payload, '|', 3), '');
+       IF context_subject IS NULL THEN RETURN; END IF;
+       IF context_tenant IS NULL THEN
+         SELECT min(m.tenant_id::text) INTO context_tenant
+         FROM public.users AS u
+         JOIN public.memberships AS m ON m.user_id = u.id
+         WHERE u.external_id = context_subject
+           AND m.status = 'active'
+         HAVING count(*) = 1;
+       END IF;
+       IF context_tenant IS NULL THEN RETURN; END IF;
+       IF NOT EXISTS (
+         SELECT 1
+         FROM public.users AS u
+         JOIN public.memberships AS m ON m.user_id = u.id
+         WHERE u.external_id = context_subject
+           AND m.tenant_id::text = context_tenant
+           AND m.status = 'active'
+       ) THEN RETURN; END IF;
+       subject_id := context_subject;
+       tenant_id := context_tenant;
+       INSERT INTO pharmnos_private.auth_context_replays (nonce, first_transaction_id)
+       VALUES (context_nonce, txid_current())
+       ON CONFLICT (nonce) DO NOTHING;
+       SELECT r.first_transaction_id INTO accepted_transaction_id
+       FROM pharmnos_private.auth_context_replays AS r
+       WHERE r.nonce = context_nonce;
+       IF accepted_transaction_id <> txid_current() THEN RETURN; END IF;
+       RETURN NEXT;
+     EXCEPTION WHEN OTHERS THEN
+       RETURN;
+     END;
+     $function$`,
+    `CREATE OR REPLACE FUNCTION public.financial_context_subject()
+     RETURNS text
+     LANGUAGE sql
+     VOLATILE
+     SECURITY DEFINER
+     SET search_path = pg_catalog, pharmnos_private
+     AS $function$
+       SELECT subject_id FROM pharmnos_private.verify_auth_context(
+         current_setting('pharmnos.auth_context', true)
+       ) LIMIT 1
+     $function$`,
+    `CREATE OR REPLACE FUNCTION public.financial_context_tenant_id()
+     RETURNS text
+     LANGUAGE sql
+     VOLATILE
+     SECURITY DEFINER
+     SET search_path = pg_catalog, pharmnos_private
+     AS $function$
+       SELECT tenant_id FROM pharmnos_private.verify_auth_context(
+         current_setting('pharmnos.auth_context', true)
+       ) LIMIT 1
+     $function$`,
+    `CREATE OR REPLACE FUNCTION public.financial_context_is_admin()
+     RETURNS boolean
+     LANGUAGE plpgsql
+     STABLE
+     SECURITY DEFINER
+     SET search_path = pg_catalog, pharmnos_private
+     AS $function$
+     DECLARE
+       context_subject text;
+       context_tenant text;
+     BEGIN
+       SELECT subject_id, tenant_id
+       INTO context_subject, context_tenant
+       FROM pharmnos_private.verify_auth_context(
+         current_setting('pharmnos.auth_context', true)
+       )
+       LIMIT 1;
+       IF context_subject IS NULL OR context_tenant IS NULL THEN RETURN false; END IF;
+       RETURN EXISTS (
+         SELECT 1
+         FROM public.memberships AS m
+         JOIN public.users AS u ON u.id = m.user_id
+         JOIN public.roles AS r ON r.id = m.role_id
+         WHERE m.tenant_id::text = context_tenant
+           AND m.status = 'active'
+           AND u.external_id = context_subject
+           AND r.system_role = 'ADMIN'
+       );
+     EXCEPTION WHEN OTHERS THEN
+       RETURN false;
+     END;
+     $function$`,
+    `REVOKE ALL ON FUNCTION pharmnos_private.verify_auth_context(text) FROM PUBLIC, ${ident(RUNTIME_ROLE)}`,
+    `REVOKE ALL ON FUNCTION public.financial_context_subject() FROM PUBLIC`,
+    `REVOKE ALL ON FUNCTION public.financial_context_tenant_id() FROM PUBLIC`,
+    `REVOKE ALL ON FUNCTION public.financial_context_is_admin() FROM PUBLIC`,
+    `GRANT EXECUTE ON FUNCTION public.financial_context_subject() TO ${ident(RUNTIME_ROLE)}`,
+    `GRANT EXECUTE ON FUNCTION public.financial_context_tenant_id() TO ${ident(RUNTIME_ROLE)}`,
+    `GRANT EXECUTE ON FUNCTION public.financial_context_is_admin() TO ${ident(RUNTIME_ROLE)}`,
     ...grantStatements(),
     ...policyStatements(),
     `CREATE UNIQUE INDEX IF NOT EXISTS "purchase_invoices_tenant_id_supplier_id_supplier_invoice_no_key"
@@ -323,6 +477,15 @@ const controlSql = [
                 OR NEW.total_tax IS DISTINCT FROM OLD.total_tax
                 OR NEW.round_off IS DISTINCT FROM OLD.round_off
                 OR NEW.net_amount IS DISTINCT FROM OLD.net_amount
+                OR NEW.supplier_id IS DISTINCT FROM OLD.supplier_id
+                OR NEW.supplier_invoice_no IS DISTINCT FROM OLD.supplier_invoice_no
+                OR NEW.invoice_date IS DISTINCT FROM OLD.invoice_date
+                OR NEW.gst_treatment IS DISTINCT FROM OLD.gst_treatment
+                OR NEW.tax_mode IS DISTINCT FROM OLD.tax_mode
+                OR NEW.notes IS DISTINCT FROM OLD.notes
+                OR NEW.finalized_snapshot IS DISTINCT FROM OLD.finalized_snapshot
+                OR NEW.finalized_snapshot_hash IS DISTINCT FROM OLD.finalized_snapshot_hash
+                OR NEW.rendering_version IS DISTINCT FROM OLD.rendering_version
                 OR NEW.finalized_at IS DISTINCT FROM OLD.finalized_at
                 OR NEW.current_gst_evidence_revision_id IS DISTINCT FROM OLD.current_gst_evidence_revision_id
                 OR NEW.current_gst_calculation_id IS DISTINCT FROM OLD.current_gst_calculation_id
@@ -512,13 +675,49 @@ const controlSql = [
        RETURN NEW;
      END;
      $function$`,
+    `CREATE OR REPLACE FUNCTION public.reject_finalized_purchase_delete()
+     RETURNS trigger
+     LANGUAGE plpgsql
+     SET search_path = pg_catalog, public
+     AS $function$
+     DECLARE
+       purchase_status public."InvoiceStatus";
+     BEGIN
+       IF TG_TABLE_NAME = 'purchase_invoices' THEN
+         IF OLD.status = 'FINALIZED'::public."InvoiceStatus" THEN
+           RAISE EXCEPTION 'Finalized purchase invoices cannot be deleted'
+             USING ERRCODE = '42501';
+         END IF;
+         RETURN OLD;
+       END IF;
+       SELECT status
+       INTO purchase_status
+       FROM public."purchase_invoices"
+       WHERE id = OLD.purchase_id
+         AND tenant_id = OLD.tenant_id;
+       IF purchase_status = 'FINALIZED'::public."InvoiceStatus" THEN
+         RAISE EXCEPTION 'Finalized purchase invoice items cannot be deleted'
+           USING ERRCODE = '42501';
+       END IF;
+       RETURN OLD;
+     END;
+     $function$`,
+    `DROP TRIGGER IF EXISTS reject_finalized_purchase_invoice_delete ON public."purchase_invoices"`,
+    `CREATE TRIGGER reject_finalized_purchase_invoice_delete
+     BEFORE DELETE ON public."purchase_invoices"
+     FOR EACH ROW EXECUTE FUNCTION public.reject_finalized_purchase_delete()`,
+    `DROP TRIGGER IF EXISTS reject_finalized_purchase_item_delete ON public."purchase_invoice_items"`,
+    `CREATE TRIGGER reject_finalized_purchase_item_delete
+     BEFORE DELETE ON public."purchase_invoice_items"
+     FOR EACH ROW EXECUTE FUNCTION public.reject_finalized_purchase_delete()`,
+    `REVOKE EXECUTE ON FUNCTION public.reject_finalized_purchase_delete() FROM PUBLIC`,
     `DROP TRIGGER IF EXISTS prevent_finalized_purchase_mutation ON public."purchase_invoices"`,
     `CREATE TRIGGER prevent_finalized_purchase_mutation
-     BEFORE UPDATE OR DELETE ON public."purchase_invoices"
+     BEFORE UPDATE ON public."purchase_invoices"
      FOR EACH ROW EXECUTE FUNCTION public.prevent_finalized_purchase_mutation()`,
     `DROP TRIGGER IF EXISTS prevent_finalized_purchase_item_mutation ON public."purchase_invoice_items"`,
     `CREATE TRIGGER prevent_finalized_purchase_item_mutation
-     BEFORE UPDATE OR DELETE ON public."purchase_invoice_items"
+     BEFORE UPDATE ON public."purchase_invoice_items"
      FOR EACH ROW EXECUTE FUNCTION public.prevent_finalized_purchase_mutation()`,
     `CREATE OR REPLACE FUNCTION public.prevent_finalized_sales_mutation()
      RETURNS trigger
@@ -545,8 +744,6 @@ const controlSql = [
               OR NEW.total_tax IS DISTINCT FROM OLD.total_tax
               OR NEW.round_off IS DISTINCT FROM OLD.round_off
               OR NEW.net_amount IS DISTINCT FROM OLD.net_amount
-              OR NEW.paid_amount IS DISTINCT FROM OLD.paid_amount
-              OR NEW.balance_due IS DISTINCT FROM OLD.balance_due
               OR NEW.payment_mode IS DISTINCT FROM OLD.payment_mode
               OR NEW.notes IS DISTINCT FROM OLD.notes
               OR NEW.created_by IS DISTINCT FROM OLD.created_by
@@ -664,7 +861,8 @@ const controlSql = [
     `REVOKE EXECUTE ON FUNCTION public.prevent_finalized_sales_mutation() FROM PUBLIC`,
     `REVOKE EXECUTE ON FUNCTION public.guard_purchase_posting_transition() FROM PUBLIC`,
     `GRANT EXECUTE ON FUNCTION public.guard_sales_posting_transition() TO ${ident(BOOTSTRAP_ROLE)}`,
-].join(";\n");
+    ].join(";\n");
+}
 
 async function queryRows(client, sql, values = []) {
     return (await client.query(sql, values)).rows;
@@ -838,6 +1036,10 @@ export function validateConnectedInitializationRequest({
 async function main() {
     const lifecycle = loadAuthorizedTargetLifecycle({ phase: "SCHEMA_INITIALIZATION" });
     Object.assign(process.env, lifecycle.environment);
+    const contextSigningSecret = process.env.DATABASE_AUTH_CONTEXT_SIGNING_SECRET;
+    if (!contextSigningSecret || contextSigningSecret.length < 32) {
+        throw new Error("DATABASE_AUTH_CONTEXT_SIGNING_SECRET must be configured with at least 32 characters.");
+    }
     const targetContract = lifecycle.contract;
     const databaseName = targetContract.databaseName;
     if (targetContract.databaseName !== process.env.TEST_DATABASE_NAME ||
@@ -846,7 +1048,6 @@ async function main() {
     }
     const required = [
         "TEST_DATABASE_URL",
-        "DATABASE_URL",
         "TEST_DATABASE_NAME",
         "TEST_DATABASE_MARKER",
         "FINANCIAL_E2E_RUNTIME_DATABASE_URL",
@@ -893,7 +1094,6 @@ async function main() {
     if (!target.ok) throw new Error(`Target guard failed: ${target.errors.join(" ")}`);
 
     const targetUrl = new URL(process.env.TEST_DATABASE_URL);
-    const ordinaryUrl = new URL(process.env.DATABASE_URL);
     const candidate = validateLocalDisposableTargetCandidate({
         serviceName: "financial-e2e-postgres",
         profile: "financial-e2e",
@@ -905,11 +1105,6 @@ async function main() {
         marker: process.env.TEST_DATABASE_MARKER,
         storage: "tmpfs",
         isolationLabel: "financial-e2e-isolated",
-        ordinaryTarget: {
-            host: ordinaryUrl.hostname,
-            port: Number(ordinaryUrl.port || 5432),
-            databaseName: ordinaryUrl.pathname,
-        },
     });
     if (!candidate.ok) throw new Error(`Candidate target guard failed: ${candidate.errors.join(" ")}`);
 
@@ -1046,7 +1241,7 @@ async function main() {
              END
              $$;`,
         );
-        await client.query(controlSql);
+        await client.query(buildControlSql(contextSigningSecret));
         await client.query("COMMIT");
         transactionStarted = false;
         await verifyTargetSchema(client, targetContract);

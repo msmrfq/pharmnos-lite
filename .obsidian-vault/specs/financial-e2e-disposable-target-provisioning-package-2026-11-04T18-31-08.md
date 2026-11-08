@@ -13,6 +13,19 @@ campaign. This document is a preparation package only. It is not a target
 contract, authorization, provisioning record, database evidence, or cleanup
 authorization.
 
+## 2026-11-07 offline readiness update
+
+This existing package remains the canonical owner-facing target-readiness
+artifact; no duplicate tracking document was created. The current validator
+requires the `contextSecretSource` contract field, and the checked-in schema
+artifact fingerprint is now:
+
+`40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168`
+
+The current executable artifact manifest is package version `0.1.3` with 13
+executable artifacts. No target was selected, connected, provisioned,
+mutated, migrated, or cleaned up during this update.
+
 ## Acceptance Criteria
 
 - [x] Exact target-contract fields and validation rules are identified from
@@ -106,6 +119,7 @@ Contract version `1` requires all of the following:
 | `runtimeRole` | `pharmnos_e2e_runtime`; distinct from bootstrap |
 | `bootstrapCredentialSource` | `FINANCIAL_E2E_DB_PASSWORD` |
 | `runtimeCredentialSource` | `FINANCIAL_E2E_RUNTIME_DB_PASSWORD` |
+| `contextSecretSource` | `DATABASE_AUTH_CONTEXT_SIGNING_SECRET` |
 | `marker` | `pharmnos-financial-e2e` |
 | `composeProject` | `pharmnoslite` or `pharmnoslite-financial-e2e[-suffix]` |
 | `composeService` | `financial-e2e-postgres` |
@@ -143,12 +157,13 @@ executable contract**.
 | Runtime role | `pharmnos_e2e_runtime` |
 | Bootstrap secret source | `FINANCIAL_E2E_DB_PASSWORD` in local ignored environment only |
 | Runtime secret source | `FINANCIAL_E2E_RUNTIME_DB_PASSWORD` in local ignored environment only |
+| Signed-context secret source | `DATABASE_AUTH_CONTEXT_SIGNING_SECRET` in local ignored environment only |
 | Marker | `pharmnos-financial-e2e` |
 | Compose project | `<UNIQUE_pharmnoslite-financial-e2e-SUFFIX>` |
 | Compose service | `financial-e2e-postgres` |
 | Compose profile | `financial-e2e` |
 | Schema artifact | `prisma/financial-e2e-schema-provisioning.generated.sql` |
-| Schema artifact SHA-256 | `508e0122b95496466544b4b508a50b18a326b7f4a43b6f6a5849232291a8bea5` |
+| Schema artifact SHA-256 | `40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168` |
 | Authorization time | `<OPERATOR_APPROVED_IST_UNIX_MS>` |
 | Expiry time | `<OPERATOR_APPROVED_FUTURE_IST_UNIX_MS>` |
 
@@ -165,12 +180,13 @@ Redacted contract template:
   "runtimeRole": "pharmnos_e2e_runtime",
   "bootstrapCredentialSource": "FINANCIAL_E2E_DB_PASSWORD",
   "runtimeCredentialSource": "FINANCIAL_E2E_RUNTIME_DB_PASSWORD",
+  "contextSecretSource": "DATABASE_AUTH_CONTEXT_SIGNING_SECRET",
   "marker": "pharmnos-financial-e2e",
   "composeProject": "pharmnoslite-financial-e2e-<UNIQUE_SUFFIX>",
   "composeService": "financial-e2e-postgres",
   "composeProfile": "financial-e2e",
   "schemaArtifact": "prisma/financial-e2e-schema-provisioning.generated.sql",
-  "schemaArtifactHash": "508e0122b95496466544b4b508a50b18a326b7f4a43b6f6a5849232291a8bea5",
+  "schemaArtifactHash": "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
   "authorizedAt": "<OPERATOR_APPROVED_IST_UNIX_MS>",
   "expiresAt": "<OPERATOR_APPROVED_FUTURE_IST_UNIX_MS>"
 }
@@ -260,14 +276,14 @@ FINANCIAL_E2E_RECOVERY_POLICY=UNTRUSTED_STOP_INSPECT_REAUTHORIZE_NEW_TARGET
 ### 3.3 Artifact package
 
 [`financial-e2e-artifact-manifest.json`](../../prisma/financial-e2e-artifact-manifest.json)
-is currently marked `APPROVED_EXECUTABLE_LOCAL_ONLY` and contains eight
+is currently marked `APPROVED_EXECUTABLE_LOCAL_ONLY` and contains 13
 executable artifacts. Offline SHA-256 verification matched the checked-in
 manifest:
 
 | Artifact | SHA-256 |
 |---|---|
 | `prisma/schema.prisma` source schema | `a4c2d9e2eadf25b58728b3dcb9b7274278d08dd948aab2da16e1999dd543368d` |
-| `prisma/financial-e2e-schema-provisioning.generated.sql` | `508e0122b95496466544b4b508a50b18a326b7f4a43b6f6a5849232291a8bea5` |
+| `prisma/financial-e2e-schema-provisioning.generated.sql` | `40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168` |
 | `prisma/financial-e2e-security-controls.review.sql` | `88af752140aab6bffa6a71ed613f7456adf93c493a05691674025efdadc596c0` |
 | `prisma/financial-e2e-rls-policies.review.sql` | `327339cdee28392964fc336d4177ffe01475959a78f5fadba372742e967d8b8b` |
 | `prisma/financial-e2e-additive-provisioning.review.sql` | `a4637c0a28670cbe0f53195942f2dabb75c3f04918e9e91e58aa763ed7cef90a` |

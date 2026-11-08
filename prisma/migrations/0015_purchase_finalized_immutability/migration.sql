@@ -15,6 +15,15 @@ BEGIN
            OR NEW.total_tax IS DISTINCT FROM OLD.total_tax
            OR NEW.round_off IS DISTINCT FROM OLD.round_off
            OR NEW.net_amount IS DISTINCT FROM OLD.net_amount
+           OR NEW.supplier_id IS DISTINCT FROM OLD.supplier_id
+           OR NEW.supplier_invoice_no IS DISTINCT FROM OLD.supplier_invoice_no
+           OR NEW.invoice_date IS DISTINCT FROM OLD.invoice_date
+           OR NEW.gst_treatment IS DISTINCT FROM OLD.gst_treatment
+           OR NEW.tax_mode IS DISTINCT FROM OLD.tax_mode
+           OR NEW.notes IS DISTINCT FROM OLD.notes
+           OR NEW.finalized_snapshot IS DISTINCT FROM OLD.finalized_snapshot
+           OR NEW.finalized_snapshot_hash IS DISTINCT FROM OLD.finalized_snapshot_hash
+           OR NEW.rendering_version IS DISTINCT FROM OLD.rendering_version
            OR NEW.finalized_at IS DISTINCT FROM OLD.finalized_at
            OR NEW.current_gst_evidence_revision_id IS DISTINCT FROM OLD.current_gst_evidence_revision_id
            OR NEW.current_gst_calculation_id IS DISTINCT FROM OLD.current_gst_calculation_id

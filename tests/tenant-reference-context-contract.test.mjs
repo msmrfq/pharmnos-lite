@@ -82,7 +82,7 @@ test("sales finalization and payment transactions establish both reviewed RLS cl
   }
 
   assert.match(salesSource, /async function findPaymentIdempotencyReplay\([\s\S]*await establishTenantContext\(tx, ctx\)/);
-  assert.match(tenantContextSource, /set_config\('request\.jwt\.claim\.sub', \$\{ctx\.subjectId\}, true\)/);
-  assert.match(tenantContextSource, /set_config\('request\.jwt\.claim\.tenant_id', \$\{ctx\.tenantId\}, true\)/);
+  assert.match(tenantContextSource, /set_config\(\s*['"]pharmnos\.auth_context['"]/);
+  assert.match(tenantContextSource, /createFinancialAuthContext\(ctx\.subjectId, ctx\.tenantId\)/);
   assert.match(tenantContextSource, /userId: user\.id,[\s\S]*subjectId: externalId/);
 });

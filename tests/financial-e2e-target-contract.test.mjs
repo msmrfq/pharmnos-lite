@@ -85,6 +85,19 @@ test("rejects a contract with inconsistent credential sources", () => {
         ordinaryUrl,
         now,
     });
+
+    test("rejects a contract with an inconsistent context secret source", () => {
+        const value = { ...contract(), contextSecretSource: "OTHER_CONTEXT_SECRET" };
+        const result = validateTargetContract({
+            contract: value,
+            targetUrl,
+            runtimeUrl,
+            ordinaryUrl,
+            now,
+        });
+        assert.equal(result.ok, false);
+        assert.match(result.errors.join(" "), /credential sources/);
+    });
     assert.equal(result.ok, false);
     assert.match(result.errors.join(" "), /credential sources/);
 });

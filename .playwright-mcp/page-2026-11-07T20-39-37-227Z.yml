@@ -1,0 +1,151 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e34]:
+    - complementary [ref=e35]:
+      - generic [ref=e36]:
+        - link "Pharmnos Lite" [ref=e38] [cursor=pointer]:
+          - /url: /dashboard
+        - generic [ref=e44]:
+          - paragraph [ref=e45]: Business
+          - paragraph [ref=e46]: Maharashtra Pharma Distributors
+        - navigation [ref=e47]:
+          - link "Dashboard" [ref=e48] [cursor=pointer]:
+            - /url: /dashboard
+          - link "Billing" [ref=e55] [cursor=pointer]:
+            - /url: /billing
+          - link "Purchases" [ref=e60] [cursor=pointer]:
+            - /url: /purchases
+          - link "Inventory" [ref=e66] [cursor=pointer]:
+            - /url: /inventory
+          - link "Customers" [ref=e71] [cursor=pointer]:
+            - /url: /customers
+          - link "Suppliers" [ref=e78] [cursor=pointer]:
+            - /url: /suppliers
+          - link "Reports" [ref=e85] [cursor=pointer]:
+            - /url: /reports
+          - link "Audit Log" [ref=e89] [cursor=pointer]:
+            - /url: /audit
+          - link "Settings" [ref=e95] [cursor=pointer]:
+            - /url: /settings
+        - button "RK Rajesh Kumar Administrator" [ref=e101] [cursor=pointer]:
+          - generic [ref=e102]: RK
+          - generic [ref=e104]:
+            - paragraph [ref=e105]: Rajesh Kumar
+            - paragraph [ref=e106]: Administrator
+    - generic [ref=e109]:
+      - banner [ref=e110]:
+        - generic [ref=e111]:
+          - textbox "Search products, customers, invoices..." [ref=e114]
+          - generic [ref=e115]:
+            - button "Notifications" [ref=e116] [cursor=pointer]
+            - button "RK Rajesh Kumar" [ref=e118] [cursor=pointer]:
+              - generic [ref=e119]: RK
+              - generic [ref=e121]: Rajesh Kumar
+      - generic [ref=e123]:
+        - generic [ref=e124]:
+          - generic [ref=e125]:
+            - heading "Good afternoon, Rajesh." [level=1] [ref=e126]
+            - paragraph [ref=e127]: Here's how your pharmacy is performing today — 8 November 2026.
+          - generic [ref=e128]:
+            - link "Purchase entry" [ref=e129] [cursor=pointer]:
+              - /url: /purchases/new
+            - link "New invoice" [ref=e130] [cursor=pointer]:
+              - /url: /billing/new
+        - generic [ref=e131]:
+          - link "Sales this month ₹ 0.00 0 invoices · Purchase ₹ 0.00" [ref=e132] [cursor=pointer]:
+            - /url: /billing
+            - generic [ref=e133]:
+              - generic [ref=e135]:
+                - paragraph [ref=e136]: Sales this month
+                - generic [ref=e137]: ₹ 0.00
+              - generic [ref=e142]: 0 invoices · Purchase ₹ 0.00
+          - link "Receivables ₹ 0.00 All accounts current" [ref=e147] [cursor=pointer]:
+            - /url: /reports/customer-dues
+            - generic [ref=e148]:
+              - generic [ref=e150]:
+                - paragraph [ref=e151]: Receivables
+                - generic [ref=e152]: ₹ 0.00
+              - generic [ref=e157]: All accounts current
+          - link "Approved stock value ₹ 0.00 0 SKUs · 0 batches" [ref=e162] [cursor=pointer]:
+            - /url: /reports/stock-valuation
+            - generic [ref=e163]:
+              - generic [ref=e165]:
+                - paragraph [ref=e166]: Approved stock value
+                - generic [ref=e167]: ₹ 0.00
+              - generic [ref=e172]: 0 SKUs · 0 batches
+          - link "Near expiry (60d) 0 batches No near-expiry batches · Payables ₹ 0.00" [ref=e177] [cursor=pointer]:
+            - /url: /inventory?tab=batches
+            - generic [ref=e178]:
+              - generic [ref=e180]:
+                - paragraph [ref=e181]: Near expiry (60d)
+                - generic [ref=e182]: 0 batches
+              - generic [ref=e187]: No near-expiry batches · Payables ₹ 0.00
+        - generic [ref=e192]:
+          - generic [ref=e193]: Quick actions
+          - link "New invoice" [ref=e194] [cursor=pointer]:
+            - /url: /billing/new
+          - link "Purchase entry" [ref=e195] [cursor=pointer]:
+            - /url: /purchases/new
+          - link "Add product" [ref=e196] [cursor=pointer]:
+            - /url: /inventory/products/new
+          - link "Add customer" [ref=e197] [cursor=pointer]:
+            - /url: /customers/new
+          - link "Add supplier" [ref=e198] [cursor=pointer]:
+            - /url: /suppliers/new
+        - generic [ref=e199]:
+          - generic [ref=e200]:
+            - generic [ref=e201]:
+              - generic [ref=e202]:
+                - generic [ref=e203]: Recent invoices
+                - paragraph [ref=e204]: Last finalized sales invoices
+              - generic [ref=e205]:
+                - link "Register" [ref=e206] [cursor=pointer]:
+                  - /url: /reports/sales-register
+                - link "New" [ref=e207] [cursor=pointer]:
+                  - /url: /billing/new
+            - table [ref=e210]:
+              - rowgroup [ref=e211]:
+                - row [ref=e212]:
+                  - columnheader "Invoice" [ref=e213]
+                  - columnheader "Customer" [ref=e214]
+                  - columnheader "Amount" [ref=e215]
+                  - columnheader "Status" [ref=e216]
+                  - columnheader "Time" [ref=e217]
+              - rowgroup [ref=e218]:
+                - row [ref=e219]:
+                  - cell "No invoices yet — create your first invoice from the quick actions above." [ref=e220]
+          - generic [ref=e221]:
+            - generic [ref=e222]:
+              - generic [ref=e223]:
+                - generic [ref=e224]: Low stock queue
+                - paragraph [ref=e225]: Replenishment priorities
+              - link "View all" [ref=e226] [cursor=pointer]:
+                - /url: /inventory/low-stock
+            - generic [ref=e228]:
+              - generic [ref=e229]:
+                - paragraph [ref=e230]: No inventory batches loaded
+                - paragraph [ref=e231]: Create a purchase first
+              - generic [ref=e232]:
+                - generic [ref=e233]: —
+                - generic [ref=e234]: Order
+        - generic [ref=e235]:
+          - generic [ref=e236]:
+            - generic [ref=e237]:
+              - generic [ref=e238]: Recent activity
+              - paragraph [ref=e239]: Last 10 events from audit log
+            - link "Open audit" [ref=e240] [cursor=pointer]:
+              - /url: /audit
+          - table [ref=e243]:
+            - rowgroup [ref=e244]:
+              - row [ref=e245]:
+                - columnheader "When" [ref=e246]
+                - columnheader "User" [ref=e247]
+                - columnheader "Module" [ref=e248]
+                - columnheader "Action" [ref=e249]
+                - columnheader "Reference" [ref=e250]
+                - columnheader "Details" [ref=e251]
+            - rowgroup [ref=e252]:
+              - row [ref=e253]:
+                - cell "No activity yet — start by creating a purchase or an invoice." [ref=e254]
+  - region "Notifications (F8)":
+    - list
+  - alert [ref=e33]: Dashboard · Pharmnos Lite

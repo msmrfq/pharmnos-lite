@@ -1,0 +1,248 @@
+{
+  "campaign": "Financial Reconciliation - Runtime Scenario Harness",
+  "target": "run-scoped disposable PostgreSQL only",
+  "fixture": {
+    "tenants": {
+      "a": "tenant_a_scenario20261108i_ee75dde18aef47de8d7f14acbf6e0d7c",
+      "b": "tenant_b_scenario20261108i_3afa2ccb8c52403eb33500d9a14eec1e"
+    }
+  },
+  "results": [
+    {
+      "id": "S-02",
+      "status": "PASS",
+      "operation": "allocatePayment",
+      "persisted": {
+        "payments": 3000,
+        "allocations": 400,
+        "refunds": 0,
+        "reversals": 0,
+        "allocation_reversals": 0,
+        "sales_paid": 400,
+        "sales_due": 600
+      },
+      "allocationId": "cmw7anm3k00028v5vk9gf4m05"
+    },
+    {
+      "id": "S-03",
+      "status": "PASS",
+      "operation": "conflicting idempotency payload rejected"
+    },
+    {
+      "id": "S-14",
+      "status": true,
+      "operation": "reverseAllocation",
+      "persisted": {
+        "payments": 3000,
+        "allocations": 400,
+        "refunds": 0,
+        "reversals": 0,
+        "allocation_reversals": 1,
+        "sales_paid": 0,
+        "sales_due": 1000
+      },
+      "reversalId": "cmw7anm4u00078v5vm1q8a3w2"
+    },
+    {
+      "id": "S-11",
+      "status": true,
+      "operation": "completeRefund",
+      "persisted": {
+        "payments": 3000,
+        "allocations": 400,
+        "refunds": 200,
+        "reversals": 0,
+        "allocation_reversals": 1,
+        "sales_paid": 0,
+        "sales_due": 1000
+      },
+      "refundId": "cmw7anm5i000a8v5v1b45ole3"
+    },
+    {
+      "id": "S-05",
+      "status": true,
+      "operation": "supplier allocation"
+    },
+    {
+      "id": "S-27",
+      "status": "PASS",
+      "operation": "cross-tenant allocation rejected"
+    },
+    {
+      "id": "S-29",
+      "status": true,
+      "operation": "concurrent competing allocations",
+      "fulfilled": 0,
+      "persisted": {
+        "payments": 3000,
+        "allocations": 1000,
+        "refunds": 200,
+        "reversals": 0,
+        "allocation_reversals": 1,
+        "sales_paid": 0,
+        "sales_due": 1000
+      }
+    },
+    {
+      "id": "S-16",
+      "status": true,
+      "operation": "controlled transaction rollback"
+    },
+    {
+      "id": "S-01",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-04",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-06",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-07",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-08",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-09",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-10",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-12",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-13",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-15",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-17",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-18",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-19",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-20",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-21",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-22",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-23",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-24",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-25",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-26",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-28",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-30",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-31",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-32",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-33",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-34",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-35",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-36",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-37",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    },
+    {
+      "id": "S-38",
+      "status": "BLOCKED",
+      "operation": "No application boundary for the matrix operation or independent as-of/audit assertion"
+    }
+  ],
+  "summary": {
+    "pass": 3,
+    "fail": 0,
+    "blocked": 30
+  },
+  "note": "Blocked scenarios are not credited as verified. Credentials and full connection strings are intentionally excluded."
+}

@@ -3,12 +3,14 @@ import fs from "node:fs";
 import pg from "pg";
 
 const { Client } = pg;
-const envFiles = [".env.local", ".env.financial-e2e"];
+const envFiles = process.env.FINANCIAL_E2E_ENV_FILE
+    ? [process.env.FINANCIAL_E2E_ENV_FILE]
+    : [".env.local", ".env.financial-e2e"];
 for (const file of envFiles) {
     if (!fs.existsSync(file)) continue;
     for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
         const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-        if (match) process.env[match[1]] = match[2].replace(/^(['"])(.*)\1$/, "$2");
+        if (match && !process.env[match[1]]) process.env[match[1]] = match[2].replace(/^(['"])(.*)\1$/, "$2");
     }
 }
 
@@ -23,6 +25,7 @@ const files = [
     "src/adapters/auth/supabase-auth.adapter.ts",
     "scripts/financial-e2e-provision-local.mjs",
     "prisma/financial-e2e-rls-policies.review.sql",
+    "prisma/05-rls-tenant-policies.sql",
     "scripts/purchase-gst-application-acceptance.cjs",
 ];
 const sha256 = (file) => crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -53,7 +56,10 @@ await client.query(
 );
 const forgedClaims = (await client.query(`
     SELECT current_setting('request.jwt.claim.sub', true) AS subject,
-      current_setting('request.jwt.claim.tenant_id', true) AS tenant
+      current_setting('request.jwt.claim.tenant_id', true) AS tenant,
+      public.financial_context_subject() AS verified_subject,
+      public.financial_context_tenant_id() AS verified_tenant,
+      public.financial_context_is_admin() AS verified_admin
 `)).rows[0];
 await client.query("ROLLBACK");
 await client.end();
@@ -65,15 +71,35 @@ const evidence = {
     databaseIdentity: identity,
     runtimeRole: role,
     securityDefinerHelper: { publicFunctionCount: helper.count, status: helper.count === 0 ? "REMOVED" : "PRESENT" },
+    authorizationBoundaries: {
+        directRuntime: "SIGNED_PHARMNOS_AUTH_CONTEXT",
+        supabaseDataApi: "SUPABASE_AUTHENTICATED_GATEWAY_JWT",
+    },
     forgedClaimProbe: {
         status: forgedClaims.subject === "forged-subject" && forgedClaims.tenant === "forged-tenant" ? "REPRODUCED" : "NOT_REPRODUCED",
         subject: forgedClaims.subject,
         tenant: forgedClaims.tenant,
-        conclusion: "Transaction-local GUCs are mutable by the runtime role and are not, by themselves, authenticated identity.",
+        signedContextResult: {
+            subject: forgedClaims.verified_subject,
+            tenant: forgedClaims.verified_tenant,
+            admin: forgedClaims.verified_admin,
+        },
+        authorizationBypass:
+            forgedClaims.verified_subject === null &&
+            forgedClaims.verified_tenant === null &&
+            forgedClaims.verified_admin === false
+                ? "NOT_REPRODUCED"
+                : "REPRODUCED",
+        conclusion: "Transaction-local request JWT GUCs are mutable by the runtime role, but the signed-context authorization helpers ignore them and fail closed without a verified context.",
     },
     sourceHashes: Object.fromEntries(files.map((file) => [file, sha256(file)])),
     cleanup: "No database or persistent rows were created; transaction was rolled back.",
-    verdict: "HIGH_TRUST_BOUNDARY_BLOCKER",
+    verdict:
+        forgedClaims.verified_subject === null &&
+        forgedClaims.verified_tenant === null &&
+        forgedClaims.verified_admin === false
+            ? "RAW_CLAIM_FORGERY_REJECTED"
+            : "HIGH_TRUST_BOUNDARY_BLOCKER",
 };
 
 const output = `.obsidian-vault/specs/authenticated-database-trust-boundary-evidence-${Date.now()}.json`;

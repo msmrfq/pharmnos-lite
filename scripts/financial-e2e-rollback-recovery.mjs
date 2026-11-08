@@ -5,6 +5,7 @@ import {
     validateFinancialE2eTarget,
     verifyDatabaseIdentity,
 } from "./financial-e2e-safety.mjs";
+import { createSignedFinancialContext } from "./financial-e2e-signed-context.mjs";
 
 const { Client } = pg;
 const run = `rollback-${Date.now()}`;
@@ -173,7 +174,9 @@ async function main() {
         if (!identity.ok) throw new Error(`IDENTITY=FAIL ${identity.error}`);
 
         await setup(bootstrap);
-        await runtime.query("SELECT set_config('request.jwt.claim.tenant_id', $1, false)", [ids.tenant]);
+        await runtime.query("SELECT set_config('pharmnos.auth_context', $1, false)", [
+            createSignedFinancialContext(`${run}-external`, ids.tenant),
+        ]);
 
         await runtime.query("BEGIN");
         await runtime.query(

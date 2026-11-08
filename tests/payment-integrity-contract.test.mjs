@@ -34,6 +34,10 @@ const supplierPage = await readFile(
   new URL("../src/app/purchases/payments/new/page.tsx", import.meta.url),
   "utf8",
 );
+const paymentRepositorySource = await readFile(
+  new URL("../src/repositories/payment.repository.ts", import.meta.url),
+  "utf8",
+);
 
 function actionBody(name) {
   const start = salesSource.indexOf(`export async function ${name}`);
@@ -98,4 +102,11 @@ test("customer and supplier payment effects are balance-serialized in one transa
     assert.match(body, /(?:customer|supplier)_ledgers\.create/);
     assert.match(body, /\.update\(\{\s*where: \{ id: data\.(customer|supplier)_id, tenant_id: ctx\.tenantId \}/s);
   }
+});
+
+test("payment repository rejects mutation without a reversal workflow", () => {
+  assert.match(paymentRepositorySource, /Payments are immutable; create a reversal instead\./);
+  assert.match(paymentRepositorySource, /async update\([\s\S]*?throw new Error/);
+  assert.match(paymentRepositorySource, /async delete\([\s\S]*?throw new Error/);
+  assert.doesNotMatch(paymentRepositorySource, /this\.prisma\.payments\.(update|delete)/);
 });

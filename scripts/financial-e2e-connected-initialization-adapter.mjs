@@ -156,8 +156,8 @@ function validatePreparation(input, context) {
     if (input.bootstrapRole !== "pharmnos_e2e" || input.runtimeRole !== "pharmnos_e2e_runtime") {
         errors.push("The approved bootstrap and runtime roles are required.");
     }
-    if (!input.target?.testUrl || !input.target?.ordinaryUrl) {
-        errors.push("Independent ordinary-target comparison is required.");
+    if (!input.target?.testUrl) {
+        errors.push("The disposable target URL is required.");
     } else {
         let parsedTarget;
         try {

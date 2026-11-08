@@ -1,0 +1,98 @@
+- generic [active] [ref=f24e1]:
+  - generic [ref=f24e2]:
+    - complementary [ref=f24e3]:
+      - generic [ref=f24e4]:
+        - link "Pharmnos Lite" [ref=f24e6] [cursor=pointer]:
+          - /url: /dashboard
+        - generic [ref=f24e12]:
+          - paragraph [ref=f24e13]: Business
+          - paragraph [ref=f24e14]: Your Pharmacy
+        - navigation [ref=f24e15]:
+          - link "Dashboard" [ref=f24e16] [cursor=pointer]:
+            - /url: /dashboard
+          - link "Billing" [ref=f24e23] [cursor=pointer]:
+            - /url: /billing
+          - link "Purchases" [ref=f24e28] [cursor=pointer]:
+            - /url: /purchases
+          - link "Inventory" [ref=f24e34] [cursor=pointer]:
+            - /url: /inventory
+          - link "Customers" [ref=f24e39] [cursor=pointer]:
+            - /url: /customers
+          - link "Suppliers" [ref=f24e46] [cursor=pointer]:
+            - /url: /suppliers
+          - link "Reports" [ref=f24e53] [cursor=pointer]:
+            - /url: /reports
+          - link "Audit Log" [ref=f24e57] [cursor=pointer]:
+            - /url: /audit
+          - link "Settings" [ref=f24e63] [cursor=pointer]:
+            - /url: /settings
+        - button "US User Administrator" [ref=f24e69] [cursor=pointer]:
+          - generic [ref=f24e70]: US
+          - generic [ref=f24e72]:
+            - paragraph [ref=f24e73]: User
+            - paragraph [ref=f24e74]: Administrator
+    - generic [ref=f24e77]:
+      - banner [ref=f24e78]:
+        - generic [ref=f24e79]:
+          - textbox "Search products, customers, invoices..." [ref=f24e82]
+          - generic [ref=f24e83]:
+            - button "Notifications" [ref=f24e84] [cursor=pointer]
+            - button "US User" [ref=f24e86] [cursor=pointer]:
+              - generic [ref=f24e87]: US
+              - generic [ref=f24e89]: User
+      - generic [ref=f24e90]:
+        - generic [ref=f24e92]:
+          - link "Back" [ref=f24e93] [cursor=pointer]:
+            - /url: /purchases
+          - generic [ref=f24e94]:
+            - generic [ref=f24e95]: New purchase entry
+            - paragraph [ref=f24e96]: Record stock received from a supplier. Batches are created when you confirm inward (finalize).
+        - generic [ref=f24e98]:
+          - generic [ref=f24e99]:
+            - generic [ref=f24e100]:
+              - generic [ref=f24e101]: Supplier & invoice
+              - generic [ref=f24e103]:
+                - generic [ref=f24e104]
+                - generic [ref=f24e109]
+                - generic [ref=f24e115]
+                - generic [ref=f24e120]
+                - generic [ref=f24e122]
+                - generic [ref=f24e125]
+                - generic [ref=f24e127]
+                - generic [ref=f24e129]
+                - generic [ref=f24e131]
+                - generic [ref=f24e133]
+                - generic [ref=f24e135]
+                - generic [ref=f24e137]
+                - generic [ref=f24e139]
+                - generic [ref=f24e141]
+                - generic [ref=f24e143]
+                - generic [ref=f24e145]
+                - generic [ref=f24e147]
+                - generic [ref=f24e149]
+            - generic [ref=f24e151]:
+              - generic [ref=f24e152]:
+                - generic [ref=f24e153]: Items received
+                - button "Add item" [ref=f24e154] [cursor=pointer]
+              - table [ref=f24e157]:
+                - rowgroup [ref=f24e158]
+                - rowgroup [ref=f24e170]
+          - generic [ref=f24e216]:
+            - generic [ref=f24e217]:
+              - generic [ref=f24e218]:
+                - generic [ref=f24e219]: Totals
+                - paragraph [ref=f24e220]: Client-side preview only — server recomputes on finalize.
+              - generic [ref=f24e221]:
+                - generic [ref=f24e222]
+                - generic [ref=f24e225]
+                - generic [ref=f24e228]
+                - generic [ref=f24e231]
+                - generic [ref=f24e234]
+            - generic [ref=f24e237]:
+              - generic [ref=f24e238]: Stock impact
+              - generic [ref=f24e240]:
+                - paragraph [ref=f24e241]: Saving this form records a DRAFT. Finalize a draft from the purchase list to create new batches and inward stock movements.
+                - generic [ref=f24e242]
+  - region "Notifications (F8)":
+    - list
+  - alert [ref=f24e249]

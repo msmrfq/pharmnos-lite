@@ -1,0 +1,16 @@
+{
+  "contractVersion": 1,
+  "runId": "sec20261108g",
+  "host": "127.0.0.1",
+  "port": 55437,
+  "databaseName": "pharmnos_financial_e2e_20261108g",
+  "bootstrapRole": "pharmnos_e2e",
+  "runtimeRole": "pharmnos_e2e_runtime",
+  "composeProject": "pharmnoslite-financial-e2e-20261108g",
+  "composeService": "financial-e2e-postgres",
+  "composeProfile": "financial-e2e",
+  "marker": "pharmnos-financial-e2e",
+  "schemaArtifactHash": "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
+  "targetFingerprint": "f9cfd82eeab9da213e56774d55f33695d988601b771ae9f99d9a3e7f10d18ca1",
+  "secretValuesRecorded": false
+}

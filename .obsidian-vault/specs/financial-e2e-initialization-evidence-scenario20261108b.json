@@ -1,0 +1,33 @@
+{
+  "evidenceVersion": 1,
+  "phase": "SCHEMA_INITIALIZATION",
+  "status": "PASS",
+  "runId": "scenario20261108b",
+  "targetBinding": "1|scenario20261108b|127.0.0.1|55613|pharmnos_financial_e2e_scenario_20261108b|pharmnos_e2e|pharmnos_e2e_runtime|FINANCIAL_E2E_DB_PASSWORD|FINANCIAL_E2E_RUNTIME_DB_PASSWORD|DATABASE_AUTH_CONTEXT_SIGNING_SECRET|pharmnos-financial-e2e|pharmnoslite-financial-e2e-scenario20261108b|financial-e2e-postgres|717c4f12a8109845bf38fb153cd658938b1593b6c2aec86f24ddd25dc98ef64d",
+  "targetFingerprint": "57525ac18316409caaa4b242fea76be653c48c8a09b5289f44aafb72f4abaa57",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 55613,
+    "databaseName": "pharmnos_financial_e2e_scenario_20261108b",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "composeProject": "pharmnoslite-financial-e2e-scenario20261108b",
+    "composeService": "financial-e2e-postgres",
+    "composeProfile": "financial-e2e",
+    "schemaArtifactHash": "717c4f12a8109845bf38fb153cd658938b1593b6c2aec86f24ddd25dc98ef64d"
+  },
+  "recordedAt": 1794108469647,
+  "details": {
+    "databaseName": "pharmnos_financial_e2e_scenario_20261108b",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "schemaArtifactHash": "717c4f12a8109845bf38fb153cd658938b1593b6c2aec86f24ddd25dc98ef64d",
+    "rlsTables": 34,
+    "policies": 87,
+    "triggers": 19,
+    "constraints": 149,
+    "runtimeDeletePrivileges": 0,
+    "runtimeRestricted": true,
+    "scenariosExecuted": false
+  }
+}

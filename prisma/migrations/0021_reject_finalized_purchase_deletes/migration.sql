@@ -42,3 +42,19 @@ BEFORE DELETE ON public."purchase_invoice_items"
 FOR EACH ROW EXECUTE FUNCTION public.reject_finalized_purchase_delete();
 
 REVOKE EXECUTE ON FUNCTION public.reject_finalized_purchase_delete() FROM PUBLIC;
+
+-- The original combined triggers must not shadow the dedicated delete guards.
+DROP TRIGGER IF EXISTS prevent_finalized_purchase_mutation
+  ON public."purchase_invoices";
+CREATE TRIGGER prevent_finalized_purchase_mutation
+BEFORE UPDATE ON public."purchase_invoices"
+FOR EACH ROW EXECUTE FUNCTION public.prevent_finalized_purchase_mutation();
+
+-- The original combined item trigger rejects the parent-missing state produced
+-- by a legitimate ON DELETE CASCADE from a draft purchase. Keep its update
+-- protection, and let the dedicated delete guard decide finalized deletes.
+DROP TRIGGER IF EXISTS prevent_finalized_purchase_item_mutation
+  ON public."purchase_invoice_items";
+CREATE TRIGGER prevent_finalized_purchase_item_mutation
+BEFORE UPDATE ON public."purchase_invoice_items"
+FOR EACH ROW EXECUTE FUNCTION public.prevent_finalized_purchase_mutation();

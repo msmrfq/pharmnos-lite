@@ -1,0 +1,238 @@
+- generic:
+  - generic [aria-hidden]:
+    - complementary:
+      - generic:
+        - generic:
+          - link:
+            - /url: /dashboard
+            - generic: Pharmnos Lite
+        - generic:
+          - paragraph: Business
+          - paragraph: Your Pharmacy
+        - navigation:
+          - link:
+            - /url: /dashboard
+            - generic: Dashboard
+          - link:
+            - /url: /billing
+            - generic: Billing
+          - link:
+            - /url: /purchases
+            - generic: Purchases
+          - link:
+            - /url: /inventory
+            - generic: Inventory
+          - link:
+            - /url: /customers
+            - generic: Customers
+          - link:
+            - /url: /suppliers
+            - generic: Suppliers
+          - link:
+            - /url: /reports
+            - generic: Reports
+          - link:
+            - /url: /audit
+            - generic: Audit Log
+          - generic:
+            - link:
+              - /url: /settings
+              - generic: Settings
+        - generic:
+          - button:
+            - generic: US
+            - generic:
+              - paragraph: User
+              - paragraph: Administrator
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - generic:
+              - textbox:
+                - /placeholder: Search products, customers, invoices...
+          - generic:
+            - button
+            - button:
+              - generic: US
+              - generic: User
+      - generic:
+        - generic:
+          - generic:
+            - link:
+              - /url: /purchases
+            - generic:
+              - generic: New purchase entry
+              - paragraph: Record stock received from a supplier. Batches are created when you confirm inward (finalize).
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic: Supplier & invoice
+                - generic:
+                  - generic:
+                    - text: Supplier *
+                    - combobox:
+                      - generic: E2E Supplier 1 (SUP-E2E-1)
+                    - combobox [aria-hidden]
+                  - generic:
+                    - text: GST Treatment *
+                    - combobox:
+                      - generic: Select GST treatment
+                    - combobox [aria-hidden]
+                    - paragraph: Deferred categories remain visible but cannot be finalized until their rules are approved.
+                  - generic:
+                    - text: Tax mode *
+                    - combobox:
+                      - generic: Tax exclusive
+                    - combobox [aria-hidden]
+                  - generic:
+                    - text: Supplier invoice no.
+                    - textbox:
+                      - /placeholder: e.g. INV/CIP/00219
+                  - generic:
+                    - text: Supplier invoice document
+                    - button
+                    - paragraph: Optional PDF or image, maximum 10 MB.
+                  - generic:
+                    - text: Supplier taxable value
+                    - spinbutton
+                  - generic:
+                    - text: Supplier CGST
+                    - spinbutton
+                  - generic:
+                    - text: Supplier SGST
+                    - spinbutton
+                  - generic:
+                    - text: Supplier IGST
+                    - spinbutton
+                  - generic:
+                    - text: Supplier cess
+                    - spinbutton
+                  - generic:
+                    - text: Supplier invoice total
+                    - spinbutton
+                  - generic:
+                    - text: Supplier round-off
+                    - spinbutton
+                  - generic:
+                    - text: Supplier state at transaction
+                    - combobox
+                  - generic:
+                    - text: Recipient state at transaction
+                    - combobox
+                  - generic:
+                    - text: Delivery state at transaction
+                    - combobox
+                  - generic:
+                    - text: Supply scenario
+                    - combobox
+                  - generic:
+                    - text: Purchase date
+                    - textbox: 2026-11-07
+                  - generic:
+                    - text: Notes
+                    - textbox:
+                      - /placeholder: Optional internal notes…
+              - generic:
+                - generic:
+                  - generic: Items received
+                  - button: Add item
+                - generic:
+                  - generic:
+                    - table:
+                      - rowgroup:
+                        - row:
+                          - columnheader: Product *
+                          - columnheader: Batch *
+                          - columnheader: Expiry
+                          - columnheader: Qty
+                          - columnheader: MRP
+                          - columnheader: Purchase rate
+                          - columnheader: Disc %
+                          - columnheader: GST %
+                          - columnheader: Line
+                          - columnheader
+                      - rowgroup:
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic:
+                                - combobox:
+                                  - generic: Select product
+                                - combobox [aria-hidden]
+                          - cell:
+                            - textbox:
+                              - /placeholder: BATCH-01
+                          - cell:
+                            - textbox
+                          - cell:
+                            - spinbutton: "1"
+                          - cell:
+                            - spinbutton: "0"
+                          - cell:
+                            - spinbutton: "0"
+                          - cell:
+                            - spinbutton: "0"
+                          - cell:
+                            - spinbutton: "0"
+                          - cell: ₹ 0.00
+                          - cell:
+                            - generic:
+                              - button [disabled]
+                        - row:
+                          - cell:
+                            - generic:
+                              - generic: Optional supplier line evidence — leave blank when the invoice does not provide line-level values.
+                              - generic:
+                                - text: Taxable
+                                - spinbutton
+                              - generic:
+                                - text: CGST
+                                - spinbutton
+                              - generic:
+                                - text: SGST
+                                - spinbutton
+                              - generic:
+                                - text: IGST
+                                - spinbutton
+                              - generic:
+                                - text: Cess
+                                - spinbutton
+                              - generic:
+                                - text: Line total
+                                - spinbutton
+            - generic:
+              - generic:
+                - generic:
+                  - generic: Totals
+                  - paragraph: Client-side preview only — server recomputes on finalize.
+                - generic:
+                  - generic:
+                    - generic: Goods value
+                    - generic: ₹ 0.00
+                  - generic:
+                    - generic: Discount
+                    - generic: "- ₹ 0.00"
+                  - generic:
+                    - generic: Tax (GST)
+                    - generic: + ₹ 0.00
+                  - generic:
+                    - generic: Round off
+                    - generic: —
+                  - generic:
+                    - generic: Payable (net)
+                    - generic: ₹ 0.00
+              - generic:
+                - generic: Stock impact
+                - generic:
+                  - paragraph: Saving this form records a DRAFT. Finalize a draft from the purchase list to create new batches and inward stock movements.
+                  - generic:
+                    - link:
+                      - /url: /purchases
+                      - text: Cancel
+                    - button: Save draft
+  - list
+  - alert
+  - listbox [ref=f14e250]:
+    - option "E2E Supplier 1 (SUP-E2E-1)" [active] [selected] [ref=f14e251] [cursor=pointer]

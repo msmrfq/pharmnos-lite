@@ -124,12 +124,12 @@ ALTER TABLE public.q14_soft_delete_audit FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS q14_soft_delete_request_tenant_read ON public.q14_soft_delete_requests;
 CREATE POLICY q14_soft_delete_request_tenant_read
 ON public.q14_soft_delete_requests FOR SELECT TO "pharmnos_e2e_runtime"
-USING (tenant_id = NULLIF(current_setting('request.jwt.claim.tenant_id', true), ''));
+USING (tenant_id = public.financial_context_tenant_id());
 
 DROP POLICY IF EXISTS q14_soft_delete_audit_tenant_read ON public.q14_soft_delete_audit;
 CREATE POLICY q14_soft_delete_audit_tenant_read
 ON public.q14_soft_delete_audit FOR SELECT TO "pharmnos_e2e_runtime"
-USING (tenant_id = NULLIF(current_setting('request.jwt.claim.tenant_id', true), ''));
+USING (tenant_id = public.financial_context_tenant_id());
 
 REVOKE ALL ON TABLE public.q14_trigger_allowlist, public.q14_maintenance_probe,
     public.q14_maintenance_audit, public.q14_soft_delete_requests,
@@ -280,7 +280,7 @@ DECLARE
     caller_role text := coalesce(nullif(current_setting('role', true), 'none'), session_user);
 BEGIN
     IF caller_role <> 'pharmnos_e2e_runtime'
-       OR current_setting('request.jwt.claim.tenant_id', true) <> p_tenant_id
+       OR public.financial_context_tenant_id() <> p_tenant_id
        OR nullif(btrim(p_reason), '') IS NULL
        OR p_target_table NOT IN ('products', 'customers', 'suppliers')
     THEN
@@ -341,7 +341,7 @@ BEGIN
        OR request_row.status <> 'REQUESTED'
        OR request_row.expires_at <= now()
        OR request_row.requested_by = p_actor_id
-       OR current_setting('request.jwt.claim.tenant_id', true) <> request_row.tenant_id
+       OR public.financial_context_tenant_id() <> request_row.tenant_id
     THEN
         INSERT INTO public.q14_soft_delete_audit
             (id, request_id, tenant_id, actor_id, actor_db_role, action, target_table, target_id, outcome, reason)
@@ -382,7 +382,7 @@ BEGIN
        OR request_row.expires_at <= now()
        OR request_row.requested_by = p_actor_id
        OR request_row.approved_by = p_actor_id
-       OR current_setting('request.jwt.claim.tenant_id', true) <> request_row.tenant_id
+       OR public.financial_context_tenant_id() <> request_row.tenant_id
     THEN
         INSERT INTO public.q14_soft_delete_audit
             (id, request_id, tenant_id, actor_id, actor_db_role, action, target_table, target_id, outcome, reason)

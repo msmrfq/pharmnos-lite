@@ -1,0 +1,174 @@
+{
+  "title": "Supabase provider recovery evidence collection",
+  "retrieved_at": "2026-11-08T05-06-09+05:30",
+  "timezone": "IST",
+  "scope": "Read-only provider metadata and capability inspection; no restore attempted",
+  "project": {
+    "association": "VERIFIED",
+    "ref": "lizyjqkckysgvffwcqvb",
+    "name": "Pharmnos Lite",
+    "organization": "Pharmnos",
+    "organization_id": "yuomalhdqouhpbstedvl",
+    "region": "ap-south-1",
+    "status": "INACTIVE",
+    "database_engine": "PostgreSQL 17",
+    "database_version": "17.6.1.171",
+    "source": "Supabase MCP list_projects/get_project/get_organization",
+    "confidence": "HIGH"
+  },
+  "repository_identity": {
+    "supabase_url_host": "lizyjqkckysgvffwcqvb.supabase.co",
+    "supabase_url_matches_project": true,
+    "database_host_observed": "aws-0-ap-south-1.pooler.supabase.com",
+    "database_project_match": "NOT AVAILABLE THROUGH CURRENT ACCESS",
+    "reason": "The configured database host is a regional pooler hostname and does not independently encode the project ref; the connection was not opened.",
+    "credentials_exposed": false
+  },
+  "access": {
+    "supabase_mcp": {
+      "available": true,
+      "authenticated": true,
+      "successful_read_only_operations": [
+        "list_projects",
+        "get_project",
+        "get_organization",
+        "search_docs"
+      ],
+      "failed_or_unavailable_operations": [
+        {
+          "operation": "read-only SELECT from storage.buckets",
+          "status": "NOT AVAILABLE THROUGH CURRENT ACCESS",
+          "reason": "Database is possibly not accessible at the moment; project status is INACTIVE"
+        }
+      ]
+    },
+    "supabase_cli": {
+      "installed": false,
+      "version": "NOT AVAILABLE THROUGH CURRENT ACCESS",
+      "linkage": "NOT AVAILABLE THROUGH CURRENT ACCESS"
+    }
+  },
+  "evidence_matrix": {
+    "actual_plan": {
+      "finding": "Free",
+      "source": "Supabase MCP organization metadata",
+      "confidence": "HIGH",
+      "status": "VERIFIED"
+    },
+    "daily_backups_enabled": {
+      "finding": null,
+      "source": "No project backup inventory or dashboard metadata exposed; general provider documentation only",
+      "confidence": "NONE",
+      "status": "NOT AVAILABLE THROUGH CURRENT ACCESS"
+    },
+    "latest_backup": {
+      "finding": null,
+      "source": "No project backup inventory exposed",
+      "confidence": "NONE",
+      "status": "NOT AVAILABLE THROUGH CURRENT ACCESS"
+    },
+    "backup_retention": {
+      "finding": null,
+      "source": "No project backup configuration exposed",
+      "confidence": "NONE",
+      "status": "NOT AVAILABLE THROUGH CURRENT ACCESS"
+    },
+    "pitr_available": {
+      "finding": "Provider documentation says PITR is an add-on for Pro, Team, and Enterprise; this Free project is not shown as eligible by project metadata",
+      "source": "Supabase MCP project/org metadata plus provider documentation",
+      "confidence": "MEDIUM",
+      "status": "PROVIDER CONFIRMATION REQUIRED"
+    },
+    "pitr_enabled": {
+      "finding": null,
+      "source": "No project PITR settings exposed",
+      "confidence": "NONE",
+      "status": "NOT AVAILABLE THROUGH CURRENT ACCESS"
+    },
+    "recovery_window": {
+      "finding": null,
+      "source": "No project PITR settings exposed",
+      "confidence": "NONE",
+      "status": "NOT AVAILABLE THROUGH CURRENT ACCESS"
+    },
+    "earliest_recovery_point": {
+      "finding": null,
+      "source": "No project recovery-point inventory exposed",
+      "confidence": "NONE",
+      "status": "NOT AVAILABLE THROUGH CURRENT ACCESS"
+    },
+    "latest_recovery_point": {
+      "finding": null,
+      "source": "No project recovery-point inventory exposed",
+      "confidence": "NONE",
+      "status": "NOT AVAILABLE THROUGH CURRENT ACCESS"
+    },
+    "restore_to_new_project": {
+      "finding": "No authorized restore path was inspected or attempted",
+      "source": "Campaign authorization boundary",
+      "confidence": "HIGH",
+      "status": "NOT TESTED"
+    },
+    "storage_buckets": {
+      "finding": "Repository declares pharmnos-documents; historical project notes report private storage configuration, but current bucket metadata could not be queried",
+      "source": "Repository configuration and historical sanitized project notes; current MCP SQL query unavailable",
+      "confidence": "MEDIUM",
+      "status": "PARTIALLY VERIFIED"
+    },
+    "storage_object_recovery": {
+      "finding": "Database backup/PITR does not establish object-content recovery; no project-specific storage recovery evidence is available",
+      "source": "Provider documentation and repository recovery records",
+      "confidence": "HIGH",
+      "status": "NOT AVAILABLE THROUGH CURRENT ACCESS"
+    },
+    "rpo_approved": {
+      "finding": null,
+      "source": "Canonical recovery record",
+      "confidence": "NONE",
+      "status": "OWNER DECISION REQUIRED"
+    },
+    "rto_approved": {
+      "finding": null,
+      "source": "Canonical recovery record",
+      "confidence": "NONE",
+      "status": "OWNER DECISION REQUIRED"
+    },
+    "operational_recovery_owner": {
+      "finding": null,
+      "source": "Canonical recovery record",
+      "confidence": "NONE",
+      "status": "OWNER DECISION REQUIRED"
+    }
+  },
+  "provider_documentation": {
+    "backup_guide": "https://supabase.com/docs/guides/platform/backups",
+    "observed_capability_summary": "Daily backups are documented for Pro, Team, and Enterprise; PITR is documented as an add-on for those plans; database backups do not include Storage object contents.",
+    "project_specific": false
+  },
+  "existing_local_evidence": {
+    "status": "BOUNDED_NON_PROVIDER_EVIDENCE",
+    "summary": "A data-only restore into an isolated pre-provisioned disposable schema matched 34 public tables by deterministic checks and was cleaned exactly.",
+    "does_not_prove": [
+      "Supabase provider PITR",
+      "provider backup retention",
+      "full provider schema-and-data restore",
+      "Storage object-content recovery",
+      "measured RPO or RTO",
+      "production recovery acceptance"
+    ]
+  },
+  "safety": {
+    "provider_state_changed": false,
+    "database_state_changed": false,
+    "storage_state_changed": false,
+    "restore_attempted": false,
+    "credentials_or_tokens_retained": false
+  },
+  "disposition": {
+    "criterion": "ST3-I",
+    "status": "PARTIAL / NOT ACCEPTED",
+    "accepted_points": 0,
+    "stage_3": "NO-GO",
+    "reason": "Project-specific backup inventory, retention, PITR settings/recovery points, authorized restore path, and Storage object recovery remain unverified."
+  }
+}

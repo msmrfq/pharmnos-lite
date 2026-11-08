@@ -1,0 +1,133 @@
+{
+  "runId": "sec20261108d",
+  "initializationAttemptId": "sec20261108d-init01",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 55437,
+    "databaseName": "pharmnos_financial_e2e_20261108d",
+    "composeProject": "pharmnoslite-financial-e2e-20261108d",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "targetFingerprint": "8d724b910176c577f8fff713d677a4d3381e13c6133a9606252d70d3f9bf5589"
+  },
+  "cleanup": "PASS",
+  "results": [
+    {
+      "id": "canonical-provisioning",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "bootstrap-fixtures",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "effective-privilege-boundary",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "missing",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "legacy-forgery",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "altered-malformed-expired-wrong",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "owner-isolation",
+      "status": "FAIL",
+      "detail": "2"
+    },
+    {
+      "id": "employee-permission",
+      "status": "FAIL",
+      "detail": "role"
+    },
+    {
+      "id": "same-tx-replay",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "pool-reset",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "rollback-retry",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "commit-replay",
+      "status": "FAIL",
+      "detail": "replay"
+    },
+    {
+      "id": "cross-tenant-read",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "admin-permission",
+      "status": "FAIL",
+      "detail": "admin"
+    },
+    {
+      "id": "employee-rbac-write-denied",
+      "status": "FAIL",
+      "detail": "new row violates row-level security policy for table \"roles\""
+    },
+    {
+      "id": "concurrent-replay",
+      "status": "FAIL",
+      "detail": "winner=1,loser=1"
+    },
+    {
+      "id": "key-denied",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "verifier-denied",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "policy-tamper",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "function-tamper",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "role-escalation",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "grant-escalation",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "rls-disable",
+      "status": "PASS",
+      "detail": ""
+    }
+  ],
+  "passCount": 17,
+  "failCount": 6
+}

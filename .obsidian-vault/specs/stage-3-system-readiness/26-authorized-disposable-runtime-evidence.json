@@ -1,0 +1,706 @@
+{
+    "evidenceVersion":  1,
+    "stage":  "AUTHORIZED_DISPOSABLE_RUNTIME_VERIFICATION",
+    "recordedAt":  "2026-11-06T23:53:46.894Z",
+    "sourceCommit":  "c0150084302fbba47230386f378d4cadf65f47ea",
+    "worktreeState":  "pre-existing dirty changes preserved",
+    "sourceFiles":  [
+                        "scripts/gst-application-e2e-runner.mjs",
+                        "scripts/financial-e2e-trigger-contract.mjs",
+                        "tests/financial-e2e-trigger-contract.test.mjs"
+                    ],
+    "schemaArtifactHash":  "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
+    "sourceTarget":  {
+                         "host":  "127.0.0.1",
+                         "port":  55602,
+                         "databaseName":  "pharmnos_financial_e2e_20261107b",
+                         "bootstrapRole":  "pharmnos_e2e",
+                         "runtimeRole":  "pharmnos_e2e_runtime",
+                         "composeProject":  "pharmnoslite-financial-e2e-20261107b",
+                         "composeService":  "financial-e2e-postgres",
+                         "composeProfile":  "financial-e2e",
+                         "schemaArtifactHash":  "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
+                         "targetFingerprint":  "925039cfb6870476f5b28551a4b018314fc1a59e51d2abd78c0f0786b729636a",
+                         "infrastructureEvidence":  "stage3-runtime-evidence-b/infrastructure.json",
+                         "initializationEvidence":  "stage3-runtime-evidence-b/initialization.json",
+                         "suiteEvidence":  "stage3-runtime-evidence-b/suite.json",
+                         "cleanupEvidence":  "stage3-runtime-evidence-b/cleanup.json"
+                     },
+    "restoreTarget":  {
+                          "host":  "127.0.0.1",
+                          "port":  55603,
+                          "databaseName":  "pharmnos_financial_e2e_restore_20261107a",
+                          "bootstrapRole":  "pharmnos_e2e",
+                          "runtimeRole":  "pharmnos_e2e_runtime",
+                          "composeProject":  "pharmnoslite-financial-e2e-restore-20261107a",
+                          "composeService":  "financial-e2e-postgres",
+                          "composeProfile":  "financial-e2e",
+                          "schemaArtifactHash":  "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
+                          "targetFingerprint":  "83d7fd255ec535d7f76478d4dc25c3a9cf51881a3fae912f480fc87ba1c7c4e2",
+                          "infrastructureEvidence":  "stage3-restore-evidence/infrastructure.json",
+                          "initializationEvidence":  "stage3-restore-evidence/initialization.json",
+                          "cleanupEvidence":  "stage3-restore-evidence/cleanup.json"
+                      },
+    "migration":  {
+                      "artifact":  "prisma/financial-e2e-schema-provisioning.generated.sql",
+                      "artifactSha256":  "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
+                      "provisioning":  "PASS",
+                      "rlsTables":  34,
+                      "policies":  87,
+                      "triggersObserved":  19,
+                      "constraints":  129
+                  },
+    "namedTriggerContract":  {
+                                 "expected":  [
+                                                  {
+                                                      "name":  "prevent_finalized_purchase_mutation",
+                                                      "table":  "purchase_invoices",
+                                                      "timing":  "BEFORE",
+                                                      "events":  [
+                                                                     "UPDATE"
+                                                                 ],
+                                                      "function":  "prevent_finalized_purchase_mutation"
+                                                  },
+                                                  {
+                                                      "name":  "prevent_finalized_purchase_item_mutation",
+                                                      "table":  "purchase_invoice_items",
+                                                      "timing":  "BEFORE",
+                                                      "events":  [
+                                                                     "UPDATE"
+                                                                 ],
+                                                      "function":  "prevent_finalized_purchase_mutation"
+                                                  },
+                                                  {
+                                                      "name":  "reject_finalized_purchase_invoice_delete",
+                                                      "table":  "purchase_invoices",
+                                                      "timing":  "BEFORE",
+                                                      "events":  [
+                                                                     "DELETE"
+                                                                 ],
+                                                      "function":  "reject_finalized_purchase_delete"
+                                                  },
+                                                  {
+                                                      "name":  "reject_finalized_purchase_item_delete",
+                                                      "table":  "purchase_invoice_items",
+                                                      "timing":  "BEFORE",
+                                                      "events":  [
+                                                                     "DELETE"
+                                                                 ],
+                                                      "function":  "reject_finalized_purchase_delete"
+                                                  }
+                                              ],
+                                 "observed":  [
+                                                  {
+                                                      "name":  "prevent_finalized_purchase_mutation",
+                                                      "table":  "purchase_invoices",
+                                                      "timing":  "BEFORE",
+                                                      "events":  [
+                                                                     "UPDATE"
+                                                                 ],
+                                                      "enabled":  "O",
+                                                      "functionSchema":  "public",
+                                                      "function":  "prevent_finalized_purchase_mutation",
+                                                      "functionArgs":  "",
+                                                      "definition":  "CREATE TRIGGER prevent_finalized_purchase_mutation BEFORE UPDATE ON public.purchase_invoices FOR EACH ROW EXECUTE FUNCTION prevent_finalized_purchase_mutation()"
+                                                  },
+                                                  {
+                                                      "name":  "prevent_finalized_purchase_item_mutation",
+                                                      "table":  "purchase_invoice_items",
+                                                      "timing":  "BEFORE",
+                                                      "events":  [
+                                                                     "UPDATE"
+                                                                 ],
+                                                      "enabled":  "O",
+                                                      "functionSchema":  "public",
+                                                      "function":  "prevent_finalized_purchase_mutation",
+                                                      "functionArgs":  "",
+                                                      "definition":  "CREATE TRIGGER prevent_finalized_purchase_item_mutation BEFORE UPDATE ON public.purchase_invoice_items FOR EACH ROW EXECUTE FUNCTION prevent_finalized_purchase_mutation()"
+                                                  },
+                                                  {
+                                                      "name":  "reject_finalized_purchase_invoice_delete",
+                                                      "table":  "purchase_invoices",
+                                                      "timing":  "BEFORE",
+                                                      "events":  [
+                                                                     "DELETE"
+                                                                 ],
+                                                      "enabled":  "O",
+                                                      "functionSchema":  "public",
+                                                      "function":  "reject_finalized_purchase_delete",
+                                                      "functionArgs":  "",
+                                                      "definition":  "CREATE TRIGGER reject_finalized_purchase_invoice_delete BEFORE DELETE ON public.purchase_invoices FOR EACH ROW EXECUTE FUNCTION reject_finalized_purchase_delete()"
+                                                  },
+                                                  {
+                                                      "name":  "reject_finalized_purchase_item_delete",
+                                                      "table":  "purchase_invoice_items",
+                                                      "timing":  "BEFORE",
+                                                      "events":  [
+                                                                     "DELETE"
+                                                                 ],
+                                                      "enabled":  "O",
+                                                      "functionSchema":  "public",
+                                                      "function":  "reject_finalized_purchase_delete",
+                                                      "functionArgs":  "",
+                                                      "definition":  "CREATE TRIGGER reject_finalized_purchase_item_delete BEFORE DELETE ON public.purchase_invoice_items FOR EACH ROW EXECUTE FUNCTION reject_finalized_purchase_delete()"
+                                                  }
+                                              ]
+                             },
+    "purchaseDeleteBehavior":  {
+                                   "targetRunId":  "stage3_runtime_20261107b",
+                                   "sourceHashes":  {
+                                                        "src/app/_actions/sales.actions.ts":  "035e48d3fc1439ee5bea7cd6426209d2cb977cb7a59e4896df97e6a3f0d3f7a9",
+                                                        "src/domain/services/gst-calculator.service.ts":  "7321202fc07a16f9fd6603b60c412faa1421dbaf2057a68571c0f6d06604509b",
+                                                        "src/lib/decimal.ts":  "d73b7821d7c194d721bcc140362d70d3acfc819c2c81bead1903c9f2ef3fad3c",
+                                                        "prisma/schema.prisma":  "bb3c1503ba237c352a5391730f75938925e6f61a71901e6b2add564a0aeaf2d4",
+                                                        "prisma/financial-e2e-schema-provisioning.generated.sql":  "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
+                                                        "scripts/gst-application-e2e-runner.mjs":  "f6a88093cebd413c399a3c1cb909480e7facd51b9b9f0379bdf9d9f70ef520a5"
+                                                    },
+                                   "migrationFingerprint":  "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
+                                   "triggerContract":  {
+                                                           "expected":  [
+                                                                            {
+                                                                                "name":  "prevent_finalized_purchase_mutation",
+                                                                                "table":  "purchase_invoices",
+                                                                                "timing":  "BEFORE",
+                                                                                "events":  [
+                                                                                               "UPDATE"
+                                                                                           ],
+                                                                                "function":  "prevent_finalized_purchase_mutation"
+                                                                            },
+                                                                            {
+                                                                                "name":  "prevent_finalized_purchase_item_mutation",
+                                                                                "table":  "purchase_invoice_items",
+                                                                                "timing":  "BEFORE",
+                                                                                "events":  [
+                                                                                               "UPDATE"
+                                                                                           ],
+                                                                                "function":  "prevent_finalized_purchase_mutation"
+                                                                            },
+                                                                            {
+                                                                                "name":  "reject_finalized_purchase_invoice_delete",
+                                                                                "table":  "purchase_invoices",
+                                                                                "timing":  "BEFORE",
+                                                                                "events":  [
+                                                                                               "DELETE"
+                                                                                           ],
+                                                                                "function":  "reject_finalized_purchase_delete"
+                                                                            },
+                                                                            {
+                                                                                "name":  "reject_finalized_purchase_item_delete",
+                                                                                "table":  "purchase_invoice_items",
+                                                                                "timing":  "BEFORE",
+                                                                                "events":  [
+                                                                                               "DELETE"
+                                                                                           ],
+                                                                                "function":  "reject_finalized_purchase_delete"
+                                                                            }
+                                                                        ],
+                                                           "observed":  [
+                                                                            {
+                                                                                "name":  "prevent_finalized_purchase_mutation",
+                                                                                "table":  "purchase_invoices",
+                                                                                "timing":  "BEFORE",
+                                                                                "events":  [
+                                                                                               "UPDATE"
+                                                                                           ],
+                                                                                "enabled":  "O",
+                                                                                "functionSchema":  "public",
+                                                                                "function":  "prevent_finalized_purchase_mutation",
+                                                                                "functionArgs":  "",
+                                                                                "definition":  "CREATE TRIGGER prevent_finalized_purchase_mutation BEFORE UPDATE ON public.purchase_invoices FOR EACH ROW EXECUTE FUNCTION prevent_finalized_purchase_mutation()"
+                                                                            },
+                                                                            {
+                                                                                "name":  "prevent_finalized_purchase_item_mutation",
+                                                                                "table":  "purchase_invoice_items",
+                                                                                "timing":  "BEFORE",
+                                                                                "events":  [
+                                                                                               "UPDATE"
+                                                                                           ],
+                                                                                "enabled":  "O",
+                                                                                "functionSchema":  "public",
+                                                                                "function":  "prevent_finalized_purchase_mutation",
+                                                                                "functionArgs":  "",
+                                                                                "definition":  "CREATE TRIGGER prevent_finalized_purchase_item_mutation BEFORE UPDATE ON public.purchase_invoice_items FOR EACH ROW EXECUTE FUNCTION prevent_finalized_purchase_mutation()"
+                                                                            },
+                                                                            {
+                                                                                "name":  "reject_finalized_purchase_invoice_delete",
+                                                                                "table":  "purchase_invoices",
+                                                                                "timing":  "BEFORE",
+                                                                                "events":  [
+                                                                                               "DELETE"
+                                                                                           ],
+                                                                                "enabled":  "O",
+                                                                                "functionSchema":  "public",
+                                                                                "function":  "reject_finalized_purchase_delete",
+                                                                                "functionArgs":  "",
+                                                                                "definition":  "CREATE TRIGGER reject_finalized_purchase_invoice_delete BEFORE DELETE ON public.purchase_invoices FOR EACH ROW EXECUTE FUNCTION reject_finalized_purchase_delete()"
+                                                                            },
+                                                                            {
+                                                                                "name":  "reject_finalized_purchase_item_delete",
+                                                                                "table":  "purchase_invoice_items",
+                                                                                "timing":  "BEFORE",
+                                                                                "events":  [
+                                                                                               "DELETE"
+                                                                                           ],
+                                                                                "enabled":  "O",
+                                                                                "functionSchema":  "public",
+                                                                                "function":  "reject_finalized_purchase_delete",
+                                                                                "functionArgs":  "",
+                                                                                "definition":  "CREATE TRIGGER reject_finalized_purchase_item_delete BEFORE DELETE ON public.purchase_invoice_items FOR EACH ROW EXECUTE FUNCTION reject_finalized_purchase_delete()"
+                                                                            }
+                                                                        ]
+                                                       },
+                                   "before":  {
+                                                  "finalized":  [
+                                                                    {
+                                                                        "parent_count":  1,
+                                                                        "item_count":  1
+                                                                    }
+                                                                ],
+                                                  "draft":  [
+                                                                {
+                                                                    "parent_count":  1,
+                                                                    "item_count":  1
+                                                                }
+                                                            ]
+                                              },
+                                   "attempts":  [
+                                                    {
+                                                        "label":  "finalized_item_delete",
+                                                        "result":  "REJECTED",
+                                                        "sqlState":  "42501",
+                                                        "message":  "Finalized purchase invoice items cannot be deleted"
+                                                    },
+                                                    {
+                                                        "label":  "finalized_parent_delete",
+                                                        "result":  "REJECTED",
+                                                        "sqlState":  "42501",
+                                                        "message":  "Finalized purchase invoices cannot be deleted"
+                                                    }
+                                                ],
+                                   "after":  {
+                                                 "finalized":  [
+                                                                   {
+                                                                       "parent_count":  1,
+                                                                       "item_count":  1
+                                                                   }
+                                                               ],
+                                                 "draft":  [
+                                                               {
+                                                                   "parent_count":  0,
+                                                                   "item_count":  0
+                                                               }
+                                                           ]
+                                             },
+                                   "evidenceBearingDraft":  {
+                                                                "result":  "REJECTED",
+                                                                "sqlState":  "23503",
+                                                                "constraint":  "purchase_gst_evidence_purchase_fkey",
+                                                                "message":  "update or delete on table \"purchase_invoices\" violates foreign key constraint \"purchase_gst_evidence_purchase_fkey\" on table \"purchase_gst_evidence_revisions\""
+                                                            },
+                                   "executedAt":  "2026-11-06T23:49:49.872Z"
+                               },
+    "applicationSuite":  {
+                             "status":  "PASS",
+                             "scenarioFailure":  null,
+                             "salesPersistence":  {
+                                                      "scenario":  "INTRA_STATE_SALES_FINALIZATION",
+                                                      "invoiceId":  "gst_e2e_sales_success_2e3b5fbe15cb42d7b626e665946e333c",
+                                                      "invoice":  {
+                                                                      "status":  "FINALIZED",
+                                                                      "invoiceNo":  "DRAFT-946e333c",
+                                                                      "gstTreatment":  "Registered Business â€“ Regular",
+                                                                      "taxMode":  "EXCLUSIVE",
+                                                                      "placeOfSupplyCode":  "MH",
+                                                                      "taxDataStatus":  "COMPLETE",
+                                                                      "grossAmount":  100,
+                                                                      "totalDiscount":  0,
+                                                                      "totalTax":  18,
+                                                                      "roundOff":  0,
+                                                                      "netAmount":  118,
+                                                                      "balanceDue":  118
+                                                                  },
+                                                      "line":  {
+                                                                   "lineTotal":  118,
+                                                                   "taxableAmount":  100,
+                                                                   "cgstAmount":  9,
+                                                                   "sgstAmount":  9,
+                                                                   "igstAmount":  0,
+                                                                   "cessAmount":  0
+                                                               },
+                                                      "customer":  {
+                                                                       "beforeReceivableBalance":  250,
+                                                                       "afterReceivableBalance":  368
+                                                                   },
+                                                      "supplier":  {
+                                                                       "beforePayableBalance":  125,
+                                                                       "afterPayableBalance":  125
+                                                                   },
+                                                      "posting":  {
+                                                                      "stockMovements":  1,
+                                                                      "customerLedgers":  1,
+                                                                      "auditLogs":  1
+                                                                  }
+                                                  },
+                             "fixtureResourceCount":  88,
+                             "cleanupMode":  "DISPOSABLE_TARGET_DISPOSAL"
+                         },
+    "restore":  {
+                    "exportMethod":  "docker exec pg_dump --format=plain --data-only --no-owner",
+                    "exportBytes":  117763,
+                    "exportSha256":  "7140BF1C23BA263B007E511BB690E5D191124B846719F9F0397A1380EF9286E",
+                    "initialRestore":  "FAILED_AND_ROLLED_BACK circular foreign-key ordering",
+                    "retryMethod":  "plain SQL restore with session_replication_role=replica on disposable bootstrap connection",
+                    "restoreBytes":  117800,
+                    "restoreSha256":  "D77B93CB260D264756D655DABA30C5557614FB2E7FD51D50216A0E2AFDAC18CF",
+                    "comparison":  {
+                                       "source":  {
+                                                      "database":  "pharmnos_financial_e2e_20261107b",
+                                                      "role":  "pharmnos_e2e",
+                                                      "tableCount":  34,
+                                                      "tenant":  "gst_e2e_tenant_67541adfdaa14e7b99eb46841dce5218"
+                                                  },
+                                       "restored":  {
+                                                        "database":  "pharmnos_financial_e2e_restore_20261107a",
+                                                        "role":  "pharmnos_e2e",
+                                                        "tableCount":  34
+                                                    },
+                                       "dataCatalogEqual":  true,
+                                       "tableComparisons":  [
+                                                                {
+                                                                    "table":  "audit_logs",
+                                                                    "rows":  8,
+                                                                    "checksum":  "5de754850cf22e2952c44090c8e0c58b",
+                                                                    "restoredRows":  8,
+                                                                    "restoredChecksum":  "5de754850cf22e2952c44090c8e0c58b",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "business_profiles",
+                                                                    "rows":  4,
+                                                                    "checksum":  "b875a116deb6c106d28149c634f9175d",
+                                                                    "restoredRows":  4,
+                                                                    "restoredChecksum":  "b875a116deb6c106d28149c634f9175d",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "customer_ledgers",
+                                                                    "rows":  4,
+                                                                    "checksum":  "95021590f3293b464c650bb48a35275a",
+                                                                    "restoredRows":  4,
+                                                                    "restoredChecksum":  "95021590f3293b464c650bb48a35275a",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "customers",
+                                                                    "rows":  4,
+                                                                    "checksum":  "2cbc60f1ec601d62bd0b0912ae39739b",
+                                                                    "restoredRows":  4,
+                                                                    "restoredChecksum":  "2cbc60f1ec601d62bd0b0912ae39739b",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "gst_rate_rule_history",
+                                                                    "rows":  0,
+                                                                    "checksum":  "d41d8cd98f00b204e9800998ecf8427e",
+                                                                    "restoredRows":  0,
+                                                                    "restoredChecksum":  "d41d8cd98f00b204e9800998ecf8427e",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "gst_rate_rules",
+                                                                    "rows":  4,
+                                                                    "checksum":  "bc923222c9222a9b6dcf31349fc380a4",
+                                                                    "restoredRows":  4,
+                                                                    "restoredChecksum":  "bc923222c9222a9b6dcf31349fc380a4",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "hsn_sac_catalog",
+                                                                    "rows":  8,
+                                                                    "checksum":  "ac374884f85600e7961232df9a9b9366",
+                                                                    "restoredRows":  8,
+                                                                    "restoredChecksum":  "ac374884f85600e7961232df9a9b9366",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "hsn_sac_catalog_history",
+                                                                    "rows":  0,
+                                                                    "checksum":  "d41d8cd98f00b204e9800998ecf8427e",
+                                                                    "restoredRows":  0,
+                                                                    "restoredChecksum":  "d41d8cd98f00b204e9800998ecf8427e",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "inventory_valuation_adjustments",
+                                                                    "rows":  0,
+                                                                    "checksum":  "d41d8cd98f00b204e9800998ecf8427e",
+                                                                    "restoredRows":  0,
+                                                                    "restoredChecksum":  "d41d8cd98f00b204e9800998ecf8427e",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "inventory_valuation_decisions",
+                                                                    "rows":  0,
+                                                                    "checksum":  "d41d8cd98f00b204e9800998ecf8427e",
+                                                                    "restoredRows":  0,
+                                                                    "restoredChecksum":  "d41d8cd98f00b204e9800998ecf8427e",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "memberships",
+                                                                    "rows":  4,
+                                                                    "checksum":  "4b3bdadaa2bc7142bb9d0dba53aa8323",
+                                                                    "restoredRows":  4,
+                                                                    "restoredChecksum":  "4b3bdadaa2bc7142bb9d0dba53aa8323",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "payments",
+                                                                    "rows":  4,
+                                                                    "checksum":  "761e0cf1bb52afa2b3816478a27a158d",
+                                                                    "restoredRows":  4,
+                                                                    "restoredChecksum":  "761e0cf1bb52afa2b3816478a27a158d",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "product_batches",
+                                                                    "rows":  18,
+                                                                    "checksum":  "1a03bdfdd1ff752e181b26810f0419ea",
+                                                                    "restoredRows":  18,
+                                                                    "restoredChecksum":  "1a03bdfdd1ff752e181b26810f0419ea",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "products",
+                                                                    "rows":  8,
+                                                                    "checksum":  "38b6a4402e65225698b2c649f4ca4bd9",
+                                                                    "restoredRows":  8,
+                                                                    "restoredChecksum":  "38b6a4402e65225698b2c649f4ca4bd9",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "purchase_gst_accounting_decisions",
+                                                                    "rows":  12,
+                                                                    "checksum":  "c04ce9b09ebb27ca79322a84432d12c8",
+                                                                    "restoredRows":  12,
+                                                                    "restoredChecksum":  "c04ce9b09ebb27ca79322a84432d12c8",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "purchase_gst_calculations",
+                                                                    "rows":  16,
+                                                                    "checksum":  "ba8362671169784f75e91252fbfea35d",
+                                                                    "restoredRows":  16,
+                                                                    "restoredChecksum":  "ba8362671169784f75e91252fbfea35d",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "purchase_gst_evidence_revisions",
+                                                                    "rows":  16,
+                                                                    "checksum":  "0b642942d92bf3c4e5fb4dd1635c37bd",
+                                                                    "restoredRows":  16,
+                                                                    "restoredChecksum":  "0b642942d92bf3c4e5fb4dd1635c37bd",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "purchase_gst_line_evidence",
+                                                                    "rows":  8,
+                                                                    "checksum":  "34194bee3f0a46d9191664cde0ebf145",
+                                                                    "restoredRows":  8,
+                                                                    "restoredChecksum":  "34194bee3f0a46d9191664cde0ebf145",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "purchase_gst_reconciliation_event_lines",
+                                                                    "rows":  4,
+                                                                    "checksum":  "c75132e93beb1eb968b626da428bab03",
+                                                                    "restoredRows":  4,
+                                                                    "restoredChecksum":  "c75132e93beb1eb968b626da428bab03",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "purchase_gst_reconciliation_events",
+                                                                    "rows":  8,
+                                                                    "checksum":  "777a08982738b7cc4c33a9925b6972ed",
+                                                                    "restoredRows":  8,
+                                                                    "restoredChecksum":  "777a08982738b7cc4c33a9925b6972ed",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "purchase_invoice_items",
+                                                                    "rows":  16,
+                                                                    "checksum":  "3d67bd67660aad95062c3c7554cd4874",
+                                                                    "restoredRows":  16,
+                                                                    "restoredChecksum":  "3d67bd67660aad95062c3c7554cd4874",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "purchase_invoices",
+                                                                    "rows":  20,
+                                                                    "checksum":  "2a9d847c0b944ca07bc00af95f8ab949",
+                                                                    "restoredRows":  20,
+                                                                    "restoredChecksum":  "2a9d847c0b944ca07bc00af95f8ab949",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "purchase_posting_operations",
+                                                                    "rows":  6,
+                                                                    "checksum":  "ed16706b16890151b79451fb400bbf1f",
+                                                                    "restoredRows":  6,
+                                                                    "restoredChecksum":  "ed16706b16890151b79451fb400bbf1f",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "purchase_supplier_documents",
+                                                                    "rows":  0,
+                                                                    "checksum":  "d41d8cd98f00b204e9800998ecf8427e",
+                                                                    "restoredRows":  0,
+                                                                    "restoredChecksum":  "d41d8cd98f00b204e9800998ecf8427e",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "role_permissions",
+                                                                    "rows":  40,
+                                                                    "checksum":  "3622d68995f65df3c9a4fb13103c6315",
+                                                                    "restoredRows":  40,
+                                                                    "restoredChecksum":  "3622d68995f65df3c9a4fb13103c6315",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "roles",
+                                                                    "rows":  4,
+                                                                    "checksum":  "b026d1555f5713fcd6b3cbb008d64ee0",
+                                                                    "restoredRows":  4,
+                                                                    "restoredChecksum":  "b026d1555f5713fcd6b3cbb008d64ee0",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "sales_invoice_items",
+                                                                    "rows":  16,
+                                                                    "checksum":  "e2161422791b0a6066da8c62280d223c",
+                                                                    "restoredRows":  16,
+                                                                    "restoredChecksum":  "e2161422791b0a6066da8c62280d223c",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "sales_invoices",
+                                                                    "rows":  12,
+                                                                    "checksum":  "0f0095ad0bae79c9c45100b593ac1115",
+                                                                    "restoredRows":  12,
+                                                                    "restoredChecksum":  "0f0095ad0bae79c9c45100b593ac1115",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "sales_posting_operations",
+                                                                    "rows":  2,
+                                                                    "checksum":  "60ed498d26c1c82358636ccb50a869ef",
+                                                                    "restoredRows":  2,
+                                                                    "restoredChecksum":  "60ed498d26c1c82358636ccb50a869ef",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "stock_movements",
+                                                                    "rows":  8,
+                                                                    "checksum":  "997cddbe305cb454cd03754924d733c9",
+                                                                    "restoredRows":  8,
+                                                                    "restoredChecksum":  "997cddbe305cb454cd03754924d733c9",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "supplier_ledgers",
+                                                                    "rows":  8,
+                                                                    "checksum":  "352c6ba9c1bfdf317957ecf021a70106",
+                                                                    "restoredRows":  8,
+                                                                    "restoredChecksum":  "352c6ba9c1bfdf317957ecf021a70106",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "suppliers",
+                                                                    "rows":  4,
+                                                                    "checksum":  "1715eb378191b3d79561d6ae028a5d7a",
+                                                                    "restoredRows":  4,
+                                                                    "restoredChecksum":  "1715eb378191b3d79561d6ae028a5d7a",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "tenants",
+                                                                    "rows":  6,
+                                                                    "checksum":  "7a3c4e4e07afd4a236c4523ae1d63a48",
+                                                                    "restoredRows":  6,
+                                                                    "restoredChecksum":  "7a3c4e4e07afd4a236c4523ae1d63a48",
+                                                                    "match":  true
+                                                                },
+                                                                {
+                                                                    "table":  "users",
+                                                                    "rows":  4,
+                                                                    "checksum":  "8633ad2033faac8fb5c06a38673b4696",
+                                                                    "restoredRows":  4,
+                                                                    "restoredChecksum":  "8633ad2033faac8fb5c06a38673b4696",
+                                                                    "match":  true
+                                                                }
+                                                            ],
+                                       "runtimeIsolation":  {
+                                                                "source":  {
+                                                                               "database":  "pharmnos_financial_e2e_20261107b",
+                                                                               "role":  {
+                                                                                            "current_user":  "pharmnos_e2e_runtime",
+                                                                                            "rolcanlogin":  true,
+                                                                                            "rolsuper":  false,
+                                                                                            "rolbypassrls":  false
+                                                                                        },
+                                                                               "expectedDb":  "pharmnos_financial_e2e_20261107b",
+                                                                               "ownTenantRows":  1
+                                                                           },
+                                                                "restored":  {
+                                                                                 "database":  "pharmnos_financial_e2e_restore_20261107a",
+                                                                                 "role":  {
+                                                                                              "current_user":  "pharmnos_e2e_runtime",
+                                                                                              "rolcanlogin":  true,
+                                                                                              "rolsuper":  false,
+                                                                                              "rolbypassrls":  false
+                                                                                          },
+                                                                                 "expectedDb":  "pharmnos_financial_e2e_restore_20261107a",
+                                                                                 "ownTenantRows":  1
+                                                                             }
+                                                            },
+                                       "migrationFingerprint":  null,
+                                       "publicDataTablesMatched":  34
+                                   },
+                    "schemaInitializedBeforeData":  true,
+                    "schemaArtifactHash":  "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
+                    "restoredSchemaCounts":  {
+                                                 "rlsTables":  34,
+                                                 "policies":  87,
+                                                 "triggers":  19,
+                                                 "constraints":  129,
+                                                 "runtimeDeletePrivileges":  0,
+                                                 "runtimeRestricted":  true
+                                             },
+                    "normalPrismaMigrationHistoryReplay":  false,
+                    "scopeLimitation":  "Data-only restore into a pre-provisioned current schema; not a complete schema dump or normal Prisma migration-history replay."
+                },
+    "security":  {
+                     "sourceDatabaseRole":  "pharmnos_e2e",
+                     "restoredDatabaseRole":  "pharmnos_e2e",
+                     "requiredRuntimeAttributes":  "LOGIN, NOSUPERUSER, NOBYPASSRLS",
+                     "claimGucAuthentication":  "not cryptographic; caller-settable under SQL credential boundary"
+                 },
+    "browser":  {
+                    "status":  "UNAVAILABLE",
+                    "reason":  "No Playwright dependency or authenticated browser harness exists in repository; action-path evidence is not browser proof."
+                },
+    "cleanup":  {
+                    "source":  {
+                                   "composeProject":  "pharmnoslite-financial-e2e-20261107b",
+                                   "action":  "down",
+                                   "verifiedAbsent":  true
+                               },
+                    "restore":  {
+                                    "composeProject":  "pharmnoslite-financial-e2e-restore-20261107a",
+                                    "action":  "down",
+                                    "verifiedAbsent":  true
+                                },
+                    "exactContainersVerifiedAbsent":  true,
+                    "productionOrSharedTouched":  false
+                }
+}

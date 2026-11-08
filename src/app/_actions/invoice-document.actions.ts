@@ -2,6 +2,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
+import { Prisma } from "@prisma/client";
 import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
 import { storageAdapter } from "@/adapters/storage";
 import {
@@ -146,9 +147,12 @@ export async function uploadSupplierInvoiceDocumentAction(formData: FormData): P
   if (!validation.ok) return validation;
   const purchase = await prisma.purchase_invoices.findFirst({
     where: { id: purchaseId, tenant_id: ctx.tenantId },
-    select: { id: true, supplier_id: true },
+    select: { id: true, supplier_id: true, status: true },
   });
   if (!purchase) return { ok: false, error: "Purchase not found or belongs to another business." };
+  if (purchase.status !== "DRAFT") {
+    return { ok: false, error: "Supplier invoice documents cannot be replaced after purchase finalization." };
+  }
   return persistSupplierInvoiceDocument(ctx, purchase.id, file);
 }
 
@@ -164,14 +168,9 @@ export async function persistSupplierInvoiceDocument(
   }
   const validation = validateSupplierDocument(file);
   if (!validation.ok) return validation;
-  const purchase = await prisma.purchase_invoices.findFirst({
-    where: { id: purchaseId, tenant_id: ctx.tenantId },
-    select: { id: true, supplier_id: true },
-  });
-  if (!purchase) return { ok: false, error: "Purchase not found or belongs to another business." };
   const documentId = randomUUID();
   const filename = file.name.replace(/[^A-Za-z0-9._-]+/g, "_");
-  const key = buildSupplierDocumentKey(ctx, purchase.id, documentId, filename);
+  const key = buildSupplierDocumentKey(ctx, purchaseId, documentId, filename);
   const bytes = new Uint8Array(await file.arrayBuffer());
   const contentValidation = validateSupplierDocumentBytes(file.type, bytes);
   if (!contentValidation.ok) return contentValidation;
@@ -179,6 +178,21 @@ export async function persistSupplierInvoiceDocument(
     await storageAdapter.ensureBucket(SUPPLIER_DOCUMENT_BUCKET, false);
     await storageAdapter.upload(SUPPLIER_DOCUMENT_BUCKET, key, Buffer.from(bytes), file.type);
     await prisma.$transaction(async (tx) => {
+      const lockedPurchase = await tx.$queryRaw<Array<{
+        id: string;
+        supplier_id: string;
+        status: string;
+      }>>(Prisma.sql`
+        SELECT id, supplier_id, status
+        FROM "purchase_invoices"
+        WHERE id = ${purchaseId} AND tenant_id = ${ctx.tenantId}
+        FOR UPDATE
+      `);
+      const purchase = lockedPurchase[0];
+      if (!purchase) throw new Error("Purchase not found or belongs to another business.");
+      if (purchase.status !== "DRAFT") {
+        throw new Error("Supplier invoice documents cannot be replaced after purchase finalization.");
+      }
       const current = await tx.purchase_supplier_documents.findFirst({
         where: { tenant_id: ctx.tenantId, purchase_invoice_id: purchase.id, replaced_at: null },
         orderBy: { uploaded_at: "desc" },

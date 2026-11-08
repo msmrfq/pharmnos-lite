@@ -677,6 +677,7 @@ export async function createPurchaseDraftAction(
         }
       }
 
+      const invoiceDate = data.invoice_date instanceof Date ? data.invoice_date : new Date(data.invoice_date as any);
       const created = await tx.purchase_invoices.create({
         data: {
           tenant_id: ctx.tenantId,
@@ -684,7 +685,8 @@ export async function createPurchaseDraftAction(
           invoice_no: data.invoice_no && String(data.invoice_no).trim() ? String(data.invoice_no).trim() : "",
           supplier_id: data.supplier_id,
           supplier_invoice_no: normalizeSupplierInvoiceNo(data.supplier_invoice_no),
-          invoice_date: data.invoice_date instanceof Date ? data.invoice_date : new Date(data.invoice_date as any),
+          invoice_date: invoiceDate,
+          due_date: invoiceDate,
           status: __PurchaseStatusDRAFT,
           gst_treatment: treatment.treatment,
           tax_mode: data.tax_mode,
@@ -1311,31 +1313,46 @@ export async function cancelPurchaseDraftAction(id: string): Promise<ActionResul
     assertPostgresConfigured("cancelPurchaseDraftAction");
     const ctx = await requireServerTenantContext();
     requirePermission(ctx, "edit_purchase" as PermissionAction);
-    const existing = await prisma.purchase_invoices.findUnique({
-      where: { id, tenant_id: ctx.tenantId },
+    const cancelled = await prisma.$transaction(async (tx) => {
+      await establishTenantContext(tx, ctx);
+      const updated = await tx.purchase_invoices.updateMany({
+        where: { id, tenant_id: ctx.tenantId, status: __PurchaseStatusDRAFT },
+        data: {
+          status: __PurchaseStatusCANCELLED,
+          cancelled_at: new Date(),
+          cancelled_by: ctx.userId,
+          updated_at: new Date(),
+        },
+      });
+      if (updated.count !== 1) {
+        const existing = await tx.purchase_invoices.findUnique({
+          where: { id, tenant_id: ctx.tenantId },
+          select: { status: true },
+        });
+        if (!existing) throw new Error("Purchase not found.");
+        throw new Error("Only draft purchases can be cancelled.");
+      }
+      await tx.audit_logs.create({
+        data: {
+          tenant_id: ctx.tenantId,
+          event_type: "INVOICE_CANCELLED",
+          actor_id: ctx.userId,
+          target_type: "purchase_invoice",
+          target_id: id,
+          metadata: { reason: "draft_cancelled" },
+          created_at: new Date(),
+        },
+      });
+      return updated;
     });
-    if (!existing) {
-      return { ok: false, message: "Purchase not found." };
-    }
-    if (existing.status !== __PurchaseStatusDRAFT) {
-      return { ok: false, message: "Only draft purchases can be cancelled." };
-    }
-    await prisma.purchase_invoices.update({
-      where: { id, tenant_id: ctx.tenantId },
-      data: {
-        status: __PurchaseStatusCANCELLED,
-        cancelled_at: new Date(),
-        cancelled_by: ctx.userId,
-        updated_at: new Date(),
-      },
-    });
+    if (cancelled.count !== 1) throw new Error("Purchase could not be cancelled.");
     revalidatePath("/purchases");
     revalidatePath("/dashboard");
     return { ok: true, data: { id } };
-  } catch (_e: any) {
+  } catch (e: any) {
     return {
       ok: false,
-      message: "Purchase could not be cancelled. Please try again.",
+      message: e?.message || "Purchase could not be cancelled. Please try again.",
     };
   }
 }
@@ -1630,7 +1647,9 @@ export async function finalizePurchaseAction(
 
       for (let i = 0; i < items.length; i += 1) {
         const line = items[i];
-        const qty = Number(line.quantity ?? 0);
+        const paidQty = Number(line.quantity ?? 0);
+        const freeQty = Number(line.free_qty ?? 0);
+        const physicalQty = paidQty + freeQty;
         const governed = governedLines[i];
         await tx.$executeRaw(Prisma.sql`
           UPDATE "purchase_invoice_items"
@@ -1667,8 +1686,8 @@ export async function finalizePurchaseAction(
             inventory_valuation_status: "PENDING",
             inventory_acquisition_cost: null,
             sale_rate: line.sale_rate ? Number(line.sale_rate) : null,
-            received_qty: qty,
-            available_qty: qty,
+            received_qty: physicalQty,
+            available_qty: physicalQty,
             supplier_id: existing.supplier_id,
             purchase_id: existing.id,
             is_blocked: false,
@@ -1676,8 +1695,8 @@ export async function finalizePurchaseAction(
             updated_at: new Date(),
           },
           update: {
-            received_qty: { increment: qty },
-            available_qty: { increment: qty },
+            received_qty: { increment: physicalQty },
+            available_qty: { increment: physicalQty },
             updated_at: new Date(),
           },
         });
@@ -1686,7 +1705,7 @@ export async function finalizePurchaseAction(
       const movementPromises = [];
       for (let i = 0; i < items.length; i += 1) {
         const line = items[i];
-        const qty = Number(line.quantity ?? 0);
+        const physicalQty = Number(line.quantity ?? 0) + Number(line.free_qty ?? 0);
         const batch = await tx.product_batches.findUnique({
           where: {
             tenant_id_product_id_batch_no: {
@@ -1704,7 +1723,7 @@ export async function finalizePurchaseAction(
               product_id: line.product_id,
               batch_id: batch?.id ?? null,
               movement_type: __MovementPURCHASE_IN,
-              quantity_delta: qty,
+              quantity_delta: physicalQty,
               reference_type: "purchase_invoice",
               reference_id: existing.id,
               unit_rate: null,
@@ -1762,6 +1781,8 @@ export async function finalizePurchaseAction(
           batchNo: line.batch_no,
           expiry: line.expiry_date?.toISOString?.() ?? null,
           quantity: line.quantity,
+          freeQuantity: line.free_qty,
+          physicalQuantity: Number(line.quantity ?? 0) + Number(line.free_qty ?? 0),
           purchaseRate: line.purchase_rate?.toString?.() ?? null,
           discountAmount: line.discount_amount?.toString?.() ?? null,
           gstRate: line.gst_rate?.toString?.() ?? null,
@@ -2008,6 +2029,7 @@ export async function createStockAdjustmentAction(
 export async function getPurchaseForEdit(id: string): Promise<purchase_invoices | null> {
   assertPostgresConfigured("getPurchaseForEdit");
   const ctx = await requireServerTenantContext();
+  requirePermission(ctx, "edit_purchase" as PermissionAction);
   return prisma.purchase_invoices.findUnique({
     where: { id, tenant_id: ctx.tenantId },
     include: { supplier: true, items: { include: { product: true } } },

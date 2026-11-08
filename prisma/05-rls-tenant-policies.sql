@@ -12,6 +12,12 @@
 --   3. DROP IF EXISTS + CREATE POLICY per table (existing tables)
 --   4. Guarded additive policy block for GST/posting tables
 --
+-- Boundary: this artifact is exclusively for Supabase's authenticated Data API
+-- gateway. The gateway supplies cryptographically verified Auth JWT claims to
+-- auth.jwt(); it is not used by the direct Prisma/runtime-role path. The
+-- disposable financial target uses pharmnos.auth_context and the
+-- financial_context_* helpers instead.
+--
 -- Policy pattern uses explicit SELECT/INSERT/UPDATE commands:
 --   USING      (tenant_id = jwt_tenant_id())    -- reads + existing writes
 --   WITH CHECK (tenant_id = jwt_tenant_id())    -- new / updated rows

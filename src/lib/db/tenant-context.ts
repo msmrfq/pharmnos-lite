@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { authAdapter } from "@/adapters/auth";
 import { Prisma } from "@prisma/client";
 import type { PermissionAction, SystemRole } from "@prisma/client";
+import { createFinancialAuthContext } from "@/lib/db/financial-auth-context";
 
 export type TenantContext = {
   tenantId: string;
@@ -46,9 +47,11 @@ export async function establishTenantContext(
   ctx: TenantContext,
 ): Promise<void> {
   await tx.$executeRaw(Prisma.sql`
-    SELECT
-      set_config('request.jwt.claim.sub', ${ctx.subjectId}, true),
-      set_config('request.jwt.claim.tenant_id', ${ctx.tenantId}, true)
+    SELECT set_config(
+      'pharmnos.auth_context',
+      ${createFinancialAuthContext(ctx.subjectId, ctx.tenantId)},
+      true
+    )
   `);
 }
 
@@ -70,7 +73,11 @@ export async function getServerTenantContext(): Promise<SessionCtxResult> {
     const externalId = session.user.id;
     const user = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw(Prisma.sql`
-        SELECT set_config('request.jwt.claim.sub', ${externalId}, true)
+        SELECT set_config(
+          'pharmnos.auth_context',
+          ${createFinancialAuthContext(externalId)},
+          true
+        )
       `);
       return tx.users.findUnique({
         where: { external_id: externalId },

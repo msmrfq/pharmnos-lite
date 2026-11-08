@@ -24,6 +24,24 @@
 -- Rationale: preserves the existing two-role boundary and avoids silently
 -- granting elevation. Consequence: service-led transitions remain required;
 -- this package cannot provide privileged function-mediated writes.
+--
+-- Identity authenticity control:
+-- The setting name is 'pharmnos.auth_context'. It is transaction-local input
+-- only. RLS never trusts its contents directly. Public wrappers call the
+-- bootstrap-owned SECURITY DEFINER verifier, which reads the private signing
+-- key and validates the HMAC, version, subject, tenant, expiry, and active
+-- subject-to-tenant membership. The runtime role has no access to the key
+-- table or verifier function and cannot alter either security definition.
+-- The executable verifier reads the untrusted input with
+-- current_setting('pharmnos.auth_context', true).
+-- Replay control is implemented by pharmnos_private.auth_context_replays,
+-- txid_current(), and ON CONFLICT (nonce) DO NOTHING; a committed nonce reuse
+-- in another transaction is rejected.
+--
+-- Authorization-table writes are restricted by the bootstrap-owned
+-- public.financial_context_is_admin() SECURITY DEFINER helper. Runtime
+-- memberships, roles, and role_permissions writes require an active signed
+-- membership whose role has SystemRole ADMIN in the signed tenant.
 
 BEGIN;
 
@@ -58,6 +76,9 @@ GRANT SELECT, INSERT, UPDATE ON TABLE
   public.stock_movements, public.customer_ledgers, public.supplier_ledgers,
   public.audit_logs
 TO pharmnos_e2e_runtime;
+
+-- RLS, not the table grant alone, permits authorization-table writes only for
+-- signed administrators. Ordinary members retain no route to self-escalate.
 
 GRANT SELECT ON TABLE
   public.hsn_sac_catalog,
@@ -111,10 +132,8 @@ FROM pharmnos_e2e_runtime;
 -- The following policy family is required for every table with tenant_id.
 -- users and role_permissions are relation-scoped exceptions because neither
 -- model has a tenant_id column.
---   USING      (tenant_id::text = NULLIF(current_setting(
---                 'request.jwt.claim.tenant_id', true), ''))
---   WITH CHECK (tenant_id::text = NULLIF(current_setting(
---                 'request.jwt.claim.tenant_id', true), ''))
+--   USING      (tenant_id::text = public.financial_context_tenant_id())
+--   WITH CHECK (tenant_id::text = public.financial_context_tenant_id())
 --
 -- Required tenant-scoped tables:
 -- tenants, users, memberships, roles, role_permissions, business_profiles, products,
@@ -137,8 +156,7 @@ FROM pharmnos_e2e_runtime;
 --   EXISTS (
 --     SELECT 1 FROM public.roles r
 --     WHERE r.id = role_permissions.role_id
---       AND r.tenant_id::text = NULLIF(current_setting(
---         'request.jwt.claim.tenant_id', true), '')
+--       AND r.tenant_id::text = public.financial_context_tenant_id()
 --   )
 --
 -- Every listed table must receive:

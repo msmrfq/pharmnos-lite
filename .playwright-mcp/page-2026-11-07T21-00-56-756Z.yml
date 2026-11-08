@@ -1,0 +1,190 @@
+- generic:
+  - generic [aria-hidden]:
+    - complementary:
+      - generic:
+        - generic:
+          - link:
+            - /url: /dashboard
+            - generic: Pharmnos Lite
+        - generic:
+          - paragraph: Business
+          - paragraph: Maharashtra Pharma Distributors
+        - navigation:
+          - link:
+            - /url: /dashboard
+            - generic: Dashboard
+          - link:
+            - /url: /billing
+            - generic: Billing
+          - link:
+            - /url: /purchases
+            - generic: Purchases
+          - link:
+            - /url: /inventory
+            - generic: Inventory
+          - link:
+            - /url: /customers
+            - generic: Customers
+          - link:
+            - /url: /suppliers
+            - generic: Suppliers
+          - link:
+            - /url: /reports
+            - generic: Reports
+          - link:
+            - /url: /audit
+            - generic: Audit Log
+          - generic:
+            - link:
+              - /url: /settings
+              - generic: Settings
+        - generic:
+          - button [expanded]:
+            - generic: RK
+            - generic:
+              - paragraph: Rajesh Kumar
+              - paragraph: Administrator
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - generic:
+              - textbox:
+                - /placeholder: Search products, customers, invoices...
+          - generic:
+            - button
+            - button:
+              - generic: RK
+              - generic: Rajesh Kumar
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - heading [level=1]: Good afternoon, Rajesh.
+              - paragraph: Here's how your pharmacy is performing today — 8 November 2026.
+            - generic:
+              - link:
+                - /url: /purchases/new
+                - text: Purchase entry
+              - link:
+                - /url: /billing/new
+                - text: New invoice
+          - status:
+            - generic:
+              - strong: Showing placeholder values until database is connected.
+              - text: Temporary Supabase pooler timeout is common on the free tier — try again in 60 seconds.
+          - generic:
+            - link:
+              - /url: /billing
+              - generic:
+                - generic:
+                  - generic:
+                    - paragraph: Sales this month
+                    - generic: ₹ 0
+                - generic: Aggregates loading…
+            - link:
+              - /url: /reports/customer-dues
+              - generic:
+                - generic:
+                  - generic:
+                    - paragraph: Receivables
+                    - generic: ₹ 0
+                - generic: Aggregates loading…
+            - link:
+              - /url: /reports/stock-valuation
+              - generic:
+                - generic:
+                  - generic:
+                    - paragraph: Stock value
+                    - generic: ₹ 0
+                - generic: Aggregates loading…
+            - link:
+              - /url: /inventory?tab=batches
+              - generic:
+                - generic:
+                  - generic:
+                    - paragraph: Near expiry (60d)
+                    - generic: 0 batches
+                - generic: Aggregates loading…
+          - generic:
+            - generic: Quick actions
+            - link:
+              - /url: /billing/new
+              - text: New invoice
+            - link:
+              - /url: /purchases/new
+              - text: Purchase entry
+            - link:
+              - /url: /inventory/products/new
+              - text: Add product
+            - link:
+              - /url: /customers/new
+              - text: Add customer
+            - link:
+              - /url: /suppliers/new
+              - text: Add supplier
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic: Recent invoices
+                  - paragraph: Last finalized sales invoices
+                - generic:
+                  - link:
+                    - /url: /reports/sales-register
+                    - text: Register
+                  - link:
+                    - /url: /billing/new
+                    - text: New
+              - generic:
+                - generic:
+                  - table:
+                    - rowgroup:
+                      - row:
+                        - columnheader: Invoice
+                        - columnheader: Customer
+                        - columnheader: Amount
+                        - columnheader: Status
+                        - columnheader: Time
+                    - rowgroup:
+                      - row:
+                        - cell: Recent invoices hidden until database is connected.
+            - generic:
+              - generic:
+                - generic:
+                  - generic: Low stock queue
+                  - paragraph: Replenishment priorities
+                - link:
+                  - /url: /inventory/low-stock
+                  - text: View all
+              - generic:
+                - paragraph: Queue loading…
+          - generic:
+            - generic:
+              - generic:
+                - generic: Recent activity
+                - paragraph: Last 10 events from audit log
+              - link:
+                - /url: /audit
+                - text: Open audit
+            - generic:
+              - generic:
+                - table:
+                  - rowgroup:
+                    - row:
+                      - columnheader: When
+                      - columnheader: User
+                      - columnheader: Module
+                      - columnheader: Action
+                      - columnheader: Reference
+                      - columnheader: Details
+                  - rowgroup:
+                    - row:
+                      - cell: Activity timeline hidden until database is connected.
+  - list
+  - alert
+  - menu "RK Rajesh Kumar Administrator" [active] [ref=f18e223]:
+    - menuitem "My Profile" [ref=f18e224] [cursor=pointer]
+    - menuitem "Business Settings" [ref=f18e225] [cursor=pointer]
+    - separator [ref=f18e226]
+    - button "Sign out" [ref=f18e228] [cursor=pointer]

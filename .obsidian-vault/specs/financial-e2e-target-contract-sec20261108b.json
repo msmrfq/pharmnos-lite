@@ -1,0 +1,25 @@
+{
+  "contract": {
+    "version": 1,
+    "runId": "sec20261108b",
+    "host": "127.0.0.1",
+    "port": 55437,
+    "databaseName": "pharmnos_financial_e2e_20261108b",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "bootstrapCredentialSource": "FINANCIAL_E2E_DB_PASSWORD",
+    "runtimeCredentialSource": "FINANCIAL_E2E_RUNTIME_DB_PASSWORD",
+    "contextSecretSource": "DATABASE_AUTH_CONTEXT_SIGNING_SECRET",
+    "marker": "pharmnos-financial-e2e",
+    "composeProject": "pharmnoslite-financial-e2e-20261108b",
+    "composeService": "financial-e2e-postgres",
+    "composeProfile": "financial-e2e",
+    "schemaArtifact": "prisma/financial-e2e-schema-provisioning.generated.sql",
+    "schemaArtifactHash": "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
+    "authorizedAt": 1794078752857,
+    "expiresAt": 1794165152857
+  },
+  "initializationAttemptId": "sec20261108b-init01",
+  "targetBinding": "1|sec20261108b|127.0.0.1|55437|pharmnos_financial_e2e_20261108b|pharmnos_e2e|pharmnos_e2e_runtime|FINANCIAL_E2E_DB_PASSWORD|FINANCIAL_E2E_RUNTIME_DB_PASSWORD|DATABASE_AUTH_CONTEXT_SIGNING_SECRET|pharmnos-financial-e2e|pharmnoslite-financial-e2e-20261108b|financial-e2e-postgres|40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
+  "targetFingerprint": "2549681a70c060d6f3f8a485ea356f223641b5e47a4cb6b12e95294a8132db11"
+}

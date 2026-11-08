@@ -1,0 +1,77 @@
+{
+  "evidenceVersion": 1,
+  "phase": "EVIDENCE_RECORDING",
+  "status": "PASS",
+  "runId": "stage3_closure_19f19a43bd",
+  "targetBinding": "1|stage3_closure_19f19a43bd|127.0.0.1|55526|pharmnos_financial_e2e_19f19a43bd|pharmnos_e2e|pharmnos_e2e_runtime|FINANCIAL_E2E_DB_PASSWORD|FINANCIAL_E2E_RUNTIME_DB_PASSWORD|pharmnos-financial-e2e|pharmnoslite-financial-e2e-stage3_closure_19f19a43bd|financial-e2e-postgres|40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
+  "targetFingerprint": "1689e4a3dbfcc5b4f5d399666fed2326361e4deb727cb7fe932a0eb890a65284",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 55526,
+    "databaseName": "pharmnos_financial_e2e_19f19a43bd",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "composeProject": "pharmnoslite-financial-e2e-stage3_closure_19f19a43bd",
+    "composeService": "financial-e2e-postgres",
+    "composeProfile": "financial-e2e",
+    "schemaArtifactHash": "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168"
+  },
+  "recordedAt": 1794003881952,
+  "details": {
+    "suite": "sales-gst",
+    "command": "pnpm exec node .\\scripts\\sales-gst-application-acceptance.cjs",
+    "databaseAccessed": true,
+    "salesOnly": false,
+    "sourceHashes": {
+      "src/app/_actions/sales.actions.ts": "035e48d3fc1439ee5bea7cd6426209d2cb977cb7a59e4896df97e6a3f0d3f7a9",
+      "src/domain/services/gst-calculator.service.ts": "7321202fc07a16f9fd6603b60c412faa1421dbaf2057a68571c0f6d06604509b",
+      "src/lib/decimal.ts": "d73b7821d7c194d721bcc140362d70d3acfc819c2c81bead1903c9f2ef3fad3c",
+      "prisma/schema.prisma": "bb3c1503ba237c352a5391730f75938925e6f61a71901e6b2add564a0aeaf2d4",
+      "prisma/financial-e2e-schema-provisioning.generated.sql": "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
+      "scripts/gst-application-e2e-runner.mjs": "54872764c54e032e464845734f78156bf5efd12b0cb2aa84f2a590e059348934"
+    },
+    "salesPersistence": {
+      "scenario": "INTRA_STATE_SALES_FINALIZATION",
+      "invoiceId": "gst_e2e_sales_success_353114d0112b4850962a3be3c2aea64f",
+      "invoice": {
+        "status": "FINALIZED",
+        "invoiceNo": "DRAFT-c2aea64f",
+        "gstTreatment": "Registered Business – Regular",
+        "taxMode": "EXCLUSIVE",
+        "placeOfSupplyCode": "MH",
+        "taxDataStatus": "COMPLETE",
+        "grossAmount": 100,
+        "totalDiscount": 0,
+        "totalTax": 18,
+        "roundOff": 0,
+        "netAmount": 118,
+        "balanceDue": 118
+      },
+      "line": {
+        "lineTotal": 118,
+        "taxableAmount": 100,
+        "cgstAmount": 9,
+        "sgstAmount": 9,
+        "igstAmount": 0,
+        "cessAmount": 0
+      },
+      "customer": {
+        "beforeReceivableBalance": 250,
+        "afterReceivableBalance": 368
+      },
+      "supplier": {
+        "beforePayableBalance": 125,
+        "afterPayableBalance": 125
+      },
+      "posting": {
+        "stockMovements": 1,
+        "customerLedgers": 1,
+        "auditLogs": 1
+      }
+    },
+    "fixtureResourceCount": 88,
+    "cleanupMode": "DISPOSABLE_TARGET_DISPOSAL",
+    "cleanupAuthorization": false,
+    "failure": null
+  }
+}

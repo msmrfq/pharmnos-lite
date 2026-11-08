@@ -132,25 +132,33 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 > **Update this section EVERY SESSION before you stop working. Thirty seconds here saves five minutes of re-orientation next time.**
 
-**Last updated:** `Date: 2026-11-07  Time: 03-05-00 (IST)`
+**Last updated:** `Date: 2026-11-07  Time: 07-48-00 (IST)`
 
 ### Verified working
 - P1?P7 remain complete; the active stage is GST Modernization within POST-P7 ? PRE-PRODUCTION VALIDATION.
-- Current-source offline/build evidence is green: JavaScript regression 274/274, T13 12/12, T25 297/297, financial-integrity 22/22, closure-hardening 19/19, typecheck, lint, production build, safe-placeholder Prisma validation, artifact verification, and `git diff --check`.
+- Current-source offline/build evidence is green: JavaScript regression 301/301, focused financial contracts 13/13, typecheck, lint, production build, safe-placeholder Prisma validation, artifact verification, and `git diff --check`.
 - Current source includes finalized sales/purchase GST persistence, decimal arithmetic, ledger/invoice immutability protections, export/HSN snapshot safeguards, CSV formula neutralization, strict TLS, and review-only artifact rejection.
 - Stage 3 D-01 remediation added migration `0021_reject_finalized_purchase_deletes`, which separately rejects finalized purchase invoice and item deletes; focused contracts pass 13/13, typecheck, lint, safe-placeholder Prisma validation, and `git diff --check` pass. Database deployment/runtime proof remains unexecuted.
+- Authorized current-source disposable verification is complete for application behavior and local restore: target `127.0.0.1:55602` passed the named-trigger/deletion contract and Purchase GST 16/16; a separate `127.0.0.1:55603` restore matched 34 public tables by deterministic checksum. Both exact Compose targets were disposed and verified absent. Sanitized evidence is `.obsidian-vault/specs/stage-3-system-readiness/26-authorized-disposable-runtime-evidence.json`.
+- After the supplier-document locking and finalized-purchase immutability corrections, a current-source action-path rerun passed the exercised Sales/Purchase/payment and immutability scenarios against the explicitly authorized target `127.0.0.1:55605` / `pharmnos_financial_e2e_targeted_20261107a`. Evidence is `.obsidian-vault/specs/stage-3-system-readiness/27-current-source-targeted-runtime-evidence.json`; exact cleanup is now separately verified in `.obsidian-vault/specs/stage-3-system-readiness/28-current-source-targeted-cleanup-evidence.json`.
+- Controlled financial closure verified recoverable, nonrecoverable, partial, and unresolved-pending inventory valuation behavior without adding ITC automation. Fresh technical, financial, and security reviews preserve NO-GO: technical REJECT unconditional, financial REJECT final acceptance with bounded Sales acceptance, and security REJECT unconditional outside the scoped server-only threat model.
+- Current-release policy closure package is complete in `.obsidian-vault/specs/stage-3-system-readiness/30-acceptance-baseline-and-evidence-reconciliation.md` through `34-final-stage-3-readiness-decision.md`. The owner confirmed the paid/free quantity policy, account-level payment behavior, and researched GST/accounting policy; purchase finalization now posts total physical quantity while preserving paid/free quantities in the immutable snapshot.
+- The prior purchase runtime artifact is stale for the current `purchases.actions.ts` hash after the paid/free correction; do not use it as current-source persisted readback. A fresh immutable target contract is required before rerunning target-bound purchase acceptance.
+- A separate current-source migration-replay target `127.0.0.1:55604` applied all 21 Prisma migrations through `0021`, then passed a second idempotent deploy with 21 finished migration rows and 0 unfinished rows. The restricted runtime role connected to that same authorized database with `LOGIN`, `NOSUPERUSER`, and `NOBYPASSRLS`; exact target cleanup passed. This is migration replay evidence only and does not prove generated provisioning and Prisma migrations are interchangeable.
 - The disposable-target lifecycle and immutable target-contract safeguards are implemented and fail closed; historical restricted-runtime purchase/T19/Sales evidence remains retained but is not current-source proof after later hardening.
 - T19 target-bound runtime was verified at 16/16 on an authorized disposable target and cleaned up; current-source rerun and independent technical acceptance remain separate claims.
+- Stage 3 remains NO-GO with 10/100 accepted points (bounded ST3-F only). The owner-approved goods-receipt correction is statically verified but needs fresh target-bound persisted readback; the prior purchase runtime artifact is stale for the current source hash. Browser E2E, provider recovery, forged-claim-GUC resistance, and unconditional independent closure remain open. The separate migration replay now verifies normal Prisma migration-history replay through `0021`, while the earlier restore remains data-only into a current-schema target.
 
 ### Broken / Blocked
-- Final technical acceptance remains **NOT ACCEPTED** and production readiness remains **NO-GO**; no fresh immutable target contract was supplied for current-source T19/Sales/Purchase runtime reruns.
+- Technical acceptance is **CONDITIONAL**, financial acceptance is **REJECTED**, and production readiness remains **NO-GO**; browser E2E, provider recovery, security closure, and renewed independent acceptance remain open. External professional confirmation is not an owner-required internal gate.
 - Authenticated browser E2E is not implemented, and production-shaped migration, backup/restore, recovery, observability, and production authorization evidence remain open.
 - Forged PostgreSQL request-claim resistance remains an explicit HIGH residual risk outside the scoped server-only boundary; arbitrary SQL under the runtime role must not be treated as authenticated JWT evidence.
 - GST/accounting policy and professional-confirmation gates remain open for statutory boundaries, ITC/valuation lifecycle, rounding interpretation, and related Version 2 deferrals.
 - Existing owner-gated security/rollback paths and live/production operations remain fail-closed and unauthorized.
 
 ### Focus right now
-- Supply and validate one fresh immutable disposable target contract before any current-source target-bound runtime campaign.
+- Signed direct-database authentication context remediation is implemented offline under `decisions/0010-signed-database-auth-context.md`, including nonce/transaction replay binding; current-source adversarial PostgreSQL runtime evidence and independent acceptance remain pending because no authorized immutable target contract is available.
+- Preserve the independent review dispositions and address only the explicitly listed owner/security/recovery/financial prerequisites.
 - Preserve evidence separation: static/offline tests, target-bound runtime verification, independent acceptance, and production readiness must remain distinct.
 - Keep production, Live Supabase, migration, deployment, and credential/container lifecycle changes at NO-GO unless explicitly authorized.
 - After editing this canonical briefing, run `& .\sync-agent-briefings.ps1` to refresh its generated mirrors.

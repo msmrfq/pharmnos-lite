@@ -1,0 +1,28 @@
+{
+  "runId": "sec20261108c",
+  "initializationAttemptId": "sec20261108c-init01",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 55437,
+    "databaseName": "pharmnos_financial_e2e_20261108c",
+    "composeProject": "pharmnoslite-financial-e2e-20261108c",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "targetFingerprint": "a189b6c7317b1942ed3365ea188a4c8829acf0c00e1e707ce7e758a2b56455ab"
+  },
+  "cleanup": "PASS",
+  "results": [
+    {
+      "id": "canonical-provisioning",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "fatal",
+      "status": "FAIL",
+      "detail": "insert or update on table \"memberships\" violates foreign key constraint \"memberships_user_id_fkey\""
+    }
+  ],
+  "passCount": 1,
+  "failCount": 1
+}

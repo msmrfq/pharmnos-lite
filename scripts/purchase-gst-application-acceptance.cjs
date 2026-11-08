@@ -231,8 +231,18 @@ async function postingState(purchaseId) {
          )) AS pending_valuation_batch_count,
       (SELECT count(*)::int FROM stock_movements s WHERE s.tenant_id = p.tenant_id AND s.reference_id = p.id AND s.inventory_valuation_status = 'PENDING') AS pending_valuation_movement_count,
       (SELECT count(*)::int FROM stock_movements s WHERE s.tenant_id = p.tenant_id AND s.reference_id = p.id AND s.inventory_acquisition_cost IS NULL) AS null_valuation_movement_count,
+      (SELECT COALESCE(sum(s.quantity_delta), 0)::text FROM stock_movements s WHERE s.tenant_id = p.tenant_id AND s.reference_id = p.id) AS stock_quantity_delta,
+      (SELECT COALESCE(sum(b.received_qty), 0)::text
+       FROM product_batches b
+       WHERE b.tenant_id = p.tenant_id
+         AND b.purchase_id = p.id) AS batch_received_quantity,
+      (SELECT COALESCE(sum(b.available_qty), 0)::text
+       FROM product_batches b
+       WHERE b.tenant_id = p.tenant_id
+         AND b.purchase_id = p.id) AS batch_available_quantity,
       l.credit::text AS supplier_ledger_credit,
       l.balance::text AS supplier_ledger_balance,
+      (SELECT s.payable_balance::text FROM suppliers s WHERE s.tenant_id = p.tenant_id AND s.id = p.supplier_id) AS supplier_payable_balance,
       o.request_payload_hash,
       o.status AS posting_status,
       a.metadata AS audit_metadata
@@ -252,7 +262,7 @@ async function postingState(purchaseId) {
   return result.rows[0] ?? null;
 }
 
-function createDraftForm({ supplierId, supplierInvoiceNo, declaredTotal }) {
+function createDraftForm({ supplierId, supplierInvoiceNo, declaredTotal, taxMode = "EXCLUSIVE" }) {
   const form = new ApplicationFormData();
   const fields = {
     invoice_no: supplierInvoiceNo,
@@ -260,7 +270,7 @@ function createDraftForm({ supplierId, supplierInvoiceNo, declaredTotal }) {
     supplier_invoice_no: supplierInvoiceNo,
     invoice_date: "2027-04-01",
     gst_treatment: `Registered Business ${String.fromCodePoint(0x2013)} Regular`,
-    tax_mode: "EXCLUSIVE",
+    tax_mode: taxMode,
     gross_amount: "200",
     total_discount: "10",
     total_tax: "27",
@@ -280,9 +290,10 @@ function createDraftForm({ supplierId, supplierInvoiceNo, declaredTotal }) {
     notes: "Purchase GST acceptance campaign",
   };
   for (const [key, value] of Object.entries(fields)) form.set(key, value);
+  const batchPrefix = supplierInvoiceNo.replace(/[^A-Za-z0-9_-]/g, "_");
   const lines = [
-    { product_id: ids.productA, batch_no: "BATCH-A", quantity: "1", free_qty: "0", purchase_rate: "100", sale_rate: "120", mrp: "130", discount_pct: "0", gst_rate: "18", declared_taxable_value: "100", declared_cgst: "9", declared_sgst: "9", declared_igst: "0", declared_cess: "0", declared_line_total: "118" },
-    { product_id: ids.productB, batch_no: "BATCH-B", quantity: "2", free_qty: "0", purchase_rate: "50", sale_rate: "60", mrp: "70", discount_pct: "10", gst_rate: "10", declared_taxable_value: "90", declared_cgst: "4.50", declared_sgst: "4.50", declared_igst: "0", declared_cess: "0", declared_line_total: "99" },
+    { product_id: ids.productA, batch_no: `${batchPrefix}-A`, quantity: "1", free_qty: "1", purchase_rate: "100", sale_rate: "120", mrp: "130", discount_pct: "0", gst_rate: "18", declared_taxable_value: "100", declared_cgst: "9", declared_sgst: "9", declared_igst: "0", declared_cess: "0", declared_line_total: "118" },
+    { product_id: ids.productB, batch_no: `${batchPrefix}-B`, quantity: "2", free_qty: "2", purchase_rate: "50", sale_rate: "60", mrp: "70", discount_pct: "10", gst_rate: "10", declared_taxable_value: "90", declared_cgst: "4.50", declared_sgst: "4.50", declared_igst: "0", declared_cess: "0", declared_line_total: "99" },
   ];
   lines.forEach((line, index) => {
     for (const [key, value] of Object.entries(line)) form.set(`lines[${index}].${key}`, value);
@@ -329,6 +340,7 @@ class ApplicationFormData {
 
 async function runTest(id, functionName, userExternalId, purchaseId, expected, fn, predicate) {
   const before = purchaseId ? await purchaseState(purchaseId) : null;
+  const beforeFinancial = purchaseId ? await postingState(purchaseId) : null;
   let actual;
   let error;
   try {
@@ -338,7 +350,7 @@ async function runTest(id, functionName, userExternalId, purchaseId, expected, f
   }
   const after = purchaseId ? await purchaseState(purchaseId) : null;
   const afterFinancial = purchaseId ? await postingState(purchaseId) : null;
-  const passed = predicate({ actual, error, before, after, afterFinancial });
+  const passed = predicate({ actual, error, before, after, beforeFinancial, afterFinancial });
   evidence.tests.push({
     id,
     function: functionName,
@@ -351,6 +363,7 @@ async function runTest(id, functionName, userExternalId, purchaseId, expected, f
     actual: error ? { error } : actual,
     before,
     after,
+    beforeFinancial,
     afterFinancial,
     status: passed ? "PASS" : "FAIL",
   });
@@ -498,7 +511,7 @@ async function main() {
     status: "VERIFIED",
     source: "authenticated session user ID -> users.external_id -> active membership",
     tenantClaimSource: "verified membership returned by getServerTenantContext",
-    transactionClaims: "SET LOCAL request.jwt.claim.sub and request.jwt.claim.tenant_id",
+    transactionClaims: "signed pharmnos.auth_context only; legacy caller-set JWT claims are ignored",
     callerSuppliedTenantOverride: "REJECTED",
     fixedTenantConnectionClaim: "NOT USED",
     applicationRole: evidence.applicationDatabaseIdentity.current_user_name,
@@ -526,26 +539,29 @@ async function main() {
   let isolationPassed = false;
   try {
     await isolationA.query("BEGIN");
-    await isolationA.query("SELECT set_config('request.jwt.claim.sub', $1, true)", [ids.externalUserA]);
-    const [claimA, claimB, visibleA, visibleB] = await Promise.all([
-      isolationA.query("SELECT current_setting('request.jwt.claim.sub', true) AS subject"),
+    const [claimA, claimB, visibleB] = await Promise.all([
+      isolationA.query(`
+        SELECT
+          set_config('request.jwt.claim.sub', $1, true) AS configured,
+          current_setting('request.jwt.claim.sub', true) AS subject,
+          (SELECT count(*)::int FROM users WHERE external_id = $1) AS visible_user_count
+      `, [ids.externalUserA]),
       isolationB.query("SELECT current_setting('request.jwt.claim.sub', true) AS subject"),
-      isolationA.query("SELECT count(*)::int AS count FROM users WHERE external_id = $1", [ids.externalUserA]),
       isolationB.query("SELECT count(*)::int AS count FROM users WHERE external_id = $1", [ids.externalUserA]),
     ]);
     await isolationA.query("COMMIT");
     const resetA = await isolationA.query("SELECT current_setting('request.jwt.claim.sub', true) AS subject");
     isolationPassed = claimA.rows[0].subject === ids.externalUserA &&
       !claimB.rows[0].subject &&
-      visibleA.rows[0].count === 1 &&
+      claimA.rows[0].visible_user_count === 0 &&
       visibleB.rows[0].count === 0 &&
       !resetA.rows[0].subject;
     evidence.transactionClaimIsolation = {
       status: isolationPassed ? "PASS" : "FAIL",
-      transactionA: { subject: claimA.rows[0].subject, visibleUserCount: visibleA.rows[0].count },
+      transactionA: { legacySubject: claimA.rows[0].subject, visibleUserCount: claimA.rows[0].visible_user_count },
       concurrentTransactionB: { subject: claimB.rows[0].subject, visibleUserCount: visibleB.rows[0].count },
       afterCommitTransactionA: { subject: resetA.rows[0].subject },
-      claims: "SET LOCAL semantics verified across independent pooled connections",
+      claims: "Caller-settable legacy JWT claims do not authenticate or bypass signed-context RLS",
     };
   } finally {
     await isolationA.end();
@@ -632,6 +648,24 @@ async function main() {
       after === null &&
       afterFinancial === null,
   );
+  await runTest(
+    "inclusive_purchase_blocked_until_governed_rule35",
+    "createPurchaseDraftAction",
+    ids.externalUserA,
+    null,
+    "Inclusive GST input is rejected until governed Rule 35 extraction and rounding are enabled",
+    () => createPurchaseDraftAction({ ok: false }, createDraftForm({
+      supplierId: ids.supplierA,
+      supplierInvoiceNo: `${run}-INCLUSIVE-BLOCKED`,
+      declaredTotal: 217,
+      taxMode: "INCLUSIVE",
+    })),
+    ({ actual, error, after, afterFinancial }) => !error &&
+      actual?.ok === false &&
+      String(actual.message).toLowerCase().includes("inclusive") &&
+      after === null &&
+      afterFinancial === null,
+  );
 
   const matchedDraftForm = await createDraftForm({ supplierId: ids.supplierA, supplierInvoiceNo: `${run}-SUP-001`, declaredTotal: 217 });
   const createResult = await runTest(
@@ -689,10 +723,16 @@ async function main() {
     matchedPurchase,
     "Finalization posts exactly one inventory movement, supplier ledger, audit event, and completed operation",
     () => finalizePurchaseAction(matchedPurchase, { ok: false }, formDataFromEntries([["idempotency_key", `${run}-FINAL-001`]])),
-    ({ error, after }) => Boolean(error?.startsWith("NEXT_REDIRECT:")) &&
+    ({ error, after, afterFinancial }) => Boolean(error?.startsWith("NEXT_REDIRECT:")) &&
       after?.status === "FINALIZED" &&
       after?.posting_operation_count === 1 &&
       after?.stock_movement_count === 2 &&
+      afterFinancial?.stock_quantity_delta === "6" &&
+      afterFinancial?.batch_received_quantity === "6" &&
+      afterFinancial?.batch_available_quantity === "6" &&
+      afterFinancial?.supplier_ledger_credit === "217.00" &&
+      afterFinancial?.supplier_ledger_balance === "217.00" &&
+      afterFinancial?.supplier_payable_balance === "217.00" &&
       after?.supplier_ledger_count === 1 &&
       after?.audit_count === 1,
   );
@@ -797,14 +837,15 @@ async function main() {
     rollbackPurchase,
     "A failure after stock-effect attempt rolls back invoice, posting, stock, ledger, and audit changes",
     () => finalizePurchaseAction(rollbackPurchase, { ok: false }, formDataFromEntries([["idempotency_key", `${run}-ROLLBACK`]])),
-    ({ actual, before, after }) => actual?.ok === false &&
+    ({ actual, before, beforeFinancial, after, afterFinancial }) => actual?.ok === false &&
       String(actual.message).includes("forced purchase posting failure") &&
       before?.status === "DRAFT" &&
       after?.status === "DRAFT" &&
       after?.posting_operation_count === 0 &&
       after?.stock_movement_count === 0 &&
       after?.supplier_ledger_count === 0 &&
-      after?.audit_count === 0,
+      after?.audit_count === 0 &&
+      beforeFinancial?.supplier_payable_balance === afterFinancial?.supplier_payable_balance,
   );
   await db.query(`DROP TRIGGER "${rollbackTrigger}" ON stock_movements; DROP FUNCTION "${rollbackTriggerFunction}"();`);
   await runTest(
@@ -938,11 +979,15 @@ async function main() {
       afterFinancial?.accepted_line_total === "218.3400" &&
       afterFinancial?.canonical_line_total === "218.34" &&
       afterFinancial?.canonical_gst_amount === "27.26" &&
+      afterFinancial?.stock_quantity_delta === "6" &&
+      afterFinancial?.batch_received_quantity === "6" &&
+      afterFinancial?.batch_available_quantity === "6" &&
       afterFinancial?.pending_valuation_line_count === 2 &&
       afterFinancial?.pending_valuation_batch_count === 2 &&
       afterFinancial?.pending_valuation_movement_count === 2 &&
       afterFinancial?.null_valuation_movement_count === 2 &&
       afterFinancial?.supplier_ledger_credit === "218.34" &&
+      afterFinancial?.supplier_payable_balance === "1086.34" &&
       afterFinancial?.audit_metadata?.net_amount === 218.34 &&
       afterFinancial?.posting_status === "COMPLETED",
   );

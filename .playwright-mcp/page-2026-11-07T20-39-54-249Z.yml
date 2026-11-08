@@ -1,0 +1,129 @@
+- generic:
+  - generic [aria-hidden]:
+    - complementary:
+      - generic:
+        - generic:
+          - link:
+            - /url: /dashboard
+            - generic: Pharmnos Lite
+        - generic:
+          - paragraph: Business
+          - paragraph: Your Pharmacy
+        - navigation:
+          - link:
+            - /url: /dashboard
+            - generic: Dashboard
+          - link:
+            - /url: /billing
+            - generic: Billing
+          - link:
+            - /url: /purchases
+            - generic: Purchases
+          - link:
+            - /url: /inventory
+            - generic: Inventory
+          - link:
+            - /url: /customers
+            - generic: Customers
+          - link:
+            - /url: /suppliers
+            - generic: Suppliers
+          - link:
+            - /url: /reports
+            - generic: Reports
+          - link:
+            - /url: /audit
+            - generic: Audit Log
+          - generic:
+            - link:
+              - /url: /settings
+              - generic: Settings
+        - generic:
+          - button [expanded]:
+            - generic: US
+            - generic:
+              - paragraph: User
+              - paragraph: Administrator
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - generic:
+              - textbox:
+                - /placeholder: Search products, customers, invoices...
+          - generic:
+            - button
+            - button:
+              - generic: US
+              - generic: User
+      - generic:
+        - generic:
+          - generic:
+            - generic: Purchases
+            - paragraph: Supplier purchase entries create batches and stock movements on finalize.
+          - generic:
+            - button [disabled]: Filter
+            - button: Export
+            - link:
+              - /url: /purchases/new
+              - text: Purchase entry
+        - generic:
+          - tablist:
+            - tab [selected]: All
+            - tab [disabled]: Draft
+            - tab [disabled]: Finalized
+            - tab [disabled]: Returns
+          - tabpanel:
+            - generic:
+              - generic:
+                - generic:
+                  - table:
+                    - rowgroup:
+                      - row:
+                        - columnheader: Purchase no.
+                        - columnheader: Supplier
+                        - columnheader: Supplier invoice
+                        - columnheader: Date
+                        - columnheader: Gross
+                        - columnheader: Discount
+                        - columnheader: Tax
+                        - columnheader: Net
+                        - columnheader: Status
+                        - columnheader: Actions
+                    - rowgroup:
+                      - row:
+                        - cell:
+                          - link [disabled]:
+                            - /url: /purchases/cmw6v9n900003i6spmxnurbnt
+                            - text: —
+                        - cell: E2E Supplier 1
+                        - cell: —
+                        - cell: 07 Nov 2026
+                        - cell: ₹ 500.00
+                        - cell: ₹ 0.00
+                        - cell: ₹ 60.00
+                        - cell: ₹ 560.00
+                        - cell:
+                          - generic: DRAFT
+                        - cell:
+                          - generic:
+                            - button [disabled]
+                            - button: Finalize
+                            - button: Cancel
+            - generic:
+              - paragraph: Showing 1 of 1 purchases · Page 1 / 1
+              - generic:
+                - link [disabled]:
+                  - /url: /purchases
+                  - text: Prev
+                - link [disabled]:
+                  - /url: /purchases?page=2
+                  - text: Next
+  - list
+  - alert: Purchases · Pharmnos Lite
+  - menu "US User Administrator" [active] [ref=f14e435]:
+    - menuitem "My Profile" [ref=f14e436] [cursor=pointer]
+    - menuitem "Business Settings" [ref=f14e437] [cursor=pointer]
+    - separator [ref=f14e438]
+    - menuitem [ref=f14e439] [cursor=pointer]:
+      - button "Sign out" [ref=f14e440]

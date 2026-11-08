@@ -37,6 +37,7 @@ function createFixture() {
   const initializationEvidence = path.join(tempRoot, `${crypto.randomUUID()}-initialization.json`);
   const suiteEvidence = path.join(tempRoot, `${crypto.randomUUID()}-suite.json`);
   const environment = {
+    FINANCIAL_E2E_ENV_FILE: path.join(tempRoot, "missing-test-environment"),
     ALLOW_FINANCIAL_E2E: "true",
     DATABASE_URL: "postgresql://ordinary@127.0.0.1:55430/pharmnos_local",
     TEST_DATABASE_URL: "postgresql://pharmnos_e2e@127.0.0.1:55491/pharmnos_financial_e2e_lifecycle",
@@ -112,6 +113,15 @@ test("validates an exact target contract before phase work", () => {
   });
   assert.equal(lifecycle.targetBinding, fixture.binding);
   assert.equal(lifecycle.targetFingerprint, fixture.fingerprint);
+});
+
+test("accepts a missing ordinary database URL without using it as a runtime dependency", () => {
+  const fixture = createFixture();
+  delete fixture.environment.DATABASE_URL;
+  assert.doesNotThrow(() => loadAuthorizedTargetLifecycle({
+    env: fixture.environment,
+    phase: "TARGET_VALIDATION",
+  }));
 });
 
 test("rejects a missing full-contract fingerprint", () => {

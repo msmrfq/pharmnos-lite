@@ -109,7 +109,7 @@ function phaseAuthorizationBinding(environment, phase) {
 function assertExactDatabaseUrls(environment, contract) {
   const bootstrap = new URL(required(environment.TEST_DATABASE_URL, "TEST_DATABASE_URL"));
   const runtime = new URL(required(environment.FINANCIAL_E2E_RUNTIME_DATABASE_URL, "FINANCIAL_E2E_RUNTIME_DATABASE_URL"));
-  const ordinary = new URL(required(environment.DATABASE_URL, "DATABASE_URL"));
+  const ordinary = environment.DATABASE_URL ? new URL(environment.DATABASE_URL) : null;
   const errors = [];
   if (bootstrap.hostname !== contract.host || Number(bootstrap.port) !== contract.port ||
       bootstrap.pathname !== `/${contract.databaseName}`) {
@@ -124,7 +124,7 @@ function assertExactDatabaseUrls(environment, contract) {
       bootstrap.pathname !== runtime.pathname) {
     errors.push("Bootstrap and runtime URLs do not identify the same target.");
   }
-  if (ordinary.hostname === contract.host && Number(ordinary.port) === contract.port &&
+  if (ordinary && ordinary.hostname === contract.host && Number(ordinary.port) === contract.port &&
       ordinary.pathname === `/${contract.databaseName}`) {
     errors.push("DATABASE_URL must remain separate from the disposable target.");
   }

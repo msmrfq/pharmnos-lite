@@ -45,6 +45,22 @@ test("rejects an ordinary-target overlap in the local candidate contract", () =>
     assert.match(result.errors.join(" "), /overlaps/);
 });
 
+test("allows a disposable candidate without an ordinary database identity", () => {
+    const result = validateLocalDisposableTargetCandidate({
+        serviceName: "financial-e2e-postgres",
+        profile: "financial-e2e",
+        host: "127.0.0.1",
+        port: 55437,
+        databaseName: "pharmnos_financial_e2e_sec20261107a",
+        bootstrapRole: "pharmnos_e2e",
+        runtimeRole: "pharmnos_e2e_runtime",
+        marker: "pharmnos-financial-e2e",
+        storage: "tmpfs",
+        isolationLabel: "financial-e2e-isolated",
+    });
+    assert.equal(result.ok, true);
+});
+
 test("accepts only a unique loopback governance target", () => {
     assert.deepEqual(validateGovernanceRuntimeTarget({
         baseUrl: "postgresql://tester@127.0.0.1:55432/pharmnos_financial_e2e",
@@ -270,10 +286,9 @@ test("rejects a target with the same database identity but different query param
     assert.match(result.errors.join(" "), /different database identity/);
 });
 
-test("rejects missing ordinary database identity", async () => {
+test("accepts missing ordinary database identity without connecting to it", async () => {
     const result = await validateFinancialE2eTarget({ ...validInput, ordinaryUrl: "" });
-    assert.equal(result.ok, false);
-    assert.match(result.errors.join(" "), /DATABASE_URL is required/);
+    assert.deepEqual(result, { ok: true, errors: [] });
 });
 
 test("rejects missing isolation marker and non-test database name", async () => {

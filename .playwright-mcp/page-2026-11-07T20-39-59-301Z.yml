@@ -1,0 +1,100 @@
+- generic [ref=f14e1]:
+  - generic [ref=f14e273]:
+    - complementary [ref=f14e274]:
+      - generic [ref=f14e275]:
+        - link "Pharmnos Lite" [ref=f14e277] [cursor=pointer]:
+          - /url: /dashboard
+        - generic [ref=f14e283]:
+          - paragraph [ref=f14e284]: Business
+          - paragraph [ref=f14e285]: Your Pharmacy
+        - navigation [ref=f14e286]:
+          - link "Dashboard" [ref=f14e287] [cursor=pointer]:
+            - /url: /dashboard
+          - link "Billing" [ref=f14e294] [cursor=pointer]:
+            - /url: /billing
+          - link "Purchases" [ref=f14e299] [cursor=pointer]:
+            - /url: /purchases
+          - link "Inventory" [ref=f14e305] [cursor=pointer]:
+            - /url: /inventory
+          - link "Customers" [ref=f14e310] [cursor=pointer]:
+            - /url: /customers
+          - link "Suppliers" [ref=f14e317] [cursor=pointer]:
+            - /url: /suppliers
+          - link "Reports" [ref=f14e324] [cursor=pointer]:
+            - /url: /reports
+          - link "Audit Log" [ref=f14e328] [cursor=pointer]:
+            - /url: /audit
+          - link "Settings" [ref=f14e334] [cursor=pointer]:
+            - /url: /settings
+        - button "US User Administrator" [active] [ref=f14e340] [cursor=pointer]:
+          - generic [ref=f14e341]: US
+          - generic [ref=f14e343]:
+            - paragraph [ref=f14e344]: User
+            - paragraph [ref=f14e345]: Administrator
+    - generic [ref=f14e348]:
+      - banner [ref=f14e349]:
+        - generic [ref=f14e350]:
+          - textbox "Search products, customers, invoices..." [ref=f14e353]
+          - generic [ref=f14e354]:
+            - button "Notifications" [ref=f14e355] [cursor=pointer]
+            - button "US User" [ref=f14e357] [cursor=pointer]:
+              - generic [ref=f14e358]: US
+              - generic [ref=f14e360]: User
+      - generic [ref=f14e361]:
+        - generic [ref=f14e362]:
+          - generic [ref=f14e363]:
+            - generic [ref=f14e364]: Purchases
+            - paragraph [ref=f14e365]: Supplier purchase entries create batches and stock movements on finalize.
+          - generic [ref=f14e366]:
+            - button "Filter" [disabled] [ref=f14e367] [cursor=pointer]
+            - button "Export" [ref=f14e368] [cursor=pointer]
+            - link "Purchase entry" [ref=f14e369] [cursor=pointer]:
+              - /url: /purchases/new
+        - generic [ref=f14e370]:
+          - tablist [ref=f14e371]:
+            - tab "All" [selected] [ref=f14e372] [cursor=pointer]
+            - tab "Draft" [disabled] [ref=f14e373] [cursor=pointer]
+            - tab "Finalized" [disabled] [ref=f14e374] [cursor=pointer]
+            - tab "Returns" [disabled] [ref=f14e375] [cursor=pointer]
+          - tabpanel "All" [ref=f14e376]:
+            - table [ref=f14e380]:
+              - rowgroup [ref=f14e381]:
+                - row [ref=f14e382]:
+                  - columnheader "Purchase no." [ref=f14e383]
+                  - columnheader "Supplier" [ref=f14e384]
+                  - columnheader "Supplier invoice" [ref=f14e385]
+                  - columnheader "Date" [ref=f14e386]
+                  - columnheader "Gross" [ref=f14e387]
+                  - columnheader "Discount" [ref=f14e388]
+                  - columnheader "Tax" [ref=f14e389]
+                  - columnheader "Net" [ref=f14e390]
+                  - columnheader "Status" [ref=f14e391]
+                  - columnheader "Actions" [ref=f14e392]
+              - rowgroup [ref=f14e393]:
+                - row [ref=f14e394]:
+                  - cell "—" [ref=f14e395]:
+                    - link "—" [disabled]:
+                      - /url: /purchases/cmw6v9n900003i6spmxnurbnt
+                  - cell "E2E Supplier 1" [ref=f14e396]
+                  - cell "—" [ref=f14e397]
+                  - cell "07 Nov 2026" [ref=f14e398]
+                  - cell "₹ 500.00" [ref=f14e399]
+                  - cell "₹ 0.00" [ref=f14e400]
+                  - cell "₹ 60.00" [ref=f14e401]
+                  - cell "₹ 560.00" [ref=f14e402]
+                  - cell "DRAFT" [ref=f14e403]
+                  - cell [ref=f14e405]:
+                    - generic [ref=f14e406]:
+                      - button "View purchase" [disabled]
+                      - button "Finalize" [ref=f14e407] [cursor=pointer]
+                      - button "Cancel draft" [ref=f14e408] [cursor=pointer]: Cancel
+            - generic [ref=f14e409]:
+              - paragraph [ref=f14e410]: Showing 1 of 1 purchases · Page 1 / 1
+              - generic [ref=f14e411]:
+                - link "Prev" [disabled]:
+                  - /url: /purchases
+                - link "Next" [disabled]:
+                  - /url: /purchases?page=2
+  - region "Notifications (F8)":
+    - list
+  - alert [ref=f14e249]: Purchases · Pharmnos Lite

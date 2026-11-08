@@ -1,0 +1,31 @@
+- generic [active] [ref=f5e1]:
+  - generic [ref=f5e5]:
+    - link "Pharmnos Lite" [ref=f5e6] [cursor=pointer]:
+      - /url: /
+    - generic [ref=f5e13]:
+      - generic [ref=f5e14]:
+        - generic [ref=f5e15]: Welcome back
+        - paragraph [ref=f5e16]: Sign in to your Pharmnos Lite workspace.
+      - generic [ref=f5e18]:
+        - generic [ref=f5e19]:
+          - text: Email
+          - textbox "Email" [ref=f5e20]:
+            - /placeholder: owner@pharmacy.in
+        - generic [ref=f5e21]:
+          - generic [ref=f5e22]:
+            - generic [ref=f5e23]: Password
+            - link "Forgot password?" [ref=f5e24] [cursor=pointer]:
+              - /url: /auth/forgot-password
+          - textbox "Password" [ref=f5e25]:
+            - /placeholder: ••••••••
+        - generic [ref=f5e26]:
+          - checkbox "Remember me on this device" [checked] [ref=f5e27]
+          - text: Remember me on this device
+        - button "Sign in" [ref=f5e28] [cursor=pointer]
+      - paragraph [ref=f5e30]:
+        - text: New to Pharmnos Lite?
+        - link "Create a workspace" [ref=f5e31] [cursor=pointer]:
+          - /url: /auth/sign-up
+    - paragraph [ref=f5e32]: By continuing, you agree to our Terms of Service and Privacy Policy.
+  - region "Notifications (F8)":
+    - list

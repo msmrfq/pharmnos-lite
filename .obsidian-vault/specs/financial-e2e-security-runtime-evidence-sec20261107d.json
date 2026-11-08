@@ -1,0 +1,31 @@
+{
+  "runId": "sec20261107d",
+  "initializationAttemptId": "sec20261107d-init01",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 55437,
+    "databaseName": "pharmnos_financial_e2e_20261107d",
+    "composeProject": "pharmnoslite-financial-e2e-20261107d",
+    "runtimeRole": "pharmnos_e2e_runtime"
+  },
+  "status": "PARTIAL_NOT_ACCEPTED",
+  "results": {
+    "canonicalProvisioning": "PASS",
+    "missingContextFailClosed": "PASS",
+    "poolReuseContextCleared": "PASS",
+    "signingKeyIsolation": "PASS",
+    "privateVerifierIsolation": "PASS",
+    "roleEscalationDenied": "PASS",
+    "ownerAdminAuthorization": "NOT_VERIFIED",
+    "employeeRestrictions": "NOT_VERIFIED",
+    "rollbackRetry": "NOT_VERIFIED",
+    "postCommitReplay": "NOT_VERIFIED",
+    "concurrentNonceReplay": "NOT_VERIFIED",
+    "independentWholeBoundaryReview": "NOT_VERIFIED"
+  },
+  "notes": [
+    "The restricted-role fixture probe used an invalid initial membership fixture mapping; its owner and employee assertions were not accepted as evidence.",
+    "No credentials or complete connection strings are recorded.",
+    "The exact target was cleaned up through the contract-bound disposal lifecycle."
+  ]
+}

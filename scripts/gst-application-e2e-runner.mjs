@@ -15,6 +15,8 @@ import {
   CLEANUP_TABLES,
   collectOwnedResources,
 } from "./financial-e2e-fixture-ownership.mjs";
+import { verifyFinalizedPurchaseTriggerContract } from "./financial-e2e-trigger-contract.mjs";
+import { createSignedFinancialContext } from "./financial-e2e-signed-context.mjs";
 import { targetContractBinding, verifyTargetSchema } from "./financial-e2e-target-contract.mjs";
 import {
   createLifecycleEvidence,
@@ -28,10 +30,15 @@ const require = createRequire(import.meta.url);
 const root = process.cwd();
 const SALES_SOURCE_FILES = [
   "src/app/_actions/sales.actions.ts",
+  "src/app/_actions/purchases.actions.ts",
+  "src/app/_actions/invoice-document.actions.ts",
   "src/domain/services/gst-calculator.service.ts",
   "src/lib/decimal.ts",
   "prisma/schema.prisma",
+  "prisma/migrations/0015_purchase_finalized_immutability/migration.sql",
+  "prisma/migrations/0021_reject_finalized_purchase_deletes/migration.sql",
   "prisma/financial-e2e-schema-provisioning.generated.sql",
+  "scripts/financial-e2e-provision-local.mjs",
   "scripts/gst-application-e2e-runner.mjs",
 ];
 const sourceHashes = () => Object.fromEntries(
@@ -71,6 +78,8 @@ const {
 let APPROVED;
 let LIFECYCLE;
 let salesPersistenceEvidence = null;
+let triggerContractEvidence = null;
+let purchaseDeleteEvidence = null;
 
 async function cleanupOwnedResources(plan, client) {
   await client.query("BEGIN");
@@ -166,7 +175,7 @@ async function gate() {
          WHERE n.nspname = 'public' AND NOT t.tgisinternal) AS triggers
     `)).rows[0];
     assert.equal(Number(catalog.rls_tables), 34);
-    assert.equal(Number(catalog.triggers), 17);
+    triggerContractEvidence = await verifyFinalizedPurchaseTriggerContract(bootstrap);
     return bootstrap;
   } catch (error) {
     await bootstrap.end();
@@ -207,9 +216,10 @@ async function createFixture(bootstrap) {
     await bootstrap.query("INSERT INTO users (id, external_id, email, full_name, updated_at) VALUES ($1,$2,$3,$4,now())", [user, invoiceUser, invoiceUser, "GST E2E User"]);
     await bootstrap.query("INSERT INTO roles (id, tenant_id, name, is_default, updated_at) VALUES ($1,$2,$3,true,now())", [role, tenant, "GST E2E Role"]);
     await bootstrap.query("INSERT INTO memberships (id, tenant_id, user_id, role_id, status, updated_at) VALUES ($1,$2,$3,$4,'active',now())", [membership, tenant, user, role]);
-    for (const permission of ["create_purchase", "accept_purchase_gst", "finalize_invoice", "finalize_purchase", "view_invoice", "view_customer_ledger", "view_supplier_ledger", "edit_product", "edit_customer"]) {
+    for (const permission of ["create_purchase", "accept_purchase_gst", "finalize_invoice", "finalize_purchase", "create_payment", "view_invoice", "view_customer_ledger", "view_supplier_ledger", "edit_product", "edit_customer"]) {
       await bootstrap.query("INSERT INTO role_permissions (id, role_id, permission) VALUES ($1,$2,$3)", [id(`permission_${permission}`), role, permission]);
     }
+
     await bootstrap.query("INSERT INTO business_profiles (id, tenant_id, state, invoice_prefix, invoice_next_seq, purchase_prefix, purchase_next_seq, updated_at) VALUES ($1,$2,'MH','INV',41,'PUR',71,now())", [profile, tenant]);
     await bootstrap.query("INSERT INTO customers (id, tenant_id, business_name, billing_state, receivable_balance, updated_at) VALUES ($1,$2,'GST Customer','MH',250,now())", [customer, tenant]);
     await bootstrap.query("INSERT INTO suppliers (id, tenant_id, business_name, payable_balance, updated_at) VALUES ($1,$2,'GST Supplier',125,now())", [supplier, tenant]);
@@ -266,7 +276,7 @@ async function createFixture(bootstrap) {
 }
 
 async function appClient(tenant) {
-  const url = targetUrl("FINANCIAL_E2E_RUNTIME_DATABASE_URL", process.env.FINANCIAL_E2E_RUNTIME_DB_PASSWORD, `-c request.jwt.claim.tenant_id=${tenant}`);
+  const url = targetUrl("FINANCIAL_E2E_RUNTIME_DATABASE_URL", process.env.FINANCIAL_E2E_RUNTIME_DB_PASSWORD);
   process.env.DATABASE_URL = url;
   process.env.FINANCIAL_E2E_TEST_MODE = "true";
   process.env.TEST_DATABASE_NAME = APPROVED.databaseName;
@@ -306,8 +316,125 @@ async function createSnapshotFixtures(bootstrap, baseFixture) {
           invoiceId === completeInvoice ? "Original Generic" : null],
       );
     }
+
     await bootstrap.query("COMMIT");
     return { tenant, user, externalId: baseFixture.externalId, customer, product, completeInvoice, completeItem, missingInvoice, missingItem };
+  } catch (error) {
+    await bootstrap.query("ROLLBACK").catch(() => {});
+    throw error;
+  }
+}
+
+async function verifyPurchaseDeleteBehavior(bootstrap, fixture) {
+  const finalizedPurchase = id("finalized_delete_purchase");
+  const finalizedItem = id("finalized_delete_item");
+  const draftPurchase = id("draft_cascade_purchase");
+  const draftItem = id("draft_cascade_item");
+  const before = {};
+  const attempts = [];
+  await bootstrap.query("BEGIN");
+  try {
+    await bootstrap.query(
+      `INSERT INTO purchase_invoices
+       (id,tenant_id,invoice_no,supplier_id,invoice_date,status,gross_amount,net_amount,updated_at)
+       VALUES ($1,$2,$3,$4,now(),'FINALIZED',100,100,now())`,
+      [finalizedPurchase, fixture.tenant, `FINAL-${finalizedPurchase.slice(-8)}`, fixture.supplier],
+    );
+    await bootstrap.query(
+      `INSERT INTO purchase_invoice_items
+       (id,tenant_id,purchase_id,product_id,batch_no,quantity,purchase_rate,gst_rate,line_total)
+       VALUES ($1,$2,$3,$4,'FINAL-DELETE',1,100,0,100)`,
+      [finalizedItem, fixture.tenant, finalizedPurchase, fixture.productA],
+    );
+    await bootstrap.query(
+      `INSERT INTO purchase_invoices
+       (id,tenant_id,invoice_no,supplier_id,invoice_date,status,gross_amount,net_amount,updated_at)
+       VALUES ($1,$2,$3,$4,now(),'DRAFT',100,100,now())`,
+      [draftPurchase, fixture.tenant, `DRAFT-${draftPurchase.slice(-8)}`, fixture.supplier],
+    );
+    await bootstrap.query(
+      `INSERT INTO purchase_invoice_items
+       (id,tenant_id,purchase_id,product_id,batch_no,quantity,purchase_rate,gst_rate,line_total)
+       VALUES ($1,$2,$3,$4,'DRAFT-DELETE',1,100,0,100)`,
+      [draftItem, fixture.tenant, draftPurchase, fixture.productA],
+    );
+    before.finalized = await query(
+      bootstrap,
+      `SELECT
+         (SELECT count(*)::int FROM purchase_invoices WHERE id = $1) AS parent_count,
+         (SELECT count(*)::int FROM purchase_invoice_items WHERE id = $2) AS item_count`,
+      [finalizedPurchase, finalizedItem],
+    );
+    before.draft = await query(
+      bootstrap,
+      `SELECT
+         (SELECT count(*)::int FROM purchase_invoices WHERE id = $1) AS parent_count,
+         (SELECT count(*)::int FROM purchase_invoice_items WHERE id = $2) AS item_count`,
+      [draftPurchase, draftItem],
+    );
+    async function attemptWithinSavepoint(label, sql, idValue) {
+      await bootstrap.query(`SAVEPOINT ${label}`);
+      try {
+        await bootstrap.query(sql, [idValue]);
+        await bootstrap.query(`RELEASE SAVEPOINT ${label}`);
+        return { label, result: "UNEXPECTED_SUCCESS" };
+      } catch (error) {
+        await bootstrap.query(`ROLLBACK TO SAVEPOINT ${label}`);
+        await bootstrap.query(`RELEASE SAVEPOINT ${label}`);
+        return { label, result: "REJECTED", sqlState: error.code, message: error.message };
+      }
+    }
+    for (const [label, sql, idValue] of [
+      ["finalized_item_delete", "DELETE FROM purchase_invoice_items WHERE id = $1", finalizedItem],
+      ["finalized_parent_delete", "DELETE FROM purchase_invoices WHERE id = $1", finalizedPurchase],
+    ]) {
+      attempts.push(await attemptWithinSavepoint(label, sql, idValue));
+    }
+    await bootstrap.query("DELETE FROM purchase_invoices WHERE id = $1", [draftPurchase]);
+    const after = {
+      finalized: await query(
+        bootstrap,
+        `SELECT
+           (SELECT count(*)::int FROM purchase_invoices WHERE id = $1) AS parent_count,
+           (SELECT count(*)::int FROM purchase_invoice_items WHERE id = $2) AS item_count`,
+        [finalizedPurchase, finalizedItem],
+      ),
+      draft: await query(
+        bootstrap,
+        `SELECT
+           (SELECT count(*)::int FROM purchase_invoices WHERE id = $1) AS parent_count,
+           (SELECT count(*)::int FROM purchase_invoice_items WHERE id = $2) AS item_count`,
+        [draftPurchase, draftItem],
+      ),
+    };
+    let evidenceBearing = null;
+    await bootstrap.query("SAVEPOINT evidence_bearing_delete");
+    try {
+      await bootstrap.query("DELETE FROM purchase_invoices WHERE id = $1", [fixture.purchase]);
+      evidenceBearing = { result: "UNEXPECTED_SUCCESS" };
+      await bootstrap.query("RELEASE SAVEPOINT evidence_bearing_delete");
+    } catch (error) {
+      await bootstrap.query("ROLLBACK TO SAVEPOINT evidence_bearing_delete");
+      await bootstrap.query("RELEASE SAVEPOINT evidence_bearing_delete");
+      evidenceBearing = {
+        result: "REJECTED",
+        sqlState: error.code,
+        constraint: error.constraint ?? null,
+        message: error.message,
+      };
+    }
+    await bootstrap.query("ROLLBACK");
+    return {
+      targetRunId: APPROVED.runId,
+      sourceHashes: sourceHashes(),
+      migrationFingerprint: APPROVED.schemaArtifactHash,
+      triggerContract: triggerContractEvidence,
+      before,
+      attempts,
+      after,
+      evidenceBearingDraft: evidenceBearing,
+      executedAt: new Date().toISOString(),
+    };
   } catch (error) {
     await bootstrap.query("ROLLBACK").catch(() => {});
     throw error;
@@ -417,19 +544,17 @@ async function verifyTenantIsolationAndPrivileges(bootstrap, fixture) {
       [fixture.tenant, fixture.tenant, tenantB],
       [tenantB, tenantB, fixture.tenant],
     ]) {
-      await runtime.query(
-        "SELECT set_config('request.jwt.claim.sub', $1, false), set_config('request.jwt.claim.tenant_id', $2, false)",
-        [fixture.externalId, claim],
-      );
+      await runtime.query("SELECT set_config('pharmnos.auth_context', $1, false)", [
+        createSignedFinancialContext(fixture.externalId, claim),
+      ]);
       const own = await query(runtime, "SELECT id FROM tenants WHERE id = $1", [expectedOwn]);
       const cross = await query(runtime, "SELECT id FROM tenants WHERE id = $1", [expectedCross]);
       assert.equal(own.length, 1);
       assert.equal(cross.length, 0);
     }
-    await runtime.query(
-      "SELECT set_config('request.jwt.claim.sub', $1, false), set_config('request.jwt.claim.tenant_id', $2, false)",
-      [fixture.externalId, tenantB],
-    );
+    await runtime.query("SELECT set_config('pharmnos.auth_context', $1, false)", [
+      createSignedFinancialContext(fixture.externalId, tenantB),
+    ]);
     assert.equal(
       (await query(runtime, "SELECT id FROM sales_invoices WHERE id = $1", [fixture.sales])).length,
       0,
@@ -482,7 +607,7 @@ async function verifyTenantIsolationAndPrivileges(bootstrap, fixture) {
   `, [APPROVED.runtimeRole]))[0];
   assert.equal(Number(catalog.forced_rls_tables), 34);
   assert.equal(Number(catalog.policies), 87);
-  assert.equal(Number(catalog.triggers), 17);
+  triggerContractEvidence = await verifyFinalizedPurchaseTriggerContract(bootstrap);
   assert.equal(Number(catalog.runtime_delete_grants), 0);
   assert.equal(catalog.runtime_can_select_tenants, true);
   assert.equal(catalog.runtime_can_insert_tenants, true);
@@ -502,6 +627,7 @@ async function main() {
     bootstrap = await gate();
     ordinaryDatabaseUrl = process.env.DATABASE_URL;
     fixture = await createFixture(bootstrap);
+    purchaseDeleteEvidence = await verifyPurchaseDeleteBehavior(bootstrap, fixture);
     await verifyTenantIsolationAndPrivileges(bootstrap, fixture);
     const snapshotFixture = await createSnapshotFixtures(bootstrap, fixture);
     fixtureManifest = recordFixtureIdentifiers(
@@ -866,27 +992,27 @@ async function main() {
     console.log("PURCHASE-INCOMPLETE-LEGACY-HOLD=PASS_CURRENT_CAMPAIGN");
 
     const customerPaymentForm = new FormData();
-    for (const [key, value] of Object.entries({ customer_id: fixture.customer, amount: "50", payment_method: "Cash", reference_no: `GST-${fixture.salesSuccess}`, notes: "" })) customerPaymentForm.append(key, value);
+    for (const [key, value] of Object.entries({ customer_id: fixture.customer, idempotency_key: id("customer_payment"), amount: "50", payment_method: "Cash", reference_no: `GST-${fixture.salesSuccess}`, notes: "" })) customerPaymentForm.append(key, value);
     const customerBeforePayment = await prisma.customers.findUnique({ where: { id: fixture.customer, tenant_id: fixture.tenant } });
     const customerPayment = await createCustomerPaymentAction({}, customerPaymentForm);
     assert.equal(customerPayment.ok, true, customerPayment.message ?? "Customer payment failed.");
     assert.equal(Number((await prisma.customers.findUnique({ where: { id: fixture.customer, tenant_id: fixture.tenant } })).receivable_balance), Number(customerBeforePayment.receivable_balance) - 50);
     assert.equal(await prisma.payments.count({ where: { tenant_id: fixture.tenant, id: customerPayment.data.id } }), 1);
-    assert.equal(await prisma.customer_ledgers.count({ where: { tenant_id: fixture.tenant, reference_type: "payment_received", reference_id: null } }), 1);
+    assert.equal(await prisma.customer_ledgers.count({ where: { tenant_id: fixture.tenant, reference_type: "payment_received", reference_id: customerPayment.data.id } }), 1);
     const badPayment = new FormData();
-    for (const [key, value] of Object.entries({ customer_id: id("missing_customer"), amount: "10", payment_method: "Cash", reference_no: "GST-BAD", notes: "" })) badPayment.append(key, value);
+    for (const [key, value] of Object.entries({ customer_id: id("missing_customer"), idempotency_key: id("bad_customer_payment"), amount: "10", payment_method: "Cash", reference_no: "GST-BAD", notes: "" })) badPayment.append(key, value);
     const paymentFailure = await createCustomerPaymentAction({}, badPayment);
     assert.equal(paymentFailure.ok, false);
     const supplierPaymentForm = new FormData();
-    for (const [key, value] of Object.entries({ supplier_id: fixture.supplier, amount: "40", payment_method: "Bank Transfer", reference_no: `GST-SUP-${fixture.purchaseSuccess}`, notes: "" })) supplierPaymentForm.append(key, value);
+    for (const [key, value] of Object.entries({ supplier_id: fixture.supplier, idempotency_key: id("supplier_payment"), amount: "40", payment_method: "Bank Transfer", reference_no: `GST-SUP-${fixture.purchaseSuccess}`, notes: "" })) supplierPaymentForm.append(key, value);
     const supplierBeforePayment = await prisma.suppliers.findUnique({ where: { id: fixture.supplier, tenant_id: fixture.tenant } });
     const supplierPayment = await createSupplierPaymentAction({}, supplierPaymentForm);
     assert.equal(supplierPayment.ok, true);
     assert.equal(Number((await prisma.suppliers.findUnique({ where: { id: fixture.supplier, tenant_id: fixture.tenant } })).payable_balance), Number(supplierBeforePayment.payable_balance) - 40);
     assert.equal(await prisma.payments.count({ where: { tenant_id: fixture.tenant, id: supplierPayment.data.id } }), 1);
-    assert.equal(await prisma.supplier_ledgers.count({ where: { tenant_id: fixture.tenant, supplier_id: fixture.supplier, reference_type: "payment_made", reference_id: null } }), 1);
+    assert.equal(await prisma.supplier_ledgers.count({ where: { tenant_id: fixture.tenant, supplier_id: fixture.supplier, reference_type: "payment_made", reference_id: supplierPayment.data.id } }), 1);
     const badSupplierPayment = new FormData();
-    for (const [key, value] of Object.entries({ supplier_id: id("missing_supplier"), amount: "10", payment_method: "Cash", reference_no: "GST-BAD-SUP", notes: "" })) badSupplierPayment.append(key, value);
+    for (const [key, value] of Object.entries({ supplier_id: id("missing_supplier"), idempotency_key: id("bad_supplier_payment"), amount: "10", payment_method: "Cash", reference_no: "GST-BAD-SUP", notes: "" })) badSupplierPayment.append(key, value);
     const supplierPaymentFailure = await createSupplierPaymentAction({}, badSupplierPayment);
     assert.equal(supplierPaymentFailure.ok, false);
     console.log("PAYMENT=PASS_APPLICATION_PATH_DATABASE_E2E");
@@ -964,6 +1090,7 @@ async function main() {
   const crossTenant = await repos.salesInvoices.getById(snapshotFixture.completeInvoice, {
     tenantId: id("unauthorized_tenant"),
     userId: fixture.user,
+    subjectId: fixture.externalId,
     roles: ["GST E2E Role"],
     permissions: ["view_invoice"],
   });
@@ -1069,6 +1196,8 @@ async function main() {
           salesOnly,
           sourceHashes: sourceHashes(),
           salesPersistence: salesPersistenceEvidence,
+          triggerContract: triggerContractEvidence,
+          purchaseDeleteBehavior: purchaseDeleteEvidence,
           fixtureResourceCount: fixtureManifest?.resources?.length ?? 0,
           cleanupMode: process.env.FINANCIAL_E2E_CLEANUP_MODE || "ROW_LEVEL_CLEANUP",
           cleanupAuthorization: process.env.FINANCIAL_E2E_CLEANUP_AUTHORIZED === "true",

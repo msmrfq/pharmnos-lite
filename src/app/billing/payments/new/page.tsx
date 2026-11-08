@@ -55,7 +55,7 @@ export default async function NewBillingPaymentPage({
           <div>
             <CardTitle className="text-display-sm tracking-brand">Record payment received</CardTitle>
             <CardDescription>
-              Record a customer payment against their outstanding balance. Dues are automatically reduced; overpayments are clamped to 0.
+              Record a customer payment against their outstanding balance. Overpayments are rejected and no payment is recorded.
             </CardDescription>
             {!dbOk && (
               <p className="mt-2 text-caption text-destructive">

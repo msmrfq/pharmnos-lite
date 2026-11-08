@@ -1,0 +1,9 @@
+_format_version: "2.1"
+services:
+  - name: auth-e2e-gotrue
+    url: http://auth-e2e-gotrue:9999
+    routes:
+      - name: auth-e2e-api
+        paths:
+          - /auth/v1
+        strip_path: true

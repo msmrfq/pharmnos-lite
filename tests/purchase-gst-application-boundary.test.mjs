@@ -30,3 +30,11 @@ test("Purchase GST restores the ordinary endpoint for final lifecycle validation
   assert.match(source, /const ordinaryDatabaseUrl = process\.env\.DATABASE_URL/);
   assert.match(source, /env:\s*\{\s*\.\.\.process\.env,\s*DATABASE_URL:\s*ordinaryDatabaseUrl\s*\}/);
 });
+
+test("Purchase GST runtime campaign verifies paid and free physical quantity persistence", () => {
+  assert.match(source, /quantity: "1", free_qty: "1"/);
+  assert.match(source, /quantity: "2", free_qty: "2"/);
+  assert.match(source, /stock_quantity_delta/);
+  assert.match(source, /batch_received_quantity/);
+  assert.match(source, /batch_available_quantity/);
+});

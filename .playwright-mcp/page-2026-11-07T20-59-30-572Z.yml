@@ -1,0 +1,149 @@
+- generic [active] [ref=f16e1]:
+  - generic [ref=f16e34]:
+    - complementary [ref=f16e35]:
+      - generic [ref=f16e36]:
+        - link "Pharmnos Lite" [ref=f16e38] [cursor=pointer]:
+          - /url: /dashboard
+        - generic [ref=f16e44]:
+          - paragraph [ref=f16e45]: Business
+          - paragraph [ref=f16e46]: Maharashtra Pharma Distributors
+        - navigation [ref=f16e47]:
+          - link "Dashboard" [ref=f16e48] [cursor=pointer]:
+            - /url: /dashboard
+          - link "Billing" [ref=f16e55] [cursor=pointer]:
+            - /url: /billing
+          - link "Purchases" [ref=f16e60] [cursor=pointer]:
+            - /url: /purchases
+          - link "Inventory" [ref=f16e66] [cursor=pointer]:
+            - /url: /inventory
+          - link "Customers" [ref=f16e71] [cursor=pointer]:
+            - /url: /customers
+          - link "Suppliers" [ref=f16e78] [cursor=pointer]:
+            - /url: /suppliers
+          - link "Reports" [ref=f16e85] [cursor=pointer]:
+            - /url: /reports
+          - link "Audit Log" [ref=f16e89] [cursor=pointer]:
+            - /url: /audit
+          - link "Settings" [ref=f16e95] [cursor=pointer]:
+            - /url: /settings
+        - button "RK Rajesh Kumar Administrator" [ref=f16e101] [cursor=pointer]:
+          - generic [ref=f16e102]: RK
+          - generic [ref=f16e104]:
+            - paragraph [ref=f16e105]: Rajesh Kumar
+            - paragraph [ref=f16e106]: Administrator
+    - generic [ref=f16e109]:
+      - banner [ref=f16e110]:
+        - generic [ref=f16e111]:
+          - textbox "Search products, customers, invoices..." [ref=f16e114]
+          - generic [ref=f16e115]:
+            - button "Notifications" [ref=f16e116] [cursor=pointer]
+            - button "RK Rajesh Kumar" [ref=f16e118] [cursor=pointer]:
+              - generic [ref=f16e119]: RK
+              - generic [ref=f16e121]: Rajesh Kumar
+      - generic [ref=f16e123]:
+        - generic [ref=f16e124]:
+          - generic [ref=f16e125]:
+            - heading "Good afternoon, Rajesh." [level=1] [ref=f16e126]
+            - paragraph [ref=f16e127]: Here's how your pharmacy is performing today — 8 November 2026.
+          - generic [ref=f16e128]:
+            - link "Purchase entry" [ref=f16e129] [cursor=pointer]:
+              - /url: /purchases/new
+            - link "New invoice" [ref=f16e130] [cursor=pointer]:
+              - /url: /billing/new
+        - status [ref=f16e131]:
+          - generic [ref=f16e134]:
+            - strong [ref=f16e135]: Showing placeholder values until database is connected.
+            - text: Temporary Supabase pooler timeout is common on the free tier — try again in 60 seconds.
+        - generic [ref=f16e136]:
+          - link "Sales this month ₹ 0 Aggregates loading…" [ref=f16e137] [cursor=pointer]:
+            - /url: /billing
+            - generic [ref=f16e138]:
+              - generic [ref=f16e140]:
+                - paragraph [ref=f16e141]: Sales this month
+                - generic [ref=f16e142]: ₹ 0
+              - generic [ref=f16e147]: Aggregates loading…
+          - link "Receivables ₹ 0 Aggregates loading…" [ref=f16e152] [cursor=pointer]:
+            - /url: /reports/customer-dues
+            - generic [ref=f16e153]:
+              - generic [ref=f16e155]:
+                - paragraph [ref=f16e156]: Receivables
+                - generic [ref=f16e157]: ₹ 0
+              - generic [ref=f16e162]: Aggregates loading…
+          - link "Stock value ₹ 0 Aggregates loading…" [ref=f16e167] [cursor=pointer]:
+            - /url: /reports/stock-valuation
+            - generic [ref=f16e168]:
+              - generic [ref=f16e170]:
+                - paragraph [ref=f16e171]: Stock value
+                - generic [ref=f16e172]: ₹ 0
+              - generic [ref=f16e177]: Aggregates loading…
+          - link "Near expiry (60d) 0 batches Aggregates loading…" [ref=f16e182] [cursor=pointer]:
+            - /url: /inventory?tab=batches
+            - generic [ref=f16e183]:
+              - generic [ref=f16e185]:
+                - paragraph [ref=f16e186]: Near expiry (60d)
+                - generic [ref=f16e187]: 0 batches
+              - generic [ref=f16e192]: Aggregates loading…
+        - generic [ref=f16e197]:
+          - generic [ref=f16e198]: Quick actions
+          - link "New invoice" [ref=f16e199] [cursor=pointer]:
+            - /url: /billing/new
+          - link "Purchase entry" [ref=f16e200] [cursor=pointer]:
+            - /url: /purchases/new
+          - link "Add product" [ref=f16e201] [cursor=pointer]:
+            - /url: /inventory/products/new
+          - link "Add customer" [ref=f16e202] [cursor=pointer]:
+            - /url: /customers/new
+          - link "Add supplier" [ref=f16e203] [cursor=pointer]:
+            - /url: /suppliers/new
+        - generic [ref=f16e204]:
+          - generic [ref=f16e205]:
+            - generic [ref=f16e206]:
+              - generic [ref=f16e207]:
+                - generic [ref=f16e208]: Recent invoices
+                - paragraph [ref=f16e209]: Last finalized sales invoices
+              - generic [ref=f16e210]:
+                - link "Register" [ref=f16e211] [cursor=pointer]:
+                  - /url: /reports/sales-register
+                - link "New" [ref=f16e212] [cursor=pointer]:
+                  - /url: /billing/new
+            - table [ref=f16e215]:
+              - rowgroup [ref=f16e216]:
+                - row [ref=f16e217]:
+                  - columnheader "Invoice" [ref=f16e218]
+                  - columnheader "Customer" [ref=f16e219]
+                  - columnheader "Amount" [ref=f16e220]
+                  - columnheader "Status" [ref=f16e221]
+                  - columnheader "Time" [ref=f16e222]
+              - rowgroup [ref=f16e223]:
+                - row [ref=f16e224]:
+                  - cell "Recent invoices hidden until database is connected." [ref=f16e225]
+          - generic [ref=f16e226]:
+            - generic [ref=f16e227]:
+              - generic [ref=f16e228]:
+                - generic [ref=f16e229]: Low stock queue
+                - paragraph [ref=f16e230]: Replenishment priorities
+              - link "View all" [ref=f16e231] [cursor=pointer]:
+                - /url: /inventory/low-stock
+            - paragraph [ref=f16e233]: Queue loading…
+        - generic [ref=f16e234]:
+          - generic [ref=f16e235]:
+            - generic [ref=f16e236]:
+              - generic [ref=f16e237]: Recent activity
+              - paragraph [ref=f16e238]: Last 10 events from audit log
+            - link "Open audit" [ref=f16e239] [cursor=pointer]:
+              - /url: /audit
+          - table [ref=f16e242]:
+            - rowgroup [ref=f16e243]:
+              - row [ref=f16e244]:
+                - columnheader "When" [ref=f16e245]
+                - columnheader "User" [ref=f16e246]
+                - columnheader "Module" [ref=f16e247]
+                - columnheader "Action" [ref=f16e248]
+                - columnheader "Reference" [ref=f16e249]
+                - columnheader "Details" [ref=f16e250]
+            - rowgroup [ref=f16e251]:
+              - row [ref=f16e252]:
+                - cell "Activity timeline hidden until database is connected." [ref=f16e253]
+  - region "Notifications (F8)":
+    - list
+  - alert [ref=f16e33]: Dashboard · Pharmnos Lite

@@ -1,92 +1,98 @@
 {
-  "manifestVersion": 1,
-  "packageVersion": "0.1.2",
-  "approved": true,
-  "status": "APPROVED_EXECUTABLE_LOCAL_ONLY",
-  "sourceSchema": {
-    "path": "prisma/schema.prisma",
-    "generation": "prisma migrate diff --from-empty",
-    "sha256": "bb3c1503ba237c352a5391730f75938925e6f61a71901e6b2add564a0aeaf2d4"
-  },
-  "artifacts": [
-    {
-      "order": 1,
-      "path": "prisma/financial-e2e-schema-provisioning.generated.sql",
-      "sha256": "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
-      "classification": "executable"
-    },
-    {
-      "order": 2,
-      "path": "prisma/migrations/0001_baseline/migration.sql",
-      "sha256": "d7d618cb6e5f30a1f62efbdf2fdf36dc7eb5b557de4da417ee8165f551512c1d",
-      "classification": "executable"
-    },
-    {
-      "order": 3,
-      "path": "scripts/financial-e2e-provisioning-static-guard.mjs",
-      "sha256": "0485013ba76ce6d32025aa1d23ebe411fc40efce62681674dfe4389ee55ca699",
-      "classification": "executable"
-    },
-    {
-      "order": 4,
-      "path": "prisma/migrations/0008_hsn_governance_integrity/migration.sql",
-      "sha256": "a52333f0526cf512588f488ca2c488d2322f211ca7a81505dad381bda111e047",
-      "classification": "executable"
-    },
-    {
-      "order": 5,
-      "path": "prisma/migrations/0011_inventory_valuation_decision_history/migration.sql",
-      "sha256": "d7148f60b6cfb2493af7c8a5216778de80acd7c8e17127350daa7231fffab768",
-      "classification": "executable"
-    },
-    {
-      "order": 6,
-      "path": "scripts/financial-e2e-provision-local.mjs",
-      "sha256": "dd6ee5d793ff4451867ce2760fc8f3d2fbbd15787bda734fad652567ea6ab128",
-      "classification": "executable"
-    },
-    {
-      "order": 7,
-      "path": "prisma/migrations/0012_payment_integrity/migration.sql",
-      "sha256": "6da50f365d40b3c4e81854ffd9bffb31725f3b31afed5fb0979ca4c2caadf953",
-      "classification": "executable"
-    },
-    {
-      "order": 8,
-      "path": "prisma/migrations/0013_payment_permission_backfill/migration.sql",
-      "sha256": "fde67e64a30e06e687d3f81b692957dafb9368c772d3c532d594bf3bbb25e790",
-      "classification": "executable"
-    },
-    {
-      "order": 9,
-      "path": "prisma/migrations/0014_supplier_invoice_uniqueness/migration.sql",
-      "sha256": "5a22265f196e8a68077703cbe19268e514c78148ad4f1490b26a8ed2afdfa4b5",
-      "classification": "executable"
-    },
-    {
-      "order": 10,
-      "path": "prisma/migrations/0015_purchase_finalized_immutability/migration.sql",
-      "sha256": "aa23258440cf6b14b135f9737740cb9813291d16ef24cc0dba7d50b80c43ec82",
-      "classification": "executable"
-    },
-    {
-      "order": 11,
-      "path": "prisma/migrations/0016_supplier_invoice_trimmed_uniqueness/migration.sql",
-      "sha256": "43dbb060f772346bbfb40dc444abd4f2595af7597e688d0353acf32d01302c87",
-      "classification": "executable"
-    },
-    {
-      "order": 12,
-      "path": "prisma/migrations/0020_supplier_document_rls_and_active_guard/migration.sql",
-      "sha256": "430ac6236b756e0eec1192532c69959ea4395b1884830306362a15e0a2579191",
-      "classification": "executable"
-    }
-  ],
-  "verificationSteps": [
-    "Run the provisioning static guard.",
-    "Verify the source schema and every artifact hash before any future authorized execution.",
-    "Verify database identity, marker provenance, role attributes, privileges, schema, constraints, indexes, RLS, policies, triggers, and functions after connected initialization.",
-    "Reconnect with the restricted runtime role and verify tenant isolation and required RLS behavior.",
-    "Emit sanitized evidence bound to the target, run, attempt, and manifest."
-  ]
+    "manifestVersion":  1,
+    "packageVersion":  "0.1.3",
+    "approved":  true,
+    "status":  "APPROVED_EXECUTABLE_LOCAL_ONLY",
+    "sourceSchema":  {
+                         "path":  "prisma/schema.prisma",
+                         "generation":  "prisma migrate diff --from-empty",
+                         "sha256":  "bb3c1503ba237c352a5391730f75938925e6f61a71901e6b2add564a0aeaf2d4"
+                     },
+    "artifacts":  [
+                      {
+                          "order":  1,
+                          "path":  "prisma/financial-e2e-schema-provisioning.generated.sql",
+                          "sha256":  "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
+                          "classification":  "executable"
+                      },
+                      {
+                          "order":  2,
+                          "path":  "prisma/migrations/0001_baseline/migration.sql",
+                          "sha256":  "d7d618cb6e5f30a1f62efbdf2fdf36dc7eb5b557de4da417ee8165f551512c1d",
+                          "classification":  "executable"
+                      },
+                      {
+                          "order":  3,
+                          "path":  "scripts/financial-e2e-provisioning-static-guard.mjs",
+                          "sha256":  "9fa6b10972175deec16e8c4af2e4315274429e9ebc32acb70fbf81783cfca339",
+                          "classification":  "executable"
+                      },
+                      {
+                          "order":  4,
+                          "path":  "prisma/migrations/0008_hsn_governance_integrity/migration.sql",
+                          "sha256":  "a52333f0526cf512588f488ca2c488d2322f211ca7a81505dad381bda111e047",
+                          "classification":  "executable"
+                      },
+                      {
+                          "order":  5,
+                          "path":  "prisma/migrations/0011_inventory_valuation_decision_history/migration.sql",
+                          "sha256":  "d7148f60b6cfb2493af7c8a5216778de80acd7c8e17127350daa7231fffab768",
+                          "classification":  "executable"
+                      },
+                      {
+                          "order":  6,
+                          "path":  "scripts/financial-e2e-provision-local.mjs",
+                          "sha256":  "daf8eb24cfa3f819484cf01f668b6e2af7ca1b96be25f11da39a4668c458aa34",
+                          "classification":  "executable"
+                      },
+                      {
+                          "order":  7,
+                          "path":  "prisma/migrations/0012_payment_integrity/migration.sql",
+                          "sha256":  "6da50f365d40b3c4e81854ffd9bffb31725f3b31afed5fb0979ca4c2caadf953",
+                          "classification":  "executable"
+                      },
+                      {
+                          "order":  8,
+                          "path":  "prisma/migrations/0013_payment_permission_backfill/migration.sql",
+                          "sha256":  "fde67e64a30e06e687d3f81b692957dafb9368c772d3c532d594bf3bbb25e790",
+                          "classification":  "executable"
+                      },
+                      {
+                          "order":  9,
+                          "path":  "prisma/migrations/0014_supplier_invoice_uniqueness/migration.sql",
+                          "sha256":  "5a22265f196e8a68077703cbe19268e514c78148ad4f1490b26a8ed2afdfa4b5",
+                          "classification":  "executable"
+                      },
+                      {
+                          "order":  10,
+                          "path":  "prisma/migrations/0015_purchase_finalized_immutability/migration.sql",
+                          "sha256":  "58078a5e79953fa68f010a289c6860fa9e5ba8ab2239670d452f59725e169111",
+                          "classification":  "executable"
+                      },
+                      {
+                          "order":  11,
+                          "path":  "prisma/migrations/0016_supplier_invoice_trimmed_uniqueness/migration.sql",
+                          "sha256":  "43dbb060f772346bbfb40dc444abd4f2595af7597e688d0353acf32d01302c87",
+                          "classification":  "executable"
+                      },
+                      {
+                          "order":  12,
+                          "path":  "prisma/migrations/0020_supplier_document_rls_and_active_guard/migration.sql",
+                          "sha256":  "430ac6236b756e0eec1192532c69959ea4395b1884830306362a15e0a2579191",
+                          "classification":  "executable"
+                      },
+                      {
+                          "order":  13,
+                          "path":  "scripts/financial-e2e-signed-context.mjs",
+                          "sha256":  "4f21ee9717eaab3ff8550d0fe9a424bfe77c2776793272c5446cc6782da40a0d",
+                          "classification":  "executable"
+                      }
+                  ],
+    "verificationSteps":  [
+                              "Run the provisioning static guard.",
+                              "Verify the source schema and every artifact hash before any future authorized execution.",
+                              "Verify database identity, marker provenance, role attributes, privileges, schema, constraints, indexes, RLS, policies, triggers, and functions after connected initialization.",
+                              "Reconnect with the restricted runtime role and verify tenant isolation and required RLS behavior.",
+                              "Emit sanitized evidence bound to the target, run, attempt, and manifest."
+                          ]
 }

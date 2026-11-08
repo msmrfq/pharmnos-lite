@@ -14,6 +14,10 @@ const dialogSource = await readFile(
   new URL("../src/app/inventory/_stock-adjustment-dialog.tsx", import.meta.url),
   "utf8",
 );
+const stockServiceSource = await readFile(
+  new URL("../src/domain/services/stock-movement.service.ts", import.meta.url),
+  "utf8",
+);
 
 function actionBody(source, name) {
   const start = source.indexOf(`export async function ${name}`);
@@ -54,4 +58,19 @@ test("the adjustment form supplies a stable retry key and the schema requires it
   assert.match(schemaSource, /idempotency_key:\s*z[\s\S]*?\.regex\(\/\^\[A-Za-z0-9\]/);
   assert.match(dialogSource, /name="idempotency_key"/);
   assert.match(dialogSource, /stock-adjustment:\$\{crypto\.randomUUID\(\)\}/);
+});
+
+test("stock movement service guards concurrent outbound decrements", () => {
+  assert.match(stockServiceSource, /available_qty:\s*\{\s*gte:\s*delta\s*\}/);
+  assert.match(stockServiceSource, /product_batches\.updateMany/);
+  assert.match(stockServiceSource, /if \(batchUpdate\.count !== 1\)/);
+});
+
+test("recordMany uses one transaction and rejects rounded-zero quantities", () => {
+  const recordManyStart = stockServiceSource.indexOf("async recordMany(");
+  const recordManyBody = stockServiceSource.slice(recordManyStart);
+  assert.match(recordManyBody, /this\.prisma\.\$transaction/);
+  assert.match(stockServiceSource, /quantity must round to at least one unit/);
+  assert.match(stockServiceSource, /received_qty: 0/);
+  assert.match(stockServiceSource, /available_qty: 0/);
 });

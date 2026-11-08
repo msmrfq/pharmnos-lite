@@ -8,9 +8,11 @@
 --   pharmnos_e2e_runtime  ordinary non-superuser/non-BYPASSRLS verifier
 -- No browser or application backend role is assumed to exist.
 --
--- Canonical fail-closed claim expression:
---   NULLIF(current_setting('request.jwt.claim.tenant_id', true), '')
--- A missing, empty, or non-matching claim denies access.
+-- Canonical fail-closed identity expression:
+--   public.financial_context_tenant_id()
+-- The wrapper verifies a short-lived HMAC context using a private bootstrap-owned
+-- key before returning an identity. Missing, malformed, expired, or forged
+-- contexts return NULL and deny access.
 
 -- Common table policy contract
 -- For each table below, the final executable artifact must:
@@ -22,6 +24,11 @@
 --   CREATE POLICY tenant_insert_<table> ON public.<table>
 --     FOR INSERT TO pharmnos_e2e_runtime
 --     WITH CHECK (<predicate>);
+--
+-- memberships, roles, and role_permissions use an additional
+-- public.financial_context_is_admin() predicate for INSERT and UPDATE.
+-- Their tenant predicate remains mandatory; the helper is bootstrap-owned,
+-- SECURITY DEFINER, fixed-search-path, and returns false on invalid context.
 --   CREATE POLICY tenant_update_<table> ON public.<table>
 --     FOR UPDATE TO pharmnos_e2e_runtime
 --     USING (<predicate>) WITH CHECK (<predicate>);
@@ -30,12 +37,10 @@
 -- must cause provisioning to stop rather than be created implicitly.
 
 -- Direct tenant_id tables: predicate is
---   tenant_id::text = NULLIF(current_setting(
---     'request.jwt.claim.tenant_id', true), '')
+--   tenant_id::text = public.financial_context_tenant_id()
 
 -- tenants: root table has no tenant_id. Predicate is:
---   id::text = NULLIF(current_setting(
---     'request.jwt.claim.tenant_id', true), '')
+--   id::text = public.financial_context_tenant_id()
 -- Required policies:
 --   tenant_select_tenants
 --   tenant_insert_tenants
@@ -46,8 +51,7 @@
 --   EXISTS (
 --     SELECT 1 FROM public.memberships AS m
 --     WHERE m.user_id = users.id
---       AND m.tenant_id::text = NULLIF(current_setting(
---         'request.jwt.claim.tenant_id', true), '')
+--       AND m.tenant_id::text = public.financial_context_tenant_id()
 --   )
 -- Required policies:
 --   tenant_select_users / tenant_insert_users / tenant_update_users
@@ -61,8 +65,7 @@
 --   AND EXISTS (
 --     SELECT 1 FROM public.users AS u
 --     WHERE u.id = memberships.user_id
---       AND u.external_id = NULLIF(current_setting(
---         'request.jwt.claim.sub', true), '')
+--       AND u.external_id = public.financial_context_subject()
 --   )
 -- The lookup is a schema-qualified users join evaluated by the same RLS
 -- boundary; no SECURITY DEFINER authorization helper is used.
@@ -81,8 +84,7 @@
 --       AND EXISTS (
 --         SELECT 1 FROM public.users AS u
 --         WHERE u.id = m.user_id
---           AND u.external_id = NULLIF(current_setting(
---             'request.jwt.claim.sub', true), '')
+--           AND u.external_id = public.financial_context_subject()
 --       )
 --   )
 -- Required policies:
@@ -93,31 +95,26 @@
 -- business_profiles
 -- tenant_select_business_profiles / tenant_insert_business_profiles /
 -- tenant_update_business_profiles
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- products
 -- tenant_select_products / tenant_insert_products / tenant_update_products
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- product_batches
 -- tenant_select_product_batches / tenant_insert_product_batches /
 -- tenant_update_product_batches
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- customers
 -- tenant_select_customers / tenant_insert_customers /
 -- tenant_update_customers
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- suppliers
 -- tenant_select_suppliers / tenant_insert_suppliers /
 -- tenant_update_suppliers
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- purchase_invoices
 -- tenant_select_purchase_invoices / tenant_insert_purchase_invoices /
@@ -126,8 +123,7 @@
 -- purchase_supplier_documents
 -- tenant_select_purchase_supplier_documents / tenant_insert_purchase_supplier_documents /
 -- tenant_update_purchase_supplier_documents
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 -- No DELETE policy is defined. Finalized rows additionally require the
 -- tenant-qualified database triggers in
 -- financial-e2e-security-controls.review.sql:
@@ -138,8 +134,7 @@
 -- tenant_select_sales_posting_operations /
 -- tenant_insert_sales_posting_operations /
 -- tenant_update_sales_posting_operations
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 -- Operation state and its unique key are tenant-scoped and must remain
 -- transactionally aligned with the finalized invoice.
 
@@ -147,16 +142,14 @@
 -- tenant_select_purchase_posting_operations /
 -- tenant_insert_purchase_posting_operations /
 -- tenant_update_purchase_posting_operations
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 -- UPDATE is additionally constrained by the posting-transition control.
 
 -- purchase_invoice_items
 -- tenant_select_purchase_invoice_items /
 -- tenant_insert_purchase_invoice_items /
 -- tenant_update_purchase_invoice_items
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 -- No DELETE policy is defined. Finalized accepted/tax/amount fields are
 -- protected by prevent_finalized_purchase_item_mutation.
 
@@ -166,120 +159,101 @@
 -- purchase_gst_evidence_revisions
 -- tenant_select_purchase_gst_evidence_revisions /
 -- tenant_insert_purchase_gst_evidence_revisions
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- purchase_gst_line_evidence
 -- tenant_select_purchase_gst_line_evidence /
 -- tenant_insert_purchase_gst_line_evidence
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- purchase_gst_calculations
 -- tenant_select_purchase_gst_calculations /
 -- tenant_insert_purchase_gst_calculations
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- purchase_gst_accounting_decisions
 -- tenant_select_purchase_gst_accounting_decisions /
 -- tenant_insert_purchase_gst_accounting_decisions
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- purchase_gst_reconciliation_events
 -- tenant_select_purchase_gst_reconciliation_events /
 -- tenant_insert_purchase_gst_reconciliation_events
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- purchase_gst_reconciliation_event_lines
 -- tenant_select_purchase_gst_reconciliation_event_lines /
 -- tenant_insert_purchase_gst_reconciliation_event_lines
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- inventory_valuation_decisions
 -- tenant_select_inventory_valuation_decisions /
 -- tenant_insert_inventory_valuation_decisions
 -- Immutable history: no tenant_update policy.
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- inventory_valuation_adjustments
 -- tenant_select_inventory_valuation_adjustments /
 -- tenant_insert_inventory_valuation_adjustments
 -- Immutable history: no tenant_update policy.
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- hsn_sac_catalog
 -- tenant_select_hsn_sac_catalog
 -- No INSERT, UPDATE, or DELETE policy: application runtime reads approved
 -- tenant-scoped governance facts; maintenance remains separately authorized.
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- gst_rate_rules
 -- tenant_select_gst_rate_rules
 -- No INSERT, UPDATE, or DELETE policy: application runtime reads approved
 -- tenant-scoped governance facts; maintenance remains separately authorized.
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- hsn_sac_catalog_history
 -- tenant_select_hsn_sac_catalog_history /
 -- tenant_insert_hsn_sac_catalog_history
 -- No UPDATE or DELETE policy: history is append-only.
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- gst_rate_rule_history
 -- tenant_select_gst_rate_rule_history /
 -- tenant_insert_gst_rate_rule_history
 -- No UPDATE or DELETE policy: history is append-only.
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- sales_invoices
 -- tenant_select_sales_invoices / tenant_insert_sales_invoices /
 -- tenant_update_sales_invoices
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- sales_invoice_items
 -- tenant_select_sales_invoice_items / tenant_insert_sales_invoice_items /
 -- tenant_update_sales_invoice_items
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- payments
 -- tenant_select_payments / tenant_insert_payments / tenant_update_payments
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- stock_movements
 -- tenant_select_stock_movements / tenant_insert_stock_movements /
 -- tenant_update_stock_movements
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- customer_ledgers
 -- tenant_select_customer_ledgers / tenant_insert_customer_ledgers /
 -- tenant_update_customer_ledgers
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- supplier_ledgers
 -- tenant_select_supplier_ledgers / tenant_insert_supplier_ledgers /
 -- tenant_update_supplier_ledgers
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- audit_logs
 -- tenant_select_audit_logs / tenant_insert_audit_logs
--- Predicate: tenant_id::text = NULLIF(current_setting(
---   'request.jwt.claim.tenant_id', true), '')
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 -- Audit rows are append-only for the runtime role; no UPDATE/DELETE policy.
 
 -- Required denial tests after authorized provisioning:

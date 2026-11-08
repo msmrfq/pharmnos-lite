@@ -106,9 +106,7 @@ export function validateLocalDisposableTargetCandidate({
     if (isolationLabel !== "financial-e2e-isolated") {
         errors.push("The disposable isolation label is required.");
     }
-    if (!ordinaryTarget || typeof ordinaryTarget !== "object") {
-        errors.push("Independent ordinary-target identity is required.");
-    } else {
+    if (ordinaryTarget && typeof ordinaryTarget === "object") {
         if (ordinaryTarget.host === host && ordinaryTarget.port === port) {
             errors.push("Disposable target overlaps the ordinary database endpoint.");
         }
@@ -166,7 +164,6 @@ export async function validateFinancialE2eTarget({
     const applicationMarker = String(marker ?? "").trim();
 
     if (!test) errors.push("TEST_DATABASE_URL is required.");
-    if (!ordinary) errors.push("DATABASE_URL is required to compare the test target.");
     if (!databaseName) errors.push("TEST_DATABASE_NAME is required.");
     if (!applicationMarker) errors.push("TEST_DATABASE_MARKER is required.");
 

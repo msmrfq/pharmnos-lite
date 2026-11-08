@@ -1,0 +1,29 @@
+{
+  "evidenceVersion": 1,
+  "phase": "EVIDENCE_RECORDING",
+  "status": "PASS",
+  "runId": "purchasegstmw6tjdyt09f6ef",
+  "targetBinding": "1|purchasegstmw6tjdyt09f6ef|127.0.0.1|55520|pharmnos_financial_e2e_purchasegstmw6tjdyt09f6ef|pharmnos_e2e|pharmnos_e2e_runtime|FINANCIAL_E2E_DB_PASSWORD|FINANCIAL_E2E_RUNTIME_DB_PASSWORD|DATABASE_AUTH_CONTEXT_SIGNING_SECRET|pharmnos-financial-e2e|pharmnoslite-financial-e2e-purchasegstmw6tjdyt09f6ef|financial-e2e-postgres|40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168",
+  "targetFingerprint": "bf560291d2fe3cf91b5e61ad4c9050197b2c6f3da6f66bdbaa552e200d9023d6",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 55520,
+    "databaseName": "pharmnos_financial_e2e_purchasegstmw6tjdyt09f6ef",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "composeProject": "pharmnoslite-financial-e2e-purchasegstmw6tjdyt09f6ef",
+    "composeService": "financial-e2e-postgres",
+    "composeProfile": "financial-e2e",
+    "schemaArtifactHash": "40e3c0efd19fcd01e6b813ca37bf0c95899255fa8e00d0977a1ab27758ced168"
+  },
+  "recordedAt": 1794081064306,
+  "details": {
+    "function": "DGM-T19",
+    "suite": "purchase-gst",
+    "databaseAccessed": true,
+    "resultCount": 16,
+    "failureCount": 0,
+    "cleanupStatus": "DEFERRED",
+    "evidenceRecordingSucceeded": true
+  }
+}

@@ -143,8 +143,22 @@ enum PaymentMode {
   CASH
   CARD
   UPI
+  CHEQUE
+  BANK_TRANSFER
+  NEFT
   CREDIT
   MIXED
+}
+
+enum FinancialRefundStatus {
+  REQUESTED
+  APPROVED
+  COMPLETED
+  CANCELLED
+}
+
+enum FinancialReversalStatus {
+  COMPLETED
 }
 
 enum StockMovementType {
@@ -208,71 +222,75 @@ model tenants {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
-  users               memberships[]
-  business_profile    business_profiles?
-  products            products[]
-  product_batches     product_batches[]
-  customers           customers[]
-  suppliers           suppliers[]
-  purchase_invoices   purchase_invoices[]
-  purchase_supplier_documents purchase_supplier_documents[]
-  sales_invoices      sales_invoices[]
-  stock_movements       stock_movements[]
-  customer_ledger       customer_ledgers[]
-  supplier_ledger       supplier_ledgers[]
-  audit_logs            audit_logs[]
-  payments              payments[]
-  sales_posting_operations sales_posting_operations[]
-  purchase_invoice_items purchase_invoice_items[]
-  sales_invoice_items    sales_invoice_items[]
-  purchase_gst_line_evidence purchase_gst_line_evidence[]
+  users                              memberships[]
+  business_profile                   business_profiles?
+  products                           products[]
+  product_batches                    product_batches[]
+  customers                          customers[]
+  suppliers                          suppliers[]
+  purchase_invoices                  purchase_invoices[]
+  purchase_supplier_documents        purchase_supplier_documents[]
+  sales_invoices                     sales_invoices[]
+  stock_movements                    stock_movements[]
+  customer_ledger                    customer_ledgers[]
+  supplier_ledger                    supplier_ledgers[]
+  audit_logs                         audit_logs[]
+  payments                           payments[]
+  payment_allocations                payment_allocations[]
+  payment_refunds                    payment_refunds[]
+  payment_reversals                  payment_reversals[]
+  allocation_reversals               allocation_reversals[]
+  sales_posting_operations           sales_posting_operations[]
+  purchase_invoice_items             purchase_invoice_items[]
+  sales_invoice_items                sales_invoice_items[]
+  purchase_gst_line_evidence         purchase_gst_line_evidence[]
   purchase_gst_reconciliation_events purchase_gst_reconciliation_events[]
-  posting_operations purchase_posting_operations[]
-  inventory_valuation_decisions inventory_valuation_decisions[]
-  inventory_valuation_adjustments inventory_valuation_adjustments[]
-  hsn_sac_catalog hsn_sac_catalog[]
-  gst_rate_rules gst_rate_rules[]
+  posting_operations                 purchase_posting_operations[]
+  inventory_valuation_decisions      inventory_valuation_decisions[]
+  inventory_valuation_adjustments    inventory_valuation_adjustments[]
+  hsn_sac_catalog                    hsn_sac_catalog[]
+  gst_rate_rules                     gst_rate_rules[]
 
   @@index([slug])
 }
 
 model users {
-  id           String   @id @default(cuid())
-  external_id  String?  @unique
-  email        String   @unique
-  full_name    String?
-  phone        String?
-  avatar_url   String?
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  id          String   @id @default(cuid())
+  external_id String?  @unique
+  email       String   @unique
+  full_name   String?
+  phone       String?
+  avatar_url  String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
 
   memberships memberships[]
-  audit_logs  audit_logs[]   @relation("audit_actor")
+  audit_logs  audit_logs[]  @relation("audit_actor")
 }
 
 model memberships {
-  id         String     @id @default(cuid())
+  id         String    @id @default(cuid())
   tenant_id  String
   user_id    String
   role_id    String
-  status     String     @default("active")
+  status     String    @default("active")
   invited_by String?
   invited_at DateTime?
   joined_at  DateTime?
-  created_at DateTime   @default(now())
-  updated_at DateTime   @updatedAt
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
 
-  tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  user   users   @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  role   roles   @relation(fields: [role_id], references: [id], onDelete: Restrict)
-  captured_gst_evidence_revisions purchase_gst_evidence_revisions[] @relation("purchase_gst_evidence_capture_actor")
-  accounting_decisions purchase_gst_accounting_decisions[] @relation("purchase_gst_accounting_decision_actor")
-  purchase_line_acceptances purchase_invoice_items[] @relation("purchase_line_acceptance_actor")
-  gst_reconciliation_events purchase_gst_reconciliation_events[] @relation("purchase_gst_event_actor")
-  approved_hsn_catalog_records hsn_sac_catalog[] @relation("hsn_classification_approver")
-  approved_gst_rate_rules gst_rate_rules[] @relation("gst_rate_approver")
-  inventory_valuation_decisions inventory_valuation_decisions[] @relation("inventory_valuation_decision_actor")
-  inventory_valuation_adjustments inventory_valuation_adjustments[] @relation("inventory_valuation_adjustment_actor")
+  tenant                          tenants                              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  user                            users                                @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  role                            roles                                @relation(fields: [role_id], references: [id], onDelete: Restrict)
+  captured_gst_evidence_revisions purchase_gst_evidence_revisions[]    @relation("purchase_gst_evidence_capture_actor")
+  accounting_decisions            purchase_gst_accounting_decisions[]  @relation("purchase_gst_accounting_decision_actor")
+  purchase_line_acceptances       purchase_invoice_items[]             @relation("purchase_line_acceptance_actor")
+  gst_reconciliation_events       purchase_gst_reconciliation_events[] @relation("purchase_gst_event_actor")
+  approved_hsn_catalog_records    hsn_sac_catalog[]                    @relation("hsn_classification_approver")
+  approved_gst_rate_rules         gst_rate_rules[]                     @relation("gst_rate_approver")
+  inventory_valuation_decisions   inventory_valuation_decisions[]      @relation("inventory_valuation_decision_actor")
+  inventory_valuation_adjustments inventory_valuation_adjustments[]    @relation("inventory_valuation_adjustment_actor")
 
   @@unique([tenant_id, user_id])
   @@unique([tenant_id, id])
@@ -281,14 +299,14 @@ model memberships {
 }
 
 model roles {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   tenant_id   String
   name        String
   system_role SystemRole?
   description String?
-  is_default  Boolean  @default(false)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  is_default  Boolean     @default(false)
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
 
   permissions role_permissions[]
   memberships memberships[]
@@ -310,28 +328,28 @@ model role_permissions {
 }
 
 model business_profiles {
-  id                 String   @id @default(cuid())
-  tenant_id          String   @unique
-  address_line_1     String?
-  address_line_2     String?
-  city               String?
-  state              String?
-  pincode            String?
-  country            String   @default("India")
-  gstin              String?
-  pan                String?
-  drug_license_no_1  String?
-  drug_license_no_2  String?
-  contact_phone      String?
-  contact_email      String?
-  invoice_prefix     String   @default("INV")
-  invoice_next_seq   Int      @default(1)
-  purchase_prefix    String   @default("PUR")
-  purchase_next_seq  Int      @default(1)
-  default_gst_rate   Decimal? @db.Decimal(5, 2)
-  near_expiry_days   Int      @default(60)
-  created_at         DateTime @default(now())
-  updated_at         DateTime @updatedAt
+  id                String   @id @default(cuid())
+  tenant_id         String   @unique
+  address_line_1    String?
+  address_line_2    String?
+  city              String?
+  state             String?
+  pincode           String?
+  country           String   @default("India")
+  gstin             String?
+  pan               String?
+  drug_license_no_1 String?
+  drug_license_no_2 String?
+  contact_phone     String?
+  contact_email     String?
+  invoice_prefix    String   @default("INV")
+  invoice_next_seq  Int      @default(1)
+  purchase_prefix   String   @default("PUR")
+  purchase_next_seq Int      @default(1)
+  default_gst_rate  Decimal? @db.Decimal(5, 2)
+  near_expiry_days  Int      @default(60)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
 
   tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
 }
@@ -341,26 +359,26 @@ model business_profiles {
 // ═══════════════════════════════════════════════════════════
 
 model products {
-  id                     String           @id @default(cuid())
-  tenant_id              String
-  sku                    String?
-  name                   String
-  generic_name           String?
-  manufacturer           String?
-  pack_size              String?
-  hsn_code               String?
-  gst_rate               Decimal          @db.Decimal(5, 2)
+  id                      String         @id @default(cuid())
+  tenant_id               String
+  sku                     String?
+  name                    String
+  generic_name            String?
+  manufacturer            String?
+  pack_size               String?
+  hsn_code                String?
+  gst_rate                Decimal        @db.Decimal(5, 2)
   schedule_classification ScheduleClass?
-  mrp                    Decimal?         @db.Decimal(12, 2)
-  standard_sale_rate     Decimal?         @db.Decimal(12, 2)
-  purchase_rate          Decimal?         @db.Decimal(12, 2)
-  reorder_level          Int              @default(0)
-  is_active              Boolean          @default(true)
-  created_at             DateTime         @default(now())
-  updated_at             DateTime         @updatedAt
-  created_by             String?
+  mrp                     Decimal?       @db.Decimal(12, 2)
+  standard_sale_rate      Decimal?       @db.Decimal(12, 2)
+  purchase_rate           Decimal?       @db.Decimal(12, 2)
+  reorder_level           Int            @default(0)
+  is_active               Boolean        @default(true)
+  created_at              DateTime       @default(now())
+  updated_at              DateTime       @updatedAt
+  created_by              String?
 
-  tenant          tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant          tenants                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   batches         product_batches[]
   purchase_items  purchase_invoice_items[]
   invoice_items   sales_invoice_items[]
@@ -373,31 +391,31 @@ model products {
 }
 
 model product_batches {
-  id            String   @id @default(cuid())
-  tenant_id     String
-  product_id    String
-  batch_no      String
-  expiry_date   DateTime?
-  mrp           Decimal? @db.Decimal(12, 2)
-  purchase_rate Decimal? @db.Decimal(12, 2)
-  inventory_acquisition_cost Decimal? @db.Decimal(20, 4)
-  inventory_valuation_status String @default("PENDING")
+  id                                 String    @id @default(cuid())
+  tenant_id                          String
+  product_id                         String
+  batch_no                           String
+  expiry_date                        DateTime?
+  mrp                                Decimal?  @db.Decimal(12, 2)
+  purchase_rate                      Decimal?  @db.Decimal(12, 2)
+  inventory_acquisition_cost         Decimal?  @db.Decimal(20, 4)
+  inventory_valuation_status         String    @default("PENDING")
   inventory_valuation_policy_version String?
-  sale_rate     Decimal? @db.Decimal(12, 2)
-  received_qty  Int      @default(0)
-  available_qty Int      @default(0)
-  supplier_id   String?
-  purchase_id   String?
-  is_blocked    Boolean  @default(false)
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  sale_rate                          Decimal?  @db.Decimal(12, 2)
+  received_qty                       Int       @default(0)
+  available_qty                      Int       @default(0)
+  supplier_id                        String?
+  purchase_id                        String?
+  is_blocked                         Boolean   @default(false)
+  created_at                         DateTime  @default(now())
+  updated_at                         DateTime  @updatedAt
 
-  tenant          tenants              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  product         products             @relation(fields: [product_id], references: [id], onDelete: Cascade)
-  supplier        suppliers?           @relation(fields: [supplier_id], references: [id])
-  purchase_invoice purchase_invoices?  @relation(fields: [purchase_id], references: [id])
-  stock_movements  stock_movements[]
-  sales_invoice_items sales_invoice_items[]
+  tenant                        tenants                         @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  product                       products                        @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  supplier                      suppliers?                      @relation(fields: [supplier_id], references: [id])
+  purchase_invoice              purchase_invoices?              @relation(fields: [purchase_id], references: [id])
+  stock_movements               stock_movements[]
+  sales_invoice_items           sales_invoice_items[]
   inventory_valuation_decisions inventory_valuation_decisions[]
 
   @@unique([tenant_id, product_id, batch_no])
@@ -431,43 +449,44 @@ model customers {
   created_at         DateTime @default(now())
   updated_at         DateTime @updatedAt
 
-  tenant     tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  invoices   sales_invoices[]
-  ledger     customer_ledgers[]
-  payments   payments[]
+  tenant   tenants            @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  invoices sales_invoices[]
+  ledger   customer_ledgers[]
+  payments payments[]
 
   @@unique([tenant_id, code])
+  @@unique([tenant_id, id])
   @@index([tenant_id])
   @@index([tenant_id, business_name])
 }
 
 model suppliers {
-  id               String   @id @default(cuid())
-  tenant_id        String
-  code             String?
-  business_name    String
-  contact_person   String?
-  phone            String?
-  mobile           String?
-  email            String?
-  address_1        String?
-  address_2        String?
-  city             String?
-  state            String?
-  pincode          String?
-  gstin            String?
-  drug_license_no  String?
-  opening_balance  Decimal? @db.Decimal(14, 2)
-  payable_balance  Decimal  @default(0) @db.Decimal(14, 2)
-  is_active        Boolean  @default(true)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  id              String   @id @default(cuid())
+  tenant_id       String
+  code            String?
+  business_name   String
+  contact_person  String?
+  phone           String?
+  mobile          String?
+  email           String?
+  address_1       String?
+  address_2       String?
+  city            String?
+  state           String?
+  pincode         String?
+  gstin           String?
+  drug_license_no String?
+  opening_balance Decimal? @db.Decimal(14, 2)
+  payable_balance Decimal  @default(0) @db.Decimal(14, 2)
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 
-  tenant          tenants              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  purchases       purchase_invoices[]
-  batches         product_batches[]
-  ledger          supplier_ledgers[]
-  payments        payments[]
+  tenant             tenants                       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  purchases          purchase_invoices[]
+  batches            product_batches[]
+  ledger             supplier_ledgers[]
+  payments           payments[]
   supplier_documents purchase_supplier_documents[]
 
   @@unique([tenant_id, code])
@@ -481,59 +500,61 @@ model suppliers {
 // ═══════════════════════════════════════════════════════════
 
 model purchase_invoices {
-  id              String        @id @default(cuid())
-  tenant_id       String
-  invoice_no      String
-  supplier_id     String
-  supplier_invoice_no String?
-  invoice_date    DateTime
-  status          InvoiceStatus @default(DRAFT)
-  gst_reconciliation_status PurchaseGstReconciliationStatus @default(NOT_RECONCILED)
-  gst_accounting_acceptance_status PurchaseGstAccountingAcceptanceStatus @default(NOT_ACCEPTED)
-  gst_treatment   String?
-  tax_mode        String? @default("EXCLUSIVE")
-  current_gst_evidence_revision_id String?
-  current_gst_calculation_id String?
+  id                                 String                                @id @default(cuid())
+  tenant_id                          String
+  invoice_no                         String
+  supplier_id                        String
+  supplier_invoice_no                String?
+  invoice_date                       DateTime
+  due_date        DateTime?
+  status                             InvoiceStatus                         @default(DRAFT)
+  gst_reconciliation_status          PurchaseGstReconciliationStatus       @default(NOT_RECONCILED)
+  gst_accounting_acceptance_status   PurchaseGstAccountingAcceptanceStatus @default(NOT_ACCEPTED)
+  gst_treatment                      String?
+  tax_mode                           String?                               @default("EXCLUSIVE")
+  current_gst_evidence_revision_id   String?
+  current_gst_calculation_id         String?
   current_gst_accounting_decision_id String?
-  gst_record_version Int @default(0)
-  gross_amount    Decimal       @db.Decimal(14, 2)
-  total_discount  Decimal       @default(0) @db.Decimal(14, 2)
-  total_tax       Decimal       @default(0) @db.Decimal(14, 2)
-  round_off       Decimal       @default(0) @db.Decimal(10, 2)
-  net_amount      Decimal       @db.Decimal(14, 2)
-  notes           String?
-  created_by      String?
-  finalized_at    DateTime?
-  cancelled_at    DateTime?
-  cancelled_by    String?
-  created_at      DateTime      @default(now())
-  updated_at      DateTime      @updatedAt
+  gst_record_version                 Int                                   @default(0)
+  gross_amount                       Decimal                               @db.Decimal(14, 2)
+  total_discount                     Decimal                               @default(0) @db.Decimal(14, 2)
+  total_tax                          Decimal                               @default(0) @db.Decimal(14, 2)
+  round_off                          Decimal                               @default(0) @db.Decimal(10, 2)
+  net_amount                         Decimal                               @db.Decimal(14, 2)
+  notes                              String?
+  created_by                         String?
+  finalized_at                       DateTime?
+  cancelled_at                       DateTime?
+  cancelled_by                       String?
+  created_at                         DateTime                              @default(now())
+  updated_at                         DateTime                              @updatedAt
   finalized_snapshot Json?
   finalized_snapshot_hash String?
-  rendering_version String?
-  pdf_artifact_key String?
+  rendering_version                  String?
+  pdf_artifact_key                   String?
   pdf_generation_status String @default("PENDING")
-  pdf_generated_at DateTime?
-  pdf_rendering_version String?
-  pdf_byte_size Int?
-  pdf_checksum_sha256 String?
-  pdf_error String?
+  pdf_generated_at                   DateTime?
+  pdf_rendering_version              String?
+  pdf_byte_size                      Int?
+  pdf_checksum_sha256                String?
+  pdf_error                          String?
 
-  tenant   tenants                @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  supplier suppliers              @relation(fields: [supplier_id], references: [id], onDelete: Restrict)
-  items    purchase_invoice_items[] @relation("purchase_invoice_items")
-  batches  product_batches[]
-  ledger   supplier_ledgers[]
-  gst_evidence_revisions purchase_gst_evidence_revisions[] @relation("purchase_invoice_gst_revisions")
-  current_gst_evidence_revision purchase_gst_evidence_revisions? @relation("purchase_current_gst_evidence_revision", fields: [tenant_id, id, current_gst_evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_invoices_current_gst_evidence_fkey")
-  gst_calculations purchase_gst_calculations[] @relation("purchase_gst_calculation_purchase")
-  current_gst_calculation purchase_gst_calculations? @relation("purchase_current_gst_calculation", fields: [tenant_id, id, current_gst_calculation_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_invoices_current_gst_calculation_fkey")
-  gst_accounting_decisions purchase_gst_accounting_decisions[] @relation("purchase_gst_decision_purchase")
-  current_gst_accounting_decision purchase_gst_accounting_decisions? @relation("purchase_current_gst_accounting_decision", fields: [tenant_id, id, current_gst_accounting_decision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_invoices_current_gst_accounting_decision_fkey")
-  gst_reconciliation_events purchase_gst_reconciliation_events[] @relation("purchase_gst_event_purchase")
-  posting_operations purchase_posting_operations[]
-  inventory_valuation_decisions inventory_valuation_decisions[]
-  supplier_documents purchase_supplier_documents[]
+  tenant                          tenants                              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  supplier                        suppliers                            @relation(fields: [supplier_id], references: [id], onDelete: Restrict)
+  items                           purchase_invoice_items[]             @relation("purchase_invoice_items")
+  batches                         product_batches[]
+  ledger                          supplier_ledgers[]
+  payment_allocations             payment_allocations[]
+  gst_evidence_revisions          purchase_gst_evidence_revisions[]    @relation("purchase_invoice_gst_revisions")
+  current_gst_evidence_revision   purchase_gst_evidence_revisions?     @relation("purchase_current_gst_evidence_revision", fields: [tenant_id, id, current_gst_evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_invoices_current_gst_evidence_fkey")
+  gst_calculations                purchase_gst_calculations[]          @relation("purchase_gst_calculation_purchase")
+  current_gst_calculation         purchase_gst_calculations?           @relation("purchase_current_gst_calculation", fields: [tenant_id, id, current_gst_calculation_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_invoices_current_gst_calculation_fkey")
+  gst_accounting_decisions        purchase_gst_accounting_decisions[]  @relation("purchase_gst_decision_purchase")
+  current_gst_accounting_decision purchase_gst_accounting_decisions?   @relation("purchase_current_gst_accounting_decision", fields: [tenant_id, id, current_gst_accounting_decision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_invoices_current_gst_accounting_decision_fkey")
+  gst_reconciliation_events       purchase_gst_reconciliation_events[] @relation("purchase_gst_event_purchase")
+  posting_operations              purchase_posting_operations[]
+  inventory_valuation_decisions   inventory_valuation_decisions[]
+  supplier_documents              purchase_supplier_documents[]
 
   @@unique([tenant_id, invoice_no])
   @@unique([tenant_id, id])
@@ -547,24 +568,24 @@ model purchase_invoices {
 }
 
 model purchase_supplier_documents {
-  id                 String   @id @default(cuid())
-  tenant_id          String
+  id                  String    @id @default(cuid())
+  tenant_id           String
   purchase_invoice_id String
-  supplier_id        String
-  storage_key        String
-  original_filename  String
-  mime_type          String
-  byte_size          Int
-  checksum_sha256    String
-  uploaded_by        String
-  uploaded_at        DateTime @default(now())
-  supersedes_id      String?
-  replaced_at        DateTime?
+  supplier_id         String
+  storage_key         String
+  original_filename   String
+  mime_type           String
+  byte_size           Int
+  checksum_sha256     String
+  uploaded_by         String
+  uploaded_at         DateTime  @default(now())
+  supersedes_id       String?
+  replaced_at         DateTime?
 
-  tenant   tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  purchase purchase_invoices @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict)
-  supplier suppliers         @relation(fields: [tenant_id, supplier_id], references: [tenant_id, id], onDelete: Restrict)
-  supersedes purchase_supplier_documents? @relation("supplier_document_replacements", fields: [tenant_id, supersedes_id], references: [tenant_id, id], onDelete: Restrict)
+  tenant       tenants                       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  purchase     purchase_invoices             @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict)
+  supplier     suppliers                     @relation(fields: [tenant_id, supplier_id], references: [tenant_id, id], onDelete: Restrict)
+  supersedes   purchase_supplier_documents?  @relation("supplier_document_replacements", fields: [tenant_id, supersedes_id], references: [tenant_id, id], onDelete: Restrict)
   replacements purchase_supplier_documents[] @relation("supplier_document_replacements")
 
   @@unique([tenant_id, id])
@@ -574,18 +595,18 @@ model purchase_supplier_documents {
 }
 
 model purchase_posting_operations {
-  id                String   @id @default(cuid())
-  tenant_id         String
-  purchase_invoice_id String
-  idempotency_key   String
+  id                   String   @id @default(cuid())
+  tenant_id            String
+  purchase_invoice_id  String
+  idempotency_key      String
   request_payload_hash String
-  status            String   @default("PROCESSING")
-  result_invoice_no String?
-  result_purchase_id String?
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
+  status               String   @default("PROCESSING")
+  result_invoice_no    String?
+  result_purchase_id   String?
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
 
-  tenant   tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  tenant   tenants           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   purchase purchase_invoices @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict)
 
   @@unique([tenant_id, idempotency_key], map: "purchase_posting_idempotency_key")
@@ -594,29 +615,29 @@ model purchase_posting_operations {
 }
 
 model hsn_sac_catalog {
-  id                    String   @id @default(cuid())
-  tenant_id             String
-  code                  String
-  description           String?
-  classification_type   String?
-  classification_metadata Json?
-  classification_status GstApprovalStatus @default(PENDING)
-  rate_approval_status  GstApprovalStatus @default(PENDING)
-  source_reference      String?
-  effective_from        DateTime?
-  effective_to          DateTime?
-  is_active             Boolean  @default(false)
-  created_by_membership_id String?
-  updated_by_membership_id String?
+  id                                       String            @id @default(cuid())
+  tenant_id                                String
+  code                                     String
+  description                              String?
+  classification_type                      String?
+  classification_metadata                  Json?
+  classification_status                    GstApprovalStatus @default(PENDING)
+  rate_approval_status                     GstApprovalStatus @default(PENDING)
+  source_reference                         String?
+  effective_from                           DateTime?
+  effective_to                             DateTime?
+  is_active                                Boolean           @default(false)
+  created_by_membership_id                 String?
+  updated_by_membership_id                 String?
   classification_approved_by_membership_id String?
-  classification_approved_at DateTime?
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
+  classification_approved_at               DateTime?
+  created_at                               DateTime          @default(now())
+  updated_at                               DateTime          @updatedAt
 
-  tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  rules gst_rate_rules[]
-  history hsn_sac_catalog_history[]
-  classification_approver memberships? @relation("hsn_classification_approver", fields: [tenant_id, classification_approved_by_membership_id], references: [tenant_id, id], onDelete: Restrict)
+  tenant                  tenants                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  rules                   gst_rate_rules[]
+  history                 hsn_sac_catalog_history[]
+  classification_approver memberships?              @relation("hsn_classification_approver", fields: [tenant_id, classification_approved_by_membership_id], references: [tenant_id, id], onDelete: Restrict)
 
   @@unique([tenant_id, code])
   @@unique([tenant_id, id])
@@ -625,13 +646,13 @@ model hsn_sac_catalog {
 }
 
 model hsn_sac_catalog_history {
-  id                 String   @id @default(cuid())
-  tenant_id          String
-  catalog_id         String
-  action             String
-  snapshot           Json
+  id                  String   @id @default(cuid())
+  tenant_id           String
+  catalog_id          String
+  action              String
+  snapshot            Json
   actor_membership_id String?
-  created_at         DateTime @default(now())
+  created_at          DateTime @default(now())
 
   catalog hsn_sac_catalog @relation(fields: [tenant_id, catalog_id], references: [tenant_id, id], onDelete: Restrict)
 
@@ -639,27 +660,27 @@ model hsn_sac_catalog_history {
 }
 
 model gst_rate_rules {
-  id                 String   @id @default(cuid())
-  tenant_id          String
-  hsn_sac_catalog_id  String?
-  rule_version       String
-  tax_rate           Decimal? @db.Decimal(7, 4)
-  component_policy   String
-  approval_status    GstApprovalStatus @default(PENDING)
-  source_reference   String?
-  effective_from     DateTime
-  effective_to       DateTime?
-  is_active          Boolean  @default(false)
-  created_by_membership_id String?
+  id                        String            @id @default(cuid())
+  tenant_id                 String
+  hsn_sac_catalog_id        String?
+  rule_version              String
+  tax_rate                  Decimal?          @db.Decimal(7, 4)
+  component_policy          String
+  approval_status           GstApprovalStatus @default(PENDING)
+  source_reference          String?
+  effective_from            DateTime
+  effective_to              DateTime?
+  is_active                 Boolean           @default(false)
+  created_by_membership_id  String?
   approved_by_membership_id String?
-  approved_at         DateTime?
-  created_at         DateTime @default(now())
-  updated_at         DateTime @updatedAt
+  approved_at               DateTime?
+  created_at                DateTime          @default(now())
+  updated_at                DateTime          @updatedAt
 
-  tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  hsn_sac_catalog hsn_sac_catalog? @relation(fields: [tenant_id, hsn_sac_catalog_id], references: [tenant_id, id], onDelete: Restrict)
-  history gst_rate_rule_history[]
-  approver memberships? @relation("gst_rate_approver", fields: [tenant_id, approved_by_membership_id], references: [tenant_id, id], onDelete: Restrict)
+  tenant          tenants                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  hsn_sac_catalog hsn_sac_catalog?        @relation(fields: [tenant_id, hsn_sac_catalog_id], references: [tenant_id, id], onDelete: Restrict)
+  history         gst_rate_rule_history[]
+  approver        memberships?            @relation("gst_rate_approver", fields: [tenant_id, approved_by_membership_id], references: [tenant_id, id], onDelete: Restrict)
 
   @@unique([tenant_id, rule_version])
   @@unique([tenant_id, id])
@@ -668,13 +689,13 @@ model gst_rate_rules {
 }
 
 model gst_rate_rule_history {
-  id                 String   @id @default(cuid())
-  tenant_id          String
-  rule_id            String
-  action             String
-  snapshot           Json
+  id                  String   @id @default(cuid())
+  tenant_id           String
+  rule_id             String
+  action              String
+  snapshot            Json
   actor_membership_id String?
-  created_at         DateTime @default(now())
+  created_at          DateTime @default(now())
 
   rule gst_rate_rules @relation(fields: [tenant_id, rule_id], references: [tenant_id, id], onDelete: Restrict)
 
@@ -682,82 +703,82 @@ model gst_rate_rule_history {
 }
 
 model purchase_invoice_items {
-  id               String   @id @default(cuid())
-  tenant_id        String
-  purchase_id      String
-  product_id       String
-  batch_no         String
-  expiry_date      DateTime?
-  quantity         Int
-  free_qty         Int      @default(0)
-  purchase_rate    Decimal  @db.Decimal(12, 2)
-  discount_pct     Decimal? @db.Decimal(5, 2)
-  discount_amount  Decimal  @default(0) @db.Decimal(12, 2)
-  gst_rate         Decimal  @db.Decimal(5, 2)
-  gst_amount       Decimal  @default(0) @db.Decimal(12, 2)
-  hsn_code_snapshot String?
-  hsn_sac_catalog_id_snapshot String?
-  gst_rule_version_snapshot String?
+  id                                 String    @id @default(cuid())
+  tenant_id                          String
+  purchase_id                        String
+  product_id                         String
+  batch_no                           String
+  expiry_date                        DateTime?
+  quantity                           Int
+  free_qty                           Int       @default(0)
+  purchase_rate                      Decimal   @db.Decimal(12, 2)
+  discount_pct                       Decimal?  @db.Decimal(5, 2)
+  discount_amount                    Decimal   @default(0) @db.Decimal(12, 2)
+  gst_rate                           Decimal   @db.Decimal(5, 2)
+  gst_amount                         Decimal   @default(0) @db.Decimal(12, 2)
+  hsn_code_snapshot                  String?
+  hsn_sac_catalog_id_snapshot        String?
+  gst_rule_version_snapshot          String?
   gst_rule_source_reference_snapshot String?
-  calculated_taxable_value Decimal? @db.Decimal(20, 4)
-  calculated_cgst Decimal? @db.Decimal(20, 4)
-  calculated_sgst Decimal? @db.Decimal(20, 4)
-  calculated_igst Decimal? @db.Decimal(20, 4)
-  calculated_cess Decimal? @db.Decimal(20, 4)
-  accepted_taxable_value Decimal? @db.Decimal(20, 4)
-  accepted_cgst Decimal? @db.Decimal(20, 4)
-  accepted_sgst Decimal? @db.Decimal(20, 4)
-  accepted_igst Decimal? @db.Decimal(20, 4)
-  accepted_cess Decimal? @db.Decimal(20, 4)
-  accepted_line_total Decimal? @db.Decimal(20, 4)
-  accepted_value_source String?
-  accepted_reason String?
-  accepted_at DateTime?
-  accepted_by_membership_id String?
-  accepted_decision_id String?
-  recoverable_itc Decimal? @db.Decimal(20, 4)
-  non_recoverable_gst Decimal? @db.Decimal(20, 4)
-  inventory_acquisition_cost Decimal? @db.Decimal(20, 4)
-  inventory_valuation_status String @default("PENDING")
+  calculated_taxable_value           Decimal?  @db.Decimal(20, 4)
+  calculated_cgst                    Decimal?  @db.Decimal(20, 4)
+  calculated_sgst                    Decimal?  @db.Decimal(20, 4)
+  calculated_igst                    Decimal?  @db.Decimal(20, 4)
+  calculated_cess                    Decimal?  @db.Decimal(20, 4)
+  accepted_taxable_value             Decimal?  @db.Decimal(20, 4)
+  accepted_cgst                      Decimal?  @db.Decimal(20, 4)
+  accepted_sgst                      Decimal?  @db.Decimal(20, 4)
+  accepted_igst                      Decimal?  @db.Decimal(20, 4)
+  accepted_cess                      Decimal?  @db.Decimal(20, 4)
+  accepted_line_total                Decimal?  @db.Decimal(20, 4)
+  accepted_value_source              String?
+  accepted_reason                    String?
+  accepted_at                        DateTime?
+  accepted_by_membership_id          String?
+  accepted_decision_id               String?
+  recoverable_itc                    Decimal?  @db.Decimal(20, 4)
+  non_recoverable_gst                Decimal?  @db.Decimal(20, 4)
+  inventory_acquisition_cost         Decimal?  @db.Decimal(20, 4)
+  inventory_valuation_status         String    @default("PENDING")
   inventory_valuation_policy_version String?
-  gst_acceptance_status String @default("NOT_ACCEPTED")
-  gst_discrepancy_details Json?
-  gst_calculation_reference String?
-  gst_acceptance_reference String?
-  mrp              Decimal? @db.Decimal(12, 2)
-  sale_rate        Decimal? @db.Decimal(12, 2)
-  line_total       Decimal  @db.Decimal(14, 2)
-  created_at       DateTime @default(now())
+  gst_acceptance_status              String    @default("NOT_ACCEPTED")
+  gst_discrepancy_details            Json?
+  gst_calculation_reference          String?
+  gst_acceptance_reference           String?
+  mrp                                Decimal?  @db.Decimal(12, 2)
+  sale_rate                          Decimal?  @db.Decimal(12, 2)
+  line_total                         Decimal   @db.Decimal(14, 2)
+  created_at                         DateTime  @default(now())
 
-  tenant   tenants           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  purchase purchase_invoices @relation("purchase_invoice_items", fields: [tenant_id, purchase_id], references: [tenant_id, id], onDelete: Cascade, map: "purchase_invoice_items_purchase_fkey")
-  product  products          @relation(fields: [product_id], references: [id], onDelete: Restrict)
-  gst_line_evidence purchase_gst_line_evidence[] @relation("purchase_gst_line_evidence_item")
-  accepted_by memberships? @relation("purchase_line_acceptance_actor", fields: [tenant_id, accepted_by_membership_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_line_acceptance_actor_fkey")
-  accepted_decision purchase_gst_accounting_decisions? @relation("purchase_line_acceptance_decision", fields: [tenant_id, purchase_id, accepted_decision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_line_acceptance_decision_fkey")
+  tenant                        tenants                            @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  purchase                      purchase_invoices                  @relation("purchase_invoice_items", fields: [tenant_id, purchase_id], references: [tenant_id, id], onDelete: Cascade, map: "purchase_invoice_items_purchase_fkey")
+  product                       products                           @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  gst_line_evidence             purchase_gst_line_evidence[]       @relation("purchase_gst_line_evidence_item")
+  accepted_by                   memberships?                       @relation("purchase_line_acceptance_actor", fields: [tenant_id, accepted_by_membership_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_line_acceptance_actor_fkey")
+  accepted_decision             purchase_gst_accounting_decisions? @relation("purchase_line_acceptance_decision", fields: [tenant_id, purchase_id, accepted_decision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_line_acceptance_decision_fkey")
   inventory_valuation_decisions inventory_valuation_decisions[]
 
+  @@unique([tenant_id, purchase_id, id])
   @@index([tenant_id])
   @@index([purchase_id])
   @@index([product_id])
-  @@unique([tenant_id, purchase_id, id])
 }
 
 model inventory_valuation_decisions {
-  id                         String                           @id @default(cuid())
+  id                         String                             @id @default(cuid())
   tenant_id                  String
   purchase_invoice_id        String
   purchase_invoice_item_id   String
   product_batch_id           String
   stock_movement_id          String?
-  status                     InventoryValuationDecisionStatus @default(PENDING)
+  status                     InventoryValuationDecisionStatus   @default(PENDING)
   accounting_status          InventoryValuationAccountingStatus @default(PENDING_POLICY)
   eligibility_status         String
-  accepted_taxable_value     Decimal                          @db.Decimal(20, 4)
-  accepted_gst               Decimal                          @db.Decimal(20, 4)
+  accepted_taxable_value     Decimal                            @db.Decimal(20, 4)
+  accepted_gst               Decimal                            @db.Decimal(20, 4)
   recoverable_itc            Decimal?
   non_recoverable_gst        Decimal?
-  direct_acquisition_cost    Decimal                          @default(0) @db.Decimal(20, 4)
+  direct_acquisition_cost    Decimal                            @default(0) @db.Decimal(20, 4)
   inventory_acquisition_cost Decimal?
   policy_version             String
   decision_reference         String
@@ -766,18 +787,18 @@ model inventory_valuation_decisions {
   request_payload_hash       String
   supersedes_decision_id     String?
   decided_by_membership_id   String
-  decided_at                 DateTime                         @default(now())
-  created_at                 DateTime                         @default(now())
+  decided_at                 DateTime                           @default(now())
+  created_at                 DateTime                           @default(now())
 
-  tenant        tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  purchase      purchase_invoices     @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "inventory_valuation_decisions_purchase_fkey")
-  purchase_item purchase_invoice_items @relation(fields: [tenant_id, purchase_invoice_id, purchase_invoice_item_id], references: [tenant_id, purchase_id, id], onDelete: Restrict, map: "inventory_valuation_decisions_purchase_item_fkey")
-  batch         product_batches       @relation(fields: [tenant_id, product_batch_id], references: [tenant_id, id], onDelete: Restrict, map: "inventory_valuation_decisions_batch_fkey")
-  movement      stock_movements?      @relation(fields: [tenant_id, stock_movement_id], references: [tenant_id, id], onDelete: Restrict, map: "inventory_valuation_decisions_movement_fkey")
-  actor         memberships           @relation("inventory_valuation_decision_actor", fields: [tenant_id, decided_by_membership_id], references: [tenant_id, id], onDelete: Restrict)
-  supersedes    inventory_valuation_decisions? @relation("valuation_decision_supersession", fields: [tenant_id, supersedes_decision_id], references: [tenant_id, id], onDelete: Restrict)
-  successors    inventory_valuation_decisions[] @relation("valuation_decision_supersession")
-  adjustments  inventory_valuation_adjustments[] @relation("valuation_adjustment_result")
+  tenant            tenants                           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  purchase          purchase_invoices                 @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "inventory_valuation_decisions_purchase_fkey")
+  purchase_item     purchase_invoice_items            @relation(fields: [tenant_id, purchase_invoice_id, purchase_invoice_item_id], references: [tenant_id, purchase_id, id], onDelete: Restrict, map: "inventory_valuation_decisions_purchase_item_fkey")
+  batch             product_batches                   @relation(fields: [tenant_id, product_batch_id], references: [tenant_id, id], onDelete: Restrict, map: "inventory_valuation_decisions_batch_fkey")
+  movement          stock_movements?                  @relation(fields: [tenant_id, stock_movement_id], references: [tenant_id, id], onDelete: Restrict, map: "inventory_valuation_decisions_movement_fkey")
+  actor             memberships                       @relation("inventory_valuation_decision_actor", fields: [tenant_id, decided_by_membership_id], references: [tenant_id, id], onDelete: Restrict)
+  supersedes        inventory_valuation_decisions?    @relation("valuation_decision_supersession", fields: [tenant_id, supersedes_decision_id], references: [tenant_id, id], onDelete: Restrict)
+  successors        inventory_valuation_decisions[]   @relation("valuation_decision_supersession")
+  adjustments       inventory_valuation_adjustments[] @relation("valuation_adjustment_result")
   prior_adjustments inventory_valuation_adjustments[] @relation("valuation_adjustment_prior")
 
   @@unique([tenant_id, id])
@@ -788,24 +809,24 @@ model inventory_valuation_decisions {
 }
 
 model inventory_valuation_adjustments {
-  id                       String                         @id @default(cuid())
-  tenant_id                String
-  prior_decision_id        String
-  resulting_decision_id   String
-  adjustment_kind          InventoryValuationAdjustmentKind
-  recoverable_itc_delta    Decimal                        @db.Decimal(20, 4)
-  non_recoverable_gst_delta Decimal                       @db.Decimal(20, 4)
-  inventory_cost_delta     Decimal                        @db.Decimal(20, 4)
-  reason                   String
-  idempotency_key          String
-  request_payload_hash       String
+  id                        String                           @id @default(cuid())
+  tenant_id                 String
+  prior_decision_id         String
+  resulting_decision_id     String
+  adjustment_kind           InventoryValuationAdjustmentKind
+  recoverable_itc_delta     Decimal                          @db.Decimal(20, 4)
+  non_recoverable_gst_delta Decimal                          @db.Decimal(20, 4)
+  inventory_cost_delta      Decimal                          @db.Decimal(20, 4)
+  reason                    String
+  idempotency_key           String
+  request_payload_hash      String
   adjusted_by_membership_id String
-  adjusted_at              DateTime                       @default(now())
+  adjusted_at               DateTime                         @default(now())
 
-  tenant       tenants                       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  prior        inventory_valuation_decisions @relation("valuation_adjustment_prior", fields: [tenant_id, prior_decision_id], references: [tenant_id, id], onDelete: Restrict)
-  resulting    inventory_valuation_decisions @relation("valuation_adjustment_result", fields: [tenant_id, resulting_decision_id], references: [tenant_id, id], onDelete: Restrict)
-  actor        memberships                   @relation("inventory_valuation_adjustment_actor", fields: [tenant_id, adjusted_by_membership_id], references: [tenant_id, id], onDelete: Restrict)
+  tenant    tenants                       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  prior     inventory_valuation_decisions @relation("valuation_adjustment_prior", fields: [tenant_id, prior_decision_id], references: [tenant_id, id], onDelete: Restrict)
+  resulting inventory_valuation_decisions @relation("valuation_adjustment_result", fields: [tenant_id, resulting_decision_id], references: [tenant_id, id], onDelete: Restrict)
+  actor     memberships                   @relation("inventory_valuation_adjustment_actor", fields: [tenant_id, adjusted_by_membership_id], references: [tenant_id, id], onDelete: Restrict)
 
   @@unique([tenant_id, id])
   @@unique([tenant_id, idempotency_key], map: "inventory_valuation_adjustment_idempotency_key")
@@ -814,47 +835,47 @@ model inventory_valuation_adjustments {
 }
 
 model purchase_gst_evidence_revisions {
-  id                    String @id @default(cuid())
-  tenant_id             String
-  purchase_invoice_id   String
-  revision_number       Int
-  revision_kind         PurchaseGstEvidenceRevisionKind
-  supersedes_revision_id String?
-  source_document_reference String?
-  capture_channel       String
-  capture_provenance    Json?
-  correction_reason     String?
-  captured_at           DateTime @default(now())
-  captured_by_membership_id String
-  declared_taxable_value_raw String?
-  declared_cgst_raw String?
-  declared_sgst_raw String?
-  declared_igst_raw String?
-  declared_cess_raw String?
-  declared_invoice_total_raw String?
-  declared_round_off_raw String?
-  declared_taxable_value Decimal? @db.Decimal(20, 4)
-  declared_cgst Decimal? @db.Decimal(20, 4)
-  declared_sgst Decimal? @db.Decimal(20, 4)
-  declared_igst Decimal? @db.Decimal(20, 4)
-  declared_cess Decimal? @db.Decimal(20, 4)
-  declared_invoice_total Decimal? @db.Decimal(20, 4)
-  declared_round_off Decimal? @db.Decimal(20, 4)
-  supplier_state_at_transaction String?
+  id                             String                          @id @default(cuid())
+  tenant_id                      String
+  purchase_invoice_id            String
+  revision_number                Int
+  revision_kind                  PurchaseGstEvidenceRevisionKind
+  supersedes_revision_id         String?
+  source_document_reference      String?
+  capture_channel                String
+  capture_provenance             Json?
+  correction_reason              String?
+  captured_at                    DateTime                        @default(now())
+  captured_by_membership_id      String
+  declared_taxable_value_raw     String?
+  declared_cgst_raw              String?
+  declared_sgst_raw              String?
+  declared_igst_raw              String?
+  declared_cess_raw              String?
+  declared_invoice_total_raw     String?
+  declared_round_off_raw         String?
+  declared_taxable_value         Decimal?                        @db.Decimal(20, 4)
+  declared_cgst                  Decimal?                        @db.Decimal(20, 4)
+  declared_sgst                  Decimal?                        @db.Decimal(20, 4)
+  declared_igst                  Decimal?                        @db.Decimal(20, 4)
+  declared_cess                  Decimal?                        @db.Decimal(20, 4)
+  declared_invoice_total         Decimal?                        @db.Decimal(20, 4)
+  declared_round_off             Decimal?                        @db.Decimal(20, 4)
+  supplier_state_at_transaction  String?
   recipient_state_at_transaction String?
-  delivery_state_at_transaction String?
-  supply_scenario String?
-  supply_facts Json?
-  source_fingerprint String?
+  delivery_state_at_transaction  String?
+  supply_scenario                String?
+  supply_facts                   Json?
+  source_fingerprint             String?
 
-  purchase purchase_invoices @relation("purchase_invoice_gst_revisions", fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_evidence_purchase_fkey")
-  current_for_purchase purchase_invoices? @relation("purchase_current_gst_evidence_revision")
-  superseded_revision purchase_gst_evidence_revisions? @relation("purchase_gst_revision_chain", fields: [tenant_id, purchase_invoice_id, supersedes_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_evidence_supersedes_fkey")
-  correcting_revisions purchase_gst_evidence_revisions[] @relation("purchase_gst_revision_chain")
-  captured_by memberships @relation("purchase_gst_evidence_capture_actor", fields: [tenant_id, captured_by_membership_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_evidence_capture_actor_fkey")
-  line_evidence purchase_gst_line_evidence[]
-  calculations purchase_gst_calculations[]
-  decisions purchase_gst_accounting_decisions[]
+  purchase              purchase_invoices                    @relation("purchase_invoice_gst_revisions", fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_evidence_purchase_fkey")
+  current_for_purchase  purchase_invoices?                   @relation("purchase_current_gst_evidence_revision")
+  superseded_revision   purchase_gst_evidence_revisions?     @relation("purchase_gst_revision_chain", fields: [tenant_id, purchase_invoice_id, supersedes_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_evidence_supersedes_fkey")
+  correcting_revisions  purchase_gst_evidence_revisions[]    @relation("purchase_gst_revision_chain")
+  captured_by           memberships                          @relation("purchase_gst_evidence_capture_actor", fields: [tenant_id, captured_by_membership_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_evidence_capture_actor_fkey")
+  line_evidence         purchase_gst_line_evidence[]
+  calculations          purchase_gst_calculations[]
+  decisions             purchase_gst_accounting_decisions[]
   reconciliation_events purchase_gst_reconciliation_events[]
 
   @@unique([tenant_id, purchase_invoice_id, id], map: "purchase_gst_evidence_revision_identity_key")
@@ -866,28 +887,28 @@ model purchase_gst_evidence_revisions {
 }
 
 model purchase_gst_line_evidence {
-  id String @id @default(cuid())
-  tenant_id String
-  purchase_invoice_id String
-  evidence_revision_id String
-  purchase_invoice_item_id String
+  id                         String   @id @default(cuid())
+  tenant_id                  String
+  purchase_invoice_id        String
+  evidence_revision_id       String
+  purchase_invoice_item_id   String
   declared_taxable_value_raw String?
-  declared_cgst_raw String?
-  declared_sgst_raw String?
-  declared_igst_raw String?
-  declared_cess_raw String?
-  declared_line_total_raw String?
-  declared_taxable_value Decimal? @db.Decimal(20, 4)
-  declared_cgst Decimal? @db.Decimal(20, 4)
-  declared_sgst Decimal? @db.Decimal(20, 4)
-  declared_igst Decimal? @db.Decimal(20, 4)
-  declared_cess Decimal? @db.Decimal(20, 4)
-  declared_line_total Decimal? @db.Decimal(20, 4)
+  declared_cgst_raw          String?
+  declared_sgst_raw          String?
+  declared_igst_raw          String?
+  declared_cess_raw          String?
+  declared_line_total_raw    String?
+  declared_taxable_value     Decimal? @db.Decimal(20, 4)
+  declared_cgst              Decimal? @db.Decimal(20, 4)
+  declared_sgst              Decimal? @db.Decimal(20, 4)
+  declared_igst              Decimal? @db.Decimal(20, 4)
+  declared_cess              Decimal? @db.Decimal(20, 4)
+  declared_line_total        Decimal? @db.Decimal(20, 4)
 
-  tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  evidence_revision purchase_gst_evidence_revisions @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_line_evidence_revision_fkey")
-  purchase_item purchase_invoice_items @relation("purchase_gst_line_evidence_item", fields: [tenant_id, purchase_invoice_id, purchase_invoice_item_id], references: [tenant_id, purchase_id, id], onDelete: Restrict, map: "purchase_gst_line_evidence_item_fkey")
-  event_links purchase_gst_reconciliation_event_lines[]
+  tenant            tenants                                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  evidence_revision purchase_gst_evidence_revisions           @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_line_evidence_revision_fkey")
+  purchase_item     purchase_invoice_items                    @relation("purchase_gst_line_evidence_item", fields: [tenant_id, purchase_invoice_id, purchase_invoice_item_id], references: [tenant_id, purchase_id, id], onDelete: Restrict, map: "purchase_gst_line_evidence_item_fkey")
+  event_links       purchase_gst_reconciliation_event_lines[]
 
   @@unique([tenant_id, purchase_invoice_id, evidence_revision_id, id])
   @@unique([tenant_id, evidence_revision_id, purchase_invoice_item_id])
@@ -896,25 +917,25 @@ model purchase_gst_line_evidence {
 }
 
 model purchase_gst_calculations {
-  id String @id @default(cuid())
-  tenant_id String
-  purchase_invoice_id String
-  evidence_revision_id String
-  rule_version String
-  calculated_at DateTime @default(now())
-  calculation_provenance Json?
-  input_fingerprint String?
+  id                       String   @id @default(cuid())
+  tenant_id                String
+  purchase_invoice_id      String
+  evidence_revision_id     String
+  rule_version             String
+  calculated_at            DateTime @default(now())
+  calculation_provenance   Json?
+  input_fingerprint        String?
   calculated_taxable_value Decimal? @db.Decimal(20, 4)
-  calculated_cgst Decimal? @db.Decimal(20, 4)
-  calculated_sgst Decimal? @db.Decimal(20, 4)
-  calculated_igst Decimal? @db.Decimal(20, 4)
-  calculated_cess Decimal? @db.Decimal(20, 4)
+  calculated_cgst          Decimal? @db.Decimal(20, 4)
+  calculated_sgst          Decimal? @db.Decimal(20, 4)
+  calculated_igst          Decimal? @db.Decimal(20, 4)
+  calculated_cess          Decimal? @db.Decimal(20, 4)
   calculated_invoice_total Decimal? @db.Decimal(20, 4)
-  calculated_round_off Decimal? @db.Decimal(20, 4)
+  calculated_round_off     Decimal? @db.Decimal(20, 4)
 
-  purchase purchase_invoices @relation("purchase_gst_calculation_purchase", fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_calculation_purchase_fkey")
-  current_for_purchase purchase_invoices? @relation("purchase_current_gst_calculation")
-  evidence_revision purchase_gst_evidence_revisions @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_calculation_revision_fkey")
+  purchase             purchase_invoices                   @relation("purchase_gst_calculation_purchase", fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_calculation_purchase_fkey")
+  current_for_purchase purchase_invoices?                  @relation("purchase_current_gst_calculation")
+  evidence_revision    purchase_gst_evidence_revisions     @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_calculation_revision_fkey")
   accounting_decisions purchase_gst_accounting_decisions[] @relation("purchase_gst_decision_calculation")
 
   @@unique([tenant_id, purchase_invoice_id, id])
@@ -923,31 +944,31 @@ model purchase_gst_calculations {
 }
 
 model purchase_gst_accounting_decisions {
-  id String @id @default(cuid())
-  tenant_id String
-  purchase_invoice_id String
-  evidence_revision_id String
-  calculation_id String
-  accepted_taxable_value Decimal? @db.Decimal(20, 4)
-  accepted_cgst Decimal? @db.Decimal(20, 4)
-  accepted_sgst Decimal? @db.Decimal(20, 4)
-  accepted_igst Decimal? @db.Decimal(20, 4)
-  accepted_cess Decimal? @db.Decimal(20, 4)
-  accepted_invoice_total Decimal? @db.Decimal(20, 4)
-  accepted_round_off Decimal? @db.Decimal(20, 4)
-  accepted_value_source String
-  decision_reference String
-  decision_outcome String
-  rationale String
-  decided_at DateTime @default(now())
+  id                       String   @id @default(cuid())
+  tenant_id                String
+  purchase_invoice_id      String
+  evidence_revision_id     String
+  calculation_id           String
+  accepted_taxable_value   Decimal? @db.Decimal(20, 4)
+  accepted_cgst            Decimal? @db.Decimal(20, 4)
+  accepted_sgst            Decimal? @db.Decimal(20, 4)
+  accepted_igst            Decimal? @db.Decimal(20, 4)
+  accepted_cess            Decimal? @db.Decimal(20, 4)
+  accepted_invoice_total   Decimal? @db.Decimal(20, 4)
+  accepted_round_off       Decimal? @db.Decimal(20, 4)
+  accepted_value_source    String
+  decision_reference       String
+  decision_outcome         String
+  rationale                String
+  decided_at               DateTime @default(now())
   decided_by_membership_id String
 
-  purchase purchase_invoices @relation("purchase_gst_decision_purchase", fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_decision_purchase_fkey")
-  current_for_purchase purchase_invoices? @relation("purchase_current_gst_accounting_decision")
-  evidence_revision purchase_gst_evidence_revisions @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_decision_revision_fkey")
-  decided_by memberships @relation("purchase_gst_accounting_decision_actor", fields: [tenant_id, decided_by_membership_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_decision_actor_fkey")
-  calculation purchase_gst_calculations @relation("purchase_gst_decision_calculation", fields: [tenant_id, purchase_invoice_id, calculation_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_decision_calculation_fkey")
-  accepted_line_items purchase_invoice_items[] @relation("purchase_line_acceptance_decision")
+  purchase             purchase_invoices               @relation("purchase_gst_decision_purchase", fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_decision_purchase_fkey")
+  current_for_purchase purchase_invoices?              @relation("purchase_current_gst_accounting_decision")
+  evidence_revision    purchase_gst_evidence_revisions @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_decision_revision_fkey")
+  decided_by           memberships                     @relation("purchase_gst_accounting_decision_actor", fields: [tenant_id, decided_by_membership_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_decision_actor_fkey")
+  calculation          purchase_gst_calculations       @relation("purchase_gst_decision_calculation", fields: [tenant_id, purchase_invoice_id, calculation_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_decision_calculation_fkey")
+  accepted_line_items  purchase_invoice_items[]        @relation("purchase_line_acceptance_decision")
 
   @@unique([tenant_id, purchase_invoice_id, id], map: "purchase_gst_decision_identity_key")
   @@unique([tenant_id, purchase_invoice_id, evidence_revision_id, decision_reference], map: "purchase_gst_decision_reference_key")
@@ -955,31 +976,31 @@ model purchase_gst_accounting_decisions {
 }
 
 model purchase_gst_reconciliation_events {
-  id String @id @default(cuid())
-  tenant_id String
-  purchase_invoice_id String
+  id                   String                             @id @default(cuid())
+  tenant_id            String
+  purchase_invoice_id  String
   evidence_revision_id String
-  event_kind PurchaseGstReconciliationEventKind
-  from_status PurchaseGstReconciliationStatus?
-  to_status PurchaseGstReconciliationStatus?
-  operation String
-  idempotency_key String
+  event_kind           PurchaseGstReconciliationEventKind
+  from_status          PurchaseGstReconciliationStatus?
+  to_status            PurchaseGstReconciliationStatus?
+  operation            String
+  idempotency_key      String
   request_payload_hash String?
-  decision_reference String?
-  rule_version String?
-  actor_membership_id String?
-  declared_snapshot Json?
-  calculated_snapshot Json?
-  accepted_snapshot Json?
-  discrepancy_details Json?
-  metadata Json?
-  created_at DateTime @default(now())
+  decision_reference   String?
+  rule_version         String?
+  actor_membership_id  String?
+  declared_snapshot    Json?
+  calculated_snapshot  Json?
+  accepted_snapshot    Json?
+  discrepancy_details  Json?
+  metadata             Json?
+  created_at           DateTime                           @default(now())
 
-  tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  purchase purchase_invoices @relation("purchase_gst_event_purchase", fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_event_purchase_fkey")
-  evidence_revision purchase_gst_evidence_revisions @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_event_revision_fkey")
-  actor memberships? @relation("purchase_gst_event_actor", fields: [tenant_id, actor_membership_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_event_actor_fkey")
-  line_links purchase_gst_reconciliation_event_lines[]
+  tenant            tenants                                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  purchase          purchase_invoices                         @relation("purchase_gst_event_purchase", fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_event_purchase_fkey")
+  evidence_revision purchase_gst_evidence_revisions           @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id], references: [tenant_id, purchase_invoice_id, id], onDelete: Restrict, map: "purchase_gst_event_revision_fkey")
+  actor             memberships?                              @relation("purchase_gst_event_actor", fields: [tenant_id, actor_membership_id], references: [tenant_id, id], onDelete: Restrict, map: "purchase_gst_event_actor_fkey")
+  line_links        purchase_gst_reconciliation_event_lines[]
 
   @@unique([tenant_id, purchase_invoice_id, evidence_revision_id, id])
   @@unique([tenant_id, operation, idempotency_key])
@@ -990,15 +1011,15 @@ model purchase_gst_reconciliation_events {
 }
 
 model purchase_gst_reconciliation_event_lines {
-  id String @id @default(cuid())
-  tenant_id String
-  purchase_invoice_id String
+  id                   String @id @default(cuid())
+  tenant_id            String
+  purchase_invoice_id  String
   evidence_revision_id String
-  event_id String
-  line_evidence_id String
+  event_id             String
+  line_evidence_id     String
 
-  event purchase_gst_reconciliation_events @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id, event_id], references: [tenant_id, purchase_invoice_id, evidence_revision_id, id], onDelete: Restrict, map: "purchase_gst_event_line_event_fkey")
-  line_evidence purchase_gst_line_evidence @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id, line_evidence_id], references: [tenant_id, purchase_invoice_id, evidence_revision_id, id], onDelete: Restrict, map: "purchase_gst_event_line_evidence_fkey")
+  event         purchase_gst_reconciliation_events @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id, event_id], references: [tenant_id, purchase_invoice_id, evidence_revision_id, id], onDelete: Restrict, map: "purchase_gst_event_line_event_fkey")
+  line_evidence purchase_gst_line_evidence         @relation(fields: [tenant_id, purchase_invoice_id, evidence_revision_id, line_evidence_id], references: [tenant_id, purchase_invoice_id, evidence_revision_id, id], onDelete: Restrict, map: "purchase_gst_event_line_evidence_fkey")
 
   @@unique([tenant_id, purchase_invoice_id, evidence_revision_id, id], map: "purchase_gst_event_line_identity_key")
   @@unique([tenant_id, purchase_invoice_id, evidence_revision_id, event_id, line_evidence_id], map: "purchase_gst_event_line_pair_key")
@@ -1009,64 +1030,66 @@ model purchase_gst_reconciliation_event_lines {
 // ═══════════════════════════════════════════════════════════
 
 model sales_invoices {
-  id              String        @id @default(cuid())
-  tenant_id       String
-  invoice_no      String
-  customer_id     String?
-  invoice_date    DateTime
-  status          InvoiceStatus @default(DRAFT)
-  tax_data_status TaxDataStatus?
-  gst_treatment  String?
-  tax_mode       String? @default("EXCLUSIVE")
-  place_of_supply_code String?
-  is_cash_sale    Boolean       @default(false)
-  gross_amount    Decimal       @db.Decimal(14, 2)
-  total_discount  Decimal       @default(0) @db.Decimal(14, 2)
-  total_tax       Decimal       @default(0) @db.Decimal(14, 2)
-  round_off       Decimal       @default(0) @db.Decimal(10, 2)
-  net_amount      Decimal       @db.Decimal(14, 2)
-  paid_amount     Decimal       @default(0) @db.Decimal(14, 2)
-  balance_due     Decimal       @default(0) @db.Decimal(14, 2)
-  payment_mode    PaymentMode?
-  notes           String?
-  created_by      String?
-  finalized_at    DateTime?
-  cancelled_at    DateTime?
-  cancelled_by    String?
-  cancel_reason   String?
-  seller_name_snapshot String?
-  seller_address_line_1_snapshot String?
-  seller_address_line_2_snapshot String?
-  seller_city_snapshot String?
-  seller_state_snapshot String?
-  seller_pincode_snapshot String?
-  seller_gstin_snapshot String?
-  customer_name_snapshot String?
+  id                               String         @id @default(cuid())
+  tenant_id                        String
+  invoice_no                       String
+  customer_id                      String?
+  invoice_date                     DateTime
+  due_date        DateTime?
+  status                           InvoiceStatus  @default(DRAFT)
+  tax_data_status                  TaxDataStatus?
+  gst_treatment                    String?
+  tax_mode                         String?        @default("EXCLUSIVE")
+  place_of_supply_code             String?
+  is_cash_sale                     Boolean        @default(false)
+  gross_amount                     Decimal        @db.Decimal(14, 2)
+  total_discount                   Decimal        @default(0) @db.Decimal(14, 2)
+  total_tax                        Decimal        @default(0) @db.Decimal(14, 2)
+  round_off                        Decimal        @default(0) @db.Decimal(10, 2)
+  net_amount                       Decimal        @db.Decimal(14, 2)
+  paid_amount                      Decimal        @default(0) @db.Decimal(14, 2)
+  balance_due                      Decimal        @default(0) @db.Decimal(14, 2)
+  payment_mode                     PaymentMode?
+  notes                            String?
+  created_by                       String?
+  finalized_at                     DateTime?
+  cancelled_at                     DateTime?
+  cancelled_by                     String?
+  cancel_reason                    String?
+  seller_name_snapshot             String?
+  seller_address_line_1_snapshot   String?
+  seller_address_line_2_snapshot   String?
+  seller_city_snapshot             String?
+  seller_state_snapshot            String?
+  seller_pincode_snapshot          String?
+  seller_gstin_snapshot            String?
+  customer_name_snapshot           String?
   customer_address_line_1_snapshot String?
   customer_address_line_2_snapshot String?
-  customer_city_snapshot String?
-  customer_state_snapshot String?
-  customer_pincode_snapshot String?
-  customer_gstin_snapshot String?
-  created_at      DateTime      @default(now())
-  updated_at      DateTime      @updatedAt
+  customer_city_snapshot           String?
+  customer_state_snapshot          String?
+  customer_pincode_snapshot        String?
+  customer_gstin_snapshot          String?
+  created_at                       DateTime       @default(now())
+  updated_at                       DateTime       @updatedAt
   finalized_snapshot Json?
   finalized_snapshot_hash String?
-  rendering_version String?
-  pdf_artifact_key String?
+  rendering_version                String?
+  pdf_artifact_key                 String?
   pdf_generation_status String @default("PENDING")
-  pdf_generated_at DateTime?
-  pdf_rendering_version String?
-  pdf_byte_size Int?
-  pdf_checksum_sha256 String?
-  pdf_error String?
+  pdf_generated_at                 DateTime?
+  pdf_rendering_version            String?
+  pdf_byte_size                    Int?
+  pdf_checksum_sha256              String?
+  pdf_error                        String?
 
-  tenant   tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  customer customers?          @relation(fields: [customer_id], references: [id])
-  items    sales_invoice_items[]
-  payments payments[]
-  ledger   customer_ledgers[]
-  posting_operations sales_posting_operations[]
+  tenant              tenants                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  customer            customers?                 @relation(fields: [customer_id], references: [id])
+  items               sales_invoice_items[]
+  payments            payments[]
+  ledger              customer_ledgers[]
+  payment_allocations payment_allocations[]
+  posting_operations  sales_posting_operations[]
 
   @@unique([tenant_id, invoice_no])
   @@unique([tenant_id, id])
@@ -1077,16 +1100,16 @@ model sales_invoices {
 }
 
 model sales_posting_operations {
-  id                 String   @id @default(cuid())
-  tenant_id          String
-  sales_invoice_id   String
-  idempotency_key    String
+  id                   String   @id @default(cuid())
+  tenant_id            String
+  sales_invoice_id     String
+  idempotency_key      String
   request_payload_hash String
-  status             String   @default("PROCESSING")
-  result_invoice_no  String?
-  result_sales_id    String?
-  created_at         DateTime @default(now())
-  updated_at         DateTime @updatedAt
+  status               String   @default("PROCESSING")
+  result_invoice_no    String?
+  result_sales_id      String?
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
 
   tenant tenants        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   sale   sales_invoices @relation(fields: [tenant_id, sales_invoice_id], references: [tenant_id, id], onDelete: Restrict)
@@ -1097,34 +1120,34 @@ model sales_posting_operations {
 }
 
 model sales_invoice_items {
-  id              String   @id @default(cuid())
-  tenant_id       String
-  invoice_id      String
-  product_id      String
-  batch_id        String?
-  batch_no        String
-  quantity        Int
-  free_qty        Int      @default(0)
-  sale_rate       Decimal  @db.Decimal(12, 2)
-  mrp             Decimal? @db.Decimal(12, 2)
-  discount_pct    Decimal? @db.Decimal(5, 2)
-  discount_amount Decimal  @default(0) @db.Decimal(12, 2)
-  taxable_amount  Decimal? @db.Decimal(14, 2)
-  gst_rate        Decimal  @db.Decimal(5, 2)
-  gst_amount      Decimal  @default(0) @db.Decimal(12, 2)
-  cgst_amount     Decimal? @db.Decimal(12, 2)
-  sgst_amount     Decimal? @db.Decimal(12, 2)
-  igst_amount     Decimal? @db.Decimal(12, 2)
-  cess_amount     Decimal? @db.Decimal(12, 2)
-  hsn_sac_catalog_id_snapshot String?
-  gst_rule_version_snapshot String?
+  id                                 String    @id @default(cuid())
+  tenant_id                          String
+  invoice_id                         String
+  product_id                         String
+  batch_id                           String?
+  batch_no                           String
+  quantity                           Int
+  free_qty                           Int       @default(0)
+  sale_rate                          Decimal   @db.Decimal(12, 2)
+  mrp                                Decimal?  @db.Decimal(12, 2)
+  discount_pct                       Decimal?  @db.Decimal(5, 2)
+  discount_amount                    Decimal   @default(0) @db.Decimal(12, 2)
+  taxable_amount                     Decimal?  @db.Decimal(14, 2)
+  gst_rate                           Decimal   @db.Decimal(5, 2)
+  gst_amount                         Decimal   @default(0) @db.Decimal(12, 2)
+  cgst_amount                        Decimal?  @db.Decimal(12, 2)
+  sgst_amount                        Decimal?  @db.Decimal(12, 2)
+  igst_amount                        Decimal?  @db.Decimal(12, 2)
+  cess_amount                        Decimal?  @db.Decimal(12, 2)
+  hsn_sac_catalog_id_snapshot        String?
+  gst_rule_version_snapshot          String?
   gst_rule_source_reference_snapshot String?
-  product_name_snapshot String?
-  generic_name_snapshot String?
-  hsn_code_snapshot String?
-  batch_expiry_snapshot DateTime?
-  line_total      Decimal  @db.Decimal(14, 2)
-  created_at      DateTime @default(now())
+  product_name_snapshot              String?
+  generic_name_snapshot              String?
+  hsn_code_snapshot                  String?
+  batch_expiry_snapshot              DateTime?
+  line_total                         Decimal   @db.Decimal(14, 2)
+  created_at                         DateTime  @default(now())
 
   tenant  tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   invoice sales_invoices   @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
@@ -1138,33 +1161,125 @@ model sales_invoice_items {
 }
 
 model payments {
-  id            String          @id @default(cuid())
-  tenant_id     String
-  customer_id   String?
-  supplier_id   String?
-  invoice_id    String?
-  entry_type    LedgerEntryType
-  payment_mode  PaymentMode?
-  amount        Decimal         @db.Decimal(14, 2)
-  reference_no  String?
-  payment_date  DateTime
-  notes         String?
-  idempotency_key String?
+  id                   String          @id @default(cuid())
+  tenant_id            String
+  customer_id          String?
+  supplier_id          String?
+  invoice_id           String?
+  entry_type           LedgerEntryType
+  payment_mode         PaymentMode?
+  amount               Decimal         @db.Decimal(14, 2)
+  reference_no         String?
+  payment_date         DateTime
+  notes                String?
+  idempotency_key      String?
   request_payload_hash String?
-  created_by    String?
-  created_at    DateTime        @default(now())
+  created_by           String?
+  created_at           DateTime        @default(now())
 
-  tenant    tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  customer  customers?          @relation(fields: [customer_id], references: [id])
-  supplier  suppliers?          @relation(fields: [supplier_id], references: [id])
-  invoice   sales_invoices?     @relation(fields: [invoice_id], references: [id])
+  tenant      tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  customer    customers?            @relation(fields: [customer_id], references: [id])
+  supplier    suppliers?            @relation(fields: [supplier_id], references: [id])
+  invoice     sales_invoices?       @relation(fields: [invoice_id], references: [id])
+  allocations payment_allocations[]
+  refunds     payment_refunds[]
+  reversals   payment_reversals[]
 
+  @@unique([tenant_id, idempotency_key], map: "payments_tenant_idempotency_key")
+  @@unique([tenant_id, id])
   @@index([tenant_id])
   @@index([tenant_id, customer_id])
   @@index([tenant_id, supplier_id])
   @@index([tenant_id, invoice_id])
   @@index([tenant_id, payment_date])
-  @@unique([tenant_id, idempotency_key], map: "payments_tenant_idempotency_key")
+}
+
+model payment_allocations {
+  id                   String   @id @default(cuid())
+  tenant_id            String
+  payment_id           String
+  sales_invoice_id     String?
+  purchase_invoice_id  String?
+  amount               Decimal  @db.Decimal(14, 2)
+  idempotency_key      String
+  request_payload_hash String
+  allocated_at         DateTime @default(now())
+  allocated_by         String?
+  legacy_unallocated   Boolean  @default(false)
+  created_at           DateTime @default(now())
+
+  tenant           tenants               @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  payment          payments              @relation(fields: [tenant_id, payment_id], references: [tenant_id, id], onDelete: Restrict)
+  sales_invoice    sales_invoices?       @relation(fields: [tenant_id, sales_invoice_id], references: [tenant_id, id], onDelete: Restrict)
+  purchase_invoice purchase_invoices?    @relation(fields: [tenant_id, purchase_invoice_id], references: [tenant_id, id], onDelete: Restrict)
+  reversal         allocation_reversals?
+
+  @@unique([tenant_id, id])
+  @@unique([tenant_id, idempotency_key], map: "payment_allocations_tenant_idempotency_key")
+  @@index([tenant_id, payment_id, allocated_at])
+  @@index([tenant_id, sales_invoice_id, allocated_at])
+  @@index([tenant_id, purchase_invoice_id, allocated_at])
+}
+
+model allocation_reversals {
+  id                   String   @id @default(cuid())
+  tenant_id            String
+  allocation_id        String
+  amount               Decimal  @db.Decimal(14, 2)
+  idempotency_key      String
+  request_payload_hash String
+  reversed_at          DateTime @default(now())
+  reversed_by          String?
+  created_at           DateTime @default(now())
+
+  tenant     tenants             @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  allocation payment_allocations @relation(fields: [tenant_id, allocation_id], references: [tenant_id, id], onDelete: Restrict)
+
+  @@unique([tenant_id, allocation_id], map: "allocation_reversal_once")
+  @@unique([tenant_id, idempotency_key], map: "allocation_reversals_tenant_idempotency_key")
+  @@index([tenant_id, reversed_at])
+}
+
+model payment_refunds {
+  id                   String                @id @default(cuid())
+  tenant_id            String
+  payment_id           String
+  amount               Decimal               @db.Decimal(14, 2)
+  status               FinancialRefundStatus @default(REQUESTED)
+  idempotency_key      String
+  request_payload_hash String
+  requested_at         DateTime              @default(now())
+  completed_at         DateTime?
+  requested_by         String?
+  completed_by         String?
+  reason               String?
+
+  tenant  tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  payment payments @relation(fields: [tenant_id, payment_id], references: [tenant_id, id], onDelete: Restrict)
+
+  @@unique([tenant_id, id])
+  @@unique([tenant_id, idempotency_key], map: "payment_refunds_tenant_idempotency_key")
+  @@index([tenant_id, payment_id, status])
+}
+
+model payment_reversals {
+  id                   String                  @id @default(cuid())
+  tenant_id            String
+  payment_id           String
+  amount               Decimal                 @db.Decimal(14, 2)
+  status               FinancialReversalStatus @default(COMPLETED)
+  idempotency_key      String
+  request_payload_hash String
+  reversed_at          DateTime                @default(now())
+  reversed_by          String?
+  reason               String?
+
+  tenant  tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  payment payments @relation(fields: [tenant_id, payment_id], references: [tenant_id, id], onDelete: Restrict)
+
+  @@unique([tenant_id, payment_id], map: "payment_reversal_once")
+  @@unique([tenant_id, idempotency_key], map: "payment_reversals_tenant_idempotency_key")
+  @@index([tenant_id, reversed_at])
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1172,33 +1287,33 @@ model payments {
 // ═══════════════════════════════════════════════════════════
 
 model stock_movements {
-  id             String             @id @default(cuid())
-  tenant_id      String
-  product_id     String
-  batch_id       String?
-  movement_type  StockMovementType
-  quantity_delta Int
-  reference_type String?
-  reference_id   String?
-  unit_rate      Decimal?           @db.Decimal(12, 2)
-  inventory_acquisition_cost Decimal? @db.Decimal(20, 4)
-  inventory_valuation_status String @default("PENDING")
+  id                                 String            @id @default(cuid())
+  tenant_id                          String
+  product_id                         String
+  batch_id                           String?
+  movement_type                      StockMovementType
+  quantity_delta                     Int
+  reference_type                     String?
+  reference_id                       String?
+  unit_rate                          Decimal?          @db.Decimal(12, 2)
+  inventory_acquisition_cost         Decimal?          @db.Decimal(20, 4)
+  inventory_valuation_status         String            @default("PENDING")
   inventory_valuation_policy_version String?
-  notes          String?
-  created_by     String?
-  created_at     DateTime           @default(now())
+  notes                              String?
+  created_by                         String?
+  created_at                         DateTime          @default(now())
 
-  tenant  tenants         @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  product products        @relation(fields: [product_id], references: [id], onDelete: Cascade)
-  batch   product_batches? @relation(fields: [batch_id], references: [id])
+  tenant                        tenants                         @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  product                       products                        @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  batch                         product_batches?                @relation(fields: [batch_id], references: [id])
   inventory_valuation_decisions inventory_valuation_decisions[]
 
+  @@unique([tenant_id, id])
   @@index([tenant_id])
   @@index([tenant_id, product_id])
   @@index([tenant_id, batch_id])
   @@index([tenant_id, movement_type])
   @@index([tenant_id, created_at])
-  @@unique([tenant_id, id])
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1206,23 +1321,23 @@ model stock_movements {
 // ═══════════════════════════════════════════════════════════
 
 model customer_ledgers {
-  id           String          @id @default(cuid())
-  tenant_id    String
-  customer_id  String
-  entry_type   LedgerEntryType
-  debit        Decimal         @default(0) @db.Decimal(14, 2)
-  credit       Decimal         @default(0) @db.Decimal(14, 2)
-  balance      Decimal         @db.Decimal(14, 2)
+  id             String          @id @default(cuid())
+  tenant_id      String
+  customer_id    String
+  entry_type     LedgerEntryType
+  debit          Decimal         @default(0) @db.Decimal(14, 2)
+  credit         Decimal         @default(0) @db.Decimal(14, 2)
+  balance        Decimal         @db.Decimal(14, 2)
   reference_type String?
-  reference_id String?
-  invoice_id   String?
-  narration    String?
-  entry_date   DateTime
-  created_at   DateTime        @default(now())
+  reference_id   String?
+  invoice_id     String?
+  narration      String?
+  entry_date     DateTime
+  created_at     DateTime        @default(now())
 
-  tenant    tenants          @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  customer  customers        @relation(fields: [customer_id], references: [id], onDelete: Cascade)
-  invoice   sales_invoices?  @relation(fields: [invoice_id], references: [id])
+  tenant   tenants         @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  customer customers       @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  invoice  sales_invoices? @relation(fields: [invoice_id], references: [id])
 
   @@index([tenant_id])
   @@index([tenant_id, customer_id])
@@ -1230,23 +1345,23 @@ model customer_ledgers {
 }
 
 model supplier_ledgers {
-  id           String          @id @default(cuid())
-  tenant_id    String
-  supplier_id  String
-  entry_type   LedgerEntryType
-  debit        Decimal         @default(0) @db.Decimal(14, 2)
-  credit       Decimal         @default(0) @db.Decimal(14, 2)
-  balance      Decimal         @db.Decimal(14, 2)
+  id             String          @id @default(cuid())
+  tenant_id      String
+  supplier_id    String
+  entry_type     LedgerEntryType
+  debit          Decimal         @default(0) @db.Decimal(14, 2)
+  credit         Decimal         @default(0) @db.Decimal(14, 2)
+  balance        Decimal         @db.Decimal(14, 2)
   reference_type String?
-  reference_id String?
-  purchase_id  String?
-  narration    String?
-  entry_date   DateTime
-  created_at   DateTime        @default(now())
+  reference_id   String?
+  purchase_id    String?
+  narration      String?
+  entry_date     DateTime
+  created_at     DateTime        @default(now())
 
-  tenant    tenants            @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  supplier  suppliers          @relation(fields: [supplier_id], references: [id], onDelete: Cascade)
-  purchase  purchase_invoices? @relation(fields: [purchase_id], references: [id])
+  tenant   tenants            @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  supplier suppliers          @relation(fields: [supplier_id], references: [id], onDelete: Cascade)
+  purchase purchase_invoices? @relation(fields: [purchase_id], references: [id])
 
   @@index([tenant_id])
   @@index([tenant_id, supplier_id])
@@ -1258,16 +1373,16 @@ model supplier_ledgers {
 // ═══════════════════════════════════════════════════════════
 
 model audit_logs {
-  id            String          @id @default(cuid())
-  tenant_id     String
-  event_type    AuditEventType
-  actor_id      String?
-  target_type   String?
-  target_id     String?
-  metadata      Json?
-  ip_address    String?
-  user_agent    String?
-  created_at    DateTime        @default(now())
+  id          String         @id @default(cuid())
+  tenant_id   String
+  event_type  AuditEventType
+  actor_id    String?
+  target_type String?
+  target_id   String?
+  metadata    Json?
+  ip_address  String?
+  user_agent  String?
+  created_at  DateTime       @default(now())
 
   tenant tenants @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   actor  users?  @relation("audit_actor", fields: [actor_id], references: [id], onDelete: SetNull)

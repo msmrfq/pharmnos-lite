@@ -1,0 +1,216 @@
+- generic [active] [ref=f20e1]:
+  - generic [ref=f20e2]:
+    - complementary [ref=f20e3]:
+      - generic [ref=f20e4]:
+        - link "Pharmnos Lite" [ref=f20e6] [cursor=pointer]:
+          - /url: /dashboard
+        - generic [ref=f20e12]:
+          - paragraph [ref=f20e13]: Business
+          - paragraph [ref=f20e14]: Your Pharmacy
+        - navigation [ref=f20e15]:
+          - link "Dashboard" [ref=f20e16] [cursor=pointer]:
+            - /url: /dashboard
+          - link "Billing" [ref=f20e23] [cursor=pointer]:
+            - /url: /billing
+          - link "Purchases" [ref=f20e28] [cursor=pointer]:
+            - /url: /purchases
+          - link "Inventory" [ref=f20e34] [cursor=pointer]:
+            - /url: /inventory
+          - link "Customers" [ref=f20e39] [cursor=pointer]:
+            - /url: /customers
+          - link "Suppliers" [ref=f20e46] [cursor=pointer]:
+            - /url: /suppliers
+          - link "Reports" [ref=f20e53] [cursor=pointer]:
+            - /url: /reports
+          - link "Audit Log" [ref=f20e57] [cursor=pointer]:
+            - /url: /audit
+          - link "Settings" [ref=f20e63] [cursor=pointer]:
+            - /url: /settings
+        - button "US User Administrator" [ref=f20e69] [cursor=pointer]:
+          - generic [ref=f20e70]: US
+          - generic [ref=f20e72]:
+            - paragraph [ref=f20e73]: User
+            - paragraph [ref=f20e74]: Administrator
+    - generic [ref=f20e77]:
+      - banner [ref=f20e78]:
+        - generic [ref=f20e79]:
+          - textbox "Search products, customers, invoices..." [ref=f20e82]
+          - generic [ref=f20e83]:
+            - button "Notifications" [ref=f20e84] [cursor=pointer]
+            - button "US User" [ref=f20e86] [cursor=pointer]:
+              - generic [ref=f20e87]: US
+              - generic [ref=f20e89]: User
+      - generic [ref=f20e90]:
+        - generic [ref=f20e92]:
+          - link "Back" [ref=f20e93] [cursor=pointer]:
+            - /url: /purchases
+          - generic [ref=f20e94]:
+            - generic [ref=f20e95]: New purchase entry
+            - paragraph [ref=f20e96]: Record stock received from a supplier. Batches are created when you confirm inward (finalize).
+            - paragraph [ref=f20e97]: Database is not configured — showing empty form.
+        - generic [ref=f20e99]:
+          - generic [ref=f20e100]:
+            - generic [ref=f20e101]:
+              - generic [ref=f20e102]: Supplier & invoice
+              - generic [ref=f20e104]:
+                - generic [ref=f20e105]:
+                  - text: Supplier *
+                  - combobox [ref=f20e106] [cursor=pointer]:
+                    - generic: Select supplier
+                  - combobox [aria-hidden] [ref=f20e109]
+                - generic [ref=f20e110]:
+                  - text: GST Treatment *
+                  - combobox "GST Treatment *" [ref=f20e111] [cursor=pointer]:
+                    - generic: Select GST treatment
+                  - combobox [aria-hidden] [ref=f20e114]
+                  - paragraph [ref=f20e115]: Deferred categories remain visible but cannot be finalized until their rules are approved.
+                - generic [ref=f20e116]:
+                  - text: Tax mode *
+                  - combobox "Tax mode *" [ref=f20e117] [cursor=pointer]
+                  - combobox [aria-hidden] [ref=f20e120]
+                - generic [ref=f20e121]:
+                  - text: Supplier invoice no.
+                  - textbox "Supplier invoice no." [ref=f20e122]:
+                    - /placeholder: e.g. INV/CIP/00219
+                - generic [ref=f20e123]:
+                  - text: Supplier invoice document
+                  - button "Supplier invoice document" [ref=f20e124]
+                  - paragraph [ref=f20e125]: Optional PDF or image, maximum 10 MB.
+                - generic [ref=f20e126]:
+                  - text: Supplier taxable value
+                  - spinbutton "Supplier taxable value" [ref=f20e127]
+                - generic [ref=f20e128]:
+                  - text: Supplier CGST
+                  - spinbutton "Supplier CGST" [ref=f20e129]
+                - generic [ref=f20e130]:
+                  - text: Supplier SGST
+                  - spinbutton "Supplier SGST" [ref=f20e131]
+                - generic [ref=f20e132]:
+                  - text: Supplier IGST
+                  - spinbutton "Supplier IGST" [ref=f20e133]
+                - generic [ref=f20e134]:
+                  - text: Supplier cess
+                  - spinbutton "Supplier cess" [ref=f20e135]
+                - generic [ref=f20e136]:
+                  - text: Supplier invoice total
+                  - spinbutton "Supplier invoice total" [ref=f20e137]
+                - generic [ref=f20e138]:
+                  - text: Supplier round-off
+                  - spinbutton "Supplier round-off" [ref=f20e139]
+                - generic [ref=f20e140]:
+                  - text: Supplier state at transaction
+                  - combobox "Supplier state at transaction" [ref=f20e141]
+                - generic [ref=f20e142]:
+                  - text: Recipient state at transaction
+                  - combobox "Recipient state at transaction" [ref=f20e143]
+                - generic [ref=f20e144]:
+                  - text: Delivery state at transaction
+                  - combobox "Delivery state at transaction" [ref=f20e145]
+                - generic [ref=f20e146]:
+                  - text: Supply scenario
+                  - combobox "Supply scenario" [ref=f20e147]:
+                    - option "Select scenario when capturing GST evidence" [disabled] [selected]
+                    - option "Intra-state"
+                    - option "Inter-state"
+                - generic [ref=f20e148]:
+                  - text: Purchase date
+                  - textbox "Purchase date" [ref=f20e149]: 2026-11-07
+                - generic [ref=f20e150]:
+                  - text: Notes
+                  - textbox "Notes" [ref=f20e151]:
+                    - /placeholder: Optional internal notes…
+            - generic [ref=f20e152]:
+              - generic [ref=f20e153]:
+                - generic [ref=f20e154]: Items received
+                - button "Add item" [ref=f20e155] [cursor=pointer]
+              - table [ref=f20e158]:
+                - rowgroup [ref=f20e159]:
+                  - row [ref=f20e160]:
+                    - columnheader "Product *" [ref=f20e161]
+                    - columnheader "Batch *" [ref=f20e162]
+                    - columnheader "Expiry" [ref=f20e163]
+                    - columnheader "Qty" [ref=f20e164]
+                    - columnheader "MRP" [ref=f20e165]
+                    - columnheader "Purchase rate" [ref=f20e166]
+                    - columnheader "Disc %" [ref=f20e167]
+                    - columnheader "GST %" [ref=f20e168]
+                    - columnheader "Line" [ref=f20e169]
+                    - columnheader [ref=f20e170]
+                - rowgroup [ref=f20e171]:
+                  - row [ref=f20e172]:
+                    - cell [ref=f20e173]:
+                      - generic [ref=f20e179]:
+                        - combobox [ref=f20e180] [cursor=pointer]:
+                          - generic: Select product
+                        - combobox [aria-hidden] [ref=f20e183]
+                    - cell [ref=f20e184]:
+                      - textbox "BATCH-01" [ref=f20e185]
+                    - cell [ref=f20e186]:
+                      - textbox [ref=f20e187]
+                    - cell [ref=f20e188]:
+                      - spinbutton [ref=f20e189]: "1"
+                    - cell [ref=f20e190]:
+                      - spinbutton [ref=f20e191]: "0"
+                    - cell [ref=f20e192]:
+                      - spinbutton [ref=f20e193]: "0"
+                    - cell [ref=f20e194]:
+                      - spinbutton [ref=f20e195]: "0"
+                    - cell [ref=f20e196]:
+                      - spinbutton [ref=f20e197]: "0"
+                    - cell "₹ 0.00" [ref=f20e198]
+                    - cell [ref=f20e199]:
+                      - generic [ref=f20e200]:
+                        - button "Remove line" [disabled]
+                  - row [ref=f20e201]:
+                    - cell "Optional supplier line evidence — leave blank when the invoice does not provide line-level values. Taxable CGST SGST IGST Cess Line total" [ref=f20e202]:
+                      - generic [ref=f20e203]:
+                        - generic [ref=f20e204]: Optional supplier line evidence — leave blank when the invoice does not provide line-level values.
+                        - generic [ref=f20e205]:
+                          - text: Taxable
+                          - spinbutton "Taxable" [ref=f20e206]
+                        - generic [ref=f20e207]:
+                          - text: CGST
+                          - spinbutton "CGST" [ref=f20e208]
+                        - generic [ref=f20e209]:
+                          - text: SGST
+                          - spinbutton "SGST" [ref=f20e210]
+                        - generic [ref=f20e211]:
+                          - text: IGST
+                          - spinbutton "IGST" [ref=f20e212]
+                        - generic [ref=f20e213]:
+                          - text: Cess
+                          - spinbutton "Cess" [ref=f20e214]
+                        - generic [ref=f20e215]:
+                          - text: Line total
+                          - spinbutton "Line total" [ref=f20e216]
+          - generic [ref=f20e217]:
+            - generic [ref=f20e218]:
+              - generic [ref=f20e219]:
+                - generic [ref=f20e220]: Totals
+                - paragraph [ref=f20e221]: Client-side preview only — server recomputes on finalize.
+              - generic [ref=f20e222]:
+                - generic [ref=f20e223]:
+                  - generic [ref=f20e224]: Goods value
+                  - generic [ref=f20e225]: ₹ 0.00
+                - generic [ref=f20e226]:
+                  - generic [ref=f20e227]: Discount
+                  - generic [ref=f20e228]: "- ₹ 0.00"
+                - generic [ref=f20e229]:
+                  - generic [ref=f20e230]: Tax (GST)
+                  - generic [ref=f20e231]: + ₹ 0.00
+                - generic [ref=f20e232]:
+                  - generic [ref=f20e233]: Round off
+                  - generic [ref=f20e234]: —
+                - generic [ref=f20e235]:
+                  - generic [ref=f20e236]: Payable (net)
+                  - generic [ref=f20e237]: ₹ 0.00
+            - generic [ref=f20e238]:
+              - generic [ref=f20e239]: Stock impact
+              - generic [ref=f20e241]:
+                - paragraph [ref=f20e242]: Saving this form records a DRAFT. Finalize a draft from the purchase list to create new batches and inward stock movements.
+                - generic [ref=f20e243]:
+                  - link "Cancel" [ref=f20e244] [cursor=pointer]:
+                    - /url: /purchases
+                  - button "Save draft" [ref=f20e245] [cursor=pointer]
+  - region "Notifications (F8)":
+    - list

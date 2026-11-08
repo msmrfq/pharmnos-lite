@@ -1,0 +1,62 @@
+{
+  "evidenceVersion": 1,
+  "campaign": "disposable-supabase-auth-gotrue-infrastructure",
+  "runId": "authinfra_7035ecb2a7",
+  "sourceRevision": "working-tree",
+  "status": "PASS_WITH_BROWSER_APP_INTEGRATION_BLOCKED",
+  "target": {
+    "host": "127.0.0.1",
+    "authPort": 59991,
+    "composeProject": "pharmnoslite-authinfra_7035ecb2a7",
+    "services": [
+      {
+        "name": "auth-e2e-gotrue",
+        "image": "public.ecr.aws/supabase/gotrue:v2.197.0",
+        "role": "Supabase-compatible Auth/GoTrue"
+      },
+      {
+        "name": "auth-e2e-postgres",
+        "image": "postgres:17-alpine",
+        "role": "isolated Auth metadata database"
+      },
+      {
+        "name": "auth-e2e-gateway",
+        "image": "public.ecr.aws/supabase/kong:2.8.1",
+        "role": "loopback API prefix gateway"
+      }
+    ],
+    "networkExposure": "loopback-only",
+    "storage": "tmpfs-only",
+    "financialDatabase": "not provisioned by this Auth-only campaign"
+  },
+  "verification": {
+    "composeReadiness": "PASS",
+    "authV1Health": "PASS",
+    "signup": "PASS",
+    "passwordTokenExchange": "PASS",
+    "refresh": "PASS",
+    "authenticatedUserRead": "PASS",
+    "logout": "PASS",
+    "postLogoutAccessRejected": "PASS",
+    "secretLogging": "NOT OBSERVED",
+    "browserApplicationSmoke": "BLOCKED_PENDING_FINANCIAL_APP_TARGET"
+  },
+  "disposition": "CONDITIONALLY_ACCEPTED_AUTH_INFRASTRUCTURE_ONLY",
+  "independentReview": {
+    "disposition": "ACCEPTED_WITH_LIMITATION",
+    "findings": [],
+    "scope": "Auth/GoTrue configuration, JWT credentials, gateway routing, loopback exposure, isolation, cleanup ownership and secret handling",
+    "limitation": "Review does not accept authenticated application browser E2E without a separately authorized financial app target."
+  },
+  "limitations": [
+    "The application financial database and tenant membership bootstrap were not provisioned in this Auth-only campaign.",
+    "Authenticated browser sign-in, tenant isolation, role authorization and business workflows remain unverified.",
+    "This evidence does not accept authenticated browser E2E or Stage 3."
+  ],
+  "cleanup": {
+    "status": "PASS",
+    "authorizedResources": "Only the Compose project named above",
+    "verifiedAbsent": true,
+    "preExistingContainersPreserved": true
+  }
+}

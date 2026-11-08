@@ -65,8 +65,10 @@ const __LedgerEntryPAYMENT_MADE: LedgerEntryType = "PAYMENT_MADE";
 function paymentMethodToPrismaMode(method: string): PaymentMode {
   if (method === "Cash") return "CASH";
   if (method === "UPI") return "UPI";
-  if (method === "CREDIT") return "CREDIT";
-  return "CREDIT";
+  if (method === "Cheque") return "CHEQUE";
+  if (method === "Bank Transfer") return "BANK_TRANSFER";
+  if (method === "NEFT") return "NEFT";
+  throw new Error("Unsupported payment method.");
 }
 
 function flattenFieldErrors(zodFieldErrors: Record<string, any>): Record<string, string[] | undefined> {
@@ -199,7 +201,7 @@ function paymentWarning(
   balanceLabel: "dues" | "payables",
 ): string | null {
   return decimalOrZero(requested).subtract(applied).compare("0.001") === 1
-    ? `Payment exceeds total ${balanceLabel}; clamped to 0 — please verify.`
+    ? `Payment exceeds total ${balanceLabel}; only the previously recorded amount was applied.`
     : null;
 }
 
@@ -452,13 +454,17 @@ export async function createSalesDraftAction(
       const totalDiscount = sumDecimals(lineAmounts.map((line) => line.discount_amount))
         .round(2, "HALF_UP")
         .toNumber();
+      const invoiceDate = data.invoice_date instanceof Date ? data.invoice_date : new Date(data.invoice_date as any);
+      const dueDate = new Date(invoiceDate);
+      dueDate.setDate(dueDate.getDate() + Number(data.payment_terms_days ?? 0));
       const created = await tx.sales_invoices.create({
         data: {
           tenant_id: ctx.tenantId,
           created_by: ctx.userId,
           customer_id: data.customer_id,
           invoice_no: "",
-          invoice_date: data.invoice_date instanceof Date ? data.invoice_date : new Date(data.invoice_date as any),
+          invoice_date: invoiceDate,
+          due_date: dueDate,
           status: __SalesStatusDRAFT,
           tax_data_status: "UNVERIFIED_DRAFT",
           gst_treatment: treatment.treatment,
@@ -1074,7 +1080,7 @@ export async function createCustomerPaymentAction(
         }
 
         const credit = decimalOrZero(data.amount);
-        const appliedDecimal = before.compare(credit) < 0 ? before : credit;
+        const appliedDecimal = credit;
         const clamped = before.subtract(appliedDecimal).round(2, "HALF_UP");
         const applied = appliedDecimal.round(2, "HALF_UP").toNumber();
 
@@ -1216,7 +1222,7 @@ export async function createSupplierPaymentAction(
         }
 
         const debit = decimalOrZero(data.amount);
-        const appliedDecimal = before.compare(debit) < 0 ? before : debit;
+        const appliedDecimal = debit;
         const clamped = before.subtract(appliedDecimal).round(2, "HALF_UP");
         const applied = appliedDecimal.round(2, "HALF_UP").toNumber();
 

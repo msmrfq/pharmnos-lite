@@ -1,0 +1,28 @@
+{
+  "runId": "sec20261108g",
+  "initializationAttemptId": "sec20261108g-init",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 55437,
+    "databaseName": "pharmnos_financial_e2e_20261108g",
+    "composeProject": "pharmnoslite-financial-e2e-20261108g",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "targetFingerprint": "f9cfd82eeab9da213e56774d55f33695d988601b771ae9f99d9a3e7f10d18ca1"
+  },
+  "cleanup": "PASS",
+  "results": [
+    { "id": "canonical-provisioning", "status": "PASS" },
+    { "id": "admin-rbac-write-allowed", "status": "PASS", "detail": "one returned role row" },
+    { "id": "employee-rbac-write-denied", "status": "PASS", "detail": "RLS denial" },
+    { "id": "commit-replay-rejected", "status": "PASS", "detail": "first subject accepted; committed replay returned NULL" }
+  ],
+  "passCount": 4,
+  "failCount": 0,
+  "secretValuesRecorded": false,
+  "notes": [
+    "The campaign fixture was corrected to provide all required user columns.",
+    "The prior harness defect counted NULL-return authorization results as rows; this run asserts returned values.",
+    "The target was created and disposed through the canonical contract-bound lifecycle."
+  ]
+}

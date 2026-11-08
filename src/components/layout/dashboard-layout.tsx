@@ -31,6 +31,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { signOutAction } from "@/app/auth/_actions/auth.actions";
+
+async function submitSignOut(_formData: FormData): Promise<void> {
+  await signOutAction();
+}
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard,
@@ -198,9 +203,9 @@ export function DashboardLayout(props: DashboardLayoutProps) {
                   <Link href="/settings/business">Business Settings</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-semantic-error">
-                  Sign out
-                </DropdownMenuItem>
+                <form action={submitSignOut}>
+                  <button type="submit" className="w-full px-2 py-1.5 text-left text-semantic-error">Sign out</button>
+                </form>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -255,9 +260,9 @@ export function DashboardLayout(props: DashboardLayoutProps) {
                     <Link href="/settings/business">Business Settings</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-semantic-error">
-                    Sign out
-                  </DropdownMenuItem>
+                  <form action={submitSignOut}>
+                    <button type="submit" className="w-full px-2 py-1.5 text-left text-semantic-error">Sign out</button>
+                  </form>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

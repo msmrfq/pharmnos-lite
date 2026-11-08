@@ -1,0 +1,45 @@
+{
+  "evidenceVersion": 1,
+  "audit": "authenticated-database-trust-boundary",
+  "target": "approved local disposable PostgreSQL runtime target only",
+  "databaseIdentity": {
+    "database_name": "pharmnos_financial_e2e_mw6v3qsc9ebde906",
+    "current_user": "pharmnos_e2e_runtime",
+    "session_user": "pharmnos_e2e_runtime",
+    "server_address": "172.29.0.2/32",
+    "server_port": 5432
+  },
+  "runtimeRole": {
+    "can_login": true,
+    "is_superuser": false,
+    "bypasses_rls": false,
+    "public_schema_create": false,
+    "set_config_execute": true
+  },
+  "securityDefinerHelper": {
+    "publicFunctionCount": 0,
+    "status": "REMOVED"
+  },
+  "forgedClaimProbe": {
+    "status": "REPRODUCED",
+    "subject": "forged-subject",
+    "tenant": "forged-tenant",
+    "signedContextResult": {
+      "subject": null,
+      "tenant": null,
+      "admin": false
+    },
+    "authorizationBypass": "NOT_REPRODUCED",
+    "conclusion": "Transaction-local request JWT GUCs are mutable by the runtime role, but the signed-context authorization helpers ignore them and fail closed without a verified context."
+  },
+  "sourceHashes": {
+    "src/lib/db/tenant-context.ts": "b93f206e374f953c3fb3a6b197e1997e735ec59d76be51c05da0c8afa1bba4dc",
+    "src/lib/db/prisma.ts": "4edb9ed76f64c02066fd2c107ee71dbf536dbc8ff75716c5ad3143b38f3d76c7",
+    "src/adapters/auth/supabase-auth.adapter.ts": "d68d9bd2b58ecc1a2dd793f48304029a4b4276179bda5a21a4bf29b87180c85f",
+    "scripts/financial-e2e-provision-local.mjs": "91a64999ff3e8d220797620f3fc1d2aa6914e6dc2ec984db6fe80e095f87f7cd",
+    "prisma/financial-e2e-rls-policies.review.sql": "160ce999044950ed7cdae854ab375175828e44cf17990bd91f77bc5bc8b7013d",
+    "scripts/purchase-gst-application-acceptance.cjs": "5b9eda035dfbae1eeaaeb60eb6baa6fa9d943cd042355274c2e54e45f33fea09"
+  },
+  "cleanup": "No database or persistent rows were created; transaction was rolled back.",
+  "verdict": "RAW_CLAIM_FORGERY_REJECTED"
+}

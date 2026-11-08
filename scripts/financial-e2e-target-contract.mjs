@@ -10,6 +10,7 @@ export const REQUIRED_BOOTSTRAP_ROLE = "pharmnos_e2e";
 export const REQUIRED_RUNTIME_ROLE = "pharmnos_e2e_runtime";
 export const REQUIRED_BOOTSTRAP_CREDENTIAL_SOURCE = "FINANCIAL_E2E_DB_PASSWORD";
 export const REQUIRED_RUNTIME_CREDENTIAL_SOURCE = "FINANCIAL_E2E_RUNTIME_DB_PASSWORD";
+export const REQUIRED_CONTEXT_SECRET_SOURCE = "DATABASE_AUTH_CONTEXT_SIGNING_SECRET";
 export const REQUIRED_SCHEMA_ARTIFACT = "prisma/financial-e2e-schema-provisioning.generated.sql";
 
 function isLoopbackHost(host) {
@@ -71,6 +72,7 @@ export function targetContractBinding(contract) {
         contract.runtimeRole,
         contract.bootstrapCredentialSource,
         contract.runtimeCredentialSource,
+        contract.contextSecretSource,
         contract.marker,
         contract.composeProject,
         contract.composeService,
@@ -88,6 +90,7 @@ export function createTargetContract({
     runtimeRole = REQUIRED_RUNTIME_ROLE,
     bootstrapCredentialSource = REQUIRED_BOOTSTRAP_CREDENTIAL_SOURCE,
     runtimeCredentialSource = REQUIRED_RUNTIME_CREDENTIAL_SOURCE,
+    contextSecretSource = REQUIRED_CONTEXT_SECRET_SOURCE,
     composeProject,
     composeService = REQUIRED_TARGET_SERVICE,
     composeProfile = REQUIRED_TARGET_PROFILE,
@@ -107,6 +110,7 @@ export function createTargetContract({
         runtimeRole: String(runtimeRole ?? ""),
         bootstrapCredentialSource: String(bootstrapCredentialSource ?? ""),
         runtimeCredentialSource: String(runtimeCredentialSource ?? ""),
+        contextSecretSource: String(contextSecretSource ?? ""),
         marker: String(marker ?? ""),
         composeProject: String(composeProject ?? ""),
         composeService: String(composeService ?? ""),
@@ -152,7 +156,8 @@ export function validateTargetContract({
         errors.push("Target contract roles are not the approved distinct roles.");
     }
     if (contract.bootstrapCredentialSource !== REQUIRED_BOOTSTRAP_CREDENTIAL_SOURCE ||
-        contract.runtimeCredentialSource !== REQUIRED_RUNTIME_CREDENTIAL_SOURCE) {
+        contract.runtimeCredentialSource !== REQUIRED_RUNTIME_CREDENTIAL_SOURCE ||
+        contract.contextSecretSource !== REQUIRED_CONTEXT_SECRET_SOURCE) {
         errors.push("Target contract credential sources are not the approved environment variables.");
     }
     if (contract.marker !== REQUIRED_TARGET_MARKER) errors.push("Target contract marker is invalid.");

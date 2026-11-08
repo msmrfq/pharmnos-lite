@@ -1,0 +1,91 @@
+services:
+  auth-e2e-postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME:?AUTH_DB_NAME is required}
+      POSTGRES_USER: ${AUTH_DB_USER:?AUTH_DB_USER is required}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD is required}
+    tmpfs:
+      - /var/lib/postgresql/data
+    volumes:
+      - ./scripts/auth-e2e-auth-schema.sql:/docker-entrypoint-initdb.d/001-auth-schema.sql:ro
+    restart: "no"
+    labels:
+      com.pharmnos.environment: auth-e2e-isolated
+      com.pharmnos.auth-run-id: ${FINANCIAL_E2E_RUN_ID:?FINANCIAL_E2E_RUN_ID is required}
+      com.pharmnos.auth-target-binding: ${AUTH_E2E_AUTHORIZED_TARGET_BINDING:?AUTH_E2E_AUTHORIZED_TARGET_BINDING is required}
+      com.pharmnos.auth-target-fingerprint: ${AUTH_E2E_AUTHORIZED_TARGET_FINGERPRINT:?AUTH_E2E_AUTHORIZED_TARGET_FINGERPRINT is required}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  auth-e2e-gotrue:
+    image: public.ecr.aws/supabase/gotrue:v2.197.0
+    depends_on:
+      auth-e2e-postgres:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@auth-e2e-postgres:5432/${AUTH_DB_NAME}?sslmode=disable&search_path=auth
+      GOTRUE_DB_NAMESPACE: auth
+      DB_NAMESPACE: auth
+      API_EXTERNAL_URL: http://127.0.0.1:${AUTH_PORT:?AUTH_PORT is required}
+      GOTRUE_SITE_URL: ${APP_URL:?APP_URL is required}
+      GOTRUE_URI_ALLOW_LIST: ${APP_URL:?APP_URL is required}/*
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_JWT_SECRET: ${AUTH_JWT_SECRET:?AUTH_JWT_SECRET is required}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_OPERATOR_TOKEN: ${AUTH_SERVICE_ROLE_KEY:?AUTH_SERVICE_ROLE_KEY is required}
+      GOTRUE_SMTP_ADMIN_EMAIL: e2e@example.invalid
+      GOTRUE_SMTP_HOST: localhost
+      GOTRUE_SMTP_PORT: 2500
+    restart: "no"
+    labels:
+      com.pharmnos.environment: auth-e2e-isolated
+      com.pharmnos.auth-run-id: ${FINANCIAL_E2E_RUN_ID:?FINANCIAL_E2E_RUN_ID is required}
+      com.pharmnos.auth-target-binding: ${AUTH_E2E_AUTHORIZED_TARGET_BINDING:?AUTH_E2E_AUTHORIZED_TARGET_BINDING is required}
+      com.pharmnos.auth-target-fingerprint: ${AUTH_E2E_AUTHORIZED_TARGET_FINGERPRINT:?AUTH_E2E_AUTHORIZED_TARGET_FINGERPRINT is required}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --no-verbose --tries=1 --spider http://127.0.0.1:9999/health
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  auth-e2e-gateway:
+    image: public.ecr.aws/supabase/kong:2.8.1
+    depends_on:
+      auth-e2e-gotrue:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${AUTH_PORT:?AUTH_PORT is required}:8000"
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_ADMIN_LISTEN: 127.0.0.1:8001
+      KONG_PLUGINS: bundled
+    volumes:
+      - ./scripts/auth-e2e-kong.yml:/home/kong/kong.yml:ro
+    restart: "no"
+    labels:
+      com.pharmnos.environment: auth-e2e-isolated
+      com.pharmnos.auth-run-id: ${FINANCIAL_E2E_RUN_ID:?FINANCIAL_E2E_RUN_ID is required}
+      com.pharmnos.auth-target-binding: ${AUTH_E2E_AUTHORIZED_TARGET_BINDING:?AUTH_E2E_AUTHORIZED_TARGET_BINDING is required}
+      com.pharmnos.auth-target-fingerprint: ${AUTH_E2E_AUTHORIZED_TARGET_FINGERPRINT:?AUTH_E2E_AUTHORIZED_TARGET_FINGERPRINT is required}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --no-verbose --tries=1 --spider http://127.0.0.1:8000/auth/v1/health
+      interval: 2s
+      timeout: 3s
+      retries: 30

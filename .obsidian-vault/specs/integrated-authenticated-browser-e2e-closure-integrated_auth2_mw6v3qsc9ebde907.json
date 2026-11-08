@@ -1,0 +1,129 @@
+{
+  "evidenceVersion": 1,
+  "campaign": "integrated_auth2_mw6v3qsc9ebde907",
+  "status": "CONDITIONALLY_ACCEPTED",
+  "scope": {
+    "browser": "Real browser against the loopback application and campaign Auth service.",
+    "financialRuntime": "Direct Prisma/runtime-role path only.",
+    "postgrestGateway": "Separate Supabase authenticated Data API policy path; not exercised by this campaign."
+  },
+  "sanitizedBrowserEvidence": {
+    "unauthenticatedDashboard": {
+      "request": "GET /dashboard",
+      "result": "redirected to /auth/sign-in",
+      "status": "PASS"
+    },
+    "ownerGLogin": {
+      "request": "Browser sign-in with synthetic campaign user",
+      "result": "redirected to /dashboard and retained session on /purchases/new",
+      "status": "PASS"
+    },
+    "ownerGPurchase": {
+      "request": "Browser purchase draft submission",
+      "result": "redirected to /purchases?created=<campaign-record-id>",
+      "status": "PASS"
+    },
+    "ownerHIsolation": {
+      "request": "Independent browser context opened /purchases/new",
+      "result": "tenant H supplier/product data rendered; tenant G supplier/product data was not rendered",
+      "status": "PASS"
+    },
+    "ownerHLogout": {
+      "request": "Sign out, then GET /purchases",
+      "result": "redirected to /auth/sign-in",
+      "status": "PASS"
+    },
+    "rawPlaywrightTrace": "NOT_RETAINED"
+  },
+  "sanitizedRequestEvidence": {
+    "auth": [
+      "sign-in action returned redirect to the protected dashboard",
+      "subsequent protected navigation retained the SSR session cookie",
+      "sign-out action returned redirect to the public home page"
+    ],
+    "protectedRouteAfterLogout": "redirected to /auth/sign-in",
+    "secrets": "No cookies, tokens, authorization headers, passwords, or connection strings retained."
+  },
+  "freshDatabaseReadback": {
+    "source": "Fresh PostgreSQL client connection to the authorized campaign target before cleanup",
+    "purchaseInvoice": {
+      "status": "DRAFT",
+      "tenant": "cuid_e2_tenant_g",
+      "itemCount": 1,
+      "quantity": 2,
+      "grossAmount": "200.00",
+      "totalTax": "36.00",
+      "netAmount": "236.00"
+    },
+    "purchaseLine": {
+      "gstRate": "18.00",
+      "gstAmount": "36.00",
+      "calculatedTaxableValue": "200.0000",
+      "calculatedCgst": "18.0000",
+      "calculatedSgst": "18.0000",
+      "calculatedIgst": "0.0000"
+    },
+    "status": "PASS"
+  },
+  "tenantIsolationAndForgery": {
+    "browserTenantIsolation": "PASS",
+    "rawClaimProbe": "Caller-settable request.jwt.claim.sub and request.jwt.claim.tenant_id were visible as mutable GUCs but did not populate signed financial_context_* helpers.",
+    "directRuntimeAuthorization": "Signed pharmnos.auth_context is required; subject, tenant, membership, and admin predicates use financial_context_* helpers.",
+    "postgrestAuthorization": "The separate authenticated gateway policies use auth.jwt() app_metadata.tenant_id through public.jwt_tenant_id(); this path was not exercised by the integrated browser campaign.",
+    "status": "PASS_FOR_DIRECT_RUNTIME; POSTGREST_PATH_NOT_EXERCISED"
+  },
+  "cleanupEvidence": {
+    "financialCleanup": "PASS",
+    "authCleanup": "PASS",
+    "campaignContainersAbsent": true,
+    "campaignNetworksAbsent": true,
+    "preexistingResourcesModified": false,
+    "sanitizedCleanupArtifact": "session-state/integrated2-mw6v3qsc9ebde907.cleanup.json",
+    "cleanupQueries": "NOT_RETAINED; exact lifecycle verification result is retained."
+  },
+  "independentReview": {
+    "reviewer": "security-review agent",
+    "disposition": "CONDITIONAL_ACCEPTANCE",
+    "exactReport": {
+      "summary": "No security vulnerabilities found in the reviewed changes.",
+      "claimForgery": "Resolved. Runtime authorization uses HMAC-signed pharmnos.auth_context, not caller-controlled JWT claims.",
+      "authSession": "Middleware verifies users via Supabase getUser() and correctly propagates SSR cookies.",
+      "rbacPurchase": "Tenant membership and permissions are resolved server-side; purchase creation validates tenant-owned supplier, products, and batches before writing.",
+      "contractTests": "Relevant contract tests passed, including claim-forgery, signed-context, middleware, tenant isolation, and purchase-boundary tests.",
+      "acceptanceRecommendation": "Conditional acceptance only. The sanitized campaign record reports successful browser login, tenant isolation, purchase persistence/readback, logout rejection, and exact cleanup. However, it contains assertions only—not independently verifiable browser traces, SQL/RLS outputs, request evidence, or cleanup queries.",
+      "condition": "Evidence supports the claims provisionally, but the Stage 3 disposition should remain pending until raw execution artifacts or equivalent independently reproducible proof are retained."
+    }
+  },
+  "credentialArtifactDisposition": {
+    "campaignOwnedGenerated": [
+      {
+        "artifact": "session-state/integrated2-mw6v3qsc9ebde907.env",
+        "contains": "campaign database/auth credentials and signing material",
+        "action": "RETIRED",
+        "verifiedAbsent": true
+      },
+      {
+        "artifact": "session-state/integrated2-mw6v3qsc9ebde907.users.json",
+        "contains": "synthetic campaign user passwords",
+        "action": "RETIRED",
+        "verifiedAbsent": true
+      }
+    ],
+    "retainedSanitizedArtifacts": [
+      "session-state/integrated2-mw6v3qsc9ebde907.infra.json",
+      "session-state/integrated2-mw6v3qsc9ebde907.init.json",
+      "session-state/integrated2-mw6v3qsc9ebde907.cleanup.json",
+      ".obsidian-vault/specs/integrated-authenticated-browser-e2e-evidence-integrated_auth2_mw6v3qsc9ebde907.json"
+    ],
+    "preExistingArtifacts": "Not modified, rotated, or deleted.",
+    "unresolvedConcern": "Raw browser traces and cleanup queries were not retained, so unconditional independent acceptance is not established."
+  },
+  "stage3Reconciliation": {
+    "frozenDenominator": 100,
+    "frozenWeightsChanged": false,
+    "acceptedPoints": 10,
+    "criterionST3H": "CONDITIONALLY_ACCEPTED_CAMPAIGN_RESULT; 0 POINTS",
+    "overall": "NO-GO",
+    "reason": "Other frozen criteria remain unaccepted, and the reviewer disposition is conditional."
+  }
+}

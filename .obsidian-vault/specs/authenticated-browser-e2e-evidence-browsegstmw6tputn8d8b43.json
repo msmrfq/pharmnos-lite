@@ -1,0 +1,72 @@
+{
+  "evidenceVersion": 1,
+  "campaign": "authenticated-browser-e2e-acceptance",
+  "runId": "browsegstmw6tputn8d8b43",
+  "recordedAt": "2026-11-08T01:38:47+05:30",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 55522,
+    "databaseName": "pharmnos_financial_e2e_browsegstmw6tputn8d8b43",
+    "composeProject": "pharmnoslite-financial-e2e-browsegstmw6tputn8d8b43",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "fingerprint": "f72f28ffcda00fe33632bdeb66ef41ae9a011cb9424399346760e680ce0d5a55"
+  },
+  "sourceHashes": {
+    "src/middleware.ts": "1d8a4db697023845a16cffff54ad5273e10f5793a8c3ffce02e00786d391864b",
+    "src/components/layout/dashboard-layout.tsx": "9cf563bb8388c13e2cf607ed4ced04481c75372332afb41401436122bbb82607",
+    "tests/authenticated-browser-boundary-contract.test.mjs": "2a58d664ad2d29fad1f53919a85c8b3f9ce00419b93710ee68715ea17e6adaa1"
+  },
+  "browser": {
+    "browserEngine": "Playwright MCP",
+    "baseUrl": "http://127.0.0.1:3108",
+    "scenarios": [
+      {
+        "id": "unauthenticated_dashboard_redirect",
+        "expected": "Protected dashboard navigation redirects to /auth/sign-in.",
+        "actual": "Redirected to /auth/sign-in.",
+        "status": "PASS",
+        "verification": "runtime-browser"
+      },
+      {
+        "id": "unauthenticated_purchase_redirect",
+        "expected": "Protected purchase navigation redirects to /auth/sign-in.",
+        "actual": "Redirected to /auth/sign-in.",
+        "status": "PASS",
+        "verification": "runtime-browser"
+      },
+      {
+        "id": "public_sign_in_page",
+        "expected": "Sign-in page is reachable without an authenticated session.",
+        "actual": "Sign-in page rendered with email, password and remember controls.",
+        "status": "PASS",
+        "verification": "runtime-browser"
+      },
+      {
+        "id": "invalid_sign_in_validation",
+        "expected": "Invalid credentials format is rejected without authentication or navigation.",
+        "actual": "Inline validation displayed for invalid email and short password.",
+        "status": "PASS",
+        "verification": "runtime-browser"
+      }
+    ]
+  },
+  "authenticatedScenarios": {
+    "status": "BLOCKED",
+    "reason": "No local Supabase Auth/GoTrue service or browser harness existed. The configured Supabase project is shared infrastructure and was not used. The existing in-process financial E2E session hook is not real browser authentication and was not substituted.",
+    "notClaimed": [
+      "real sign-in",
+      "logout and session refresh",
+      "two-tenant browser isolation",
+      "owner/admin and employee browser permissions",
+      "browser purchase or sales persistence",
+      "authenticated failure and retry flows"
+    ]
+  },
+  "disposition": "BLOCKED_PENDING_REAL_AUTH_TARGET",
+  "cleanup": {
+    "status": "PASS",
+    "evidenceFile": "browser-e2e-runtime-browsegstmw6tputn8d8b43-cleanup.json",
+    "verified": "The exact campaign Compose target was disposed and verified absent."
+  },
+  "secretsRecorded": false
+}

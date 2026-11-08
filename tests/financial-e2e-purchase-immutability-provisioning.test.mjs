@@ -36,8 +36,11 @@ const normalPurchaseGuard = normalMigrationSource.match(
 
 test("provisioning guards finalized purchase parents and items for update and delete", () => {
     assert.match(purchaseGuard, /IF TG_TABLE_NAME = 'purchase_invoices'/);
-    assert.match(provisioningSource, /CREATE TRIGGER prevent_finalized_purchase_mutation[\s\S]*BEFORE UPDATE OR DELETE/);
-    assert.match(provisioningSource, /CREATE TRIGGER prevent_finalized_purchase_item_mutation[\s\S]*BEFORE UPDATE OR DELETE/);
+    assert.match(provisioningSource, /CREATE TRIGGER prevent_finalized_purchase_mutation[\s\S]*BEFORE UPDATE ON/);
+    assert.match(provisioningSource, /CREATE TRIGGER prevent_finalized_purchase_item_mutation[\s\S]*BEFORE UPDATE ON/);
+    assert.match(provisioningSource, /CREATE OR REPLACE FUNCTION public\.reject_finalized_purchase_delete\(\)/);
+    assert.match(provisioningSource, /CREATE TRIGGER reject_finalized_purchase_invoice_delete[\s\S]*BEFORE DELETE ON/);
+    assert.match(provisioningSource, /CREATE TRIGGER reject_finalized_purchase_item_delete[\s\S]*BEFORE DELETE ON/);
     assert.match(purchaseGuard, /FROM public\."purchase_invoices"[\s\S]*WHERE id = OLD\.purchase_id AND tenant_id = OLD\.tenant_id/);
     assert.match(purchaseGuard, /IF purchase_status IS NULL[\s\S]*Purchase invoice parent is missing/);
     assert.match(purchaseGuard, /IF TG_OP = 'DELETE' THEN[\s\S]*RETURN OLD;/);
@@ -139,6 +142,8 @@ test("delete guard migration rejects finalized purchase deletes explicitly", () 
     assert.match(deleteGuardMigration, /BEFORE DELETE ON public\."purchase_invoices"/);
     assert.match(deleteGuardMigration, /BEFORE DELETE ON public\."purchase_invoice_items"/);
     assert.match(deleteGuardMigration, /USING ERRCODE = '42501'/);
+    assert.match(deleteGuardMigration, /DROP TRIGGER IF EXISTS prevent_finalized_purchase_mutation[\s\S]*BEFORE UPDATE ON public\."purchase_invoices"/);
+    assert.match(deleteGuardMigration, /DROP TRIGGER IF EXISTS prevent_finalized_purchase_item_mutation[\s\S]*BEFORE UPDATE ON public\."purchase_invoice_items"/);
 });
 
 test("normal migration protects the finalized purchase financial and GST snapshots", () => {

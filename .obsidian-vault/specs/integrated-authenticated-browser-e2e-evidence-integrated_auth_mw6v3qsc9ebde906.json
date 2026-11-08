@@ -1,0 +1,54 @@
+{
+  "campaign": "integrated_auth_mw6v3qsc9ebde906",
+  "source_revision": "worktree-current",
+  "target": {
+    "financial_database": "pharmnos_financial_e2e_mw6v3qsc9ebde906",
+    "financial_port": 55600,
+    "auth_port": 55601,
+    "application_port": 3109,
+    "financial_compose_project": "pharmnoslite-financial-e2e-mw6v3qsc9ebde906",
+    "auth_compose_project": "pharmnoslite-authinfra_mw6v3qsc9ebde906"
+  },
+  "provisioning": {
+    "financial_compose": "PASS",
+    "financial_schema_initialization": "PASS",
+    "restricted_runtime_role": "LOGIN,NOSUPERUSER,NOBYPASSRLS",
+    "auth_compose": "PASS",
+    "synthetic_users": 2,
+    "tenant_fixtures": 2
+  },
+  "browser": {
+    "unauthenticated_protected_route_redirect": "PASS",
+    "owner_one_login": "PASS",
+    "owner_one_dashboard": "PASS",
+    "owner_one_purchase_page": "PASS",
+    "owner_one_purchase_draft_submission": "PASS",
+    "owner_two_independent_login": "PASS",
+    "owner_two_tenant_supplier_isolation": "PASS",
+    "owner_one_logout_and_post_logout_protection": "BLOCKED: protected route remained rendered after sign-out interaction; requires reproduction and fix"
+  },
+  "persistence": {
+    "purchase_invoice_count": 1,
+    "purchase_status": "DRAFT",
+    "tenant": "e2etenant1",
+    "item_count": 1,
+    "quantity": 10,
+    "gross_amount": "500.00",
+    "total_tax": "60.00",
+    "net_amount": "560.00",
+    "fresh_readback": "PASS"
+  },
+  "cleanup": {
+    "financial_compose_down": "PASS",
+    "auth_compose_down": "PASS",
+    "campaign_containers_absent": true,
+    "campaign_networks_absent": true,
+    "preexisting_resources_modified": false
+  },
+  "disposition": {
+    "criterion": "ST3-H",
+    "status": "BLOCKED",
+    "reason": "Logout/session invalidation was not proven in the campaign run. The top-bar sign-out defect was fixed afterward, but a fresh disposable browser rerun remains required; no acceptance upgrade is made.",
+    "post_campaign_fix": "Both dashboard sign-out affordances now submit the existing server-side sign-out action."
+  }
+}

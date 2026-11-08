@@ -1,0 +1,45 @@
+{
+  "runId": "sec20261108m",
+  "initializationAttemptId": "sec20261108m-init",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 55443,
+    "databaseName": "pharmnos_financial_e2e_20261108m",
+    "composeProject": "pharmnoslite-financial-e2e-20261108m",
+    "bootstrapRole": "pharmnos_e2e",
+    "runtimeRole": "pharmnos_e2e_runtime",
+    "targetFingerprint": "b0eba859da6f017c977913d63c142a7081eb547cfddca7a30787e5aa5a7d1d56"
+  },
+  "cleanup": "PASS",
+  "passCount": 30,
+  "failCount": 0,
+  "secretValuesRecorded": false,
+  "scenarios": {
+    "identity": [
+      "unique subject-only context accepted for exactly one active membership",
+      "missing, malformed, altered, expired, and wrong-tenant contexts rejected",
+      "valid employee subject accepted only for its active tenant membership"
+    ],
+    "replay": [
+      "rollback followed by retry accepted",
+      "committed replay rejected",
+      "concurrent same-context attempts produced exactly one accepted subject and one NULL rejection",
+      "pool context reset returned NULL after clearing the transaction-local setting"
+    ],
+    "tenantIsolation": [
+      "tenant-local read accepted",
+      "cross-tenant read rejected",
+      "cross-tenant write rejected"
+    ],
+    "rbac": [
+      "admin insert/update succeeded for memberships, roles, and role_permissions",
+      "admin delete remained denied by the restricted grant boundary",
+      "employee insert/update/delete, self-promotion, and other-member privilege changes rejected"
+    ],
+    "privilegeBoundary": [
+      "private key and replay table reads rejected",
+      "private verifier invocation rejected",
+      "policy, function, grant, and RLS tampering rejected"
+    ]
+  }
+}

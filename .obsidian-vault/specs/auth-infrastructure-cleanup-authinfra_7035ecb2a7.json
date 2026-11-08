@@ -1,0 +1,15 @@
+{
+  "evidenceVersion": 1,
+  "runId": "authinfra_7035ecb2a7",
+  "composeProject": "pharmnoslite-authinfra_7035ecb2a7",
+  "status": "PASS",
+  "authorizedScope": [
+    "auth-e2e-postgres",
+    "auth-e2e-gotrue",
+    "auth-e2e-gateway",
+    "the Compose network owned by this project"
+  ],
+  "verifiedAbsent": true,
+  "preExistingContainersPreserved": true,
+  "secretsRetained": false
+}

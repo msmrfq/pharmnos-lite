@@ -88,21 +88,20 @@ export class CustomerLedgerRepository extends BaseRepository<
 
   async getOldestOverdueDays(customerId: string, ctx: TenantContext, asOf: Date = new Date()): Promise<number> {
     const t = this.withTenant(ctx);
-    const rows = await this.prisma.customer_ledgers.findMany({
-      where: { tenant_id: t.tenantId, customer_id: customerId },
-      orderBy: { entry_date: "asc" },
-      select: { entry_date: true, debit: true, credit: true },
+    const rows = await this.prisma.sales_invoices.findMany({
+      where: {
+        tenant_id: t.tenantId,
+        customer_id: customerId,
+        status: "FINALIZED",
+        balance_due: { gt: 0 },
+        due_date: { not: null, lt: asOf },
+      },
+      select: { due_date: true },
+      orderBy: { due_date: "asc" },
     });
     if (rows.length === 0) return 0;
-    let running = 0;
-    let oldestUnpaid: Date | null = null;
-    for (const r of rows) {
-      running += Number(r.debit ?? 0) - Number(r.credit ?? 0);
-      if (running > 0 && oldestUnpaid === null) {
-        oldestUnpaid = r.entry_date ? new Date(r.entry_date) : null;
-      }
-    }
-    if (running <= 0 || !oldestUnpaid) return 0;
+    const oldestUnpaid = rows[0]?.due_date ? new Date(rows[0].due_date) : null;
+    if (!oldestUnpaid) return 0;
     const todayMs = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate()).getTime();
     const oldMs = new Date(
       oldestUnpaid.getFullYear(),
@@ -129,17 +128,27 @@ export class CustomerLedgerRepository extends BaseRepository<
     const d30 = new Date(today); d30.setDate(d30.getDate() - 30);
     const d60 = new Date(today); d60.setDate(d60.getDate() - 60);
     const d90 = new Date(today); d90.setDate(d90.getDate() - 90);
-    const rows = await this.prisma.customer_ledgers.findMany({
-      where: { tenant_id: t.tenantId, ...(customerId ? { customer_id: customerId } : {}) },
-      select: { entry_date: true, debit: true, credit: true },
+    const d120 = new Date(today); d120.setDate(d120.getDate() - 120);
+    const rows = await this.prisma.sales_invoices.findMany({
+      where: {
+        tenant_id: t.tenantId,
+        ...(customerId ? { customer_id: customerId } : {}),
+        status: "FINALIZED",
+        balance_due: { gt: 0 },
+        due_date: { not: null },
+      },
+      select: { due_date: true, balance_due: true },
     });
     let current = 0, b30 = 0, b60 = 0, b90 = 0, over90 = 0;
     for (const row of rows) {
-      const bal = Number(row.debit) - Number(row.credit);
+      const dueDate = row.due_date;
+      if (!dueDate) continue;
+      const bal = Number(row.balance_due);
       if (bal <= 0) continue;
-      if (row.entry_date >= d30) current += bal;
-      else if (row.entry_date >= d60) b30 += bal;
-      else if (row.entry_date >= d90) b60 += bal;
+      if (dueDate >= d30) current += bal;
+      else if (dueDate >= d60) b30 += bal;
+      else if (dueDate >= d90) b60 += bal;
+      else if (dueDate >= d120) b90 += bal;
       else over90 += bal;
     }
     return {
@@ -247,21 +256,21 @@ export class SupplierLedgerRepository extends BaseRepository<
 
   async getOldestOverdueDays(supplierId: string, ctx: TenantContext, asOf: Date = new Date()): Promise<number> {
     const t = this.withTenant(ctx);
-    const rows = await this.prisma.supplier_ledgers.findMany({
-      where: { tenant_id: t.tenantId, supplier_id: supplierId },
-      orderBy: { entry_date: "asc" },
-      select: { entry_date: true, debit: true, credit: true },
+    const rows = await this.prisma.purchase_invoices.findMany({
+      where: {
+        tenant_id: t.tenantId,
+        supplier_id: supplierId,
+        status: "FINALIZED",
+        due_date: { not: null, lt: asOf },
+      },
+      orderBy: { due_date: "asc" },
+      select: { due_date: true, net_amount: true, payment_allocations: { where: { reversal: null }, select: { amount: true } } },
     });
     if (rows.length === 0) return 0;
-    let running = 0;
-    let oldestUnpaid: Date | null = null;
-    for (const r of rows) {
-      running += Number(r.credit ?? 0) - Number(r.debit ?? 0);
-      if (running > 0 && oldestUnpaid === null) {
-        oldestUnpaid = r.entry_date ? new Date(r.entry_date) : null;
-      }
-    }
-    if (running <= 0 || !oldestUnpaid) return 0;
+    const oldestUnpaid = rows.find((row) =>
+      Number(row.net_amount) - row.payment_allocations.reduce((sum: number, allocation: any) => sum + Number(allocation.amount), 0) > 0,
+    )?.due_date;
+    if (!oldestUnpaid) return 0;
     const todayMs = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate()).getTime();
     const oldMs = new Date(
       oldestUnpaid.getFullYear(),
@@ -285,17 +294,26 @@ export class SupplierLedgerRepository extends BaseRepository<
     const d30 = new Date(today); d30.setDate(d30.getDate() - 30);
     const d60 = new Date(today); d60.setDate(d60.getDate() - 60);
     const d90 = new Date(today); d90.setDate(d90.getDate() - 90);
-    const rows = await this.prisma.supplier_ledgers.findMany({
-      where: { tenant_id: t.tenantId, ...(supplierId ? { supplier_id: supplierId } : {}) },
-      select: { entry_date: true, debit: true, credit: true },
+    const d120 = new Date(today); d120.setDate(d120.getDate() - 120);
+    const rows = await this.prisma.purchase_invoices.findMany({
+      where: {
+        tenant_id: t.tenantId,
+        ...(supplierId ? { supplier_id: supplierId } : {}),
+        status: "FINALIZED",
+        due_date: { not: null },
+      },
+      select: { due_date: true, net_amount: true, payment_allocations: { where: { reversal: null }, select: { amount: true } } },
     });
     let current = 0, b30 = 0, b60 = 0, b90 = 0, over90 = 0;
     for (const row of rows) {
-      const bal = Number(row.credit ?? 0) - Number(row.debit ?? 0);
+      const dueDate = row.due_date;
+      if (!dueDate) continue;
+      const bal = Number(row.net_amount) - row.payment_allocations.reduce((sum: number, allocation: any) => sum + Number(allocation.amount), 0);
       if (bal <= 0) continue;
-      if (row.entry_date >= d30) current += bal;
-      else if (row.entry_date >= d60) b30 += bal;
-      else if (row.entry_date >= d90) b60 += bal;
+      if (dueDate >= d30) current += bal;
+      else if (dueDate >= d60) b30 += bal;
+      else if (dueDate >= d90) b60 += bal;
+      else if (dueDate >= d120) b90 += bal;
       else over90 += bal;
     }
     return {

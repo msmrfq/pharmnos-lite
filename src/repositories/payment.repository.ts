@@ -33,17 +33,15 @@ export class PaymentRepository extends BaseRepository<
   }
 
   async update(
-    id: string,
-    input: Prisma.paymentsUpdateInput,
-    ctx: TenantContext,
+    _id: string,
+    _input: Prisma.paymentsUpdateInput,
+    _ctx: TenantContext,
   ): Promise<payments> {
-    const t = this.withTenant(ctx);
-    return this.prisma.payments.update({ where: { id, tenant_id: t.tenantId }, data: input });
+    throw new Error("Payments are immutable; create a reversal instead.");
   }
 
-  async delete(id: string, ctx: TenantContext): Promise<void> {
-    const t = this.withTenant(ctx);
-    await this.prisma.payments.delete({ where: { id, tenant_id: t.tenantId } });
+  async delete(_id: string, _ctx: TenantContext): Promise<void> {
+    throw new Error("Payments are immutable; create a reversal instead.");
   }
 
   async list(params: ListParams, ctx: TenantContext): Promise<PagedResult<payments>> {

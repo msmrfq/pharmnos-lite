@@ -1,0 +1,49 @@
+{
+  "campaign": "Financial Reconciliation - PostgreSQL Runtime Verification",
+  "target": {
+    "type": "local Docker PostgreSQL",
+    "host": "127.0.0.1",
+    "port": 55611,
+    "database": "pharmnos_financial_e2e_runtime_20261108b",
+    "isolation": "tmpfs-backed, run-scoped Compose project, disposable",
+    "credentials": "not recorded"
+  },
+  "migrationReplay": {
+    "database": "pharmnos_financial_e2e_replay_20261108b",
+    "migrationsApplied": 22,
+    "secondDeploy": "no pending migrations"
+  },
+  "persistedChecks": {
+    "baselineRuntimeRole": {
+      "tables": 38,
+      "forcedRlsTables": 34,
+      "allocationReversalForeignKey": true,
+      "login": true,
+      "superuser": false,
+      "bypassRls": false
+    },
+    "migrationReplay": {
+      "tables": 39,
+      "completedMigrations": 22,
+      "allocationReversalForeignKey": true
+    }
+  },
+  "offlineChecks": {
+    "provisioningStaticGuard": "pass",
+    "prismaValidate": "pass",
+    "focusedContracts": "12/12",
+    "gitDiffCheck": "pass"
+  },
+  "defect": {
+    "rootCause": "The reconciliation migration and generated provisioning SQL referenced payment_allocations(tenant_id, id) without declaring the required tenant-scoped unique key.",
+    "correction": "Added payment_allocations(tenant_id, id) uniqueness to the migration and generated provisioning artifact, then refreshed the executable manifest hashes.",
+    "regression": "Clean provisioning and migration replay through migration 0022 now pass."
+  },
+  "notVerified": [
+    "Accepted 38-scenario business matrix",
+    "Concurrent mutation races",
+    "Tenant-isolation mutations",
+    "Rollback/failure injection",
+    "Persisted AR/AP balance equations from business fixtures"
+  ]
+}
