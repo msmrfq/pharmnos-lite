@@ -101,6 +101,7 @@ const enumTypes = [
     "PurchaseGstReconciliationEventKind",
     "PaymentMode",
     "FinancialRefundStatus",
+    "FinancialDateBasis",
     "StockMovementType",
     "ScheduleClass",
     "AuditEventType",
@@ -251,6 +252,7 @@ function grantStatements() {
         `REVOKE DELETE ON TABLE public.${ident("audit_logs")} FROM ${ident(RUNTIME_ROLE)}`,
         `REVOKE UPDATE ON TABLE public.${ident("audit_logs")} FROM ${ident(RUNTIME_ROLE)}`,
         `REVOKE DELETE ON TABLE public.${ident("purchase_invoices")}, public.${ident("purchase_invoice_items")} FROM ${ident(RUNTIME_ROLE)}`,
+            `REVOKE ALL ON TYPE public.${ident("FinancialDateBasis")} FROM PUBLIC`,
             `REVOKE UPDATE ON TABLE public.${ident("sales_posting_operations")} FROM ${ident(RUNTIME_ROLE)}`,
             `GRANT UPDATE (status, result_invoice_no, result_sales_id, updated_at)
              ON TABLE public.${ident("sales_posting_operations")} TO ${ident(RUNTIME_ROLE)}`,

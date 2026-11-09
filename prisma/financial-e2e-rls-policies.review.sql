@@ -235,6 +235,30 @@
 -- payments
 -- tenant_select_payments / tenant_insert_payments / tenant_update_payments
 -- Predicate: tenant_id::text = public.financial_context_tenant_id()
+-- New event dates and occurred_at are producer-owned; recorded_at is assigned
+-- by the database trigger and is immutable.
+
+-- payment_allocations
+-- tenant_select_payment_allocations / tenant_insert_payment_allocations /
+-- tenant_update_payment_allocations
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
+
+-- allocation_reversals
+-- tenant_select_allocation_reversals / tenant_insert_allocation_reversals /
+-- tenant_update_allocation_reversals
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
+
+-- payment_refunds
+-- tenant_select_payment_refunds / tenant_insert_payment_refunds /
+-- tenant_update_payment_refunds
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
+-- Request and completion are distinct events; recorded timestamps are
+-- database-assigned and immutable.
+
+-- payment_reversals
+-- tenant_select_payment_reversals / tenant_insert_payment_reversals /
+-- tenant_update_payment_reversals
+-- Predicate: tenant_id::text = public.financial_context_tenant_id()
 
 -- stock_movements
 -- tenant_select_stock_movements / tenant_insert_stock_movements /

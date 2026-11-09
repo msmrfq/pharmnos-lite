@@ -1,8 +1,17 @@
-import { LedgerEntryType } from "@prisma/client";
+import { LedgerEntryType, Prisma } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
 import { prisma as defaultPrisma } from "@/lib/db/prisma";
-import type { TenantContext } from "@/lib/db/tenant-context";
+import { establishTenantContext, type TenantContext } from "@/lib/db/tenant-context";
 import { Decimal, decimalOrZero } from "@/lib/decimal";
+import type { BusinessDate } from "@/lib/utils/business-date";
+import {
+  ledgerTemporalFields,
+  resolveFinancialTemporal,
+  type FinancialTemporalInput,
+} from "@/lib/utils/financial-temporal";
+
+/** An invoice's effective date is always an explicit business date, never an instant. */
+export type InvoiceBusinessDateInput = { readonly businessDate: BusinessDate; readonly occurredAt?: never };
 
 export type CustomerLedgerImpactInput = {
   customer_id: string;
@@ -13,7 +22,7 @@ export type CustomerLedgerImpactInput = {
   reference_type?: string | null;
   reference_id?: string | null;
   narration?: string | null;
-  entry_date?: Date;
+  temporal: FinancialTemporalInput;
 };
 
 export type SupplierLedgerImpactInput = {
@@ -25,7 +34,7 @@ export type SupplierLedgerImpactInput = {
   reference_type?: string | null;
   reference_id?: string | null;
   narration?: string | null;
-  entry_date?: Date;
+  temporal: FinancialTemporalInput;
 };
 
 export type LedgerEntryResult = {
@@ -36,27 +45,36 @@ export type LedgerEntryResult = {
   debit: number;
   credit: number;
   balance: number;
+  /** Legacy column: the date marker for a business date, the instant otherwise. */
   entry_date: Date;
+  effective_date: Date | null;
+  effective_date_basis: string | null;
+  occurred_at: Date | null;
 };
 
 const round2 = (n: number) => decimalOrZero(n).round(2, "HALF_UP").toNumber();
 
-async function customerRunningBalance(
-  tx: any,
-  tenantId: string,
-  customerId: string,
-  atOrBefore: Date,
-): Promise<number> {
+const LEDGER_ORDER = [{ created_at: "asc" }, { id: "asc" }];
+
+function assertNoLegacyDateInput(input: object): void {
+  if ("entry_date" in input) {
+    throw new TypeError("entry_date is not accepted; provide a typed `temporal` input.");
+  }
+}
+
+function assertInvoiceBusinessDate(input: unknown): void {
+  if (input === null || typeof input !== "object" || (input as { occurredAt?: unknown }).occurredAt !== undefined) {
+    throw new TypeError("An invoice ledger entry requires an explicit business date, not an instant.");
+  }
+}
+
+// The running balance never reads entry_date: legacy rows mix date markers and instants.
+async function customerRunningBalance(tx: any, tenantId: string, customerId: string): Promise<number> {
   const rows = await tx.customer_ledgers.findMany({
-    where: {
-      tenant_id: tenantId,
-      customer_id: customerId,
-      entry_date: { lte: atOrBefore },
-    },
-    orderBy: [{ entry_date: "asc" }, { created_at: "asc" }],
-    select: { debit: true, credit: true, entry_date: true, created_at: true, id: true },
+    where: { tenant_id: tenantId, customer_id: customerId },
+    orderBy: LEDGER_ORDER,
+    select: { debit: true, credit: true },
   });
-  if (!rows.length) return 0;
   let bal = Decimal.zero();
   for (const r of rows) {
     bal = bal
@@ -67,22 +85,12 @@ async function customerRunningBalance(
   return bal.toNumber();
 }
 
-async function supplierRunningBalance(
-  tx: any,
-  tenantId: string,
-  supplierId: string,
-  atOrBefore: Date,
-): Promise<number> {
+async function supplierRunningBalance(tx: any, tenantId: string, supplierId: string): Promise<number> {
   const rows = await tx.supplier_ledgers.findMany({
-    where: {
-      tenant_id: tenantId,
-      supplier_id: supplierId,
-      entry_date: { lte: atOrBefore },
-    },
-    orderBy: [{ entry_date: "asc" }, { created_at: "asc" }],
+    where: { tenant_id: tenantId, supplier_id: supplierId },
+    orderBy: LEDGER_ORDER,
     select: { debit: true, credit: true },
   });
-  if (!rows.length) return 0;
   let bal = Decimal.zero();
   for (const r of rows) {
     bal = bal
@@ -91,6 +99,24 @@ async function supplierRunningBalance(
       .round(2, "HALF_UP");
   }
   return bal.toNumber();
+}
+
+async function lockCounterparty(
+  tx: any,
+  kind: "customer" | "supplier",
+  tenantId: string,
+  id: string,
+): Promise<void> {
+  const rows: unknown[] = kind === "customer"
+    ? await tx.$queryRaw(Prisma.sql`
+      SELECT "id" FROM "customers" WHERE "tenant_id" = ${tenantId} AND "id" = ${id} FOR UPDATE
+    `)
+    : await tx.$queryRaw(Prisma.sql`
+      SELECT "id" FROM "suppliers" WHERE "tenant_id" = ${tenantId} AND "id" = ${id} FOR UPDATE
+    `);
+  if (rows.length !== 1) {
+    throw new Error(kind === "customer" ? "Customer not found." : "Supplier not found.");
+  }
 }
 
 export class LedgerImpactService {
@@ -102,13 +128,16 @@ export class LedgerImpactService {
   ): Promise<LedgerEntryResult> {
     const t = ctx as any;
     if (!t.tenantId) throw new Error("Tenant required for customer ledger impact.");
+    assertNoLegacyDateInput(input);
+    const temporal = resolveFinancialTemporal(input.temporal);
     const debit = round2(input.debit ?? 0);
     const credit = round2(input.credit ?? 0);
-    const entryDate = input.entry_date ?? new Date();
     const refType = input.reference_type ?? mapLedgerRefType(input.entry_type);
 
     return this.prisma.$transaction(async (tx: any) => {
-      const latestBal = await customerRunningBalance(tx, t.tenantId, input.customer_id, entryDate);
+      await establishTenantContext(tx, ctx);
+      await lockCounterparty(tx, "customer", t.tenantId, input.customer_id);
+      const latestBal = await customerRunningBalance(tx, t.tenantId, input.customer_id);
       const newBal = decimalOrZero(latestBal).add(debit).subtract(credit).round(2, "HALF_UP").toNumber();
       const row = await tx.customer_ledgers.create({
         data: {
@@ -122,13 +151,24 @@ export class LedgerImpactService {
           reference_id: input.reference_id ?? null,
           invoice_id: input.invoice_id ?? null,
           narration: input.narration ?? null,
-          entry_date: entryDate,
+          ...ledgerTemporalFields(temporal),
         },
-        select: { id: true, tenant_id: true, customer_id: true, debit: true, credit: true, balance: true, entry_date: true },
+        select: {
+          id: true,
+          tenant_id: true,
+          customer_id: true,
+          debit: true,
+          credit: true,
+          balance: true,
+          entry_date: true,
+          effective_date: true,
+          effective_date_basis: true,
+          occurred_at: true,
+        },
       });
 
       if (input.entry_type === "PAYMENT_RECEIVED" || input.entry_type === "INVOICE" || input.entry_type === "CREDIT_NOTE" || input.entry_type === "OPENING_BALANCE") {
-        const allBal = await customerRunningBalance(tx, t.tenantId, input.customer_id, new Date("2999-12-31"));
+        const allBal = await customerRunningBalance(tx, t.tenantId, input.customer_id);
         await tx.customers.update({
           where: { id: input.customer_id, tenant_id: t.tenantId },
           data: { receivable_balance: Decimal.from(allBal).compare(0) === 1 ? round2(allBal) : 0 },
@@ -144,6 +184,9 @@ export class LedgerImpactService {
         credit: Number(row.credit),
         balance: Number(row.balance),
         entry_date: row.entry_date,
+        effective_date: row.effective_date ?? null,
+        effective_date_basis: row.effective_date_basis ?? null,
+        occurred_at: row.occurred_at ?? null,
       };
     });
   }
@@ -154,13 +197,16 @@ export class LedgerImpactService {
   ): Promise<LedgerEntryResult> {
     const t = ctx as any;
     if (!t.tenantId) throw new Error("Tenant required for supplier ledger impact.");
+    assertNoLegacyDateInput(input);
+    const temporal = resolveFinancialTemporal(input.temporal);
     const debit = round2(input.debit ?? 0);
     const credit = round2(input.credit ?? 0);
-    const entryDate = input.entry_date ?? new Date();
     const refType = input.reference_type ?? mapLedgerRefType(input.entry_type);
 
     return this.prisma.$transaction(async (tx: any) => {
-      const latestBal = await supplierRunningBalance(tx, t.tenantId, input.supplier_id, entryDate);
+      await establishTenantContext(tx, ctx);
+      await lockCounterparty(tx, "supplier", t.tenantId, input.supplier_id);
+      const latestBal = await supplierRunningBalance(tx, t.tenantId, input.supplier_id);
       const newBal = decimalOrZero(latestBal).add(credit).subtract(debit).round(2, "HALF_UP").toNumber();
       const row = await tx.supplier_ledgers.create({
         data: {
@@ -174,9 +220,20 @@ export class LedgerImpactService {
           reference_id: input.reference_id ?? null,
           purchase_id: input.purchase_id ?? null,
           narration: input.narration ?? null,
-          entry_date: entryDate,
+          ...ledgerTemporalFields(temporal),
         },
-        select: { id: true, tenant_id: true, supplier_id: true, debit: true, credit: true, balance: true, entry_date: true },
+        select: {
+          id: true,
+          tenant_id: true,
+          supplier_id: true,
+          debit: true,
+          credit: true,
+          balance: true,
+          entry_date: true,
+          effective_date: true,
+          effective_date_basis: true,
+          occurred_at: true,
+        },
       });
 
       if (
@@ -185,7 +242,7 @@ export class LedgerImpactService {
         input.entry_type === "DEBIT_NOTE" ||
         input.entry_type === "OPENING_BALANCE"
       ) {
-        const allBal = await supplierRunningBalance(tx, t.tenantId, input.supplier_id, new Date("2999-12-31"));
+        const allBal = await supplierRunningBalance(tx, t.tenantId, input.supplier_id);
         await tx.suppliers.update({
           where: { id: input.supplier_id, tenant_id: t.tenantId },
           data: { payable_balance: Decimal.from(allBal).compare(0) === 1 ? round2(allBal) : 0 },
@@ -201,6 +258,9 @@ export class LedgerImpactService {
         credit: Number(row.credit),
         balance: Number(row.balance),
         entry_date: row.entry_date,
+        effective_date: row.effective_date ?? null,
+        effective_date_basis: row.effective_date_basis ?? null,
+        occurred_at: row.occurred_at ?? null,
       };
     });
   }
@@ -208,11 +268,12 @@ export class LedgerImpactService {
   async finalizeCustomerInvoice(
     customerId: string,
     invoiceId: string,
-    invoiceDate: Date,
+    invoiceDate: InvoiceBusinessDateInput,
     invoiceTotal: number,
     narration: string,
     ctx: TenantContext,
   ): Promise<LedgerEntryResult> {
+    assertInvoiceBusinessDate(invoiceDate);
     return this.impactCustomer(
       {
         customer_id: customerId,
@@ -223,7 +284,7 @@ export class LedgerImpactService {
         reference_type: "sales_invoice",
         reference_id: invoiceId,
         narration,
-        entry_date: invoiceDate,
+        temporal: invoiceDate,
       },
       ctx,
     );
@@ -232,11 +293,12 @@ export class LedgerImpactService {
   async finalizePurchaseInvoice(
     supplierId: string,
     purchaseId: string,
-    invoiceDate: Date,
+    invoiceDate: InvoiceBusinessDateInput,
     purchaseTotal: number,
     narration: string,
     ctx: TenantContext,
   ): Promise<LedgerEntryResult> {
+    assertInvoiceBusinessDate(invoiceDate);
     return this.impactSupplier(
       {
         supplier_id: supplierId,
@@ -247,7 +309,7 @@ export class LedgerImpactService {
         reference_type: "purchase_invoice",
         reference_id: purchaseId,
         narration,
-        entry_date: invoiceDate,
+        temporal: invoiceDate,
       },
       ctx,
     );
@@ -257,7 +319,7 @@ export class LedgerImpactService {
     customerId: string,
     invoiceId: string | null,
     paymentId: string,
-    paymentDate: Date,
+    paymentDate: FinancialTemporalInput,
     amount: number,
     narration: string,
     ctx: TenantContext,
@@ -272,7 +334,7 @@ export class LedgerImpactService {
         reference_type: "payment",
         reference_id: paymentId,
         narration,
-        entry_date: paymentDate,
+        temporal: paymentDate,
       },
       ctx,
     );
@@ -282,7 +344,7 @@ export class LedgerImpactService {
     supplierId: string,
     purchaseId: string | null,
     paymentId: string,
-    paymentDate: Date,
+    paymentDate: FinancialTemporalInput,
     amount: number,
     narration: string,
     ctx: TenantContext,
@@ -297,7 +359,7 @@ export class LedgerImpactService {
         reference_type: "payment",
         reference_id: paymentId,
         narration,
-        entry_date: paymentDate,
+        temporal: paymentDate,
       },
       ctx,
     );

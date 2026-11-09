@@ -27,10 +27,11 @@ import {
 } from "@/components/ui/table";
 import { Download, Search, ChevronLeft, ChevronRight, Truck, Calendar as CalendarIcon } from "lucide-react";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
 import ExportCsvButton from "@/components/ui/export-csv-button";
-import { exportPurchaseRegisterCsvAction } from "@/app/_actions/exports.actions";
+import { exportPurchaseRegisterCsvAction, loadFinancialRegisterReport } from "@/app/_actions/exports.actions";
+import { describeReportFailure, type RegisterExclusionSummary } from "@/domain/services/financial-report-completeness";
+import { QualifiedReportBanner, ReportUnavailableNotice } from "@/components/reports/report-completeness-notices";
+import { formatBusinessDate } from "@/lib/utils/business-date";
 
 export const metadata: Metadata = {
   title: "Purchase Register",
@@ -48,12 +49,6 @@ function statusVariant(s: string) {
   return "warning" as const;
 }
 
-function parseDate(s: string | undefined): Date | null {
-  if (!s) return null;
-  const d = new Date(s + "T00:00:00");
-  return isNaN(d.getTime()) ? null : d;
-}
-
 function buildQs(params: Record<string, string | undefined>): string {
   const entries = Object.entries(params).filter(
     ([, v]) => v !== undefined && v !== "",
@@ -65,16 +60,22 @@ function buildQs(params: Record<string, string | undefined>): string {
 export default async function PurchaseRegisterPage({
   searchParams,
 }: {
-  searchParams: { page?: string; q?: string; supplierId?: string; startDate?: string; endDate?: string };
+  searchParams: { page?: string; q?: string; supplierId?: string; startDate?: string; endDate?: string; mode?: string };
 }) {
   const pageRaw = Number(searchParams?.page ?? "1");
   const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
   const pageSize = 50;
   const q = searchParams?.q ?? "";
-  const supplierId = searchParams?.supplierId ?? "";
+  const supplierId = searchParams?.supplierId === "all" ? "" : (searchParams?.supplierId ?? "");
   const startDate = searchParams?.startDate ?? "";
   const endDate = searchParams?.endDate ?? "";
+  const rawMode = searchParams?.mode;
+  const qualified = rawMode === "qualified";
+  // The raw mode is validated by the report loader; an unknown mode fails closed there.
+  const reportInput = { q, partyId: supplierId, startDate, endDate, ...(rawMode !== undefined ? { mode: rawMode } : {}) };
   let dbOk = isPostgresConfigured();
+  let failure: { reason: string; qualifiedModeAvailable: boolean } | null = null;
+  let exclusions: RegisterExclusionSummary | null = null;
 
   let items: any[] = [];
   let total = 0;
@@ -82,61 +83,30 @@ export default async function PurchaseRegisterPage({
 
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      const [invResult, supResult] = await Promise.all([
-        repos.purchaseInvoices.list(
-          { skip: 0, take: 25000, orderBy: { invoice_date: "desc" }, search: q || undefined },
-          ctx,
-        ),
-        repos.suppliers.list({ skip: 0, take: 1000, orderBy: { business_name: "asc" } }, ctx),
-      ]);
-      suppliers = supResult.items;
-
-      let filtered = invResult.items as any[];
-
-      if (supplierId) {
-        filtered = filtered.filter((x: any) => x.supplier_id === supplierId);
-      }
-
-      const sd = parseDate(startDate);
-      const ed = parseDate(endDate);
-      if (sd) {
-        const sd0 = new Date(sd);
-        sd0.setHours(0, 0, 0, 0);
-        filtered = filtered.filter((x: any) => {
-          if (!x.invoice_date) return false;
-          const d = new Date(x.invoice_date);
-          return d.getTime() >= sd0.getTime();
-        });
-      }
-      if (ed) {
-        const ed0 = new Date(ed);
-        ed0.setHours(23, 59, 59, 999);
-        filtered = filtered.filter((x: any) => {
-          if (!x.invoice_date) return false;
-          const d = new Date(x.invoice_date);
-          return d.getTime() <= ed0.getTime();
-        });
-      }
-
-      total = filtered.length;
+      const result = await loadFinancialRegisterReport("purchase", reportInput);
+      suppliers = result.parties;
+      total = result.rows.length;
       const startIdx = (page - 1) * pageSize;
-      items = filtered.slice(startIdx, startIdx + pageSize);
-    } catch (_err) {
+      items = result.rows.slice(startIdx, startIdx + pageSize);
+      exclusions = result.mode === "qualified" ? result.exclusions : null;
+    } catch (error) {
       dbOk = false;
+      failure = describeReportFailure(error);
     }
   }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  const pageQs = (p: number) =>
+  const filterQs = (overrides: Record<string, string | undefined> = {}) =>
     buildQs({
-      page: p > 1 ? String(p) : undefined,
       q: q || undefined,
       supplierId: supplierId || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
+      mode: rawMode,
+      ...overrides,
     });
+  const pageQs = (p: number) => filterQs({ page: p > 1 ? String(p) : undefined });
 
   return (
     <DashboardLayout>
@@ -144,16 +114,16 @@ export default async function PurchaseRegisterPage({
         <div>
           <CardTitle className="text-display-sm tracking-brand">Purchase Register</CardTitle>
           <p className="mt-1 text-body-md text-body">
-            Supplier purchase entries by date range, supplier and reference.
+            Purchases by effective date, supplier and reference. Export uses the same filters; not a historical knowledge-time snapshot.
           </p>
           {!dbOk && (
             <p className="mt-2 text-caption text-destructive">
-              Database is not configured — showing placeholder rows.
+              Register unavailable; no financial results are shown.
             </p>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <ExportCsvButton variant="secondary" action={exportPurchaseRegisterCsvAction}>
+          <ExportCsvButton variant="secondary" action={exportPurchaseRegisterCsvAction.bind(null, reportInput)} disabled={!dbOk}>
             <Download className="h-4 w-4" /> Export
           </ExportCsvButton>
           <Button asChild variant="secondary">
@@ -164,9 +134,28 @@ export default async function PurchaseRegisterPage({
         </div>
       </CardHeader>
 
+      {!dbOk && (
+        <ReportUnavailableNotice
+          title="Register unavailable."
+          reason={failure?.reason ?? "The report could not be loaded."}
+          qualifiedHref={failure?.qualifiedModeAvailable && !qualified ? `/reports/purchase-register${filterQs({ mode: "qualified" })}` : null}
+        />
+      )}
+
+      {dbOk && exclusions && (
+        <QualifiedReportBanner
+          excludedLabel="invoices"
+          excludedCount={exclusions.excludedCount}
+          amounts={[{ label: "excluded net amount", value: rupee(exclusions.excludedNet) }]}
+          byReason={exclusions.byReason}
+          completeHref={`/reports/purchase-register${filterQs({ mode: undefined })}`}
+        />
+      )}
+
       <CardCanvas className="mb-5">
         <CardContent>
           <form action="" method="get" className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 items-end">
+            {rawMode !== undefined ? <input type="hidden" name="mode" value={rawMode} /> : null}
             <div className="space-y-1.5">
               <label className="text-caption font-medium text-muted">Search</label>
               <div className="relative">
@@ -182,12 +171,12 @@ export default async function PurchaseRegisterPage({
 
             <div className="space-y-1.5">
               <label className="text-caption font-medium text-muted">Supplier</label>
-              <Select name="supplierId" defaultValue={supplierId || undefined}>
+              <Select name="supplierId" defaultValue={supplierId || "all"}>
                 <SelectTrigger>
                   <SelectValue placeholder="All suppliers" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All suppliers</SelectItem>
+                  <SelectItem value="all">All suppliers</SelectItem>
                   {suppliers.map((s: any) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.business_name || s.code || s.id}
@@ -261,44 +250,13 @@ export default async function PurchaseRegisterPage({
                   </TableCell>
                 </TableRow>
               ) : !dbOk ? (
-                <>
-                  <TableRow>
-                    <TableCell colSpan={9} className="py-6 text-center text-muted text-body-md">
-                      Showing placeholder rows until database is connected.
-                    </TableCell>
-                  </TableRow>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={`ph-${i}`} className="opacity-60">
-                      <TableCell className="font-medium text-ink">
-                        <div className="flex items-center gap-2">
-                          <Truck className="h-4 w-4 text-muted" />
-                          PI-{String(1000 + i).padStart(4, "0")}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-body whitespace-nowrap">
-                        {new Date(Date.now() - i * 86400000 * 3).toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </TableCell>
-                      <TableCell className="text-body">Sample Supplier {i + 1}</TableCell>
-                      <TableCell className="text-body text-muted">SUP-REF-{i + 1}</TableCell>
-                      <TableCell>
-                        <Badge variant="warning">DRAFT</Badge>
-                      </TableCell>
-                      <TableCell className="text-right text-body">{rupee(10000 + i * 2500)}</TableCell>
-                      <TableCell className="text-right text-muted">{rupee(i * 200)}</TableCell>
-                      <TableCell className="text-right text-body">{rupee(1200 + i * 300)}</TableCell>
-                      <TableCell className="text-right font-semibold text-ink whitespace-nowrap">
-                        {rupee(10800 + i * 2600)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </>
+                <TableRow>
+                  <TableCell colSpan={9} className="py-6 text-center text-muted text-body-md">
+                    Register unavailable; no financial results are shown.
+                  </TableCell>
+                </TableRow>
               ) : (
                 items.map((p: any) => {
-                  const d = p.invoice_date ? new Date(p.invoice_date) : null;
                   return (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium text-ink">
@@ -308,16 +266,10 @@ export default async function PurchaseRegisterPage({
                         </div>
                       </TableCell>
                       <TableCell className="text-body whitespace-nowrap">
-                        {d
-                          ? d.toLocaleDateString("en-IN", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })
-                          : "—"}
+                        {formatBusinessDate(p.effective_date)}
                       </TableCell>
                       <TableCell className="text-body">
-                        {p.supplier?.business_name ?? "—"}
+                        {p.party?.business_name ?? "—"}
                       </TableCell>
                       <TableCell className="text-body text-muted">
                         {p.supplier_invoice_no ?? "—"}

@@ -158,6 +158,17 @@ enum FinancialRefundStatus {
   CANCELLED
 }
 
+/// Provenance of a financial effective date. Only EXPLICIT and DERIVED_FROM_OCCURRED_AT are assignable by the application.
+/// AMBIGUOUS and UNCLASSIFIED require a NULL date and are distinct from NULL (never classified).
+/// EVIDENCE_CLASSIFIED is reserved: CHECK constraints reject it because no durable, inspectable provenance record exists.
+enum FinancialDateBasis {
+  EXPLICIT
+  DERIVED_FROM_OCCURRED_AT
+  EVIDENCE_CLASSIFIED
+  AMBIGUOUS
+  UNCLASSIFIED
+}
+
 enum FinancialReversalStatus {
   COMPLETED
 }
@@ -517,6 +528,11 @@ model purchase_invoices {
   supplier_invoice_no                String?
   invoice_date                       DateTime
   due_date        DateTime?
+  effective_date                     DateTime?                             @db.Date
+  due_date_business                  DateTime?                             @db.Date
+  /// Pre-commit database acceptance time of finalization: clock_timestamp() assigned by the invoice guard trigger when a statement inserts the invoice as FINALIZED or moves it to FINALIZED inside a still-open transaction.
+  /// NOT commit-visible time, NOT commit order, NOT proof of historical knowledge at that instant. Callers cannot supply or change it; NULL = not finalized or legacy/unknown.
+  finalized_recorded_at              DateTime?                             @db.Timestamptz(3)
   status                             InvoiceStatus                         @default(DRAFT)
   gst_reconciliation_status          PurchaseGstReconciliationStatus       @default(NOT_RECONCILED)
   gst_accounting_acceptance_status   PurchaseGstAccountingAcceptanceStatus @default(NOT_ACCEPTED)
@@ -1046,6 +1062,11 @@ model sales_invoices {
   customer_id                      String?
   invoice_date                     DateTime
   due_date        DateTime?
+  effective_date                  DateTime?      @db.Date
+  due_date_business               DateTime?      @db.Date
+  /// Pre-commit database acceptance time of finalization: clock_timestamp() assigned by the invoice guard trigger when a statement inserts the invoice as FINALIZED or moves it to FINALIZED inside a still-open transaction.
+  /// NOT commit-visible time, NOT commit order, NOT proof of historical knowledge at that instant. Callers cannot supply or change it; NULL = not finalized or legacy/unknown.
+  finalized_recorded_at           DateTime?      @db.Timestamptz(3)
   status                           InvoiceStatus  @default(DRAFT)
   tax_data_status                  TaxDataStatus?
   gst_treatment                    String?
@@ -1181,6 +1202,12 @@ model payments {
   amount               Decimal         @db.Decimal(14, 2)
   reference_no         String?
   payment_date         DateTime
+  effective_date       DateTime?          @db.Date
+  effective_date_basis FinancialDateBasis?
+  occurred_at          DateTime?          @db.Timestamptz(3)
+  /// Pre-commit database acceptance time: clock_timestamp() assigned by a BEFORE INSERT trigger inside a still-open transaction.
+  /// NOT commit-visible time, NOT commit order, NOT proof of historical knowledge at that instant. Callers cannot supply or change it; NULL = legacy/unknown.
+  recorded_at          DateTime?          @db.Timestamptz(3)
   notes                String?
   idempotency_key      String?
   request_payload_hash String?
@@ -1225,6 +1252,11 @@ model payment_allocations {
   amount               Decimal  @db.Decimal(14, 2)
   idempotency_key      String
   request_payload_hash String
+  effective_date      DateTime? @db.Date
+  occurred_at         DateTime? @db.Timestamptz(3)
+  /// Pre-commit database acceptance time: clock_timestamp() assigned by a BEFORE INSERT trigger inside a still-open transaction.
+  /// NOT commit-visible time, NOT commit order, NOT proof of historical knowledge at that instant. Callers cannot supply or change it; NULL = legacy/unknown.
+  recorded_at         DateTime? @db.Timestamptz(3)
   allocated_at         DateTime @default(now())
   allocated_by         String?
   legacy_unallocated   Boolean  @default(false)
@@ -1250,6 +1282,11 @@ model allocation_reversals {
   amount               Decimal  @db.Decimal(14, 2)
   idempotency_key      String
   request_payload_hash String
+  effective_date      DateTime? @db.Date
+  occurred_at         DateTime? @db.Timestamptz(3)
+  /// Pre-commit database acceptance time: clock_timestamp() assigned by a BEFORE INSERT trigger inside a still-open transaction.
+  /// NOT commit-visible time, NOT commit order, NOT proof of historical knowledge at that instant. Callers cannot supply or change it; NULL = legacy/unknown.
+  recorded_at         DateTime? @db.Timestamptz(3)
   reversed_at          DateTime @default(now())
   reversed_by          String?
   created_at           DateTime @default(now())
@@ -1271,9 +1308,20 @@ model payment_refunds {
   idempotency_key      String
   request_payload_hash String
   requested_at         DateTime              @default(now())
+  requested_business_date DateTime?          @db.Date
+  requested_occurred_at   DateTime?          @db.Timestamptz(3)
+  /// Pre-commit database acceptance time of the request: clock_timestamp() assigned by the refund guard trigger on INSERT inside a still-open transaction.
+  /// NOT commit-visible time, NOT commit order, NOT proof of historical knowledge at that instant. Callers cannot supply or change it; NULL = legacy/unknown.
+  requested_recorded_at   DateTime?          @db.Timestamptz(3)
   approved_at          DateTime?
   rejected_at          DateTime?
   completed_at         DateTime?
+  completed_effective_date       DateTime?          @db.Date
+  completed_effective_date_basis FinancialDateBasis?
+  completed_occurred_at          DateTime?          @db.Timestamptz(3)
+  /// Pre-commit database acceptance time of completion: clock_timestamp() assigned by the refund guard trigger on the transition to COMPLETED inside a still-open transaction.
+  /// NOT commit-visible time, NOT commit order, NOT proof of historical knowledge at that instant. Callers cannot supply or change it; NULL = not completed or legacy/unknown.
+  completed_recorded_at          DateTime?          @db.Timestamptz(3)
   cancelled_at         DateTime?
   requested_by         String?
   approved_by          String?
@@ -1299,6 +1347,11 @@ model payment_reversals {
   status               FinancialReversalStatus @default(COMPLETED)
   idempotency_key      String
   request_payload_hash String
+  effective_date      DateTime?          @db.Date
+  occurred_at         DateTime?          @db.Timestamptz(3)
+  /// Pre-commit database acceptance time: clock_timestamp() assigned by a BEFORE INSERT trigger inside a still-open transaction.
+  /// NOT commit-visible time, NOT commit order, NOT proof of historical knowledge at that instant. Callers cannot supply or change it; NULL = legacy/unknown.
+  recorded_at         DateTime?          @db.Timestamptz(3)
   reversed_at          DateTime                @default(now())
   reversed_by          String?
   reason               String?
@@ -1362,6 +1415,12 @@ model customer_ledgers {
   invoice_id     String?
   narration      String?
   entry_date     DateTime
+  effective_date       DateTime?          @db.Date
+  effective_date_basis FinancialDateBasis?
+  occurred_at          DateTime?          @db.Timestamptz(3)
+  /// Pre-commit database acceptance time: clock_timestamp() assigned by a BEFORE INSERT trigger inside a still-open transaction.
+  /// NOT commit-visible time, NOT commit order, NOT proof of historical knowledge at that instant. Callers cannot supply or change it; NULL = legacy/unknown.
+  recorded_at          DateTime?          @db.Timestamptz(3)
   created_at     DateTime        @default(now())
 
   tenant   tenants         @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
@@ -1386,6 +1445,12 @@ model supplier_ledgers {
   purchase_id    String?
   narration      String?
   entry_date     DateTime
+  effective_date       DateTime?          @db.Date
+  effective_date_basis FinancialDateBasis?
+  occurred_at          DateTime?          @db.Timestamptz(3)
+  /// Pre-commit database acceptance time: clock_timestamp() assigned by a BEFORE INSERT trigger inside a still-open transaction.
+  /// NOT commit-visible time, NOT commit order, NOT proof of historical knowledge at that instant. Callers cannot supply or change it; NULL = legacy/unknown.
+  recorded_at          DateTime?          @db.Timestamptz(3)
   created_at     DateTime        @default(now())
 
   tenant   tenants            @relation(fields: [tenant_id], references: [id], onDelete: Cascade)

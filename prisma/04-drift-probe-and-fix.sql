@@ -1,4 +1,11 @@
 -- =====================================================================
+-- LEGACY PROBE - SUPERSEDED. It re-applies indexes/grants/RLS for the frozen
+-- 19-table first-release snapshot only (prisma/01-apply-schema-with-rls.sql).
+-- It knows nothing of migrations 0002-0028, including the 0028 financial
+-- date/instant columns and triggers, and must not be used to verify or repair a
+-- current database. Executable statements below are intentionally unchanged.
+-- =====================================================================
+-- =====================================================================
 -- Pharmnos Lite — Drift probe + auto-fix (run before seed if anything feels off)
 -- Paste into Supabase Dashboard SQL Editor → Run.
 -- Does TWO things:

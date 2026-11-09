@@ -27,8 +27,6 @@ test("CSV exports enforce the permission for their financial surface", () => {
     exportSuppliersCsvAction: "view_supplier",
     exportPurchaseRegisterCsvAction: "view_purchase",
     exportSalesRegisterCsvAction: "view_invoice",
-    exportCustomerDuesCsvAction: "view_customer_ledger",
-    exportSupplierPayablesCsvAction: "view_supplier_ledger",
     exportStockValuationCsvAction: "view_inventory",
     exportBatchExpiryCsvAction: "view_inventory",
     exportGstHsnSummaryCsvAction: "view_reports",
@@ -44,7 +42,17 @@ test("CSV exports enforce the permission for their financial surface", () => {
   }
 });
 
-test("CSV escaping neutralizes spreadsheet formulas", () => {
+test("aging CSV exports live in the aging actions and enforce the ledger permission through the shared loader", async () => {
+  const agingSource = await readFile(new URL("../src/app/_actions/aging-report.actions.ts", import.meta.url), "utf8");
+  assert.match(
+    agingSource,
+    /requirePermission\(ctx, kind === "customer" \? PermissionAction\.view_customer_ledger : PermissionAction\.view_supplier_ledger\)/,
+  );
+  assert.match(agingSource, /export async function exportCustomerDuesCsvAction[\s\S]*exportAgingCsv\("customer"\)/);
+  assert.match(agingSource, /export async function exportSupplierPayablesCsvAction[\s\S]*exportAgingCsv\("supplier"\)/);
+  assert.match(agingSource, /async function exportAgingCsv[\s\S]*loadCustomerAgingReport\(\) : loadSupplierAgingReport\(\)/);
+  assert.doesNotMatch(exportsSource, /exportCustomerDuesCsvAction|exportSupplierPayablesCsvAction/);
+});
   assert.match(exportsSource, /const safe = \/\^\[=\+\\\-@\]\//);
   assert.match(exportsSource, /return safe;/);
 });

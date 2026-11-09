@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { isPostgresConfigured } from "@/lib/db/prisma";
 import { requireServerTenantContext } from "@/lib/db/tenant-context";
 import { repos } from "@/repositories";
+import { formatBusinessDate } from "@/lib/utils/business-date";
+import { LEGACY_INVOICE_DATE_LABEL, resolveInvoiceDisplayDate } from "@/lib/utils/invoice-display-date";
 import { PrintToolbar } from "@/components/print/print-toolbar";
 
 export const metadata: Metadata = {
@@ -32,8 +34,7 @@ const rupee = (n: number | null | undefined | string | bigint) => {
 
 const formatDate = (d: Date | string | null | undefined) => {
   if (!d) return "—";
-  const dt = typeof d === "string" ? new Date(d) : d;
-  return dt.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  return formatBusinessDate(d);
 };
 
 export default async function BillingInvoiceDetailPage({
@@ -85,6 +86,7 @@ export default async function BillingInvoiceDetailPage({
   const net = Number(invoice.net_amount ?? 0);
   const bal = Number(invoice.balance_due ?? 0);
   const allPaid = invoice.is_cash_sale || (paid > 0 && Math.abs(bal) < 0.01);
+  const invoiceDate = resolveInvoiceDisplayDate(invoice);
 
   return (
     <DashboardLayout>
@@ -115,7 +117,7 @@ export default async function BillingInvoiceDetailPage({
                 {invoice.is_cash_sale && <Badge variant="outline">Cash sale</Badge>}
               </div>
               <div className="space-y-1 text-body">
-                <p><span className="text-muted">Date:</span> <span className="text-ink">{formatDate(invoice.invoice_date)}</span></p>
+                <p><span className="text-muted">Date:</span> <span className="text-ink">{invoiceDate.text}</span>{!invoiceDate.classified && <span className="ml-1 text-caption text-muted">({LEGACY_INVOICE_DATE_LABEL})</span>}</p>
                 {invoice.reference_no && <p><span className="text-muted">Ref no:</span> <span className="text-ink">{invoice.reference_no}</span></p>}
               </div>
             </div>

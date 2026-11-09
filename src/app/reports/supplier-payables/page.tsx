@@ -27,11 +27,11 @@ import {
   Search,
   FilterX,
 } from "lucide-react";
-import { repos } from "@/repositories";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { formatBusinessDate } from "@/lib/utils/business-date";
 import ExportCsvButton from "@/components/ui/export-csv-button";
-import { exportSupplierPayablesCsvAction } from "@/app/_actions/exports.actions";
+import { exportSupplierPayablesCsvAction, loadSupplierAgingReport } from "@/app/_actions/aging-report.actions";
+import { formatRupeeAmount, type AgingReport } from "@/domain/services/aging-report.service";
 
 export const metadata: Metadata = {
   title: "Supplier Payables",
@@ -44,20 +44,19 @@ const rupee = (n: number | null | undefined | string | bigint) => {
 };
 
 const agingBucketVariant = (buckets: {
-  current: number;
-  d30: number;
-  d60: number;
-  d90: number;
-  over90: number;
+  current: number | string;
+  d30: number | string;
+  d60: number | string;
+  d90: number | string;
+  over90: number | string;
 }) => {
-  if (buckets.over90 > 0.001) return { label: "90+ days", variant: "destructive" as const };
-  if (buckets.d90 > 0.001) return { label: "61-90 days", variant: "warning" as const };
-  if (buckets.d60 > 0.001) return { label: "31-60 days", variant: "warning" as const };
-  if (buckets.d30 > 0.001 || buckets.current > 0.001) return { label: "Current", variant: "success" as const };
+  if (Number(buckets.over90) > 0.001) return { label: ">90 days", variant: "destructive" as const };
+  if (Number(buckets.d90) > 0.001) return { label: "61-90 days", variant: "warning" as const };
+  if (Number(buckets.d60) > 0.001) return { label: "31-60 days", variant: "warning" as const };
+  if (Number(buckets.d30) > 0.001) return { label: "1-30 days", variant: "success" as const };
+  if (Number(buckets.current) > 0.001) return { label: "Current", variant: "success" as const };
   return { label: "No dues", variant: "success" as const };
 };
-
-type AgingBuckets = { current: number; d30: number; d60: number; d90: number; over90: number; total: number };
 
 export default async function SupplierPayablesPage({
   searchParams,
@@ -73,47 +72,34 @@ export default async function SupplierPayablesPage({
   const minPayable = minPayableRaw ? Number(minPayableRaw) : undefined;
   const hasFilter = Boolean(q || state || (minPayable !== undefined && Number.isFinite(minPayable)));
 
-  let dbOk = isPostgresConfigured();
-  const ctx = dbOk ? await requireServerTenantContext().catch(() => null) : null;
+  const dbOk = isPostgresConfigured();
 
-  let items: any[] = [];
-  let total = 0;
-  const agingPerSupplier = new Map<string, AgingBuckets>();
+  let report: AgingReport | null = null;
+  let unavailableReason: string | null = null;
 
-  if (dbOk && ctx) {
+  if (dbOk) {
     try {
-      const listParams: any = {
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        orderBy: { business_name: "asc" },
-        search: q,
-        state,
-      };
-      if (minPayable !== undefined && Number.isFinite(minPayable) && minPayable >= 0) {
-        listParams.minPayable = minPayable;
-      }
-      const result = await repos.suppliers.list(listParams, ctx);
-      items = result.items;
-      total = result.total;
-
-      const perItemCalls: Promise<void>[] = items.map(async (s: any) => {
-        try {
-          const pay = Number(s.payable_balance ?? 0);
-          if (pay <= 0.001) {
-            agingPerSupplier.set(s.id, { current: 0, d30: 0, d60: 0, d90: 0, over90: 0, total: 0 });
-            return;
-          }
-          const buckets = await repos.supplierLedgers.getAgingBuckets(ctx, s.id);
-          agingPerSupplier.set(s.id, buckets);
-        } catch (_) {
-          agingPerSupplier.set(s.id, { current: 0, d30: 0, d60: 0, d90: 0, over90: 0, total: 0 });
-        }
-      });
-      await Promise.all(perItemCalls);
-    } catch (_err) {
-      dbOk = false;
+      const loaded = await loadSupplierAgingReport();
+      if (loaded.ok) report = loaded.report;
+      else unavailableReason = loaded.reason;
+    } catch (error) {
+      console.error("Supplier payables report failed:", error);
+      unavailableReason = "Supplier payables unavailable: access or tenant context could not be verified.";
     }
   }
+  const reportError = dbOk && report === null;
+
+  const needle = (q ?? "").toLowerCase();
+  const filteredRows = (report?.rows ?? []).filter((row) => {
+    const party = row.party;
+    if (needle && ![party.name, party.code, party.contact, party.phone, party.city, party.state]
+      .some((value) => (value ?? "").toLowerCase().includes(needle))) return false;
+    if (state && (party.state ?? "").toLowerCase() !== state.toLowerCase()) return false;
+    if (minPayable !== undefined && Number.isFinite(minPayable) && minPayable >= 0 && Number(row.total) < minPayable) return false;
+    return true;
+  });
+  const total = filteredRows.length;
+  const items = filteredRows.slice((page - 1) * pageSize, page * pageSize);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -140,11 +126,11 @@ export default async function SupplierPayablesPage({
         <div>
           <CardTitle className="text-display-sm tracking-brand">Supplier Payables (Aging)</CardTitle>
           <p className="mt-1 text-body-md text-body">
-            Outstanding payables by supplier with 0-30 / 31-60 / 61-90 / 90+ days buckets.
+            Outstanding payables by supplier with current / 1-30 / 31-60 / 61-90 / &gt;90 days buckets.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <ExportCsvButton variant="secondary" action={exportSupplierPayablesCsvAction}>
+          <ExportCsvButton variant="secondary" action={exportSupplierPayablesCsvAction} disabled={!dbOk || reportError}>
             <Download className="h-4 w-4" /> Export CSV
           </ExportCsvButton>
         </div>
@@ -157,10 +143,26 @@ export default async function SupplierPayablesPage({
         >
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
           <div>
-            <strong className="font-semibold">Showing placeholder values until database is connected.</strong>
-            <span className="ml-1">Temporary Supabase pooler timeout is common on the free tier — try again in 60 seconds.</span>
+            <strong className="font-semibold">Supplier payables unavailable: database is not configured.</strong>
           </div>
         </div>
+      )}
+      {reportError && (
+        <div role="alert" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {unavailableReason ?? "Supplier payables unavailable."} No totals are shown.
+        </div>
+      )}
+      {report?.banner && (
+        <div role="alert" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+          {report.banner}
+        </div>
+      )}
+      {report && (
+        <p className="mb-4 text-caption text-muted">
+          As of {formatBusinessDate(report.businessDate)} (Asia/Kolkata) · {report.completeness === "COMPLETE" ? "Complete" : "Qualified"} ·
+          Total classified {rupee(report.totals.classified_total)}
+          {report.unclassifiedCount > 0 && <> · Due date unclassified {formatRupeeAmount(report.totals.unclassified)} ({report.unclassifiedCount} invoices)</>}
+        </p>
       )}
 
       <CardCanvas className="mb-4">
@@ -227,64 +229,71 @@ export default async function SupplierPayablesPage({
                 <TableHead>State</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead className="text-right">Payable</TableHead>
-                <TableHead className="text-right">Current 0-30</TableHead>
+                <TableHead className="text-right">Current</TableHead>
+                <TableHead className="text-right">1-30</TableHead>
                 <TableHead className="text-right">31-60</TableHead>
                 <TableHead className="text-right">61-90</TableHead>
-                <TableHead className="text-right">90+</TableHead>
+                <TableHead className="text-right">&gt;90</TableHead>
+                <TableHead className="text-right">Due date unclassified</TableHead>
                 <TableHead>Aging</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {dbOk && items.length === 0 ? (
+              {dbOk && !reportError && items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="py-10 text-center text-muted text-body-md">
+                  <TableCell colSpan={13} className="py-10 text-center text-muted text-body-md">
                     {hasFilter
                       ? "No suppliers match the current filters."
                       : "No suppliers with payable balances yet."}
                   </TableCell>
                 </TableRow>
-              ) : !dbOk ? (
+              ) : !dbOk || reportError ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="py-10 text-center text-muted text-body-md">
-                    Showing placeholder rows until database is connected.
+                  <TableCell colSpan={13} className="py-10 text-center text-muted text-body-md">
+                    Supplier payables unavailable; no financial results are shown.
                   </TableCell>
                 </TableRow>
               ) : (
-                items.map((s: any) => {
-                  const pay = Number(s.payable_balance ?? 0);
-                  const buckets = agingPerSupplier.get(s.id) ?? {
-                    current: 0,
-                    d30: 0,
-                    d60: 0,
-                    d90: 0,
-                    over90: 0,
-                    total: 0,
-                  };
+                items.map((buckets) => {
+                  const s = buckets.party;
+                  const pay = Number(buckets.total);
                   const badge = agingBucketVariant(buckets);
                   return (
-                    <TableRow key={s.id}>
+                    <TableRow key={s.id || "no-supplier"}>
                       <TableCell className="font-medium text-ink">
-                        <Link
-                          href={`/suppliers/${s.id}`}
-                          className="inline-flex items-center gap-2 hover:underline"
-                        >
-                          <Package className="h-4 w-4 text-muted" />
-                          {s.code ?? "—"}
-                        </Link>
+                        {s.id ? (
+                          <Link
+                            href={`/suppliers/${s.id}`}
+                            className="inline-flex items-center gap-2 hover:underline"
+                          >
+                            <Package className="h-4 w-4 text-muted" />
+                            {s.code ?? "—"}
+                          </Link>
+                        ) : "—"}
                       </TableCell>
-                      <TableCell className="text-body font-medium text-ink">{s.business_name ?? "—"}</TableCell>
+                      <TableCell className="text-body font-medium text-ink">{s.name || "—"}</TableCell>
                       <TableCell className="text-body">{s.city ?? "—"}</TableCell>
                       <TableCell className="text-body font-mono text-xs uppercase">{s.state ?? "—"}</TableCell>
-                      <TableCell className="text-body">{s.phone ?? s.mobile ?? "—"}</TableCell>
+                      <TableCell className="text-body">{s.phone ?? "—"}</TableCell>
                       <TableCell className={`text-right font-semibold ${pay > 0 ? "text-semantic-error" : "text-ink"}`}>
                         {rupee(pay)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{rupee(buckets.current)}</TableCell>
                       <TableCell className="text-right tabular-nums">{rupee(buckets.d30)}</TableCell>
                       <TableCell className="text-right tabular-nums">{rupee(buckets.d60)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{rupee(buckets.d90)}</TableCell>
                       <TableCell className="text-right tabular-nums">{rupee(buckets.over90)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {rupee(buckets.unclassified)}
+                        {buckets.unclassifiedCount > 0 && (
+                          <p className="text-caption text-muted">{buckets.unclassifiedCount} invoices</p>
+                        )}
+                      </TableCell>
                       <TableCell>
-                        <Badge variant={badge.variant}>{badge.label}</Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {Number(buckets.classified_total) > 0 && <Badge variant={badge.variant}>{badge.label}</Badge>}
+                          {buckets.unclassifiedCount > 0 && <Badge variant="warning">Due date unclassified</Badge>}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -295,7 +304,7 @@ export default async function SupplierPayablesPage({
         </CardContent>
       </CardCanvas>
 
-      <div className="mt-6 flex items-center justify-between flex-wrap gap-3">
+      {dbOk && !reportError && <div className="mt-6 flex items-center justify-between flex-wrap gap-3">
         <p className="text-caption text-muted">
           Showing {dbOk ? Math.min(items.length, total) : 0} of {total} suppliers · Page {page} / {totalPages}
         </p>
@@ -325,7 +334,7 @@ export default async function SupplierPayablesPage({
             </Link>
           </Button>
         </div>
-      </div>
+      </div>}
     </DashboardLayout>
   );
 }

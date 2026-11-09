@@ -26,6 +26,7 @@ const receiptTable = matches[0].replace(
 if (receiptTable === matches[0]) throw new Error("Generated receipt sequence primary key changed unexpectedly.");
 const governance = fs.readFileSync(path.join(root, "prisma", "financial-e2e-schema-governance-controls.sql"), "utf8");
 const refundMigration = fs.readFileSync(path.join(root, "prisma", "migrations", "0027_refund_lifecycle", "migration.sql"), "utf8");
+const temporalMigration = fs.readFileSync(path.join(root, "prisma", "migrations", "0028_financial_event_dates", "migration.sql"), "utf8");
 function uniqueMatch(pattern, label) {
   const matches = [...refundMigration.matchAll(pattern)];
   if (matches.length !== 1) throw new Error(`Refund baseline ${label} is missing or ambiguous.`);
@@ -44,8 +45,12 @@ const refundIndex = uniqueMatch(/CREATE UNIQUE INDEX IF NOT EXISTS "audit_logs_r
 const refundFunction = uniqueMatch(/CREATE OR REPLACE FUNCTION public\.guard_payment_refund_lifecycle\(\)[\s\S]*?\$function\$;/g, "function")[0];
 const refundTrigger = uniqueMatch(/CREATE TRIGGER "payment_refunds_lifecycle_guard"[\s\S]*?EXECUTE FUNCTION public\.guard_payment_refund_lifecycle\(\);/g, "trigger")[0];
 const refundControls = [...refundChecks, refundIndex, refundFunction, refundTrigger].join("\n\n");
+const temporalBlocks = [...temporalMigration.matchAll(/-- BEGIN GENERATED BASELINE FINANCIAL TEMPORAL CONTROLS\s*([\s\S]*?)\s*-- END GENERATED BASELINE FINANCIAL TEMPORAL CONTROLS/g)];
+if (temporalBlocks.length !== 1) throw new Error("Financial temporal baseline controls are missing or ambiguous.");
+const temporalControls = temporalBlocks[0][1].trim();
 const generated = "-- Generated offline from the current Prisma schema plus checked HSN/SAC governance controls; complete baseline.\n\n" +
-  result.stdout.replace(table, () => receiptTable).trimEnd() + "\n\n" + governance.trimEnd() + "\n\n" + refundControls + "\n";
+  result.stdout.replace(table, () => receiptTable).trimEnd() + "\n\n" + governance.trimEnd() + "\n\n" +
+  refundControls + "\n\n" + temporalControls + "\n";
 if (process.argv.slice(2).length === 1 && process.argv[2] === "--write") {
   fs.writeFileSync(artifact, generated, "utf8");
 } else if (process.argv.slice(2).length === 1 && process.argv[2] === "--check") {

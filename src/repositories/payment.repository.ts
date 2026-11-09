@@ -6,7 +6,7 @@ import { decimalOrZero } from "@/lib/decimal";
 
 export type CustomerUnappliedCredit = {
   paymentId: string;
-  paymentDate: Date;
+  paymentDate: Date | null;
   amount: number;
   unappliedAmount: number;
   referenceNo: string | null;
@@ -14,7 +14,7 @@ export type CustomerUnappliedCredit = {
 
 export type SupplierUnappliedAdvance = {
   paymentId: string;
-  paymentDate: Date;
+  paymentDate: Date | null;
   amount: number;
   unappliedAmount: number;
   referenceNo: string | null;
@@ -60,15 +60,10 @@ export class PaymentRepository extends BaseRepository<
     });
   }
 
-  async create(input: Prisma.paymentsCreateInput, ctx: TenantContext): Promise<payments> {
-    const t = this.withTenant(ctx);
-    return this.prisma.payments.create({
-      data: {
-        ...input,
-        tenant_id: t.tenantId,
-        created_by: t.userId,
-      } as any,
-    });
+  async create(_input: Prisma.paymentsCreateInput, _ctx: TenantContext): Promise<payments> {
+    throw new Error(
+      "Payments cannot be created through the repository; use the typed payment actions so the payment date is classified.",
+    );
   }
 
   async update(
@@ -85,7 +80,7 @@ export class PaymentRepository extends BaseRepository<
 
   async list(params: ListParams, ctx: TenantContext): Promise<PagedResult<payments>> {
     const t = this.withTenant(ctx);
-    const { skip = 0, take = 50, orderBy = { payment_date: "desc" }, search } = params;
+    const { skip = 0, take = 50, orderBy, search } = params;
     const where: Prisma.paymentsWhereInput = {
       tenant_id: t.tenantId,
       ...(search
@@ -103,7 +98,7 @@ export class PaymentRepository extends BaseRepository<
         include: { customer: true, supplier: true, invoice: true },
         skip,
         take,
-        orderBy,
+        orderBy: orderBy ? [orderBy, { id: "asc" }] : [{ effective_date: "desc" }, { id: "asc" }],
       }),
       this.prisma.payments.count({ where }),
     ]);
@@ -137,7 +132,7 @@ export class PaymentRepository extends BaseRepository<
       select: {
         id: true,
         amount: true,
-        payment_date: true,
+        effective_date: true,
         reference_no: true,
         allocations: {
           select: { amount: true, reversal: { select: { amount: true } } },
@@ -150,7 +145,7 @@ export class PaymentRepository extends BaseRepository<
           select: { amount: true },
         },
       },
-      orderBy: { payment_date: "asc" },
+      orderBy: [{ effective_date: "asc" }, { id: "asc" }],
     });
 
     return payments.flatMap((payment: any) => {
@@ -183,7 +178,7 @@ export class PaymentRepository extends BaseRepository<
       if (unapplied.compare(0) <= 0) return [];
       return [{
         paymentId: payment.id,
-        paymentDate: payment.payment_date,
+        paymentDate: payment.effective_date,
         amount: decimalOrZero(payment.amount).round(2, "HALF_UP").toNumber(),
         unappliedAmount: unapplied.toNumber(),
         referenceNo: payment.reference_no,
@@ -212,7 +207,7 @@ export class PaymentRepository extends BaseRepository<
       select: {
         id: true,
         amount: true,
-        payment_date: true,
+        effective_date: true,
         reference_no: true,
         allocations: {
           select: { amount: true, reversal: { select: { amount: true } } },
@@ -225,7 +220,7 @@ export class PaymentRepository extends BaseRepository<
           select: { amount: true },
         },
       },
-      orderBy: { payment_date: "asc" },
+      orderBy: [{ effective_date: "asc" }, { id: "asc" }],
     });
 
     return payments.flatMap((payment: any) => {
@@ -258,7 +253,7 @@ export class PaymentRepository extends BaseRepository<
       if (unapplied.compare(0) <= 0) return [];
       return [{
         paymentId: payment.id,
-        paymentDate: payment.payment_date,
+        paymentDate: payment.effective_date,
         amount: decimalOrZero(payment.amount).round(2, "HALF_UP").toNumber(),
         unappliedAmount: unapplied.toNumber(),
         referenceNo: payment.reference_no,

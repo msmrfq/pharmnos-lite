@@ -2,8 +2,21 @@
 
 import { assertPostgresConfigured, prisma } from "@/lib/db/prisma";
 import { repos } from "@/repositories";
-import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
-import { PermissionAction } from "@prisma/client";
+import { establishTenantContext, requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
+import { PermissionAction, Prisma } from "@prisma/client";
+import { businessDateFromPrismaDate, businessDateToday, businessDateToPrismaDate, formatBusinessDate, formatBusinessInstant, parseBusinessDate } from "@/lib/utils/business-date";
+import { Decimal } from "@/lib/decimal";
+import {
+  REPORT_RECORDING_TIME_DISCLOSURE, REPORT_ROW_LIMIT, balanceContext, classifyInvoiceEffectiveDate,
+  classifyLedgerEffectiveDate, coverageGapError, formatInstantOrBlank, integrityError, isoInstantOrNull,
+  ledgerCsvPreamble, parseOptionalReportDate, parseReportId, parseReportInputObject, parseReportMode,
+  parseReportText, parseStrictReportDate, registerCsvPreamble, rowLimitError, summarizeLedgerExclusions,
+  summarizeRegisterExclusions, toCsvResult, BALANCE_BASIS_COMPLETE, BALANCE_BASIS_QUALIFIED,
+  type ExclusionReason, type ReportCsvResult, type ReportMode, ReportUnavailableError,
+} from "@/domain/services/financial-report-completeness";
+import {
+  hsnCsvPreamble, hsnRowMatchesQuery, loadHsnInvoices, parseHsnFilter,
+} from "@/domain/services/gst-hsn-date-filter";
 
 const csvEscape = (v: any): string => {
   const s = v === null || v === undefined ? "" : String(v);
@@ -161,149 +174,154 @@ export async function exportSuppliersCsvAction(): Promise<Response> {
   return respondCsv(`suppliers-${new Date().toISOString().slice(0, 10)}.csv`, rows);
 }
 
-export async function exportPurchaseRegisterCsvAction(): Promise<Response> {
+type RegisterInput = { q?: string; partyId?: string; startDate?: string; endDate?: string; mode?: string };
+
+export async function loadFinancialRegisterReport(kind: "sales" | "purchase", input: RegisterInput = {}) {
+  assertPostgresConfigured("loadFinancialRegisterReport");
+  const ctx = await requireServerTenantContext();
+  if (kind !== "sales" && kind !== "purchase") throw new Error("Invalid register.");
+  requirePermission(ctx, kind === "sales" ? PermissionAction.view_invoice : PermissionAction.view_purchase);
+  const raw = parseReportInputObject(input);
+  const mode = parseReportMode(raw.mode);
+  const start = parseOptionalReportDate(raw.startDate, "startDate");
+  const end = parseOptionalReportDate(raw.endDate, "endDate");
+  if (start && end && start > end) throw new ReportUnavailableError("INVALID_INPUT", "Invalid register date range.");
+  const partyRaw = parseReportText(raw.partyId, "party filter", 100);
+  const partyId = partyRaw === "all" ? "" : partyRaw;
+  const q = parseReportText(raw.q, "search text").trim().toLowerCase();
+  const data = await prisma.$transaction(async (tx) => {
+    await establishTenantContext(tx, ctx);
+    const db = tx as any;
+    const invoices = await (kind === "sales" ? db.sales_invoices : db.purchase_invoices).findMany({
+      where: { tenant_id: ctx.tenantId }, orderBy: { id: "asc" }, take: REPORT_ROW_LIMIT + 1,
+    });
+    if (invoices.length > REPORT_ROW_LIMIT) throw rowLimitError("invoices");
+    const ids = [...new Set(invoices.flatMap((invoice: any) => {
+      const id = kind === "sales" ? invoice.customer_id : invoice.supplier_id;
+      return id ? [id] : [];
+    }))];
+    const parties = ids.length ? await (kind === "sales" ? db.customers : db.suppliers).findMany({
+      where: { tenant_id: ctx.tenantId, id: { in: ids } }, select: { id: true, business_name: true, code: true },
+    }) : [];
+    return { invoices, parties };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+  const parties = new Map<string, { id: string; business_name: string; code: string }>(
+    data.parties.map((p: any) => [p.id, { id: p.id, business_name: p.business_name ?? "", code: p.code ?? "" }]),
+  );
+  const excluded: { reason: ExclusionReason; net: string; partyId: string | null; searchable: string[] }[] = [];
+  const rows = data.invoices.flatMap((invoice: any) => {
+    const id = kind === "sales" ? invoice.customer_id : invoice.supplier_id;
+    const party = id ? parties.get(id) : null;
+    if (id && !party) throw integrityError("invoice counterparty is missing.");
+    const searchable = [invoice.invoice_no ?? "", invoice.reference_no ?? "", invoice.supplier_invoice_no ?? "",
+      invoice.notes ?? "", party?.business_name ?? ""].map((value: string) => String(value));
+    const classified = classifyInvoiceEffectiveDate(invoice);
+    if (!classified.trusted) {
+      excluded.push({ reason: classified.reason, net: Decimal.from(invoice.net_amount ?? "0").toFixed(2),
+        partyId: id ?? null, searchable });
+      return [];
+    }
+    return [{
+      id: invoice.id as string, invoice_no: invoice.invoice_no as string,
+      effective_date: classified.date as string, party_id: id as string | null, party,
+      supplier_invoice_no: (invoice.supplier_invoice_no ?? "") as string,
+      reference_no: (invoice.reference_no ?? "") as string, notes: (invoice.notes ?? "") as string,
+      status: invoice.status as string, is_cash_sale: Boolean(invoice.is_cash_sale),
+      gross_amount: String(invoice.gross_amount), total_discount: String(invoice.total_discount),
+      total_tax: String(invoice.total_tax), round_off: String(invoice.round_off),
+      net_amount: String(invoice.net_amount), paid_amount: String(invoice.paid_amount ?? "0"),
+      balance_due: String(invoice.balance_due ?? "0"),
+      created_at: invoice.created_at ? formatBusinessInstant(invoice.created_at) : "",
+    }];
+  });
+  // Party and search filters do not depend on the date, so they also define which
+  // undated invoices are in scope; the date range cannot be applied to them.
+  const inScopeExcluded = excluded.filter((item) => (!partyId || item.partyId === partyId) &&
+    (!q || item.searchable.some((value) => value.toLowerCase().includes(q))));
+  const exclusions = summarizeRegisterExclusions(data.invoices.length, inScopeExcluded);
+  if (mode === "complete" && exclusions.excludedCount > 0) {
+    throw coverageGapError("invoices", data.invoices.length, exclusions.excludedCount, exclusions.byReason);
+  }
+  const filtered = rows.filter((row: any) => {
+    if (partyId && row.party_id !== partyId) return false;
+    if ((start && row.effective_date < start) || (end && row.effective_date > end)) return false;
+    return !q || [row.invoice_no, row.reference_no, row.supplier_invoice_no, row.notes,
+      row.party?.business_name ?? ""].some((value: string) => value.toLowerCase().includes(q));
+  }).sort((a: any, b: any) => compareText(b.effective_date, a.effective_date) || compareText(a.id, b.id));
+  return {
+    mode, complete: mode === "complete", startDate: start, endDate: end, rows: filtered, exclusions,
+    parties: [...parties.values()].sort((a, b) => a.business_name.localeCompare(b.business_name) || compareText(a.id, b.id)),
+    recordingTimeDisclosure: REPORT_RECORDING_TIME_DISCLOSURE,
+  };
+}
+
+function compareText(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+function serializeCsv(rows: string[][]): string {
+  return bom + rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+}
+
+export async function exportPurchaseRegisterCsvAction(input: RegisterInput = {}): Promise<ReportCsvResult> {
   assertPostgresConfigured("exportPurchaseRegisterCsvAction");
   const ctx = await requireServerTenantContext();
   requirePermission(ctx, PermissionAction.view_purchase);
-  const result = await repos.purchaseInvoices.list({ skip: 0, take: 25000, orderBy: { invoice_date: "desc" } }, ctx);
-  const rows: string[][] = [
-    ["Invoice no", "Date", "Supplier", "Supplier invoice", "Status", "Gross", "Discount", "Tax", "Round off", "Net", "Created at"],
-  ];
-  for (const p of (result.items as any) ?? []) {
-    const d = p.invoice_date ? new Date(p.invoice_date) : null;
-    const c = p.created_at ? new Date(p.created_at) : null;
-    rows.push([
-      p.invoice_no ?? "",
-      d ? d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "",
-      p.supplier?.business_name ?? "",
-      p.supplier_invoice_no ?? "",
-      p.status ?? "",
-      String(p.gross_amount ?? ""),
-      String(p.total_discount ?? ""),
-      String(p.total_tax ?? ""),
-      String(p.round_off ?? ""),
-      String(p.net_amount ?? ""),
-      c ? c.toLocaleString("en-IN") : "",
-    ]);
-  }
-  return respondCsv(`purchase-register-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  return toCsvResult(async () => {
+    const result = await loadFinancialRegisterReport("purchase", input);
+    const rows: string[][] = [
+      ...registerCsvPreamble("Purchase register", result.startDate, result.endDate, result.mode, result.exclusions),
+      ["Invoice no", "Date", "Supplier", "Supplier invoice", "Status", "Gross", "Discount", "Tax", "Round off", "Net", "Created at"],
+    ];
+    for (const p of result.rows) {
+      rows.push([
+        p.invoice_no ?? "",
+        formatBusinessDate(p.effective_date),
+        p.party?.business_name ?? "",
+        p.supplier_invoice_no ?? "",
+        p.status ?? "",
+        String(p.gross_amount ?? ""),
+        String(p.total_discount ?? ""),
+        String(p.total_tax ?? ""),
+        String(p.round_off ?? ""),
+        String(p.net_amount ?? ""),
+        p.created_at,
+      ]);
+    }
+    return { csv: serializeCsv(rows), filename: `purchase-register-${businessDateToday()}${result.complete ? "" : "-qualified"}.csv` };
+  });
 }
 
-export async function exportSalesRegisterCsvAction(): Promise<Response> {
+export async function exportSalesRegisterCsvAction(input: RegisterInput = {}): Promise<ReportCsvResult> {
   assertPostgresConfigured("exportSalesRegisterCsvAction");
   const ctx = await requireServerTenantContext();
   requirePermission(ctx, PermissionAction.view_invoice);
-  const result = await repos.salesInvoices.list({ skip: 0, take: 25000, orderBy: { invoice_date: "desc" } }, ctx);
-  const rows: string[][] = [
-    ["Invoice no", "Date", "Customer", "Reference no", "Cash sale", "Status", "Gross", "Discount", "Tax", "Round off", "Net", "Paid", "Balance due", "Created at"],
-  ];
-  for (const p of (result.items as any) ?? []) {
-    const d = p.invoice_date ? new Date(p.invoice_date) : null;
-    const c = p.created_at ? new Date(p.created_at) : null;
-    rows.push([
-      p.invoice_no ?? "",
-      d ? d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "",
-      p.customer?.business_name ?? p.customer?.customer_name ?? "",
-      p.reference_no ?? "",
-      p.is_cash_sale ? "Yes" : "No",
-      p.status ?? "",
-      String(p.gross_amount ?? ""),
-      String(p.total_discount ?? ""),
-      String(p.total_tax ?? ""),
-      String(p.round_off ?? ""),
-      String(p.net_amount ?? ""),
-      String(p.paid_amount ?? ""),
-      String(p.balance_due ?? ""),
-      c ? c.toLocaleString("en-IN") : "",
-    ]);
-  }
-  return respondCsv(`sales-register-${new Date().toISOString().slice(0, 10)}.csv`, rows);
-}
-
-export async function exportCustomerDuesCsvAction(): Promise<Response> {
-  assertPostgresConfigured("exportCustomerDuesCsvAction");
-  const ctx = await requireServerTenantContext();
-  requirePermission(ctx, PermissionAction.view_customer_ledger);
-  const result = await repos.customers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx);
-  const rows: string[][] = [
-    ["Customer code", "Business", "Contact", "City", "State", "Phone", "Total due", "Current 0-30", "31-60", "61-90", "90+", "Oldest overdue days", "Receivable balance", "Active"],
-  ];
-  for (const c of (result.items as any) ?? []) {
-    let buckets = { current: 0, d30: 0, d60: 0, d90: 0, over90: 0, total: 0 };
-    let oldestDays = 0;
-    try {
-      buckets = await repos.customerLedgers.getAgingBuckets(ctx, c.id);
-    } catch {
-      buckets = { current: 0, d30: 0, d60: 0, d90: 0, over90: 0, total: 0 };
+  return toCsvResult(async () => {
+    const result = await loadFinancialRegisterReport("sales", input);
+    const rows: string[][] = [
+      ...registerCsvPreamble("Sales register", result.startDate, result.endDate, result.mode, result.exclusions),
+      ["Invoice no", "Date", "Customer", "Reference no", "Cash sale", "Status", "Gross", "Discount", "Tax", "Round off", "Net", "Paid", "Balance due", "Created at"],
+    ];
+    for (const p of result.rows) {
+      rows.push([
+        p.invoice_no ?? "",
+        formatBusinessDate(p.effective_date),
+        p.party?.business_name ?? "",
+        p.reference_no ?? "",
+        p.is_cash_sale ? "Yes" : "No",
+        p.status ?? "",
+        String(p.gross_amount ?? ""),
+        String(p.total_discount ?? ""),
+        String(p.total_tax ?? ""),
+        String(p.round_off ?? ""),
+        String(p.net_amount ?? ""),
+        String(p.paid_amount ?? ""),
+        String(p.balance_due ?? ""),
+        p.created_at,
+      ]);
     }
-    try {
-      oldestDays = await repos.customerLedgers.getOldestOverdueDays(c.id, ctx);
-    } catch {
-      oldestDays = 0;
-    }
-    const receivable = Number(c.receivable_balance ?? 0);
-    const totalDue = buckets.total > 0 ? buckets.total : receivable;
-    rows.push([
-      c.code ?? "",
-      c.business_name ?? "",
-      c.contact_person ?? "",
-      c.billing_city ?? "",
-      c.billing_state ?? "",
-      c.phone ?? c.mobile ?? "",
-      String(totalDue),
-      String(buckets.current),
-      String(buckets.d30),
-      String(buckets.d60),
-      String(buckets.over90),
-      String(oldestDays),
-      String(receivable),
-      c.is_active === false ? "No" : "Yes",
-    ]);
-  }
-  return respondCsv(`customer-dues-${new Date().toISOString().slice(0, 10)}.csv`, rows);
-}
-
-export async function exportSupplierPayablesCsvAction(): Promise<Response> {
-  assertPostgresConfigured("exportSupplierPayablesCsvAction");
-  const ctx = await requireServerTenantContext();
-  requirePermission(ctx, PermissionAction.view_supplier_ledger);
-  const result = await repos.suppliers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx);
-  const rows: string[][] = [
-    ["Supplier code", "Business", "Contact", "City", "State", "Phone", "Total payable", "Current 0-30", "31-60", "61-90", "90+", "Oldest overdue days", "Payable balance", "Active"],
-  ];
-  for (const s of (result.items as any) ?? []) {
-    let buckets = { current: 0, d30: 0, d60: 0, d90: 0, over90: 0, total: 0 };
-    let oldestDays = 0;
-    try {
-      buckets = await repos.supplierLedgers.getAgingBuckets(ctx, s.id);
-    } catch {
-      buckets = { current: 0, d30: 0, d60: 0, d90: 0, over90: 0, total: 0 };
-    }
-    try {
-      oldestDays = await repos.supplierLedgers.getOldestOverdueDays(s.id, ctx);
-    } catch {
-      oldestDays = 0;
-    }
-    const payable = Number(s.payable_balance ?? 0);
-    const totalPayable = buckets.total > 0 ? buckets.total : payable;
-    rows.push([
-      s.code ?? "",
-      s.business_name ?? "",
-      s.contact_person ?? "",
-      s.city ?? "",
-      s.state ?? "",
-      s.phone ?? s.mobile ?? "",
-      String(totalPayable),
-      String(buckets.current),
-      String(buckets.d30),
-      String(buckets.d60),
-      String(buckets.over90),
-      String(oldestDays),
-      String(payable),
-      s.is_active === false ? "No" : "Yes",
-    ]);
-  }
-  return respondCsv(`supplier-payables-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+    return { csv: serializeCsv(rows), filename: `sales-register-${businessDateToday()}${result.complete ? "" : "-qualified"}.csv` };
+  });
 }
 
 export async function exportStockValuationCsvAction(): Promise<Response> {
@@ -426,27 +444,20 @@ export async function exportBatchExpiryCsvAction(): Promise<Response> {
   return respondCsv(`batch-expiry-${new Date().toISOString().slice(0, 10)}.csv`, rows);
 }
 
-export async function exportGstHsnSummaryCsvAction(): Promise<Response> {
+type GstHsnExportInput = { from?: string; to?: string; party?: string; q?: string };
+
+export async function exportGstHsnSummaryCsvAction(input: GstHsnExportInput = {}): Promise<ReportCsvResult> {
   assertPostgresConfigured("exportGstHsnSummaryCsvAction");
   const ctx = await requireServerTenantContext();
   requirePermission(ctx, PermissionAction.view_reports);
   const t = ctx;
 
-  const now = new Date();
-  const fromDefault = new Date(now.getFullYear(), now.getMonth(), 1);
-  const toDefault = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const yyyymmdd = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, "");
-  const fromStr = yyyymmdd(fromDefault);
-  const toStr = yyyymmdd(toDefault);
-
-  const invoices = await (prisma as any).sales_invoices.findMany({
-    where: { tenant_id: t.tenantId, status: "FINALIZED", invoice_date: { gte: fromDefault, lte: new Date(toDefault.getTime() + 86399999) }     },
-    include: {
-      items: true,
-    },
-    take: 25000,
-  });
-
+  return toCsvResult(async () => {
+  const filter = parseHsnFilter(input);
+  const { invoices, exclusions } = await prisma.$transaction(async (tx) => {
+    await establishTenantContext(tx, ctx);
+    return loadHsnInvoices(tx as any, t.tenantId, filter);
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
   const groupMap = new Map<string, {
     hsn: string; description: string; ratePct: number; taxableValue: number;
     totalQty: number; cgst: number; sgst: number; igst: number; totalGst: number; invoicesSet: Set<string>;
@@ -479,10 +490,14 @@ export async function exportGstHsnSummaryCsvAction(): Promise<Response> {
   }
 
   const rows: string[][] = [
+    ...hsnCsvPreamble(filter, exclusions),
     ["HSN", "Description", "Tax rate %", "Qty", "Taxable value \u20B9", "CGST \u20B9", "SGST \u20B9", "IGST \u20B9", "Total tax \u20B9", "Invoices count", "Total invoice value \u20B9"],
   ];
 
-  for (const g of groupMap.values()) {
+  const groups = [...groupMap.values()]
+    .filter((g) => hsnRowMatchesQuery({ hsn: g.hsn, description: g.description }, filter.q))
+    .sort((a, b) => a.hsn.localeCompare(b.hsn) || a.ratePct - b.ratePct);
+  for (const g of groups) {
     const totalGst = g.totalGst;
     const totalValue = g.taxableValue + totalGst;
     rows.push([
@@ -500,107 +515,237 @@ export async function exportGstHsnSummaryCsvAction(): Promise<Response> {
     ]);
   }
 
-  return respondCsv(`gst-hsn-summary-${fromStr}-${toStr}.csv`, rows);
+  return {
+    csv: serializeCsv(rows),
+    filename: `gst-hsn-summary-${filter.from}-${filter.to}${exclusions.count > 0 ? "-qualified" : ""}.csv`,
+  };
+  });
 }
 
-export async function exportDaybookCsvAction(): Promise<Response> {
+type LedgerReportInput = {
+  kind: "daybook" | "customer";
+  customerId?: string;
+  from: string;
+  to: string;
+  q?: string;
+  voucher?: string;
+  mode?: string;
+};
+
+type ReportLedgerRow = {
+  id: string;
+  effective_date: string;
+  /** Genuine event instant (ISO, UTC) when one exists; distinct from the effective date. */
+  event_instant: string | null;
+  /** Database statement time captured before commit (ISO, UTC); see the recording-time disclosure. */
+  recorded_at: string | null;
+  entry_type: string;
+  voucher_type: string;
+  counterparty: string;
+  debit: string;
+  credit: string;
+  balance: string;
+  narration: string | null;
+  invoice_ref: string | null;
+  invoice_id: string | null;
+};
+
+const REPORT_LEDGER_LIMIT = REPORT_ROW_LIMIT;
+
+function voucherType(row: any, kind: "customer" | "supplier"): string {
+  if (row.reference_type === "payment_refund") return "Payment refund";
+  if (row.reference_type === "payment_reversal") return "Payment reversal";
+  if (row.entry_type === "OPENING_BALANCE") return "Opening balance";
+  if (row.entry_type === "INVOICE" && kind === "customer") return "Customer Invoice";
+  if (row.entry_type === "PURCHASE" && kind === "supplier") return "Supplier Invoice";
+  if (row.entry_type === "PAYMENT_RECEIVED" && kind === "customer") return "Customer Payment";
+  if (row.entry_type === "PAYMENT_MADE" && kind === "supplier") return "Supplier Payment";
+  return row.entry_type.replaceAll("_", " ");
+}
+
+function compareLedgerRows(a: ReportLedgerRow, b: ReportLedgerRow): number {
+  return compareText(a.effective_date, b.effective_date) || compareText(a.id, b.id);
+}
+
+export async function loadFinancialLedgerReport(input: LedgerReportInput) {
+  assertPostgresConfigured("loadFinancialLedgerReport");
+  const ctx = await requireServerTenantContext();
+  const raw = parseReportInputObject(input);
+  if (raw.kind !== "daybook" && raw.kind !== "customer") throw new ReportUnavailableError("INVALID_INPUT", "Invalid report.");
+  const kind: "daybook" | "customer" = raw.kind;
+  requirePermission(ctx, kind === "daybook" ? PermissionAction.view_reports : PermissionAction.view_customer_ledger);
+  const mode = parseReportMode(raw.mode);
+  const from = parseStrictReportDate(raw.from, "from");
+  const to = parseStrictReportDate(raw.to, "to");
+  if (from > to) throw new ReportUnavailableError("INVALID_INPUT", "Invalid report date range.");
+  const customerId = kind === "customer" ? parseReportId(raw.customerId, "Customer") : undefined;
+  const voucher = raw.voucher === undefined ? "all" : raw.voucher;
+  if (voucher !== "all" && voucher !== "invoice" && voucher !== "payment") {
+    throw new ReportUnavailableError("INVALID_INPUT", "Invalid voucher filter.");
+  }
+  const q = parseReportText(raw.q, "search text").trim().toLowerCase();
+
+  const data = await prisma.$transaction(async (tx) => {
+    await establishTenantContext(tx, ctx);
+    const db = tx as any;
+    const customer = kind === "customer" ? await db.customers.findFirst({
+      where: { tenant_id: ctx.tenantId, id: customerId },
+      select: { id: true, business_name: true, code: true, contact_person: true, mobile: true, phone: true, email: true, gstin: true,
+        billing_address_1: true, billing_address_2: true, billing_city: true, billing_state: true, billing_pincode: true },
+    }) : null;
+    if (kind === "customer" && !customer) throw new ReportUnavailableError("INVALID_INPUT", "Customer not found.");
+    const agingRows = kind === "customer" ? await db.sales_invoices.findMany({
+      where: { tenant_id: ctx.tenantId, customer_id: customerId, status: "FINALIZED", balance_due: { gt: 0 } },
+      select: { due_date_business: true, balance_due: true }, take: REPORT_LEDGER_LIMIT + 1,
+    }) : [];
+    const customerRows = await db.customer_ledgers.findMany({
+      where: { tenant_id: ctx.tenantId, ...(kind === "customer" ? { customer_id: customerId } : {}) },
+      orderBy: { id: "asc" }, take: REPORT_LEDGER_LIMIT + 1,
+    });
+    const supplierRows = kind === "daybook" ? await db.supplier_ledgers.findMany({
+      where: { tenant_id: ctx.tenantId }, orderBy: { id: "asc" }, take: REPORT_LEDGER_LIMIT + 1,
+    }) : [];
+    if (customerRows.length + supplierRows.length > REPORT_LEDGER_LIMIT) throw rowLimitError("ledger entries");
+    const customers = kind === "daybook" ? await db.customers.findMany({
+      where: { tenant_id: ctx.tenantId, id: { in: [...new Set(customerRows.map((row: any) => row.customer_id))] } },
+      select: { id: true, business_name: true },
+    }) : customer ? [customer] : [];
+    const suppliers = input.kind === "daybook" ? await db.suppliers.findMany({
+      where: { tenant_id: ctx.tenantId, id: { in: [...new Set(supplierRows.map((row: any) => row.supplier_id))] } },
+      select: { id: true, business_name: true },
+    }) : [];
+    const invoiceIds = [...new Set(customerRows.flatMap((row: any) => row.invoice_id ? [row.invoice_id] : []))];
+    const purchaseIds = [...new Set(supplierRows.flatMap((row: any) => row.purchase_id ? [row.purchase_id] : []))];
+    const salesInvoices = invoiceIds.length ? await db.sales_invoices.findMany({
+      where: { tenant_id: ctx.tenantId, id: { in: invoiceIds } },
+      select: { id: true, customer_id: true, invoice_no: true },
+    }) : [];
+    const purchaseInvoices = purchaseIds.length ? await db.purchase_invoices.findMany({
+      where: { tenant_id: ctx.tenantId, id: { in: purchaseIds } },
+      select: { id: true, supplier_id: true, invoice_no: true },
+    }) : [];
+    const invoiceNumbers = new Map<string, string>([
+      ...salesInvoices.filter((r: any) => r.invoice_no && r.customer_id)
+        .map((r: any) => [`c_${r.customer_id}_${r.id}`, r.invoice_no] as [string, string]),
+      ...purchaseInvoices.filter((r: any) => r.invoice_no && r.supplier_id)
+        .map((r: any) => [`s_${r.supplier_id}_${r.id}`, r.invoice_no] as [string, string]),
+    ]);
+    const names = new Map<string, string>([...customers.map((r: any) => [`c_${r.id}`, r.business_name ?? ""] as [string, string]),
+      ...suppliers.map((r: any) => [`s_${r.id}`, r.business_name ?? ""] as [string, string])]);
+    const rows = [...customerRows.map((row: any) => ({ row, kind: "customer" as const })),
+      ...supplierRows.map((row: any) => ({ row, kind: "supplier" as const }))];
+    return { customer, rows, names, agingRows, invoiceNumbers };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+
+  const excluded: { reason: ExclusionReason; debit: string; credit: string }[] = [];
+  const classifiedRows: ReportLedgerRow[] = [];
+  for (const { row, kind: rowKind } of data.rows as { row: any; kind: "customer" | "supplier" }[]) {
+    const partyKey = rowKind === "customer" ? `c_${row.customer_id}` : `s_${row.supplier_id}`;
+    if (!data.names.has(partyKey)) throw integrityError("ledger counterparty is missing.");
+    const debitAmount = Decimal.from(row.debit).toFixed(2);
+    const creditAmount = Decimal.from(row.credit).toFixed(2);
+    const classified = classifyLedgerEffectiveDate(row);
+    if (!classified.trusted) {
+      excluded.push({ reason: classified.reason, debit: debitAmount, credit: creditAmount });
+      continue;
+    }
+    classifiedRows.push({
+      id: `${rowKind === "customer" ? "c" : "s"}_${row.id}`,
+      effective_date: classified.date, event_instant: isoInstantOrNull(row.occurred_at),
+      recorded_at: isoInstantOrNull(row.recorded_at), entry_type: row.entry_type,
+      voucher_type: voucherType(row, rowKind),
+      counterparty: data.names.get(partyKey) ?? "", debit: debitAmount,
+      credit: creditAmount, balance: "0.00", narration: row.narration ?? null,
+      invoice_ref: data.invoiceNumbers.get(`${partyKey}_${rowKind === "customer" ? row.invoice_id : row.purchase_id}`) ??
+        row.reference_id ?? row.invoice_id ?? row.purchase_id ?? null,
+      invoice_id: row.invoice_id ?? null,
+    });
+  }
+  const exclusions = summarizeLedgerExclusions(data.rows.length, excluded);
+  if (mode === "complete" && exclusions.excludedCount > 0) {
+    throw coverageGapError("ledger entries", exclusions.totalEntries, exclusions.excludedCount, exclusions.byReason);
+  }
+  const rows = classifiedRows.sort(compareLedgerRows);
+
+  let running = Decimal.zero();
+  let opening = Decimal.zero();
+  let debit = Decimal.zero();
+  let credit = Decimal.zero();
+  const visible: ReportLedgerRow[] = [];
+  for (const row of rows) {
+    if (row.effective_date > to) break;
+    running = running.add(row.debit).subtract(row.credit);
+    if (row.effective_date < from) { opening = running; continue; }
+    row.balance = running.toFixed(2);
+    const isInvoice = row.voucher_type === "Customer Invoice" || row.voucher_type === "Supplier Invoice";
+    const isPayment = row.voucher_type === "Customer Payment" || row.voucher_type === "Supplier Payment";
+    if ((voucher === "invoice" && !isInvoice) || (voucher === "payment" && !isPayment)) continue;
+    if (q && ![row.counterparty, row.narration ?? "", row.invoice_ref ?? ""].some((value) => value.toLowerCase().includes(q))) continue;
+    debit = debit.add(row.debit);
+    credit = credit.add(row.credit);
+    visible.push(row);
+  }
+  let aging: { current: string; d30: string; d60: string; d90: string; over90: string } | null = null;
+  if (kind === "customer" && data.agingRows.length <= REPORT_LEDGER_LIMIT) {
+    const today = Date.parse(`${businessDateToday()}T00:00:00.000Z`);
+    const buckets = { current: Decimal.zero(), d30: Decimal.zero(), d60: Decimal.zero(), d90: Decimal.zero(), over90: Decimal.zero() };
+    let complete = true;
+    for (const invoice of data.agingRows) {
+      if (!(invoice.due_date_business instanceof Date)) { complete = false; break; }
+      let dueDate: string;
+      try { dueDate = businessDateFromPrismaDate(invoice.due_date_business); }
+      catch { complete = false; break; }
+      const days = Math.floor((today - businessDateToPrismaDate(parseBusinessDate(dueDate)).getTime()) / 86400000);
+      const bucket = days <= 0 ? "current" : days <= 30 ? "d30" : days <= 60 ? "d60" : days <= 90 ? "d90" : "over90";
+      buckets[bucket] = buckets[bucket].add(invoice.balance_due);
+    }
+    if (complete) aging = { current: buckets.current.toFixed(2), d30: buckets.d30.toFixed(2),
+      d60: buckets.d60.toFixed(2), d90: buckets.d90.toFixed(2), over90: buckets.over90.toFixed(2) };
+  }
+  return { mode, complete: mode === "complete", from, to, customer: data.customer, aging, rows: visible,
+    opening: opening.toFixed(2), debit: debit.toFixed(2), credit: credit.toFixed(2),
+    net: debit.subtract(credit).toFixed(2), closing: running.toFixed(2),
+    balanceBasis: mode === "qualified" ? BALANCE_BASIS_QUALIFIED : BALANCE_BASIS_COMPLETE,
+    balanceContext: balanceContext(mode), exclusions, recordingTimeDisclosure: REPORT_RECORDING_TIME_DISCLOSURE };
+}
+
+type LedgerReport = Awaited<ReturnType<typeof loadFinancialLedgerReport>>;
+
+function ledgerCsvRows(report: LedgerReport, title: string): string[][] {
+  const qualified = report.mode === "qualified";
+  return [
+    ...ledgerCsvPreamble(title, report.from, report.to, report.mode, report.exclusions),
+    ["Date", "Voucher type", "Counterparty", "Debit ₹", "Credit ₹", "Balance ₹", "Narration", "Invoice ref",
+      "Event instant (IST)", "Recorded at (IST)", "Balance context"],
+    [report.from, qualified ? "Opening balance (classified entries only)" : "Opening balance", "", "", "", report.opening,
+      "Brought forward", "", "", "", report.balanceContext],
+    ...report.rows.map((r) => [r.effective_date, r.voucher_type, r.counterparty, r.debit, r.credit, r.balance,
+      r.narration ?? "", r.invoice_ref ?? "", formatInstantOrBlank(r.event_instant), formatInstantOrBlank(r.recorded_at),
+      report.balanceContext]),
+  ];
+}
+
+export async function exportDaybookCsvAction(input: Omit<LedgerReportInput, "kind" | "customerId">): Promise<ReportCsvResult> {
   assertPostgresConfigured("exportDaybookCsvAction");
   const ctx = await requireServerTenantContext();
   requirePermission(ctx, PermissionAction.view_reports);
-  const t = ctx;
-
-  const now = new Date();
-  const fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
-  const toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  fromDate.setHours(0, 0, 0, 0);
-  toDate.setHours(23, 59, 59, 999);
-
-  const custBefore = await (prisma as any).customer_ledgers.findMany({
-    where: { tenant_id: t.tenantId, entry_date: { lt: fromDate } },
-    select: { debit: true, credit: true },
+  return toCsvResult(async () => {
+    const report = await loadFinancialLedgerReport({ ...input, kind: "daybook" });
+    return { csv: serializeCsv(ledgerCsvRows(report, "Daybook")),
+      filename: `daybook-${report.from}-${report.to}${report.complete ? "" : "-qualified"}.csv` };
   });
-  const suppBefore = await (prisma as any).supplier_ledgers.findMany({
-    where: { tenant_id: t.tenantId, entry_date: { lt: fromDate } },
-    select: { debit: true, credit: true },
+}
+
+export async function exportCustomerStatementCsvAction(
+  input: Omit<LedgerReportInput, "kind">,
+): Promise<ReportCsvResult> {
+  assertPostgresConfigured("exportCustomerStatementCsvAction");
+  const ctx = await requireServerTenantContext();
+  requirePermission(ctx, PermissionAction.view_customer_ledger);
+  return toCsvResult(async () => {
+    const report = await loadFinancialLedgerReport({ ...input, kind: "customer" });
+    const customer = report.customer;
+    return { csv: serializeCsv(ledgerCsvRows(report, `Customer statement: ${customer?.business_name ?? ""} (${customer?.code ?? ""})`)),
+      filename: `customer-statement-${report.from}-${report.to}${report.complete ? "" : "-qualified"}.csv` };
   });
-  let openingBal = 0;
-  for (const r of custBefore as any[]) openingBal += Number(r.debit ?? 0) - Number(r.credit ?? 0);
-  for (const r of suppBefore as any[]) openingBal += Number(r.debit ?? 0) - Number(r.credit ?? 0);
-
-  const custRows = await (prisma as any).customer_ledgers.findMany({
-    where: { tenant_id: t.tenantId, entry_date: { gte: fromDate, lte: toDate } },
-    include: { customer: { select: { business_name: true } }, invoice: { select: { invoice_no: true } } },
-    orderBy: { entry_date: "asc" },
-    take: 25000,
-  });
-  const suppRows = await (prisma as any).supplier_ledgers.findMany({
-    where: { tenant_id: t.tenantId, entry_date: { gte: fromDate, lte: toDate } },
-    include: { supplier: { select: { business_name: true } }, purchase: { select: { invoice_no: true } } },
-    orderBy: { entry_date: "asc" },
-    take: 25000,
-  });
-
-  type Unified = {
-    entry_date: Date; voucherType: string; counterparty: string;
-    debit: number; credit: number; narration: string | null; ref: string | null;
-  };
-  const unified: Unified[] = [];
-  for (const r of custRows as any[]) {
-    let vt = "Customer Invoice";
-    if (r.entry_type === "PAYMENT_RECEIVED") vt = "Customer Payment";
-    else if (r.entry_type === "OPENING_BALANCE") vt = "Opening balance";
-    unified.push({
-      entry_date: r.entry_date, voucherType: vt,
-      counterparty: r.customer?.business_name ?? "",
-      debit: Number(r.debit ?? 0), credit: Number(r.credit ?? 0),
-      narration: r.narration ?? null, ref: r.invoice?.invoice_no ?? r.reference_id ?? null,
-    });
-  }
-  for (const r of suppRows as any[]) {
-    let vt = "Supplier Invoice";
-    if (r.entry_type === "PAYMENT_MADE") vt = "Supplier Payment";
-    else if (r.entry_type === "OPENING_BALANCE") vt = "Opening balance";
-    unified.push({
-      entry_date: r.entry_date, voucherType: vt,
-      counterparty: r.supplier?.business_name ?? "",
-      debit: Number(r.debit ?? 0), credit: Number(r.credit ?? 0),
-      narration: r.narration ?? null, ref: r.purchase?.invoice_no ?? r.reference_id ?? null,
-    });
-  }
-  unified.sort((a, b) => a.entry_date.getTime() - b.entry_date.getTime());
-
-  const yyyymmdd = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, "");
-  const fmt = (n: number) => Number.isFinite(n) ? n.toFixed(2) : "";
-
-  const rows: string[][] = [
-    ["Date", "Voucher type", "Counterparty", "Debit \u20B9", "Credit \u20B9", "Balance \u20B9", "Narration", "Invoice ref"],
-  ];
-
-  let running = openingBal;
-  rows.push([
-    fromDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
-    "Opening balance",
-    "",
-    "",
-    "",
-    fmt(openingBal),
-    "Brought forward",
-    "",
-  ]);
-
-  for (const r of unified) {
-    running += r.debit - r.credit;
-    rows.push([
-      new Date(r.entry_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
-      r.voucherType,
-      r.counterparty,
-      r.debit > 0 ? fmt(r.debit) : "",
-      r.credit > 0 ? fmt(r.credit) : "",
-      fmt(running),
-      r.narration ?? "",
-      r.ref ?? "",
-    ]);
-  }
-
-  return respondCsv(`daybook-${yyyymmdd(fromDate)}-${yyyymmdd(toDate)}.csv`, rows);
 }

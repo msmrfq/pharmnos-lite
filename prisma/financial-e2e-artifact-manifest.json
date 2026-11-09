@@ -6,13 +6,13 @@
   "sourceSchema": {
     "path": "prisma/schema.prisma",
     "generation": "node scripts/generate-financial-e2e-schema.mjs --write",
-    "sha256": "b5df6127efb3b8ba1c35e73534511f1da65fc25900642fea94073ca8f0eb4f30"
+    "sha256": "b3d519e471111756e117ed8d635fb069614ba31827dc323dcc780d89616f4abf"
   },
   "artifacts": [
     {
       "order": 1,
       "path": "prisma/financial-e2e-schema-provisioning.generated.sql",
-      "sha256": "c83ebe11edd98ad1f957188b9b2fc4bd7a6cd2f4b66ea37306477249fb254b81",
+      "sha256": "eb01bfc8d155a930535dae6f85db7bcd4c8afab0753e444a0bfbdcbe93093253",
       "classification": "executable"
     },
     {
@@ -24,7 +24,7 @@
     {
       "order": 3,
       "path": "scripts/financial-e2e-provisioning-static-guard.mjs",
-      "sha256": "9fa6b10972175deec16e8c4af2e4315274429e9ebc32acb70fbf81783cfca339",
+      "sha256": "3e82b597c23ff83c74b5c83ca3d5fbd66586c47e349e5457f5e0e69ffca7dd01",
       "classification": "executable"
     },
     {
@@ -42,7 +42,7 @@
     {
       "order": 6,
       "path": "scripts/financial-e2e-provision-local.mjs",
-      "sha256": "ca42a1ff1c021a6075c226d157127bcc86a18a1805bf1dcde3c4bedf33af0ae2",
+      "sha256": "c2f4a05935194509e794c4e029d06fe0b7da766bb91a2b5a4686e3c9c4310a1a",
       "classification": "executable"
     },
     {
@@ -95,20 +95,26 @@
     },
     {
       "order": 15,
+      "path": "prisma/migrations/0028_financial_event_dates/migration.sql",
+      "sha256": "b92dd591241823e563b37069c8827a259f06b52f978e97e8a92552c5ec5149c6",
+      "classification": "executable"
+    },
+    {
+      "order": 16,
       "path": "prisma/financial-e2e-schema-governance-controls.sql",
       "sha256": "7400be6ff47377f531498543da94c5c973b380071a16445bb600a97b9ab62e1a",
       "classification": "executable"
     },
     {
-      "order": 16,
+      "order": 17,
       "path": "prisma/migrations/0025_payment_receipt_sequence/migration.sql",
       "sha256": "fc319b75ed580018eedba7846c1589c2a4a1ae9ac6168639aaab028750529f04",
       "classification": "executable"
     },
     {
-      "order": 17,
+      "order": 18,
       "path": "scripts/generate-financial-e2e-schema.mjs",
-      "sha256": "0216e2086ba9f726e3022380b750893a43fab5e1d30af9a51eb58fe83d3eabbc",
+      "sha256": "5b56d04efd1df63000d0f231b6140d9b02f38946f545442a84239cc39c46f115",
       "classification": "executable"
     }
   ],

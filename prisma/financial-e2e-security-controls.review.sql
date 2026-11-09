@@ -53,6 +53,8 @@ BEGIN;
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
 GRANT USAGE ON SCHEMA public TO pharmnos_e2e_runtime;
 REVOKE CREATE ON SCHEMA public FROM pharmnos_e2e_runtime;
+REVOKE ALL ON TYPE public."FinancialDateBasis" FROM PUBLIC;
+GRANT USAGE ON TYPE public."FinancialDateBasis" TO pharmnos_e2e_runtime;
 
 ALTER DEFAULT PRIVILEGES FOR ROLE pharmnos_e2e IN SCHEMA public
   REVOKE ALL ON TABLES FROM PUBLIC;
@@ -73,6 +75,8 @@ GRANT SELECT, INSERT, UPDATE ON TABLE
   public.purchase_invoice_items,
   public.sales_invoices, public.sales_posting_operations,
   public.sales_invoice_items, public.payments,
+  public.payment_allocations, public.allocation_reversals,
+  public.payment_refunds, public.payment_reversals,
   public.stock_movements, public.customer_ledgers, public.supplier_ledgers,
   public.audit_logs
 TO pharmnos_e2e_runtime;
@@ -144,7 +148,8 @@ FROM pharmnos_e2e_runtime;
 -- purchase_gst_reconciliation_events,
 -- purchase_gst_reconciliation_event_lines, sales_invoices,
 -- sales_posting_operations,
--- sales_invoice_items, payments, stock_movements, customer_ledgers,
+-- sales_invoice_items, payments, payment_allocations, allocation_reversals,
+-- payment_refunds, payment_reversals, stock_movements, customer_ledgers,
 -- supplier_ledgers, audit_logs.
 -- hsn_sac_catalog_history, gst_rate_rule_history.
 -- inventory_valuation_decisions, inventory_valuation_adjustments.
@@ -234,6 +239,24 @@ FROM pharmnos_e2e_runtime;
 -- controlled parent/item writes before finalized_at is set. Post-finalization
 -- valuation denormalizations remain separately governed. Neither trigger
 -- permits finalized-row deletion, and the runtime role has no DELETE grant.
+
+-- Financial date controls added by migration 0028:
+--   assign_financial_recorded_at assigns recorded_at with clock_timestamp()
+--   on INSERT for payments, both ledgers, allocations, and reversals;
+--   guard_invoice_financial_dates assigns finalized_recorded_at on the
+--   finalization transition for both invoice tables; and
+--   guard_refund_financial_dates assigns request acceptance time on INSERT and
+--   completion acceptance time only on the transition to COMPLETED.
+-- These functions never derive or overwrite effective_date, due_date_business,
+-- or occurred_at. The event producer captures one operation instant and
+-- supplies the corresponding occurred_at/effective_date pair, sharing it
+-- between the financial event and its ledger entry. Existing rows remain NULL;
+-- no historical dates or recorded times are backfilled.
+-- Recorded-time guarantee: clock_timestamp() is the database server wall clock
+-- while the statement executes inside a still-open transaction, i.e. BEFORE
+-- commit. It is not commit-visible time, not commit order, and not proof of
+-- what was known at that instant; callers cannot supply or rewrite it, and
+-- every such column carries a COMMENT ON COLUMN stating this.
 
 -- ---------------------------------------------------------------------------
 -- Guarded posting transitions and idempotency

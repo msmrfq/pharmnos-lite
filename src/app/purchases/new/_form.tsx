@@ -40,6 +40,7 @@ import {
 import { GstTreatmentSelect } from "@/components/gst/gst-treatment-select";
 import { GstStateSelect } from "@/components/gst/gst-state-select";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
+import { businessDateToday } from "@/lib/utils/business-date";
 import type { purchase_invoices } from "@prisma/client";
 
 type LineRow = {
@@ -162,7 +163,7 @@ export default function PurchasesNewClientForm({ suppliers, products }: Props) {
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (idx: number) => setLines((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)));
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessDateToday();
 
   const rupee = (n: number) =>
     `₹ ${Number(n ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;

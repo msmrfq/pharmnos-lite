@@ -43,6 +43,22 @@ import {
   STORAGE_PURCHASE_STATUS_CANCELLED,
 } from "@/lib/validation/purchases.schemas";
 import { validateGstTreatment } from "@/lib/gst/treatment";
+import {
+  businessDateFromPrismaDate,
+  businessDateToPrismaDate,
+} from "@/lib/utils/business-date";
+import {
+  ledgerTemporalFields,
+  resolveFinancialTemporal,
+} from "@/lib/utils/financial-temporal";
+
+// Rule and GST resolution must use the typed business date, never the legacy invoice_date.
+function requirePurchaseEffectiveDate(effectiveDate: Date | null | undefined): Date {
+  if (!effectiveDate) {
+    throw new Error("Purchase business dates are unclassified; resolve their provenance before GST rule resolution.");
+  }
+  return resolveFinancialTemporal({ businessDate: businessDateFromPrismaDate(effectiveDate) }).effectiveDate;
+}
 import { resolvePurchaseSupplyFacts } from "@/lib/gst/place-of-supply";
 import { isApprovedGstClassification, resolveApprovedGstRule } from "@/lib/gst/rule-governance";
 import { Decimal, decimalOrZero } from "@/lib/decimal";
@@ -678,6 +694,8 @@ export async function createPurchaseDraftAction(
       }
 
       const invoiceDate = data.invoice_date instanceof Date ? data.invoice_date : new Date(data.invoice_date as any);
+      const invoiceTemporal = resolveFinancialTemporal({ businessDate: businessDateFromPrismaDate(invoiceDate) });
+      const invoiceEffectiveDate = invoiceTemporal.effectiveDate;
       const created = await tx.purchase_invoices.create({
         data: {
           tenant_id: ctx.tenantId,
@@ -686,7 +704,9 @@ export async function createPurchaseDraftAction(
           supplier_id: data.supplier_id,
           supplier_invoice_no: normalizeSupplierInvoiceNo(data.supplier_invoice_no),
           invoice_date: invoiceDate,
+          effective_date: invoiceEffectiveDate,
           due_date: invoiceDate,
+          due_date_business: invoiceEffectiveDate,
           status: __PurchaseStatusDRAFT,
           gst_treatment: treatment.treatment,
           tax_mode: data.tax_mode,
@@ -702,7 +722,7 @@ export async function createPurchaseDraftAction(
       });
 
       const governedLines = data.supply_scenario
-        ? await resolvePurchaseLineRules(tx, ctx.tenantId, linesParsed, created.invoice_date)
+        ? await resolvePurchaseLineRules(tx, ctx.tenantId, linesParsed, invoiceEffectiveDate)
         : linesParsed;
       const itemsData = governedLines.map((line: any) => {
         const totals = calculatePurchaseLineTotals(line);
@@ -1283,7 +1303,7 @@ export async function correctPurchaseGstEvidenceAction(
         where: { tenant_id: ctx.tenantId, purchase_id: purchase.id },
         select: { product_id: true, quantity: true, purchase_rate: true, discount_pct: true, gst_rate: true },
       });
-      const governedLines = await resolvePurchaseLineRules(tx, ctx.tenantId, currentItems, purchase.invoice_date);
+      const governedLines = await resolvePurchaseLineRules(tx, ctx.tenantId, currentItems, requirePurchaseEffectiveDate(purchase.effective_date));
       await persistPurchaseGstEvidence(tx, ctx.tenantId, purchase.id, ctx.membershipId, data, {
         gross_amount: Number(purchase.gross_amount),
         total_discount: Number(purchase.total_discount),
@@ -1390,6 +1410,9 @@ export async function finalizePurchaseAction(
           throw new Error("Only draft purchases can be finalized.");
         }
       }
+      if (existing.status === __PurchaseStatusDRAFT && (!existing.effective_date || !existing.due_date_business)) {
+        throw new Error("Purchase business dates are unclassified; resolve their provenance before finalization.");
+      }
       const treatment = validateGstTreatment(existing.gst_treatment);
       if (!treatment.ok) {
         throw new Error(treatment.error ?? "GST treatment must be selected before finalization.");
@@ -1419,7 +1442,7 @@ export async function finalizePurchaseAction(
       if (items.length === 0) {
         throw new Error("No line items found.");
       }
-      const governedLines = await resolvePurchaseLineRules(tx, ctx.tenantId, items, existing.invoice_date);
+      const governedLines = await resolvePurchaseLineRules(tx, ctx.tenantId, items, requirePurchaseEffectiveDate(existing.effective_date));
       const gstEvidence = existing.current_gst_evidence_revision_id
         ? await tx.purchase_gst_evidence_revisions.findFirst({
             where: {
@@ -1802,13 +1825,21 @@ export async function finalizePurchaseAction(
         },
         renderingVersion: INVOICE_RENDERING_VERSION,
       });
-
+      if (!existing.effective_date || !existing.due_date_business) {
+        throw new Error("Purchase business dates are unclassified; resolve their provenance before finalization.");
+      }
+      const invoiceTemporal = resolveFinancialTemporal({ businessDate: businessDateFromPrismaDate(existing.effective_date) });
+      const effectiveDate = invoiceTemporal.effectiveDate;
+      const dueDateBusiness = businessDateToPrismaDate(businessDateFromPrismaDate(existing.due_date_business));
+      const finalizedAt = new Date();
       const updated = await tx.purchase_invoices.update({
         where: { id: existing.id, tenant_id: ctx.tenantId },
         data: {
           invoice_no: finalInvoiceNo,
           status: __PurchaseStatusFINALIZED,
-          finalized_at: new Date(),
+          finalized_at: finalizedAt,
+          effective_date: effectiveDate,
+          due_date_business: dueDateBusiness,
           gross_amount: postingTotals.gross_amount,
           total_discount: postingTotals.total_discount,
           total_tax: postingTotals.total_tax,
@@ -1818,7 +1849,7 @@ export async function finalizePurchaseAction(
           finalized_snapshot_hash: finalizedSnapshot.hash,
           rendering_version: INVOICE_RENDERING_VERSION,
           pdf_generation_status: "PENDING",
-          updated_at: new Date(),
+          updated_at: finalizedAt,
         },
       });
 
@@ -1847,14 +1878,14 @@ export async function finalizePurchaseAction(
           reference_id: existing.id,
           purchase_id: existing.id,
           narration: `Purchase ${finalInvoiceNo}`,
-          entry_date: existing.invoice_date,
-          created_at: new Date(),
+          ...ledgerTemporalFields(invoiceTemporal),
+          created_at: finalizedAt,
         },
       });
 
       await tx.suppliers.update({
         where: { id: existing.supplier_id, tenant_id: ctx.tenantId },
-        data: { payable_balance: { increment: credit }, updated_at: new Date() },
+        data: { payable_balance: { increment: credit }, updated_at: finalizedAt },
       });
 
       await tx.audit_logs.create({
@@ -1865,7 +1896,7 @@ export async function finalizePurchaseAction(
           target_type: "purchase_invoice",
           target_id: existing.id,
           metadata: { invoice_no: finalInvoiceNo, net_amount: credit },
-          created_at: new Date(),
+          created_at: finalizedAt,
         },
       });
 

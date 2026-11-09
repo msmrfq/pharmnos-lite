@@ -29,10 +29,15 @@ import {
   Info,
 } from "lucide-react";
 import { isPostgresConfigured, prisma } from "@/lib/db/prisma";
-import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
-import { PermissionAction } from "@prisma/client";
+import { requirePermission, requireServerTenantContext, establishTenantContext } from "@/lib/db/tenant-context";
+import { PermissionAction, Prisma } from "@prisma/client";
 import ExportCsvButton from "@/components/ui/export-csv-button";
 import { exportGstHsnSummaryCsvAction } from "@/app/_actions/exports.actions";
+import { ReportUnavailableError, describeReportFailure } from "@/domain/services/financial-report-completeness";
+import {
+  HSN_INCOMPLETE_BANNER, currentBusinessMonthBounds, hsnExclusionNotice, hsnRowMatchesQuery,
+  loadHsnInvoices, parseHsnFilter, type HsnExclusionSummary,
+} from "@/domain/services/gst-hsn-date-filter";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -44,8 +49,6 @@ const rupee = (n: number | null | undefined | string) => {
   if (!Number.isFinite(num)) return "\u2014";
   return `\u20B9 ${num.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
 };
-
-const yyyymmdd = (d: Date) => d.toISOString().slice(0, 10);
 
 type HsnRow = {
   key: string;
@@ -74,22 +77,21 @@ export default async function GstHsnSummaryPage({
     page?: string;
   };
 }) {
-  const now = new Date();
-  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const fromStr = searchParams?.from?.trim() || yyyymmdd(firstOfMonth);
-  const toStr = searchParams?.to?.trim() || yyyymmdd(lastOfMonth);
-  const fromDate = new Date(fromStr + "T00:00:00.000Z");
-  const toDate = new Date(toStr + "T23:59:59.999Z");
+  const monthDefaults = currentBusinessMonthBounds();
+  const fromStr = searchParams?.from?.trim() || monthDefaults.from;
+  const toStr = searchParams?.to?.trim() || monthDefaults.to;
   const pageRaw = Number(searchParams?.page ?? "1");
   const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
   const pageSize = 50;
   const q = searchParams?.q?.trim() ?? "";
-  const partyRaw = (searchParams?.party?.trim() ?? "all") as CounterpartyFilter;
-  const party: CounterpartyFilter = ["all", "b2b", "unregistered"].includes(partyRaw) ? partyRaw : "all";
-  const hasFilter = Boolean(q || party !== "all" || fromStr !== yyyymmdd(firstOfMonth) || toStr !== yyyymmdd(lastOfMonth));
+  const party = (searchParams?.party?.trim() || "all") as CounterpartyFilter;
+  // The CSV receives the identical resolved inputs, so page and export share one filter.
+  const reportInput = { from: fromStr, to: toStr, party, q };
+  const hasFilter = Boolean(q || party !== "all" || fromStr !== monthDefaults.from || toStr !== monthDefaults.to);
 
   let dbOk = isPostgresConfigured();
+  let reportError: string | null = null;
+  let exclusions: HsnExclusionSummary = { count: 0, taxable: "0.00", gst: "0.00", total: "0.00" };
 
   let items: HsnRow[] = [];
   let total = 0;
@@ -102,23 +104,14 @@ export default async function GstHsnSummaryPage({
     requirePermission(ctx, PermissionAction.view_reports);
     try {
       const t = ctx;
+      const filter = parseHsnFilter(reportInput);
 
-      let invoices = await (prisma as any).sales_invoices.findMany({
-        where: {
-          tenant_id: t.tenantId,
-          status: "FINALIZED",
-          invoice_date: { gte: fromDate, lte: toDate },
-        },
-        include: {
-          items: true,
-        },
-      });
-
-      if (party === "b2b") {
-        invoices = invoices.filter((inv: any) => inv.customer_gstin_snapshot?.trim().length > 0);
-      } else if (party === "unregistered") {
-        invoices = invoices.filter((inv: any) => !inv.customer_gstin_snapshot?.trim());
-      }
+      const loaded = await prisma.$transaction(async (tx) => {
+        await establishTenantContext(tx, ctx);
+        return loadHsnInvoices(tx as any, t.tenantId, filter);
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+      const invoices = loaded.invoices;
+      exclusions = loaded.exclusions;
 
       const groupMap = new Map<string, HsnRow>();
 
@@ -160,15 +153,7 @@ export default async function GstHsnSummaryPage({
       }
       computed.sort((a, b) => a.hsn.localeCompare(b.hsn) || a.rate_pct - b.rate_pct);
 
-      let filtered = computed;
-
-      if (q) {
-        const qLower = q.toLowerCase();
-        filtered = filtered.filter((r) =>
-          (r.hsn?.toLowerCase().includes(qLower) ?? false) ||
-          (r.description?.toLowerCase().includes(qLower) ?? false)
-        );
-      }
+      const filtered = computed.filter((r) => hsnRowMatchesQuery(r, filter.q));
 
       total = filtered.length;
       for (const r of filtered) {
@@ -179,8 +164,12 @@ export default async function GstHsnSummaryPage({
 
       const startIdx = (page - 1) * pageSize;
       items = filtered.slice(startIdx, startIdx + pageSize);
-    } catch (_err) {
-      dbOk = false;
+    } catch (err) {
+      if (err instanceof ReportUnavailableError) {
+        reportError = describeReportFailure(err).reason;
+      } else {
+        dbOk = false;
+      }
     }
   }
 
@@ -214,11 +203,41 @@ export default async function GstHsnSummaryPage({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <ExportCsvButton variant="secondary" action={exportGstHsnSummaryCsvAction}>
+          <ExportCsvButton
+            variant="secondary"
+            action={exportGstHsnSummaryCsvAction.bind(null, reportInput)}
+            disabled={!dbOk || reportError !== null}
+          >
             <Download className="h-4 w-4" /> Export CSV
           </ExportCsvButton>
         </div>
       </CardHeader>
+
+      {reportError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 flex items-start gap-2"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-red-600" />
+          <div>
+            <strong className="font-semibold">GST HSN summary unavailable.</strong>
+            <span className="ml-1">{reportError} No totals are shown.</span>
+          </div>
+        </div>
+      )}
+
+      {!reportError && hsnExclusionNotice(exclusions) && (
+        <div
+          role="status"
+          className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+          <div>
+            <strong className="font-semibold">{HSN_INCOMPLETE_BANNER}.</strong>
+            <span className="ml-1">{hsnExclusionNotice(exclusions)}. These invoices are not in any row or total below.</span>
+          </div>
+        </div>
+      )}
 
       {!dbOk && (
         <div
@@ -334,7 +353,9 @@ export default async function GstHsnSummaryPage({
               {dbOk && items.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} className="py-10 text-center text-muted text-body-md">
-                    {hasFilter
+                    {reportError
+                      ? "Report unavailable."
+                      : hasFilter
                       ? "No HSN rows match the current filters."
                       : "No FINALIZED sales invoices in the selected date range yet."}
                   </TableCell>
@@ -431,7 +452,7 @@ export default async function GstHsnSummaryPage({
                 </span>
                 <div>
                   <p className="text-caption font-medium uppercase tracking-wide text-muted">
-                    Total taxable
+                    Total taxable{exclusions.count > 0 ? " (dated invoices only)" : ""}
                   </p>
                   <p className="mt-1 text-display-sm font-display tracking-brand text-ink">
                     {dbOk ? rupee(summaryTaxable) : rupee(0)}
@@ -469,7 +490,9 @@ export default async function GstHsnSummaryPage({
               <div className="flex items-start gap-2 text-caption text-muted">
                 <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                 <p>
-                  Method: portable TS aggregate (no SQL group-by). FINALIZED sales invoices only.
+                  Method: portable TS aggregate (no SQL group-by). FINALIZED sales invoices only, placed by their
+                  effective date (Asia/Kolkata calendar date, inclusive range); invoices without a classified date are
+                  excluded and disclosed above.
                   CGST/SGST half-half for intrastate (same state), IGST full for interstate.
                 </p>
               </div>

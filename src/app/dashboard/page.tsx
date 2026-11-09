@@ -33,6 +33,11 @@ import {
 import { isPostgresConfigured } from "@/lib/db/prisma";
 import { requireServerTenantContext } from "@/lib/db/tenant-context";
 import { repos } from "@/repositories";
+import { businessDateToday, formatBusinessDate, formatBusinessInstant } from "@/lib/utils/business-date";
+import { Decimal } from "@/lib/decimal";
+import { formatRupeeAmount, type AgingReport } from "@/domain/services/aging-report.service";
+import { loadCustomerAgingReport, loadSupplierAgingReport } from "@/app/_actions/aging-report.actions";
+import { loadMonthlySalesStats } from "@/app/_actions/monthly-stats.actions";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -43,6 +48,10 @@ const rupee = (n: number | null | undefined | string | bigint) => {
   if (!Number.isFinite(num)) return "₹ 0";
   return `₹ ${num.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
 };
+const longMonths = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
 const quickLinks = [
   { label: "New invoice", icon: Receipt, href: "/billing/new" },
@@ -53,65 +62,92 @@ const quickLinks = [
 ];
 
 export default async function DashboardPage() {
-  let dbOk = isPostgresConfigured();
-  const ctx = dbOk ? await requireServerTenantContext().catch(() => null) : null;
+  const dbOk = isPostgresConfigured();
+  const ctx = dbOk ? await requireServerTenantContext().catch((error) => {
+    console.error("Dashboard tenant context failed:", error);
+    return null;
+  }) : null;
 
   type Metric = { label: string; value: string; change: string; variant: any; icon: any; href: string };
   let metrics: Metric[] = [];
   let recentInvoices: any[] = [];
   let lowStockQueue: any[] = [];
   let recentActivity: any[] = [];
+  let invoicesAvailable = false;
+  let stockAvailable = false;
+  let activityAvailable = false;
 
   if (dbOk && ctx) {
     try {
-      const [salesStats, purchaseStats, stockVal, agedRecv, agedPay, lastInvoices, customersList, lastAudits] =
-        await Promise.all([
-          repos.salesInvoices.monthlyStats(ctx, 1),
-          repos.purchaseInvoices.monthlyStats(ctx, 1),
+      const results = await Promise.allSettled([
           repos.productBatches.stockValuation(ctx),
-          repos.customerLedgers.agedReceivablesTotals(ctx),
-          repos.supplierLedgers.agedPayablesTotals(ctx),
           repos.salesInvoices.list({ take: 6, skip: 0, orderBy: { invoice_date: "desc" } as any, search: undefined } as any, ctx),
-          repos.customers.list({ take: 200, skip: 0, search: undefined } as any, ctx),
-          repos.auditLogs.list ? repos.auditLogs.list({ take: 10, skip: 0, orderBy: { created_at: "desc" } as any } as any, ctx).catch(() => ({ items: [], total: 0, page: 1, pageSize: 10 })) : Promise.resolve({ items: [], total: 0, page: 1, pageSize: 10 }),
+          repos.auditLogs.list({ take: 10, skip: 0, orderBy: { created_at: "desc" } as any } as any, ctx),
+          loadMonthlySalesStats(),
+          loadCustomerAgingReport(),
+          loadSupplierAgingReport(),
         ]);
+      for (const result of results) {
+        if (result.status === "rejected") console.error("Dashboard query failed:", result.reason);
+      }
+      const [stockResult, invoicesResult, auditResult, salesStatsResult, receivablesResult, payablesResult] = results;
+      const stockVal = stockResult.status === "fulfilled" ? stockResult.value : null;
+      const lastInvoices = invoicesResult.status === "fulfilled" ? invoicesResult.value : null;
+      const lastAudits = auditResult.status === "fulfilled" ? auditResult.value : null;
+      const salesStats = salesStatsResult.status === "fulfilled" && salesStatsResult.value.ok ? salesStatsResult.value.stats : null;
+      const receivables = receivablesResult.status === "fulfilled" && receivablesResult.value.ok ? receivablesResult.value.report : null;
+      const payables = payablesResult.status === "fulfilled" && payablesResult.value.ok ? payablesResult.value.report : null;
+      invoicesAvailable = lastInvoices !== null;
+      stockAvailable = stockVal !== null;
+      activityAvailable = lastAudits !== null;
 
-      const salesNet = Number(salesStats?._sum?.net_amount ?? 0);
-      const overdueRecvTotal = agedRecv.bucket_31_60 + agedRecv.bucket_61_90 + agedRecv.bucket_over_90;
-      const overdueCount = (customersList?.items ?? []).filter((c: any) => Number(c.receivable_balance ?? 0) > 0.01).length;
+      const unclassifiedNote = (report: AgingReport) => report.unclassifiedCount > 0
+        ? ` · ${formatRupeeAmount(report.totals.unclassified)} (${report.unclassifiedCount} invoices) due date unclassified`
+        : "";
+      const overdueSince31 = receivables
+        ? Decimal.from(receivables.totals.d60).add(receivables.totals.d90).add(receivables.totals.over90)
+        : null;
+      const overdueCount = receivables ? receivables.rows.filter((row) => row.oldestOverdueDays > 0).length : 0;
 
       metrics = [
         {
           label: "Sales this month",
-          value: rupee(salesNet),
-          change: `${salesStats?._count?.id ?? 0} invoices · Purchase ${rupee(Number(purchaseStats?._sum?.net_amount ?? 0))}`,
-          variant: "success" as const,
+          value: salesStats ? rupee(salesStats.netAmount) : "Unavailable",
+          change: !salesStats ? "Monthly sales unavailable" : `${salesStats.invoiceCount} invoices${salesStats.exclusionNote ? ` · ${salesStats.exclusionNote}` : ""}`,
+          variant: !salesStats || salesStats.completeness === "QUALIFIED" ? ("warning" as const) : ("default" as const),
           icon: Receipt,
           href: "/billing",
         },
         {
           label: "Receivables",
-          value: rupee(agedRecv.total),
-          change: overdueCount > 0 ? `${overdueCount} overdue · ${rupee(overdueRecvTotal)} pending 30+` : "All accounts current",
-          variant: overdueRecvTotal > 0.01 ? ("warning" as const) : ("success" as const),
+          value: receivables ? rupee(receivables.totals.classified_total) : "Unavailable",
+          change: !receivables || !overdueSince31 ? "Aging unavailable" : (
+            overdueCount > 0
+              ? `${overdueCount} overdue · ${rupee(overdueSince31.toString())} pending 31+ days`
+              : receivables.openInvoiceCount === 0 ? "No open receivables" : "No classified overdue accounts"
+          ) + unclassifiedNote(receivables),
+          variant: !receivables || receivables.completeness === "QUALIFIED" || Number(overdueSince31?.toString()) > 0.01
+            ? ("warning" as const) : ("success" as const),
           icon: TrendingUp,
           href: "/reports/customer-dues",
         },
         {
           label: "Approved stock value",
-          value: rupee(stockVal.total_value_inr),
-          change: stockVal.pending_batches_count > 0
+          value: stockVal ? rupee(stockVal.total_value_inr) : "Unavailable",
+          change: !stockVal ? "Stock unavailable" : stockVal.pending_batches_count > 0
             ? `${stockVal.pending_batches_count} batches pending valuation`
             : `${stockVal.sku_count} SKUs · ${stockVal.batches_count} batches`,
-          variant: stockVal.pending_batches_count > 0 ? ("warning" as const) : ("default" as const),
+          variant: !stockVal || stockVal.pending_batches_count > 0 ? ("warning" as const) : ("default" as const),
           icon: FileSpreadsheet,
           href: "/reports/stock-valuation",
         },
         {
           label: "Near expiry (60d)",
-          value: `${stockVal.sku_count ? Math.min(stockVal.batches_count, 999) : 0} batches`,
-          change: stockVal.near_expiry_60d_value > 0.01 ? `${rupee(stockVal.near_expiry_60d_value)} at risk · Payables ${rupee(agedPay.total)}` : `No near-expiry batches · Payables ${rupee(agedPay.total)}`,
-          variant: stockVal.near_expiry_60d_value > 0.01 ? ("badge-orange" as const) : ("success" as const),
+          value: stockVal ? `${stockVal.sku_count ? Math.min(stockVal.batches_count, 999) : 0} batches` : "Unavailable",
+          change: `${!stockVal ? "Stock unavailable" : stockVal.near_expiry_60d_value > 0.01 ? `${rupee(stockVal.near_expiry_60d_value)} at risk` : "No near-expiry batches"} · ${
+            payables ? `Payables ${rupee(payables.totals.classified_total)}${unclassifiedNote(payables)}` : "Payables unavailable"}`,
+          variant: !stockVal || (payables?.completeness ?? "QUALIFIED") === "QUALIFIED" ? ("warning" as const)
+            : stockVal.near_expiry_60d_value > 0.01 ? ("badge-orange" as const) : ("success" as const),
           icon: Clock,
           href: "/inventory?tab=batches",
         },
@@ -128,11 +164,11 @@ export default async function DashboardPage() {
               ? ("success" as const)
               : ("badge-orange" as const)
             : ("warning" as const),
-        time: inv.invoice_date ? new Date(inv.invoice_date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "—",
+        date: inv.invoice_date ? formatBusinessDate(inv.invoice_date) : "—",
         href: `/billing/${encodeURIComponent(inv.id)}/print`,
       }));
 
-      lowStockQueue = (stockVal.batches_count > 0 ? [{
+      lowStockQueue = !stockVal ? [] : (stockVal.batches_count > 0 ? [{
         name: `${stockVal.sku_count} active SKUs`,
         stock: `${stockVal.batches_count} batches`,
         note: stockVal.near_expiry_60d_value > 0 ? "Near-expiry batches present" : "All batches fresh",
@@ -141,8 +177,8 @@ export default async function DashboardPage() {
         { name: "No inventory batches loaded", stock: "—", note: dbOk ? "Create a purchase first" : "DB unavailable", variant: ("secondary" as const) },
       ]) as any;
 
-      recentActivity = (lastAudits.items ?? []).slice(0, 10).map((a: any) => ({
-        ts: a.created_at ? new Date(a.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—",
+      recentActivity = (lastAudits?.items ?? []).slice(0, 10).map((a: any) => ({
+        ts: a.created_at ? formatBusinessInstant(a.created_at) : "—",
         user: a.actor?.display_name || a.actor?.email || "System",
         module: a.audit_type || "General",
         action: a.event_type || "Logged",
@@ -151,23 +187,24 @@ export default async function DashboardPage() {
         variant: (a.event_type === "CREATED" || a.event_type === "Finalized") ? "success" as const : a.event_type === "CANCELLED" || a.event_type?.includes("Adjust") ? "destructive" as const : "default" as const,
       }));
     } catch (err) {
-      dbOk = false;
+      console.error("Dashboard rendering data failed:", err);
     }
   }
 
   if (metrics.length === 0) {
     metrics = [
-      { label: "Sales this month", value: "₹ 0", change: "Aggregates loading…", variant: "default" as const, icon: Receipt, href: "/billing" },
-      { label: "Receivables", value: "₹ 0", change: "Aggregates loading…", variant: "default" as const, icon: TrendingUp, href: "/reports/customer-dues" },
-      { label: "Stock value", value: "₹ 0", change: "Aggregates loading…", variant: "default" as const, icon: FileSpreadsheet, href: "/reports/stock-valuation" },
-      { label: "Near expiry (60d)", value: "0 batches", change: "Aggregates loading…", variant: "default" as const, icon: Clock, href: "/inventory?tab=batches" },
+      { label: "Sales this month", value: "Unavailable", change: "Monthly sales unavailable", variant: "warning" as const, icon: Receipt, href: "/billing" },
+      { label: "Receivables", value: "Unavailable", change: "Aging unavailable", variant: "warning" as const, icon: TrendingUp, href: "/reports/customer-dues" },
+      { label: "Stock value", value: "Unavailable", change: "Stock unavailable", variant: "warning" as const, icon: FileSpreadsheet, href: "/reports/stock-valuation" },
+      { label: "Near expiry (60d)", value: "Unavailable", change: "Stock unavailable · Payables unavailable", variant: "warning" as const, icon: Clock, href: "/inventory?tab=batches" },
     ];
     recentInvoices = [];
     lowStockQueue = [];
     recentActivity = [];
   }
 
-  const todayLabel = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+  const [todayYear, todayMonth, todayDay] = businessDateToday().split("-");
+  const todayLabel = `${Number(todayDay)} ${longMonths[Number(todayMonth) - 1]} ${todayYear}`;
 
   return (
     <DashboardLayout
@@ -200,15 +237,14 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {!dbOk && (
+        {(!dbOk || !ctx) && (
           <div
             role="status"
             className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2"
           >
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
             <div>
-              <strong className="font-semibold">Showing placeholder values until database is connected.</strong>
-              <span className="ml-1">Temporary Supabase pooler timeout is common on the free tier — try again in 60 seconds.</span>
+              <strong className="font-semibold">Dashboard data unavailable: database or tenant context is unavailable.</strong>
             </div>
           </div>
         )}
@@ -290,20 +326,20 @@ export default async function DashboardPage() {
                     <TableHead>Customer</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Time</TableHead>
+                    <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dbOk && recentInvoices.length === 0 ? (
+                  {!invoicesAvailable ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-8 text-center text-muted">
+                        Recent invoices unavailable.
+                      </TableCell>
+                    </TableRow>
+                  ) : recentInvoices.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="py-8 text-center text-muted">
                         No invoices yet — create your first invoice from the quick actions above.
-                      </TableCell>
-                    </TableRow>
-                  ) : !dbOk ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="py-8 text-center text-muted">
-                        Recent invoices hidden until database is connected.
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -319,7 +355,7 @@ export default async function DashboardPage() {
                         <TableCell>
                           <Badge variant={r.statusVariant}>{r.status}</Badge>
                         </TableCell>
-                        <TableCell className="text-muted">{r.time}</TableCell>
+                        <TableCell className="text-muted">{r.date}</TableCell>
                       </TableRow>
                     ))
                   )}
@@ -339,8 +375,8 @@ export default async function DashboardPage() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-2">
-              {lowStockQueue.length === 0 ? (
-                <p className="text-muted py-4 text-center">Queue loading…</p>
+              {!stockAvailable ? (
+                <p className="text-muted py-4 text-center">Stock queue unavailable.</p>
               ) : (
                 lowStockQueue.map((item: any, idx: number) => (
                   <div
@@ -386,10 +422,10 @@ export default async function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {!dbOk ? (
+                {!activityAvailable ? (
                   <TableRow>
                     <TableCell colSpan={6} className="py-8 text-center text-muted">
-                      Activity timeline hidden until database is connected.
+                      Activity timeline unavailable.
                     </TableCell>
                   </TableRow>
                 ) : recentActivity.length === 0 ? (

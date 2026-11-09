@@ -22,6 +22,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { repos } from "@/repositories";
 import { isPostgresConfigured } from "@/lib/db/prisma";
 import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { loadCustomerAgingReport } from "@/app/_actions/aging-report.actions";
 import SuccessCreatedToast from "@/components/toast/creation-success-toast";
 import ExportCsvButton from "@/components/ui/export-csv-button";
 import { exportCustomersCsvAction } from "@/app/_actions/exports.actions";
@@ -41,10 +42,10 @@ const rupee = (n: number | null | undefined | string) => {
 
 const agingBucket = (overdueDays: number) => {
   if (overdueDays <= 0) return { label: "Current", variant: "success" as const };
-  if (overdueDays <= 30) return { label: "0-30 days", variant: "success" as const };
+  if (overdueDays <= 30) return { label: "1-30 days", variant: "success" as const };
   if (overdueDays <= 60) return { label: "31-60 days", variant: "warning" as const };
   if (overdueDays <= 90) return { label: "61-90 days", variant: "warning" as const };
-  return { label: "90+ days", variant: "destructive" as const };
+  return { label: ">90 days", variant: "destructive" as const };
 };
 
 export default async function CustomersPage({
@@ -68,20 +69,31 @@ export default async function CustomersPage({
       const result = await repos.customers.list({ skip: (page - 1) * pageSize, take: pageSize, orderBy: { business_name: "asc" } }, ctx);
       items = result.items;
       total = result.total;
-      const perCustomerAging = new Map<string, number>();
-      for (const c of items) {
+      const perCustomerAging = new Map<string, number | null>();
+      const unclassifiedCustomers = new Map<string, boolean>();
+      let agingByCustomer: Map<string, { oldestOverdueDays: number; unclassifiedCount: number; classified_total: string }> | null = null;
+      if (items.some((c) => Number(c.receivable_balance ?? 0) > 0)) {
         try {
-          if (Number(c.receivable_balance ?? 0) <= 0) {
-            perCustomerAging.set(c.id, 0);
-            continue;
-          }
-          const d = await repos.customerLedgers.getOldestOverdueDays(c.id, ctx);
-          perCustomerAging.set(c.id, Number.isFinite(d) ? d : 0);
-        } catch (_) {
+          const aging = await loadCustomerAgingReport();
+          if (!aging.ok) throw new Error(aging.reason);
+          agingByCustomer = new Map(aging.report.rows.map((row) => [row.party.id, row]));
+        } catch (error) {
+          console.error("Customer aging unavailable:", error);
+        }
+      }
+      for (const c of items) {
+        if (Number(c.receivable_balance ?? 0) <= 0) {
           perCustomerAging.set(c.id, 0);
+        } else if (agingByCustomer === null) {
+          perCustomerAging.set(c.id, null);
+        } else {
+          const row = agingByCustomer.get(c.id);
+          perCustomerAging.set(c.id, row?.oldestOverdueDays ?? 0);
+          if ((row?.unclassifiedCount ?? 0) > 0) unclassifiedCustomers.set(c.id, Number(row?.classified_total ?? 0) <= 0);
         }
       }
       (items as any)._agingMap = perCustomerAging;
+      (items as any)._unclassified = unclassifiedCustomers;
     } catch (err) {
       dataError = describeDatabaseAccessError(err);
     }
@@ -168,9 +180,10 @@ export default async function CustomersPage({
                   ) : (
                     items.map((c: any) => {
                       const recv = Number(c.receivable_balance ?? 0);
-                      const agingMap = (items as any)._agingMap as Map<string, number> | undefined;
-                      const agingDays = agingMap?.get(c.id) ?? (recv > 0 ? 7 : 0);
-                      const bucket = agingBucket(agingDays);
+                      const agingMap = (items as any)._agingMap as Map<string, number | null> | undefined;
+                      const agingDays = agingMap?.get(c.id);
+                      const bucket = agingDays == null ? null : agingBucket(agingDays);
+                      const unclassifiedOnly = ((items as any)._unclassified as Map<string, boolean> | undefined)?.get(c.id);
                       return (
                         <TableRow key={c.id}>
                           <TableCell className="font-medium text-ink">
@@ -197,7 +210,12 @@ export default async function CustomersPage({
                           </TableCell>
                           <TableCell>
                             {recv > 0 ? (
-                              <Badge variant={bucket.variant}>{bucket.label}</Badge>
+                              bucket ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {unclassifiedOnly !== true && <Badge variant={bucket.variant}>{bucket.label}</Badge>}
+                                  {unclassifiedOnly !== undefined && <Badge variant="warning">Due date unclassified</Badge>}
+                                </div>
+                              ) : <Badge variant="secondary">Aging unavailable</Badge>
                             ) : (
                               <Badge variant="success">No dues</Badge>
                             )}

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { GST_TREATMENT_LABELS } from "@/lib/gst/treatment";
+import { businessDateToPrismaDate, parseBusinessDate } from "@/lib/utils/business-date";
 
 const pad2 = (n: number) => n.toString().padStart(2, "0");
 
@@ -44,6 +45,29 @@ export const dateOptional = z
   .nullable()
   .optional()
   .transform((v) => dateOrStringToDate(v));
+
+function financialDateToDate(value: string, ctx: z.RefinementCtx): Date | typeof z.NEVER {
+  try {
+    return businessDateToPrismaDate(parseBusinessDate(value));
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid date in YYYY-MM-DD format." });
+    return z.NEVER;
+  }
+}
+
+export const financialDateRequired = z.string().transform((value, ctx) => {
+  return financialDateToDate(value, ctx);
+});
+
+export const financialDateOptional = z
+  .string()
+  .nullable()
+  .optional()
+  .transform((value, ctx) => {
+    if (value === undefined || value === null || value === "") return null;
+    return financialDateToDate(value, ctx);
+  });
 
 export const decimalFromString = z.string().transform((s, ctx) => {
   const trimmed = s.trim();
@@ -161,7 +185,7 @@ export const PurchaseInvoiceCreateSchema = z
     gst_treatment: z.enum(GST_TREATMENT_LABELS, { errorMap: () => ({ message: "Select a valid GST treatment." }) }),
     tax_mode: z.enum(["EXCLUSIVE", "INCLUSIVE"]).default("EXCLUSIVE"),
     supplier_invoice_no: z.string().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
-    invoice_date: dateRequired,
+    invoice_date: financialDateRequired,
     notes: z.string().max(500).optional().or(z.literal("")).transform((v) => (v || null)),
     gross_amount: decimalFromStringOptional,
     total_discount: decimalFromStringOptional,

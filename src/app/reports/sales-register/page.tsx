@@ -26,12 +26,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Receipt, Download, ChevronLeft, ChevronRight, Search, AlertTriangle, X } from "lucide-react";
+import { Receipt, Download, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
 import ExportCsvButton from "@/components/ui/export-csv-button";
-import { exportSalesRegisterCsvAction } from "@/app/_actions/exports.actions";
+import { exportSalesRegisterCsvAction, loadFinancialRegisterReport } from "@/app/_actions/exports.actions";
+import { describeReportFailure, type RegisterExclusionSummary } from "@/domain/services/financial-report-completeness";
+import { QualifiedReportBanner, ReportUnavailableNotice } from "@/components/reports/report-completeness-notices";
+import { formatBusinessDate } from "@/lib/utils/business-date";
 
 export const metadata: Metadata = {
   title: "Sales Register",
@@ -72,16 +73,23 @@ export default async function SalesRegisterPage({
     customerId?: string;
     startDate?: string;
     endDate?: string;
+    mode?: string;
   };
 }) {
   const pageRaw = Number(searchParams?.page ?? "1");
   const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
   const pageSize = 50;
   const q = searchParams?.q ?? "";
-  const customerId = searchParams?.customerId ?? "";
+  const customerId = searchParams?.customerId === "all" ? "" : (searchParams?.customerId ?? "");
   const startDate = searchParams?.startDate ?? "";
   const endDate = searchParams?.endDate ?? "";
+  const rawMode = searchParams?.mode;
+  const qualified = rawMode === "qualified";
+  // The raw mode is validated by the report loader; an unknown mode fails closed there.
+  const reportInput = { q, partyId: customerId, startDate, endDate, ...(rawMode !== undefined ? { mode: rawMode } : {}) };
   let dbOk = isPostgresConfigured();
+  let failure: { reason: string; qualifiedModeAvailable: boolean } | null = null;
+  let exclusions: RegisterExclusionSummary | null = null;
 
   let items: any[] = [];
   let total = 0;
@@ -89,27 +97,14 @@ export default async function SalesRegisterPage({
 
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      const [result, custResult] = await Promise.all([
-        repos.salesInvoices.list(
-          {
-            skip: (page - 1) * pageSize,
-            take: pageSize,
-            orderBy: { invoice_date: "desc" },
-            search: q || undefined,
-            customerId: customerId || undefined,
-            startDate: startDate || undefined,
-            endDate: endDate || undefined,
-          },
-          ctx,
-        ),
-        repos.customers.list({ skip: 0, take: 500, orderBy: { business_name: "asc" } }, ctx),
-      ]);
-      items = result.items;
-      total = result.total;
-      customers = custResult.items;
-    } catch (_err) {
+      const result = await loadFinancialRegisterReport("sales", reportInput);
+      total = result.rows.length;
+      items = result.rows.slice((page - 1) * pageSize, page * pageSize);
+      customers = result.parties;
+      exclusions = result.mode === "qualified" ? result.exclusions : null;
+    } catch (error) {
       dbOk = false;
+      failure = describeReportFailure(error);
     }
   }
 
@@ -121,6 +116,7 @@ export default async function SalesRegisterPage({
     customerId: customerId || undefined,
     startDate: startDate || undefined,
     endDate: endDate || undefined,
+    mode: rawMode,
   };
 
   return (
@@ -129,34 +125,43 @@ export default async function SalesRegisterPage({
         <div>
           <CardTitle className="text-display-sm tracking-brand">Sales register</CardTitle>
           <p className="mt-1 text-body-md text-body">
-            Line-item sales by invoice, with date range, counterparty filter and CSV export.
+            Invoices by effective date, customer and reference. Export uses the same filters; not a historical knowledge-time snapshot.
           </p>
           {!dbOk && (
             <p className="mt-2 text-caption text-destructive">
-              Database is not configured — showing empty grid.
+              Register unavailable; no financial results are shown.
             </p>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <ExportCsvButton variant="secondary" action={exportSalesRegisterCsvAction}>
+          <ExportCsvButton variant="secondary" action={exportSalesRegisterCsvAction.bind(null, reportInput)} disabled={!dbOk}>
             <Download className="h-4 w-4" /> Export
           </ExportCsvButton>
         </div>
       </CardHeader>
 
       {!dbOk && (
-        <div role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2">
-          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
-          <div>
-            <strong className="font-semibold">Showing placeholder numbers until database is connected.</strong>
-            <span className="ml-1">Temporary Supabase pooler timeout — retry in 60 seconds.</span>
-          </div>
-        </div>
+        <ReportUnavailableNotice
+          title="Register unavailable."
+          reason={failure?.reason ?? "The report could not be loaded."}
+          qualifiedHref={failure?.qualifiedModeAvailable && !qualified ? `/reports/sales-register${buildQs(baseQs, { mode: "qualified" })}` : null}
+        />
+      )}
+
+      {dbOk && exclusions && (
+        <QualifiedReportBanner
+          excludedLabel="invoices"
+          excludedCount={exclusions.excludedCount}
+          amounts={[{ label: "excluded net amount", value: rupee(exclusions.excludedNet) }]}
+          byReason={exclusions.byReason}
+          completeHref={`/reports/sales-register${buildQs(baseQs, { mode: undefined })}`}
+        />
       )}
 
       <CardCanvas className="mb-5">
         <CardContent className="pt-4">
           <form action="/reports/sales-register" method="get" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 items-end">
+            {rawMode !== undefined ? <input type="hidden" name="mode" value={rawMode} /> : null}
             <div className="space-y-1.5">
               <Label htmlFor="q">Search</Label>
               <div className="relative">
@@ -240,12 +245,11 @@ export default async function SalesRegisterPage({
               ) : !dbOk ? (
                 <TableRow>
                   <TableCell colSpan={13} className="py-10 text-center text-muted text-body-md">
-                    Showing placeholder rows until database is connected.
+                    Register unavailable; no financial results are shown.
                   </TableCell>
                 </TableRow>
               ) : (
                 items.map((p: any) => {
-                  const d = p.invoice_date ? new Date(p.invoice_date) : null;
                   return (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium text-ink">
@@ -255,16 +259,10 @@ export default async function SalesRegisterPage({
                         </div>
                       </TableCell>
                       <TableCell className="text-body whitespace-nowrap">
-                        {d
-                          ? d.toLocaleDateString("en-IN", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })
-                          : "—"}
+                        {formatBusinessDate(p.effective_date)}
                       </TableCell>
                       <TableCell className="text-body">
-                        {p.customer?.business_name ?? p.customer?.customer_name ?? "—"}
+                        {p.party?.business_name ?? "—"}
                       </TableCell>
                       <TableCell className="text-body text-muted">
                         {p.reference_no ?? "—"}

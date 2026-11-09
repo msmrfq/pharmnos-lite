@@ -54,6 +54,7 @@ import type { PlaceOfSupplyResult } from "@/domain/services/gst-calculator.servi
 import { STATE_CODE_TO_NAME, normalizeState } from "@/lib/constants/indian-states";
 import { GstTreatmentSelect } from "@/components/gst/gst-treatment-select";
 import { sumDecimals } from "@/lib/decimal";
+import { businessDateToday } from "@/lib/utils/business-date";
 
 type BatchLite = {
   id: string;
@@ -368,7 +369,7 @@ export default function BillingNewClientForm({
   const removeLine = (idx: number) =>
     setLines((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)));
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessDateToday();
 
   const rupee = (n: number) =>
     `₹ ${Number(n ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;

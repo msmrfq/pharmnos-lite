@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import type { ButtonProps } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { GENERIC_EXPORT_FAILURE, resolveCsvExport, type CsvExportResult } from "@/lib/utils/csv-export-result";
 
-type ExportAction = () => Promise<Response>;
+type ExportAction = () => Promise<CsvExportResult>;
 
 type Props = Omit<ButtonProps, "onClick" | "type"> & {
   action: ExportAction;
@@ -16,6 +18,7 @@ type Props = Omit<ButtonProps, "onClick" | "type"> & {
 export default function ExportCsvButton({ action, filenameFallback, children, ...rest }: Props) {
   const [pending, setPending] = useState(false);
   const aRef = useRef<HTMLAnchorElement | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     aRef.current = document.createElement("a");
@@ -30,22 +33,31 @@ export default function ExportCsvButton({ action, filenameFallback, children, ..
     if (pending) return;
     try {
       setPending(true);
-      const res = await action();
-      const blob = await res.blob();
-      if (!blob.size) {
-        setPending(false);
+      const res = await resolveCsvExport(await action(), filenameFallback);
+      if (!res.ok) {
+        toast({
+          variant: "destructive",
+          title: "Export unavailable",
+          description: res.reason,
+          duration: 9000,
+        });
         return;
       }
-      const disposition = res.headers.get("Content-Disposition") ?? "";
-      const match = disposition.match(/filename="?([^";]+)"?/);
-      const filename = match?.[1] ?? filenameFallback ?? `export-${Date.now()}.csv`;
-      const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(res.blob);
       if (aRef.current) {
         aRef.current.href = url;
-        aRef.current.download = filename;
+        aRef.current.download = res.filename;
         aRef.current.click();
       }
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error("CSV export failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Could not export CSV",
+        description: GENERIC_EXPORT_FAILURE,
+        duration: 5500,
+      });
     } finally {
       setPending(false);
     }

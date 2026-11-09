@@ -1,4 +1,16 @@
 -- =====================================================================
+-- LEGACY BASELINE - SUPERSEDED. DO NOT USE TO PROVISION A CURRENT DATABASE.
+-- Frozen first-release snapshot (19 tables, ADR decisions/0001). It predates
+-- Prisma migrations 0002-0028 (no payment_allocations, allocation_reversals,
+-- payment_refunds, payment_reversals, GST evidence tables, nor the 0028
+-- financial date/instant columns, FinancialDateBasis type or recorded-time
+-- triggers). A database built from it cannot satisfy the current typed writers.
+-- It is also destructive (DROP ... CASCADE idempotency block below).
+-- Current path: prisma/migrations/* (replay) or the generated baseline
+-- prisma/financial-e2e-schema-provisioning.generated.sql for disposable targets.
+-- Executable statements below are intentionally unchanged.
+-- =====================================================================
+-- =====================================================================
 -- Pharmnos Lite — Step 1/3: Schema + RLS bootstrap on Supabase Free
 -- Run ONE time in Supabase Dashboard SQL Editor (NOT Table Editor).
 -- Idempotent: safe to re-click Run if connection drops mid-execution.

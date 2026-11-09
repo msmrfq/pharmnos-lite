@@ -3,11 +3,29 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { establishTenantContext, type TenantContext } from "@/lib/db/tenant-context";
 import { decimalOrZero } from "@/lib/decimal";
+import {
+  captureSystemInstant,
+  eventTemporalFields,
+  ledgerTemporalFields,
+  resolveFinancialTemporal,
+} from "@/lib/utils/financial-temporal";
 
 type Tx = Prisma.TransactionClient;
 type CounterpartyKind = "customer" | "supplier";
 type InvoiceKind = "sales" | "purchase";
 type Money = ReturnType<typeof decimalOrZero>;
+
+// One captured instant per operation; every row it writes derives its dates from it.
+function captureOperationDate() {
+  const resolved = resolveFinancialTemporal({ occurredAt: captureSystemInstant() });
+  return {
+    resolved,
+    occurredAt: resolved.occurredAt as Date,
+    effectiveDate: resolved.effectiveDate,
+    event: eventTemporalFields(resolved),
+    ledger: ledgerTemporalFields(resolved),
+  };
+}
 
 function sumReversals(rows: Array<{ amount: unknown }>): Money {
   return rows.reduce((total, row) => total.add(money(row.amount)), decimalOrZero(0));
@@ -300,6 +318,7 @@ export async function allocatePayment(input: AllocationInput): Promise<{ id: str
     const outstanding = money(invoice.net_amount).subtract(allocated);
     if (amount.compare(outstanding) > 0) throw new Error("Allocation exceeds the invoice's eligible outstanding amount.");
     if (amount.compare(usable) > 0) throw new Error("Allocation exceeds the payment's usable amount.");
+    const operationDate = captureOperationDate();
     const row = await tx.payment_allocations.create({
       data: {
         tenant_id: input.tenantId,
@@ -310,6 +329,7 @@ export async function allocatePayment(input: AllocationInput): Promise<{ id: str
         idempotency_key: input.idempotencyKey,
         request_payload_hash: payloadHash,
         allocated_by: input.actorId,
+        ...operationDate.event,
       },
     });
     await tx.audit_logs.create({
@@ -358,6 +378,7 @@ export async function reverseAllocation(input: AllocationReversalInput): Promise
     const invoiceKind = allocation.sales_invoice_id ? "sales" : "purchase";
     const invoiceId = allocation.sales_invoice_id ?? allocation.purchase_invoice_id!;
     await lockInvoices(tx, input.tenantId, invoiceKind, [invoiceId]);
+    const operationDate = captureOperationDate();
     const row = await tx.allocation_reversals.create({
       data: {
         tenant_id: input.tenantId,
@@ -366,6 +387,7 @@ export async function reverseAllocation(input: AllocationReversalInput): Promise
         idempotency_key: input.idempotencyKey,
         request_payload_hash: payloadHash,
         reversed_by: input.actorId,
+        ...operationDate.event,
       },
     });
     await tx.audit_logs.create({
@@ -535,6 +557,7 @@ export async function requestRefund(input: RefundRequestInput): Promise<{ id: st
       throw new Error("Payment does not belong to the requested counterparty.");
     }
     await assertRefundableAmount(tx, input.tenantId, payment.id, payment.amount, amount);
+    const operationDate = captureOperationDate();
     const row = await tx.payment_refunds.create({
       data: {
         tenant_id: input.tenantId,
@@ -545,6 +568,8 @@ export async function requestRefund(input: RefundRequestInput): Promise<{ id: st
         request_payload_hash: payloadHash,
         requested_by: actorId,
         reason: input.reason,
+        requested_business_date: operationDate.effectiveDate,
+        requested_occurred_at: operationDate.occurredAt,
       },
     });
     await recordRefundAction(
@@ -604,7 +629,7 @@ async function transitionRefund(
     if (transition.to === "APPROVED") {
       await assertRefundableAmount(tx, input.tenantId, payment.id, payment.amount, money(refund.amount));
     }
-    const timestamp = new Date();
+    const timestamp = captureSystemInstant();
     await tx.payment_refunds.update({
       where: { tenant_id_id: { tenant_id: input.tenantId, id: refund.id } },
       data: {
@@ -707,6 +732,7 @@ export async function completeRefund(
     }
     const amount = money(refund.amount);
     await assertRefundableAmount(tx, input.tenantId, payment.id, payment.amount, amount);
+    const operationDate = captureOperationDate();
     const allocations = await tx.payment_allocations.findMany({
       where: { tenant_id: input.tenantId, payment_id: payment.id },
       orderBy: [{ allocated_at: "asc" }, { id: "asc" }],
@@ -744,6 +770,7 @@ export async function completeRefund(
           idempotency_key: reversalKey,
           request_payload_hash: reversalPayloadHash,
           reversed_by: actorId,
+          ...operationDate.event,
         },
       });
       await tx.audit_logs.create({
@@ -766,13 +793,15 @@ export async function completeRefund(
       }
       remaining = remaining.subtract(reversedAmount);
     }
-    const timestamp = new Date();
     await tx.payment_refunds.update({
       where: { tenant_id_id: { tenant_id: input.tenantId, id: refund.id } },
       data: {
         status: "COMPLETED",
         completed_by: actorId,
-        completed_at: timestamp,
+        completed_at: operationDate.occurredAt,
+        completed_effective_date: operationDate.effectiveDate,
+        completed_effective_date_basis: operationDate.resolved.effectiveDateBasis,
+        completed_occurred_at: operationDate.occurredAt,
         resolution_reason: input.reason ?? refund.resolution_reason,
       },
     });
@@ -793,7 +822,8 @@ export async function completeRefund(
           reference_type: "payment_refund",
           reference_id: refund.id,
           narration: input.reason ?? "Payment refund completed",
-          entry_date: timestamp,
+          ...operationDate.ledger,
+          created_at: operationDate.occurredAt,
         },
       });
       const customer = await tx.customers.findUnique({
@@ -817,7 +847,8 @@ export async function completeRefund(
           reference_type: "payment_refund",
           reference_id: refund.id,
           narration: input.reason ?? "Payment refund completed",
-          entry_date: timestamp,
+          ...operationDate.ledger,
+          created_at: operationDate.occurredAt,
         },
       });
       await updateSupplierPayable(tx, input.tenantId, payment.counterpartyId, amount);
@@ -852,6 +883,7 @@ export async function reversePayment(input: ReversalInput): Promise<{ id: string
     await lockInvoices(tx, input.tenantId, "sales", salesIds);
     await lockInvoices(tx, input.tenantId, "purchase", purchaseIds);
     const refunded = await completedRefundTotal(tx, input.tenantId, input.paymentId);
+    const operationDate = captureOperationDate();
     const reversed = await tx.payment_reversals.create({
       data: {
         tenant_id: input.tenantId,
@@ -861,6 +893,7 @@ export async function reversePayment(input: ReversalInput): Promise<{ id: string
         request_payload_hash: payloadHash,
         reversed_by: input.actorId,
         reason: input.reason,
+        ...operationDate.event,
       },
     });
     await tx.audit_logs.create({
@@ -882,6 +915,7 @@ export async function reversePayment(input: ReversalInput): Promise<{ id: string
           idempotency_key: `${input.idempotencyKey}:allocation:${allocation.id}`,
           request_payload_hash: payloadHash,
           reversed_by: input.actorId,
+          ...operationDate.event,
         },
       });
       await tx.audit_logs.create({
@@ -908,7 +942,8 @@ export async function reversePayment(input: ReversalInput): Promise<{ id: string
           reference_type: "payment_reversal",
           reference_id: reversed.id,
           narration: input.reason ?? "Payment reversal completed",
-          entry_date: new Date(),
+          ...operationDate.ledger,
+          created_at: operationDate.occurredAt,
         },
       });
       const customer = await tx.customers.findUnique({
@@ -932,7 +967,8 @@ export async function reversePayment(input: ReversalInput): Promise<{ id: string
           reference_type: "payment_reversal",
           reference_id: reversed.id,
           narration: input.reason ?? "Payment reversal completed",
-          entry_date: new Date(),
+          ...operationDate.ledger,
+          created_at: operationDate.occurredAt,
         },
       });
       await updateSupplierPayable(tx, input.tenantId, payment.counterpartyId, money(reversed.amount));

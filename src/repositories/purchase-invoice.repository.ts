@@ -125,4 +125,29 @@ export class PurchaseInvoiceRepository extends BaseRepository<
       _count: { id: true },
     });
   }
+
+  /**
+   * Same FINALIZED filter as monthlyStats, but keyed on the date-only effective_date
+   * (inclusive start, exclusive end) and reporting finalized invoices with no
+   * effective_date separately so they are never silently dropped.
+   */
+  async monthlyEffectiveStats(
+    ctx: TenantContext,
+    bounds: { start: Date; endExclusive: Date },
+    db: any = this.prisma,
+  ) {
+    const t = this.withTenant(ctx);
+    const base = { tenant_id: t.tenantId, status: "FINALIZED" as const };
+    const included = await db.purchase_invoices.aggregate({
+      where: { ...base, effective_date: { gte: bounds.start, lt: bounds.endExclusive } },
+      _sum: { gross_amount: true, total_discount: true, total_tax: true, net_amount: true },
+      _count: { id: true },
+    });
+    const unclassified = await db.purchase_invoices.aggregate({
+      where: { ...base, effective_date: null },
+      _sum: { net_amount: true },
+      _count: { id: true },
+    });
+    return { included, unclassified };
+  }
 }

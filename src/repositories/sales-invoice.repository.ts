@@ -5,9 +5,33 @@ import type { TenantContext } from "@/lib/db/tenant-context";
 
 export type SalesInvoiceListParams = ListParams & {
   customerId?: string;
-  startDate?: string;
-  endDate?: string;
 };
+
+function requestedDateGuard(
+  input: Prisma.sales_invoicesUpdateInput,
+  field: "due_date" | "due_date_business",
+): { present: false } | { present: true; value: Date | null } {
+  const rawValue = (input as Record<string, unknown>)[field];
+  if (!Object.prototype.hasOwnProperty.call(input, field) || rawValue === undefined) {
+    return { present: false };
+  }
+
+  const value: Date | null | string | undefined = rawValue instanceof Date || rawValue === null || typeof rawValue === "string"
+    ? rawValue
+    : typeof rawValue === "object" && rawValue !== null && "set" in rawValue
+      ? (rawValue as { set?: Date | string | null }).set
+      : undefined;
+
+  if (value === undefined) {
+    throw new Error(`Sales invoice ${field} updates must use a concrete date or null.`);
+  }
+  if (value === null) return { present: true, value: null };
+  const date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    throw new Error(`Sales invoice ${field} updates must use a valid date or null.`);
+  }
+  return { present: true, value: date };
+}
 
 export class SalesInvoiceRepository extends BaseRepository<
   sales_invoices,
@@ -57,6 +81,46 @@ export class SalesInvoiceRepository extends BaseRepository<
     ctx: TenantContext,
   ): Promise<sales_invoices> {
     const t = this.withTenant(ctx);
+    const dueDate = requestedDateGuard(input, "due_date");
+    const dueDateBusiness = requestedDateGuard(input, "due_date_business");
+    const status = input.status;
+    const finalizes = status === "FINALIZED" ||
+      (typeof status === "object" && status !== null && "set" in status && status.set === "FINALIZED");
+    const changesStatus = status !== undefined;
+    if (dueDate.present || dueDateBusiness.present || (changesStatus && !finalizes)) {
+      const additionalConditions = [
+        ...(changesStatus && !finalizes ? [{ status: { not: "FINALIZED" as const } }] : []),
+        ...(dueDate.present && finalizes ? [{ due_date: dueDate.value }] : []),
+        ...(dueDateBusiness.present
+          ? [
+            {
+              OR: [
+                { status: { not: "FINALIZED" as const } },
+                { due_date_business: dueDateBusiness.value },
+              ],
+            },
+            ...(finalizes ? [{ due_date_business: dueDateBusiness.value }] : []),
+          ]
+          : []),
+      ];
+      return this.prisma.sales_invoices.update({
+        // This conditional protects repository updates only, not direct Prisma or SQL writes.
+        where: {
+          id,
+          tenant_id: t.tenantId,
+          ...(dueDate.present
+            ? {
+              OR: [
+                { status: { not: "FINALIZED" as const } },
+                { due_date: dueDate.value },
+              ],
+            }
+            : {}),
+          ...(additionalConditions.length ? { AND: additionalConditions } : {}),
+        },
+        data: input,
+      });
+    }
     return this.prisma.sales_invoices.update({
       where: { id, tenant_id: t.tenantId },
       data: input,
@@ -70,18 +134,10 @@ export class SalesInvoiceRepository extends BaseRepository<
 
   async list(params: SalesInvoiceListParams, ctx: TenantContext): Promise<PagedResult<sales_invoices>> {
     const t = this.withTenant(ctx);
-    const { skip = 0, take = 50, orderBy = { invoice_date: "desc" }, search, customerId, startDate, endDate } = params;
+    const { skip = 0, take = 50, orderBy = { invoice_date: "desc" }, search, customerId } = params;
     const where: Prisma.sales_invoicesWhereInput = {
       tenant_id: t.tenantId,
       ...(customerId ? { customer_id: customerId } : {}),
-      ...(startDate || endDate
-        ? {
-          invoice_date: {
-            ...(startDate ? { gte: new Date(startDate) } : {}),
-            ...(endDate ? { lte: new Date(endDate + "T23:59:59.999Z") } : {}),
-          },
-        }
-        : {}),
       ...(search
         ? {
           OR: [
@@ -131,5 +187,30 @@ export class SalesInvoiceRepository extends BaseRepository<
       _sum: { gross_amount: true, total_discount: true, total_tax: true, net_amount: true, paid_amount: true, balance_due: true },
       _count: { id: true },
     });
+  }
+
+  /**
+   * Same FINALIZED filter as monthlyStats, but keyed on the date-only effective_date
+   * (inclusive start, exclusive end) and reporting finalized invoices with no
+   * effective_date separately so they are never silently dropped.
+   */
+  async monthlyEffectiveStats(
+    ctx: TenantContext,
+    bounds: { start: Date; endExclusive: Date },
+    db: any = this.prisma,
+  ) {
+    const t = this.withTenant(ctx);
+    const base = { tenant_id: t.tenantId, status: "FINALIZED" as const };
+    const included = await db.sales_invoices.aggregate({
+      where: { ...base, effective_date: { gte: bounds.start, lt: bounds.endExclusive } },
+      _sum: { gross_amount: true, total_discount: true, total_tax: true, net_amount: true, paid_amount: true, balance_due: true },
+      _count: { id: true },
+    });
+    const unclassified = await db.sales_invoices.aggregate({
+      where: { ...base, effective_date: null },
+      _sum: { net_amount: true },
+      _count: { id: true },
+    });
+    return { included, unclassified };
   }
 }

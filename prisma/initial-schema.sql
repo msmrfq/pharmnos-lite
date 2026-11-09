@@ -1,4 +1,10 @@
-﻿-- CreateEnum
+﻿-- LEGACY INITIAL SCHEMA - SUPERSEDED. Frozen 19-table first-release snapshot; it
+-- predates Prisma migrations 0002-0028 and lacks the 0028 financial date/instant
+-- columns, FinancialDateBasis and recorded-time triggers, so it cannot support the
+-- current typed writers. Use prisma/migrations/* or the generated baseline
+-- prisma/financial-e2e-schema-provisioning.generated.sql. Statements below are unchanged.
+
+-- CreateEnum
 CREATE TYPE "SystemRole" AS ENUM ('ADMIN', 'BILLING', 'INVENTORY', 'MANAGER');
 
 -- CreateEnum

@@ -35,12 +35,17 @@ import {
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
+import { businessDateToday } from "@/lib/utils/business-date";
+import { formatRupeeAmount, type AgingReport } from "@/domain/services/aging-report.service";
+import type { MonthlyStats } from "@/domain/services/monthly-stats.service";
+import { loadCustomerAgingReport, loadSupplierAgingReport } from "@/app/_actions/aging-report.actions";
+import { loadMonthlyPurchaseStats, loadMonthlySalesStats } from "@/app/_actions/monthly-stats.actions";
 
 export const metadata: Metadata = {
   title: "Reports",
 };
+
+const rupee = (n: string) => `₹ ${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
 
 const aliveReports = [
   {
@@ -63,7 +68,7 @@ const aliveReports = [
   },
   {
     name: "Customer dues (aging)",
-    description: "Receivables by customer with 0-30 / 31-60 / 61-90 / 90+ days buckets.",
+    description: "Receivables by customer with current / 1-30 / 31-60 / 61-90 / >90 days buckets.",
     href: "/reports/customer-dues",
     icon: Users,
     tab: "ledger",
@@ -72,7 +77,7 @@ const aliveReports = [
   },
   {
     name: "Supplier payables (aging)",
-    description: "Payables by supplier with same 4 aging buckets, weekly payment cycle support.",
+    description: "Payables by supplier with current / 1-30 / 31-60 / 61-90 / >90 days buckets, weekly payment cycle support.",
     href: "/reports/supplier-payables",
     icon: Package,
     tab: "ledger",
@@ -118,36 +123,49 @@ const aliveReports = [
 ];
 
 export default async function ReportsPage() {
-  let dbOk = isPostgresConfigured();
-  const ctx = dbOk ? await requireServerTenantContext().catch(() => null) : null;
-  let summary: { salesNet: number; purchaseNet: number; duesTotal: number; payablesTotal: number; invoicesCount: number } = {
-    salesNet: 0, purchaseNet: 0, duesTotal: 0, payablesTotal: 0, invoicesCount: 0,
-  };
-  if (dbOk && ctx) {
-    try {
-      const [sales, purchase, dues, pays] = await Promise.all([
-        repos.salesInvoices.monthlyStats(ctx, 1).catch(() => null),
-        repos.purchaseInvoices.monthlyStats(ctx, 1).catch(() => null),
-        repos.customerLedgers.agedReceivablesTotals(ctx).catch(() => null),
-        repos.supplierLedgers.agedPayablesTotals(ctx).catch(() => null),
-      ]);
-      summary = {
-        salesNet: Number(sales?._sum?.net_amount ?? 0),
-        purchaseNet: Number(purchase?._sum?.net_amount ?? 0),
-        duesTotal: Number(dues?.total ?? 0),
-        payablesTotal: Number(pays?.total ?? 0),
-        invoicesCount: Number(sales?._count?.id ?? 0),
-      };
-    } catch { dbOk = false; }
-  }
+  const dbOk = isPostgresConfigured();
+  const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  const rupee = (n: number) => `₹ ${n.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
+  const results = dbOk ? await Promise.allSettled([
+    loadMonthlySalesStats(),
+    loadMonthlyPurchaseStats(),
+    loadCustomerAgingReport(),
+    loadSupplierAgingReport(),
+  ]) : null;
+  for (const result of results ?? []) {
+    if (result.status === "rejected") console.error("Report summary query failed:", result.reason);
+  }
+  const salesStats = results?.[0].status === "fulfilled" && results[0].value.ok ? results[0].value.stats : null;
+  const purchaseStats = results?.[1].status === "fulfilled" && results[1].value.ok ? results[1].value.stats : null;
+  const dues = results?.[2].status === "fulfilled" && results[2].value.ok ? results[2].value.report : null;
+  const payables = results?.[3].status === "fulfilled" && results[3].value.ok ? results[3].value.report : null;
+
+  const monthlyCard = (label: string, stats: MonthlyStats | null, icon: typeof TrendingUp) => ({
+    label,
+    value: stats ? rupee(stats.netAmount) : "Unavailable",
+    delta: !stats ? "Monthly total unavailable" : `${stats.invoiceCount} invoices${stats.exclusionNote ? ` · ${stats.exclusionNote}` : ""}`,
+    variant: !stats || stats.completeness === "QUALIFIED" ? ("warning" as const) : ("default" as const),
+    icon,
+  });
+  const agingCard = (label: string, report: AgingReport | null, icon: typeof TrendingUp) => ({
+    label,
+    value: report ? rupee(report.totals.classified_total) : "Unavailable",
+    delta: !report ? "Aging unavailable" : report.completeness === "COMPLETE"
+      ? `${report.openInvoiceCount} open invoices · complete`
+      : `${formatRupeeAmount(report.totals.unclassified)} (${report.unclassifiedCount} invoices) due date unclassified`,
+    variant: !report || report.completeness === "QUALIFIED" ? ("warning" as const) : ("default" as const),
+    icon,
+  });
   const summaryCards = [
-    { label: "Sales this month", value: rupee(summary.salesNet), delta: `${summary.invoicesCount} invoices`, variant: "success" as const, icon: TrendingUp },
-    { label: "Purchases this month", value: rupee(summary.purchaseNet), delta: dbOk ? "Landed stock" : "Aggregates loading…", variant: "default" as const, icon: BarChart3 },
-    { label: "Customer dues", value: rupee(summary.duesTotal), delta: summary.duesTotal > 0 ? "Aging buckets → Customer dues" : "No dues outstanding", variant: summary.duesTotal > 0 ? ("warning" as const) : ("success" as const), icon: Users },
-    { label: "Supplier payables", value: rupee(summary.payablesTotal), delta: summary.payablesTotal > 0 ? "Weekly payment cycle" : "All payables settled", variant: summary.payablesTotal > 0 ? ("badge-orange" as const) : ("success" as const), icon: Truck },
+    monthlyCard("Sales this month", salesStats, TrendingUp),
+    monthlyCard("Purchases this month", purchaseStats, BarChart3),
+    agingCard("Customer dues", dues, Users),
+    agingCard("Supplier payables", payables, Truck),
   ];
+  const qualifications = [dues?.banner ? `Customer dues: ${dues.banner}` : null, payables?.banner ? `Supplier payables: ${payables.banner}` : null]
+    .filter((note): note is string => note !== null);
+
+  const currentBusinessDate = businessDateToday();
 
   return (
     <DashboardLayout
@@ -164,7 +182,7 @@ export default async function ReportsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary">
-            <CalendarIcon className="h-4 w-4" /> Month: {new Date().toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
+            <CalendarIcon className="h-4 w-4" /> Month: {shortMonths[Number(currentBusinessDate.slice(5, 7)) - 1]} {currentBusinessDate.slice(0, 4)}
           </Button>
         </div>
       </CardHeader>
@@ -173,9 +191,18 @@ export default async function ReportsPage() {
         <div role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
           <div>
-            <strong className="font-semibold">Showing placeholder numbers until database is connected.</strong>
-            <span className="ml-1">Temporary Supabase pooler timeout — retry in 60 seconds.</span>
+            <strong className="font-semibold">Report summaries unavailable: database is not configured.</strong>
           </div>
+        </div>
+      )}
+      {dbOk && qualifications.map((note) => (
+        <div key={note} role="alert" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+          {note}
+        </div>
+      ))}
+      {dbOk && (!salesStats || !purchaseStats || !dues || !payables) && (
+        <div role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          One or more summary totals could not be read and are shown as unavailable; other totals are unaffected.
         </div>
       )}
 
@@ -358,7 +385,9 @@ export default async function ReportsPage() {
                 </CardHeader>
                 <CardContent className="pt-4 flex items-end justify-between gap-4 flex-wrap">
                   <div className="text-body-sm text-muted">
-                    {r.name === "Daybook" ? "Debit/credit chronological daybook by entry date, running balance per ledger." : "Aging 4 buckets; CSV with totals for collection / AP weeklies."}
+                    {r.name === "Daybook"
+                      ? "Debit/credit chronological daybook by entry date, running balance per ledger."
+                      : "Invoice-level aging by business due date; invoices without a classified due date are shown separately and disclosed on the report and CSV."}
                   </div>
                   {r.deferred ? (
                     <Button variant="ghost" disabled>Coming soon</Button>

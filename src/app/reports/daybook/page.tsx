@@ -24,36 +24,39 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  AlertTriangle,
   IndianRupee,
   FilterX,
 } from "lucide-react";
-import { isPostgresConfigured, prisma } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { isPostgresConfigured } from "@/lib/db/prisma";
+import { businessDateToday, formatBusinessDate, formatBusinessInstant } from "@/lib/utils/business-date";
 import ExportCsvButton from "@/components/ui/export-csv-button";
-import { exportDaybookCsvAction } from "@/app/_actions/exports.actions";
+import { exportDaybookCsvAction, loadFinancialLedgerReport } from "@/app/_actions/exports.actions";
+import { describeReportFailure, type LedgerExclusionSummary } from "@/domain/services/financial-report-completeness";
+import { QualifiedReportBanner, ReportUnavailableNotice } from "@/components/reports/report-completeness-notices";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Daybook",
 };
 
-const rupee = (n: number | null | undefined | string) => {
-  const num = typeof n === "string" ? Number(n) : Number(n ?? 0);
-  if (!Number.isFinite(num)) return "\u2014";
-  return `\u20B9 ${num.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
+const rupee = (value: string) => {
+  const [whole = "0", fraction = "00"] = value.split(".");
+  const negative = whole.startsWith("-");
+  const digits = negative ? whole.slice(1) : whole;
+  const grouped = digits.replace(/\B(?=(\d{2})+(\d{3})(?!\d))/g, ",");
+  return `₹ ${negative ? "-" : ""}${grouped}.${fraction.padEnd(2, "0")}`;
 };
-
-const yyyymmdd = (d: Date) => d.toISOString().slice(0, 10);
 
 type DaybookRow = {
   id: string;
-  entry_date: Date;
-  voucher_type: "Customer Invoice" | "Customer Payment" | "Supplier Invoice" | "Supplier Payment" | "Opening balance";
+  effective_date: string;
+  event_instant: string | null;
+  recorded_at: string | null;
+  voucher_type: string;
   counterparty: string;
-  debit: number;
-  credit: number;
-  balance: number;
+  debit: string;
+  credit: string;
+  balance: string;
   narration: string | null;
   invoice_ref: string | null;
 };
@@ -69,140 +72,49 @@ export default async function DaybookPage({
     to?: string;
     voucher?: string;
     page?: string;
+    mode?: string;
   };
 }) {
-  const now = new Date();
-  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const fromStr = searchParams?.from?.trim() || yyyymmdd(firstOfMonth);
-  const toStr = searchParams?.to?.trim() || yyyymmdd(lastOfMonth);
-  const fromDate = new Date(fromStr + "T00:00:00.000Z");
-  const toDate = new Date(toStr + "T23:59:59.999Z");
+  const today = businessDateToday();
+  const firstOfMonth = `${today.slice(0, 7)}-01`;
+  const [year, month] = today.split("-").map(Number);
+  const lastOfMonth = new Date(Date.UTC(year!, month!, 0)).toISOString().slice(0, 10);
+  const fromStr = searchParams?.from || firstOfMonth;
+  const toStr = searchParams?.to || lastOfMonth;
   const pageRaw = Number(searchParams?.page ?? "1");
   const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
   const pageSize = 50;
   const q = searchParams?.q?.trim() ?? "";
   const voucherRaw = (searchParams?.voucher?.trim() ?? "all") as VoucherFilter;
   const voucher: VoucherFilter = ["all", "invoice", "payment"].includes(voucherRaw) ? voucherRaw : "all";
-  const hasFilter = Boolean(q || voucher !== "all" || fromStr !== yyyymmdd(firstOfMonth) || toStr !== yyyymmdd(lastOfMonth));
-
+  const hasFilter = Boolean(q || voucher !== "all" || fromStr !== firstOfMonth || toStr !== lastOfMonth);
+  const rawMode = searchParams?.mode;
+  const qualified = rawMode === "qualified";
+  // The raw mode is validated by the report loader; an unknown mode fails closed there.
+  const reportInput = { from: fromStr, to: toStr, q, voucher, ...(rawMode !== undefined ? { mode: rawMode } : {}) };
   let dbOk = isPostgresConfigured();
-
+  let failure: { reason: string; qualifiedModeAvailable: boolean } | null = null;
   let items: DaybookRow[] = [];
   let total = 0;
-  let openingBalance = 0;
-  let summaryDebit = 0;
-  let summaryCredit = 0;
-  let summaryNet = 0;
+  let openingBalance = "0.00";
+  let summaryDebit = "0.00";
+  let summaryCredit = "0.00";
+  let summaryNet = "0.00";
+  let exclusions: LedgerExclusionSummary | null = null;
 
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      const t = ctx;
-
-      const custBefore = await (prisma as any).customer_ledgers.findMany({
-        where: { tenant_id: t.tenantId, entry_date: { lt: fromDate } },
-        select: { debit: true, credit: true },
-      });
-      const suppBefore = await (prisma as any).supplier_ledgers.findMany({
-        where: { tenant_id: t.tenantId, entry_date: { lt: fromDate } },
-        select: { debit: true, credit: true },
-      });
-      let ob = 0;
-      for (const r of custBefore as any[]) ob += Number(r.debit ?? 0) - Number(r.credit ?? 0);
-      for (const r of suppBefore as any[]) ob += Number(r.debit ?? 0) - Number(r.credit ?? 0);
-      openingBalance = ob;
-
-      const custRows = await (prisma as any).customer_ledgers.findMany({
-        where: { tenant_id: t.tenantId, entry_date: { gte: fromDate, lte: toDate } },
-        include: {
-          customer: { select: { business_name: true } },
-          invoice: { select: { invoice_no: true } },
-        },
-        orderBy: { entry_date: "asc" },
-      });
-      const suppRows = await (prisma as any).supplier_ledgers.findMany({
-        where: { tenant_id: t.tenantId, entry_date: { gte: fromDate, lte: toDate } },
-        include: {
-          supplier: { select: { business_name: true } },
-          purchase: { select: { invoice_no: true } },
-        },
-        orderBy: { entry_date: "asc" },
-      });
-
-      type U = {
-        id: string; entry_date: Date; voucher_type: DaybookRow["voucher_type"];
-        counterparty: string; debit: number; credit: number;
-        narration: string | null; invoice_ref: string | null;
-      };
-      const unified: U[] = [];
-      for (const r of custRows as any[]) {
-        let vt: DaybookRow["voucher_type"] = "Customer Invoice";
-        if (r.entry_type === "PAYMENT_RECEIVED") vt = "Customer Payment";
-        else if (r.entry_type === "OPENING_BALANCE") vt = "Opening balance";
-        unified.push({
-          id: `c_${r.id}`,
-          entry_date: r.entry_date,
-          voucher_type: vt,
-          counterparty: r.customer?.business_name ?? "",
-          debit: Number(r.debit ?? 0),
-          credit: Number(r.credit ?? 0),
-          narration: r.narration ?? null,
-          invoice_ref: r.invoice?.invoice_no ?? r.reference_id ?? null,
-        });
-      }
-      for (const r of suppRows as any[]) {
-        let vt: DaybookRow["voucher_type"] = "Supplier Invoice";
-        if (r.entry_type === "PAYMENT_MADE") vt = "Supplier Payment";
-        else if (r.entry_type === "OPENING_BALANCE") vt = "Opening balance";
-        unified.push({
-          id: `s_${r.id}`,
-          entry_date: r.entry_date,
-          voucher_type: vt,
-          counterparty: r.supplier?.business_name ?? "",
-          debit: Number(r.debit ?? 0),
-          credit: Number(r.credit ?? 0),
-          narration: r.narration ?? null,
-          invoice_ref: r.purchase?.invoice_no ?? r.reference_id ?? null,
-        });
-      }
-      unified.sort((a, b) => a.entry_date.getTime() - b.entry_date.getTime() || a.id.localeCompare(b.id));
-
-      let filtered = unified;
-
-      if (voucher === "invoice") {
-        filtered = filtered.filter((r) => r.voucher_type === "Customer Invoice" || r.voucher_type === "Supplier Invoice");
-      } else if (voucher === "payment") {
-        filtered = filtered.filter((r) => r.voucher_type === "Customer Payment" || r.voucher_type === "Supplier Payment");
-      }
-
-      if (q) {
-        const qLower = q.toLowerCase();
-        filtered = filtered.filter((r) =>
-          (r.counterparty?.toLowerCase().includes(qLower) ?? false) ||
-          (r.narration?.toLowerCase().includes(qLower) ?? false) ||
-          (r.invoice_ref?.toLowerCase().includes(qLower) ?? false)
-        );
-      }
-
-      const withBal: DaybookRow[] = [];
-      let running = openingBalance;
-      for (const u of filtered) {
-        running += u.debit - u.credit;
-        withBal.push({ ...u, balance: running });
-      }
-
-      total = withBal.length;
-      for (const r of filtered) {
-        summaryDebit += r.debit;
-        summaryCredit += r.credit;
-      }
-      summaryNet = summaryDebit - summaryCredit;
-
-      const startIdx = (page - 1) * pageSize;
-      items = withBal.slice(startIdx, startIdx + pageSize);
-    } catch (_err) {
+      const report = await loadFinancialLedgerReport({ ...reportInput, kind: "daybook" });
+      total = report.rows.length;
+      items = report.rows.slice((page - 1) * pageSize, page * pageSize);
+      openingBalance = report.opening;
+      summaryDebit = report.debit;
+      summaryCredit = report.credit;
+      summaryNet = report.net;
+      exclusions = report.mode === "qualified" ? report.exclusions : null;
+    } catch (error) {
       dbOk = false;
+      failure = describeReportFailure(error);
     }
   }
 
@@ -214,6 +126,7 @@ export default async function DaybookPage({
     if (fromStr) params.set("from", fromStr);
     if (toStr) params.set("to", toStr);
     if (voucher !== "all") params.set("voucher", voucher);
+    if (rawMode !== undefined) params.set("mode", rawMode);
     for (const [k, v] of Object.entries(overrides)) {
       if (v === undefined || v === "" || v === null) params.delete(k);
       else params.set(k, String(v));
@@ -232,27 +145,38 @@ export default async function DaybookPage({
         <div>
           <CardTitle className="text-display-sm tracking-brand">Daybook</CardTitle>
           <p className="mt-1 text-body-md text-body">
-            Chronological debit/credit daybook with running balance for customer + supplier ledgers.
+            Effective-date daybook. Running balances include entries hidden by filters; this is not a historical knowledge-time report.
+            {" "}Recording time is database statement time captured before commit, not commit-visible and not proof of knowledge-as-of.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <ExportCsvButton variant="secondary" action={exportDaybookCsvAction}>
+          <ExportCsvButton variant="secondary" action={exportDaybookCsvAction.bind(null, reportInput)} disabled={!dbOk}>
             <Download className="h-4 w-4" /> Export CSV
           </ExportCsvButton>
         </div>
       </CardHeader>
 
       {!dbOk && (
-        <div
-          role="status"
-          className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2"
-        >
-          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
-          <div>
-            <strong className="font-semibold">Showing placeholder rows until database is connected.</strong>
-            <span className="ml-1">Temporary Supabase pooler timeout \u2014 retry in 60 seconds.</span>
-          </div>
-        </div>
+        <ReportUnavailableNotice
+          title="Daybook unavailable."
+          reason={failure?.reason ?? "The report could not be loaded; no financial totals are shown."}
+          qualifiedHref={failure?.qualifiedModeAvailable && !qualified ? buildHref({ mode: "qualified", page: undefined }) : null}
+        />
+      )}
+
+      {dbOk && exclusions && (
+        <QualifiedReportBanner
+          excludedLabel="ledger entries"
+          excludedCount={exclusions.excludedCount}
+          amounts={[
+            { label: "excluded debit", value: rupee(exclusions.excludedDebit) },
+            { label: "excluded credit", value: rupee(exclusions.excludedCredit) },
+            { label: "excluded signed amount (D − C)", value: rupee(exclusions.excludedSigned) },
+          ]}
+          byReason={exclusions.byReason}
+          completeHref={buildHref({ mode: undefined, page: undefined })}
+          note="Opening and running balances are classified entries only."
+        />
       )}
 
       <CardCanvas className="mb-5">
@@ -262,6 +186,7 @@ export default async function DaybookPage({
             method="get"
             className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 items-end"
           >
+            {rawMode !== undefined ? <input type="hidden" name="mode" value={rawMode} /> : null}
             <div className="space-y-1.5">
               <Label htmlFor="q" className="text-caption font-medium text-muted block">
                 <span className="inline-flex items-center gap-1.5">
@@ -272,7 +197,7 @@ export default async function DaybookPage({
                 id="q"
                 name="q"
                 type="search"
-                placeholder="Counterparty, narration, ref\u2026"
+                placeholder="Counterparty, narration, ref…"
                 defaultValue={q}
               />
             </div>
@@ -343,9 +268,9 @@ export default async function DaybookPage({
                 <TableHead>Date</TableHead>
                 <TableHead>Voucher type</TableHead>
                 <TableHead>Counterparty</TableHead>
-                <TableHead className="text-right">Debit \u20B9</TableHead>
-                <TableHead className="text-right">Credit \u20B9</TableHead>
-                <TableHead className="text-right">Balance \u20B9</TableHead>
+                <TableHead className="text-right">Debit ₹</TableHead>
+                <TableHead className="text-right">Credit ₹</TableHead>
+                <TableHead className="text-right">Balance ₹{qualified ? " (classified only)" : ""}</TableHead>
                 <TableHead>Narration</TableHead>
                 <TableHead>Invoice ref</TableHead>
               </TableRow>
@@ -362,14 +287,20 @@ export default async function DaybookPage({
               ) : !dbOk ? (
                 <TableRow>
                   <TableCell colSpan={8} className="py-10 text-center text-muted text-body-md">
-                    Showing placeholder rows until database is connected.
+                    Daybook unavailable; no financial totals are shown.
                   </TableCell>
                 </TableRow>
               ) : (
                 items.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell className="text-body whitespace-nowrap tabular-nums">
-                      {new Date(r.entry_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                      {formatBusinessDate(r.effective_date)}
+                      {r.event_instant || r.recorded_at ? (
+                        <span className="block text-[11px] text-muted font-normal">
+                          {r.event_instant ? `Event: ${formatBusinessInstant(r.event_instant)}` : "Event instant: none"}
+                          {r.recorded_at ? ` · Recorded: ${formatBusinessInstant(r.recorded_at)}` : ""}
+                        </span>
+                      ) : null}
                     </TableCell>
                     <TableCell className="text-body whitespace-nowrap">
                       <Badge variant="secondary">{r.voucher_type}</Badge>
@@ -377,14 +308,14 @@ export default async function DaybookPage({
                     <TableCell className="font-medium text-ink max-w-xs truncate">
                       {r.counterparty ?? "\u2014"}
                     </TableCell>
-                    <TableCell className={`text-right tabular-nums whitespace-nowrap ${r.debit > 0 ? "font-medium text-ink" : "text-muted"}`}>
-                      {r.debit > 0 ? rupee(r.debit) : "\u2014"}
+                    <TableCell className={`text-right tabular-nums whitespace-nowrap ${Number(r.debit) > 0 ? "font-medium text-ink" : "text-muted"}`}>
+                      {Number(r.debit) > 0 ? rupee(r.debit) : "\u2014"}
                     </TableCell>
-                    <TableCell className={`text-right tabular-nums whitespace-nowrap ${r.credit > 0 ? "font-medium text-ink" : "text-muted"}`}>
-                      {r.credit > 0 ? rupee(r.credit) : "\u2014"}
+                    <TableCell className={`text-right tabular-nums whitespace-nowrap ${Number(r.credit) > 0 ? "font-medium text-ink" : "text-muted"}`}>
+                      {Number(r.credit) > 0 ? rupee(r.credit) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-right tabular-nums whitespace-nowrap">
-                      {r.balance < 0 ? (
+                      {r.balance.startsWith("-") ? (
                         <Badge variant="destructive">{rupee(r.balance)}</Badge>
                       ) : (
                         <span className="font-semibold text-ink">{rupee(r.balance)}</span>
@@ -406,11 +337,11 @@ export default async function DaybookPage({
 
       <div className="mt-6 flex items-center justify-between flex-wrap gap-3">
         <p className="text-caption text-muted">
-          Showing {dbOk ? Math.min(items.length, total) : 0} of {total} entries \u00b7 Page {page} / {totalPages}
-          {q && <span className="ml-2">\u00b7 Search: \u201C{q}\u201D</span>}
-          <span className="ml-2">\u00b7 Range: {fromStr} \u2192 {toStr}</span>
-          {voucher !== "all" && <span className="ml-2">\u00b7 {voucher === "invoice" ? "Invoices only" : "Payments only"}</span>}
-          <span className="ml-2">\u00b7 Opening: {dbOk ? rupee(openingBalance) : rupee(0)}</span>
+          Showing {dbOk ? Math.min(items.length, total) : 0} of {total} entries · Page {page} / {totalPages}
+          {q && <span className="ml-2">· Search: “{q}”</span>}
+          <span className="ml-2">· Range: {fromStr} → {toStr}</span>
+          {voucher !== "all" && <span className="ml-2">· {voucher === "invoice" ? "Invoices only" : "Payments only"}</span>}
+          <span className="ml-2">· Opening{qualified ? " (classified entries only)" : ""}: {dbOk ? rupee(openingBalance) : "—"}</span>
         </p>
         <div className="flex items-center gap-2">
           <Button
@@ -450,10 +381,10 @@ export default async function DaybookPage({
                 </span>
                 <div>
                   <p className="text-caption font-medium uppercase tracking-wide text-muted">
-                    Total debits
+                    Total debits{qualified ? " (classified only)" : ""}
                   </p>
                   <p className="mt-1 text-display-sm font-display tracking-brand text-ink">
-                    {dbOk ? rupee(summaryDebit) : rupee(0)}
+                    {dbOk ? rupee(summaryDebit) : "—"}
                   </p>
                 </div>
               </div>
@@ -463,10 +394,10 @@ export default async function DaybookPage({
                 </span>
                 <div>
                   <p className="text-caption font-medium uppercase tracking-wide text-muted">
-                    Total credits
+                    Total credits{qualified ? " (classified only)" : ""}
                   </p>
                   <p className="mt-1 text-display-sm font-display tracking-brand text-ink">
-                    {dbOk ? rupee(summaryCredit) : rupee(0)}
+                    {dbOk ? rupee(summaryCredit) : "—"}
                   </p>
                 </div>
               </div>
@@ -476,10 +407,10 @@ export default async function DaybookPage({
                 </span>
                 <div>
                   <p className="text-caption font-medium uppercase tracking-wide text-muted">
-                    Net movement (D \u2212 C)
+                    Net movement (D − C){qualified ? ", classified only" : ""}
                   </p>
-                  <p className={`mt-1 text-display-sm font-display tracking-brand ${summaryNet < 0 ? "text-destructive" : "text-ink"}`}>
-                    {dbOk ? rupee(summaryNet) : rupee(0)}
+                  <p className={`mt-1 text-display-sm font-display tracking-brand ${summaryNet.startsWith("-") ? "text-destructive" : "text-ink"}`}>
+                    {dbOk ? rupee(summaryNet) : "—"}
                   </p>
                 </div>
               </div>

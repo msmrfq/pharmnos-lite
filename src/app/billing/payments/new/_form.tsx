@@ -26,6 +26,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Save, Wallet, ArrowDownLeft } from "lucide-react";
 import { createCustomerPaymentAction } from "@/app/_actions/sales.actions";
+import { businessDateToday } from "@/lib/utils/business-date";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
 
 type Props = {
@@ -94,7 +95,7 @@ export default function BillingPaymentNewClientForm({ customers, prefillCustomer
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.ok, state.message]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessDateToday();
   const cust = customers.find((c: any) => c.id === prefillCustomerId);
   const rupee = (n: number | null | undefined | string) => {
     const num = typeof n === "string" ? Number(n) : Number(n ?? 0);

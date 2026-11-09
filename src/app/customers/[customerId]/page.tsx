@@ -19,6 +19,10 @@ import { isPostgresConfigured } from "@/lib/db/prisma";
 import { requireServerTenantContext } from "@/lib/db/tenant-context";
 import { repos } from "@/repositories";
 import { PrintToolbar } from "@/components/print/print-toolbar";
+import { businessDateToday, formatBusinessDate } from "@/lib/utils/business-date";
+import { loadFinancialLedgerReport } from "@/app/_actions/exports.actions";
+import { describeReportFailure } from "@/domain/services/financial-report-completeness";
+import { QualifiedReportBanner, ReportUnavailableNotice } from "@/components/reports/report-completeness-notices";
 
 export const metadata: Metadata = {
   title: "Customer statement",
@@ -30,50 +34,15 @@ const rupee = (n: number | null | undefined | string) => {
   return `₹ ${num.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
 };
 
-const formatDate = (d: Date | string | null | undefined) => {
-  if (!d) return "—";
-  const dt = typeof d === "string" ? new Date(d) : d;
-  return dt.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-};
-
-const entryTypeLabel = (t: string | null | undefined) => {
-  switch (t) {
-    case "OPENING_BALANCE":
-      return "Opening balance";
-    case "SALES_INVOICE":
-      return "Invoice";
-    case "SALES_CANCEL":
-      return "Invoice cancelled";
-    case "PAYMENT_RECEIVED":
-      return "Payment received";
-    case "CREDIT_NOTE":
-      return "Credit note";
-    case "DEBIT_NOTE":
-      return "Debit note";
-    case "WRITE_OFF":
-      return "Write off";
-    default:
-      return t ?? "—";
-  }
-};
-
 const entryTypeBadge = (t: string | null | undefined) => {
   switch (t) {
-    case "SALES_INVOICE":
+    case "INVOICE":
     case "DEBIT_NOTE":
     case "OPENING_BALANCE":
       return "default" as const;
     case "PAYMENT_RECEIVED":
     case "CREDIT_NOTE":
       return "success" as const;
-    case "SALES_CANCEL":
-      return "secondary" as const;
-    case "WRITE_OFF":
-      return "destructive" as const;
     default:
       return "outline" as const;
   }
@@ -81,25 +50,36 @@ const entryTypeBadge = (t: string | null | undefined) => {
 
 export default async function CustomerDetailPage({
   params,
+  searchParams,
 }: {
   params: { customerId: string };
+  searchParams?: { mode?: string };
 }) {
   const customerId = params.customerId;
+  const rawMode = searchParams?.mode;
+  const qualified = rawMode === "qualified";
   let dbOk = isPostgresConfigured();
   let customer: any = null;
-  let ledger: any[] = [];
-  let balance = 0;
+  let report: Awaited<ReturnType<typeof loadFinancialLedgerReport>> | null = null;
+  let failure: { reason: string; qualifiedModeAvailable: boolean } | null = null;
 
   if (dbOk) {
     try {
       const ctx = await requireServerTenantContext();
-      [customer, ledger, balance] = await Promise.all([
-        repos.customers.getById(customerId, ctx),
-        repos.customerLedgers.listForCustomer(customerId, ctx, 500),
-        repos.customerLedgers.getBalance(customerId, ctx),
-      ]);
+      customer = await repos.customers.getById(customerId, ctx);
     } catch (_err) {
       dbOk = false;
+    }
+    if (customer) {
+      try {
+        // Full history by effective date from one tenant-scoped snapshot, so running balances are exact.
+        report = await loadFinancialLedgerReport({
+          kind: "customer", customerId, from: "0001-01-01", to: "9999-12-31",
+          ...(rawMode !== undefined ? { mode: rawMode } : {}),
+        });
+      } catch (error) {
+        failure = describeReportFailure(error);
+      }
     }
   }
 
@@ -127,13 +107,11 @@ export default async function CustomerDetailPage({
     );
   }
 
-  let running = 0;
-  const rows = ledger.map((l: any) => {
-    const debit = Number(l.debit ?? 0);
-    const credit = Number(l.credit ?? 0);
-    running = running + debit - credit;
-    return { ...l, _debit: debit, _credit: credit, _balance: running };
-  });
+  const SHOWN_ROWS = 500;
+  const allRows = report?.rows ?? [];
+  const rows = allRows.slice(-SHOWN_ROWS);
+  const hiddenEarlier = allRows.length - rows.length;
+  const closing = report?.closing ?? null;
 
   return (
     <DashboardLayout>
@@ -142,6 +120,27 @@ export default async function CustomerDetailPage({
         backLabel="Back to customers"
         title={`Statement — ${customer.business_name ?? customer.customer_name ?? customer.code ?? "Customer"}`}
       />
+      {!report && (
+        <ReportUnavailableNotice
+          title="Statement unavailable."
+          reason={failure?.reason ?? "The ledger could not be loaded; no financial totals are shown."}
+          qualifiedHref={failure?.qualifiedModeAvailable && !qualified ? `/customers/${customerId}?mode=qualified` : null}
+        />
+      )}
+      {report && report.mode === "qualified" && (
+        <QualifiedReportBanner
+          excludedLabel="ledger entries"
+          excludedCount={report.exclusions.excludedCount}
+          amounts={[
+            { label: "excluded debit", value: rupee(report.exclusions.excludedDebit) },
+            { label: "excluded credit", value: rupee(report.exclusions.excludedCredit) },
+            { label: "excluded signed amount (D − C)", value: rupee(report.exclusions.excludedSigned) },
+          ]}
+          byReason={report.exclusions.byReason}
+          completeHref={`/customers/${customerId}`}
+          note="Running and closing balances are classified entries only."
+        />
+      )}
       <CardCanvas className="invoice-print">
         <CardContent className="p-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
@@ -188,14 +187,14 @@ export default async function CustomerDetailPage({
               </div>
               <div className="p-4 rounded-lg border border-hairline bg-surface-soft">
                 <p className="text-caption text-muted uppercase tracking-wide mb-1">
-                  Outstanding balance
+                  {qualified ? "Closing balance (classified entries only)" : "Closing balance (all ledger entries)"}
                 </p>
                 <p
                   className={`text-title-sm font-semibold ${
-                    balance > 0 ? "text-destructive" : "text-emerald-700"
+                    closing !== null && Number(closing) > 0 ? "text-destructive" : "text-emerald-700"
                   }`}
                 >
-                  {rupee(balance)}
+                  {closing === null ? "Unavailable" : rupee(closing)}
                 </p>
               </div>
               <div className="p-4 rounded-lg border border-hairline bg-surface-soft">
@@ -203,7 +202,7 @@ export default async function CustomerDetailPage({
                   Statement date
                 </p>
                 <p className="text-title-sm font-semibold text-ink">
-                  {formatDate(new Date())}
+                  {formatBusinessDate(businessDateToday())}
                 </p>
               </div>
             </div>
@@ -222,55 +221,64 @@ export default async function CustomerDetailPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((l: any) => (
+                {hiddenEarlier > 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-muted text-caption">
+                      {hiddenEarlier} earlier entries are not listed; the balances below are computed from the full history.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {rows.map((l) => (
                   <TableRow key={l.id}>
                     <TableCell className="text-body whitespace-nowrap">
-                      {formatDate(l.entry_date)}
+                      {formatBusinessDate(l.effective_date)}
                     </TableCell>
                     <TableCell>
                       <Badge variant={entryTypeBadge(l.entry_type)}>
-                        {entryTypeLabel(l.entry_type)}
+                        {l.voucher_type}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-body text-ink">
-                      {l.reference_no ?? l.description ?? "—"}
-                      {l.invoice_no && (
-                        <span className="ml-2 font-mono text-muted text-caption">
-                          ({l.invoice_no})
-                        </span>
-                      )}
+                      {l.invoice_ref ?? l.narration ?? "—"}
                     </TableCell>
                     <TableCell className="text-right text-body">
-                      {l._debit > 0 ? (
-                        <span className="text-ink">{rupee(l._debit)}</span>
+                      {Number(l.debit) > 0 ? (
+                        <span className="text-ink">{rupee(l.debit)}</span>
                       ) : (
                         <span className="text-muted">—</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right text-body">
-                      {l._credit > 0 ? (
-                        <span className="text-emerald-700">{rupee(l._credit)}</span>
+                      {Number(l.credit) > 0 ? (
+                        <span className="text-emerald-700">{rupee(l.credit)}</span>
                       ) : (
                         <span className="text-muted">—</span>
                       )}
                     </TableCell>
                     <TableCell
                       className={`text-right font-medium whitespace-nowrap ${
-                        l._balance > 0
+                        Number(l.balance) > 0
                           ? "text-destructive"
-                          : l._balance < 0
+                          : Number(l.balance) < 0
                             ? "text-emerald-700"
                             : "text-ink"
                       }`}
                     >
-                      {rupee(l._balance)}
+                      {rupee(l.balance)}
                     </TableCell>
                   </TableRow>
                 ))}
-                {rows.length === 0 && (
+                {report && rows.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted">
-                      No ledger entries. Customer has a clean account.
+                      No ledger entries to show.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!report && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted">
+                      Statement unavailable; no financial totals are shown.
                     </TableCell>
                   </TableRow>
                 )}
@@ -288,32 +296,33 @@ export default async function CustomerDetailPage({
                   <p className="text-body text-ink whitespace-pre-wrap">{customer.notes}</p>
                 </>
               )}
+              {report && (
+                <p className="mt-3 text-caption text-muted">
+                  Effective-date view of the current ledger. {report.recordingTimeDisclosure}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-body">
-                <span className="text-muted">Total debits</span>
-                <span className="text-ink">
-                  {rupee(rows.reduce((s: number, r: any) => s + r._debit, 0))}
-                </span>
+                <span className="text-muted">Total debits{qualified ? " (classified only)" : ""}</span>
+                <span className="text-ink">{report ? rupee(report.debit) : "—"}</span>
               </div>
               <div className="flex justify-between text-body">
-                <span className="text-muted">Total credits</span>
-                <span className="text-emerald-700">
-                  {rupee(rows.reduce((s: number, r: any) => s + r._credit, 0))}
-                </span>
+                <span className="text-muted">Total credits{qualified ? " (classified only)" : ""}</span>
+                <span className="text-emerald-700">{report ? rupee(report.credit) : "—"}</span>
               </div>
               <div className="flex justify-between text-title-sm font-semibold pt-2 border-t border-hairline">
-                <span className="text-ink">Closing balance</span>
+                <span className="text-ink">Closing balance{qualified ? " (classified only)" : ""}</span>
                 <span
                   className={
-                    balance > 0
+                    closing !== null && Number(closing) > 0
                       ? "text-destructive"
-                      : balance < 0
+                      : closing !== null && Number(closing) < 0
                         ? "text-emerald-700"
                         : "text-ink"
                   }
                 >
-                  {rupee(balance)}
+                  {closing === null ? "—" : rupee(closing)}
                 </span>
               </div>
             </div>

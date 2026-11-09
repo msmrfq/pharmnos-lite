@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { FileText, Phone, Mail, MapPin, Building2, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { Phone, Mail, MapPin, Building2, AlertTriangle } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,9 +18,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
-import { cn, formatDate } from "@/lib/utils";
+import { loadFinancialLedgerReport, exportCustomerStatementCsvAction } from "@/app/_actions/exports.actions";
+import ExportCsvButton from "@/components/ui/export-csv-button";
+import { QualifiedReportBanner } from "@/components/reports/report-completeness-notices";
+import { ReportUnavailableError, describeReportFailure } from "@/domain/services/financial-report-completeness";
+import { cn } from "@/lib/utils";
+import { businessDateToday, formatBusinessDate } from "@/lib/utils/business-date";
+import { Decimal } from "@/lib/decimal";
 import type { LedgerEntryType } from "@prisma/client";
 import { PrintToolbar } from "@/components/print/print-toolbar";
 
@@ -27,10 +32,12 @@ export const metadata: Metadata = {
   title: "Customer Statement",
 };
 
-const rupee = (n: number | null | undefined | string) => {
-  const num = typeof n === "string" ? Number(n) : Number(n ?? 0);
-  if (!Number.isFinite(num)) return "—";
-  return `₹ ${num.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
+const rupee = (value: string) => {
+  const [whole = "0", fraction = "00"] = value.split(".");
+  const negative = whole.startsWith("-");
+  const digits = negative ? whole.slice(1) : whole;
+  const grouped = digits.replace(/\B(?=(\d{2})+(\d{3})(?!\d))/g, ",");
+  return `₹ ${negative ? "-" : ""}${grouped}.${fraction.padEnd(2, "0")}`;
 };
 
 const ENTRY_LABELS: Record<LedgerEntryType, { label: string; variant: any }> = {
@@ -48,187 +55,81 @@ export default async function CustomerStatementPrintPage({
   searchParams,
 }: {
   params: { customerId: string };
-  searchParams: { from?: string; to?: string; days?: string };
+  searchParams: { from?: string; to?: string; days?: string; mode?: string };
 }) {
   const customerId = params.customerId;
   const sp = searchParams ?? {};
-  let dbOk = isPostgresConfigured();
-  let ctx: any = null;
-
-  const daysRaw = Number(sp?.days ?? "90");
-  const days = Number.isFinite(daysRaw) && daysRaw > 0 ? Math.floor(daysRaw) : 90;
-
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-
-  let fromDate: Date;
-  let toDate: Date;
-
-  if (sp?.to) {
-    const parsed = new Date(sp.to);
-    toDate = Number.isFinite(parsed.getTime()) ? parsed : today;
-  } else {
-    toDate = today;
-  }
-
-  if (sp?.from) {
-    const parsed = new Date(sp.from);
-    fromDate = Number.isFinite(parsed.getTime()) ? parsed : new Date(toDate.getTime() - days * 86400000);
-  } else {
-    fromDate = new Date(toDate.getTime() - days * 86400000);
-  }
-  fromDate.setHours(0, 0, 0, 0);
-
-  let customer: any = null;
-  let allLedger: any[] = [];
-  let aging: any = null;
-  let emptyFallback = false;
-
-  if (dbOk) {
+  let report: Awaited<ReturnType<typeof loadFinancialLedgerReport>> | null = null;
+  let failure: { reason: string; qualifiedModeAvailable: boolean } | null = null;
+  let fromStr = sp.from ?? "";
+  const toStr = sp.to ?? businessDateToday();
+  const rawMode = sp.mode;
+  const qualified = rawMode === "qualified";
+  const reportInput = { customerId, from: fromStr, to: toStr, ...(rawMode !== undefined ? { mode: rawMode } : {}) };
+  if (isPostgresConfigured()) {
     try {
-      ctx = await requireServerTenantContext();
-      [customer, allLedger, aging] = await Promise.all([
-        repos.customers.getById(customerId, ctx),
-        repos.customerLedgers.listForCustomer(customerId, ctx, 1000),
-        repos.customerLedgers.getAgingBuckets(ctx, customerId),
-      ]);
-    } catch (_err) {
-      dbOk = false;
+      if (!fromStr) {
+        const daysRaw = Number(sp.days ?? "90");
+        if (!Number.isSafeInteger(daysRaw) || daysRaw <= 0 || daysRaw > 36500) throw new ReportUnavailableError("INVALID_INPUT", "Invalid date range.");
+        const end = new Date(`${toStr}T00:00:00.000Z`);
+        if (!Number.isFinite(end.getTime()) || end.toISOString().slice(0, 10) !== toStr) throw new ReportUnavailableError("INVALID_INPUT", "Invalid date range.");
+        fromStr = new Date(end.getTime() - daysRaw * 86400000).toISOString().slice(0, 10);
+        reportInput.from = fromStr;
+      }
+      report = await loadFinancialLedgerReport({ kind: "customer", ...reportInput });
+    } catch (error) {
+      report = null;
+      failure = describeReportFailure(error);
     }
   }
-  if (dbOk && (!customer || allLedger.length === 0)) emptyFallback = true;
-  if (!dbOk) {
+  const modeQs = (mode?: string) => {
+    const query = new URLSearchParams();
+    if (sp.from) query.set("from", sp.from);
+    if (sp.to) query.set("to", sp.to);
+    if (!sp.from && sp.days) query.set("days", sp.days);
+    if (mode) query.set("mode", mode);
+    const text = query.toString();
+    return `/customers/${customerId}/statement/print${text ? `?${text}` : ""}`;
+  };
+  if (!report || !report.customer) {
     return (
-      <DashboardLayout
-        tenantName="Maharashtra Pharma Distributors"
-        userName="Rajesh Kumar"
-        userInitials="RK"
-      >
-        <PrintToolbar
-          backHref={`/customers/${customerId}`}
-          backLabel="Back to Customer"
-          title="Customer Statement"
-        />
+      <DashboardLayout>
+        <PrintToolbar backHref={`/customers/${customerId}`} backLabel="Back to Customer" title="Customer Statement" />
         <CardCanvas>
-          <CardContent className="py-10 space-y-3 text-center">
+          <CardContent className="py-10 space-y-3 text-center" role="alert">
             <AlertTriangle className="h-8 w-8 mx-auto text-amber-600" />
             <p className="text-body-md text-amber-800">
-              Showing placeholder until database is connected — try again in 60 seconds.
+              Statement unavailable. {failure?.reason ?? "The report could not be loaded."}
             </p>
+            {failure?.qualifiedModeAvailable && !qualified ? (
+              <p className="text-body-md">
+                <Link href={modeQs("qualified")} className="font-medium underline">
+                  View qualified (exploratory, incomplete) statement
+                </Link>
+              </p>
+            ) : null}
           </CardContent>
         </CardCanvas>
       </DashboardLayout>
     );
   }
-  if (emptyFallback) {
-    return (
-      <DashboardLayout
-        tenantName="Maharashtra Pharma Distributors"
-        userName="Rajesh Kumar"
-        userInitials="RK"
-      >
-        <PrintToolbar
-          backHref={`/customers/${customerId}`}
-          backLabel="Back to Customer"
-          title="Customer Statement"
-        />
-        <div className="p-4 lg:p-6">
-          <CardCanvas>
-            <CardContent className="py-16 text-center">
-              <FileText className="mx-auto h-12 w-12 text-muted" />
-              <h3 className="mt-4 text-title-sm font-semibold text-ink">No statement data</h3>
-              <p className="mt-2 text-body-md text-muted">
-                {!customer
-                  ? "Customer not found."
-                  : "This customer has no ledger entries yet."}
-              </p>
-            </CardContent>
-          </CardCanvas>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  const beforeFrom: typeof allLedger = [];
-  const inRange: typeof allLedger = [];
-  for (const row of allLedger) {
-    const d = row.entry_date ? new Date(row.entry_date) : null;
-    if (!d) continue;
-    if (d.getTime() < fromDate.getTime()) {
-      beforeFrom.push(row);
-    } else if (d.getTime() <= toDate.getTime()) {
-      inRange.push(row);
-    }
-  }
-
-  let openingDebit = 0;
-  let openingCredit = 0;
-  for (const r of beforeFrom) {
-    openingDebit += Number(r.debit ?? 0);
-    openingCredit += Number(r.credit ?? 0);
-  }
-  const openingBalance = openingDebit - openingCredit;
-
-  const periodRows = inRange.map((r) => ({
-    id: r.id,
-    entry_date: r.entry_date,
-    entry_type: r.entry_type,
-    debit: Number(r.debit ?? 0),
-    credit: Number(r.credit ?? 0),
-    invoice_id: r.invoice_id,
-    reference_id: r.reference_id,
-    narration: r.narration,
-  }));
-
-  type StatementRow = {
-    kind: "opening" | "entry";
-    id: string;
-    entry_date: Date | null;
-    entry_type: LedgerEntryType | "OPENING_BALANCE";
-    debit: number;
-    credit: number;
-    invoice_id: string | null;
-    narration: string | null;
-    running_balance: number;
-  };
-
-  const statement: StatementRow[] = [];
-  let running = openingBalance;
-
-  statement.push({
-    kind: "opening",
-    id: "__opening__",
-    entry_date: fromDate,
-    entry_type: "OPENING_BALANCE",
-    debit: openingBalance > 0 ? openingBalance : 0,
-    credit: openingBalance < 0 ? Math.abs(openingBalance) : 0,
-    invoice_id: null,
-    narration: "Opening balance",
-    running_balance: running,
-  });
-
-  for (const r of periodRows) {
-    running += r.debit - r.credit;
-    statement.push({
-      kind: "entry",
-      id: r.id,
-      entry_date: r.entry_date,
-      entry_type: r.entry_type,
-      debit: r.debit,
-      credit: r.credit,
-      invoice_id: r.invoice_id,
-      narration: r.narration,
-      running_balance: running,
-    });
-  }
-
-  let totalDebit = 0;
-  let totalCredit = 0;
-  for (const r of statement) {
-    if (r.kind === "opening") continue;
-    totalDebit += r.debit;
-    totalCredit += r.credit;
-  }
+  const customer = report.customer;
+  const aging = report.aging;
+  const opening = Decimal.from(report.opening);
+  const statement = [{
+    kind: "opening", id: "__opening__", entry_date: fromStr, entry_type: "OPENING_BALANCE",
+    debit: opening.compare(0) > 0 ? opening.toFixed(2) : "0.00",
+    credit: opening.compare(0) < 0 ? opening.negate().toFixed(2) : "0.00",
+    invoice_id: null as string | null,
+    narration: qualified ? "Opening balance (classified entries only)" : "Opening balance", running_balance: report.opening,
+  }, ...report.rows.map((r) => ({
+    kind: "entry", id: r.id, entry_date: r.effective_date, entry_type: r.entry_type,
+    debit: r.debit, credit: r.credit, invoice_id: r.invoice_id, narration: r.narration, running_balance: r.balance,
+    voucher_type: r.voucher_type,
+  }))];
+  const totalDebit = report.debit;
+  const totalCredit = report.credit;
+  const running = report.closing;
 
   const addressParts = [
     customer.billing_address_1,
@@ -253,6 +154,25 @@ export default async function CustomerStatementPrintPage({
       />
 
       <div className="print-area p-4 lg:p-6 space-y-6">
+        {report.mode === "qualified" ? (
+          <QualifiedReportBanner
+            excludedLabel="ledger entries"
+            excludedCount={report.exclusions.excludedCount}
+            amounts={[
+              { label: "excluded debit", value: rupee(report.exclusions.excludedDebit) },
+              { label: "excluded credit", value: rupee(report.exclusions.excludedCredit) },
+              { label: "excluded signed amount (D − C)", value: rupee(report.exclusions.excludedSigned) },
+            ]}
+            byReason={report.exclusions.byReason}
+            completeHref={modeQs()}
+            note="Opening and running balances are classified entries only."
+          />
+        ) : null}
+        <div className="print:hidden flex justify-end">
+          <ExportCsvButton variant="secondary" action={exportCustomerStatementCsvAction.bind(null, reportInput)}>
+            Export CSV
+          </ExportCsvButton>
+        </div>
         <CardCanvas className="overflow-visible">
           <CardContent className="p-6 space-y-6">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between print-break-inside-avoid">
@@ -309,43 +229,36 @@ export default async function CustomerStatementPrintPage({
                   <div className="flex items-baseline justify-between">
                     <span className="text-caption text-muted font-medium">Period</span>
                     <span className="text-body-md font-semibold text-ink">
-                      {formatDate(fromDate, "PP")} — {formatDate(toDate, "PP")}
+                      {formatBusinessDate(fromStr)} — {formatBusinessDate(toStr)}
                     </span>
                   </div>
-                  <div className="mt-4 flex items-baseline justify-between">
-                    <span className="text-caption text-muted font-medium">Total Due</span>
-                    <span className="text-display-lg font-bold tracking-brand text-semantic-error">
-                      {rupee(aging.total > 0 ? aging.total : Number(customer.receivable_balance ?? 0))}
-                    </span>
-                  </div>
+                  <p className="mt-3 text-caption text-muted">Effective-date view of the current ledger; not a historical knowledge-time snapshot. {report.recordingTimeDisclosure}</p>
                 </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-lg border border-hairline p-3">
-                    <p className="text-caption text-muted font-medium">Current (0-30)</p>
-                    <div className="mt-1.5">
+                {aging ? (
+                  <div className="grid grid-cols-2 gap-2" aria-label="Current invoice aging, not period aging">
+                    <div className="rounded-lg border border-hairline p-3">
+                      <p className="text-caption text-muted font-medium">Current</p>
                       <Badge variant="success">{rupee(aging.current)}</Badge>
                     </div>
-                  </div>
-                  <div className="rounded-lg border border-hairline p-3">
-                    <p className="text-caption text-muted font-medium">31-60 days</p>
-                    <div className="mt-1.5">
-                      <Badge variant="warning">{rupee(aging.d30)}</Badge>
+                    <div className="rounded-lg border border-hairline p-3">
+                      <p className="text-caption text-muted font-medium">1-30 days</p>
+                      <Badge variant="success">{rupee(aging.d30)}</Badge>
                     </div>
-                  </div>
-                  <div className="rounded-lg border border-hairline p-3">
-                    <p className="text-caption text-muted font-medium">61-90 days</p>
-                    <div className="mt-1.5">
+                    <div className="rounded-lg border border-hairline p-3">
+                      <p className="text-caption text-muted font-medium">31-60 days</p>
                       <Badge variant="warning">{rupee(aging.d60)}</Badge>
                     </div>
-                  </div>
-                  <div className="rounded-lg border border-hairline p-3">
-                    <p className="text-caption text-muted font-medium">90+ days</p>
-                    <div className="mt-1.5">
+                    <div className="rounded-lg border border-hairline p-3">
+                      <p className="text-caption text-muted font-medium">61-90 days</p>
+                      <Badge variant="warning">{rupee(aging.d90)}</Badge>
+                    </div>
+                    <div className="rounded-lg border border-hairline p-3">
+                      <p className="text-caption text-muted font-medium">&gt;90 days</p>
                       <Badge variant="destructive">{rupee(aging.over90)}</Badge>
                     </div>
+                    <p className="text-caption text-muted">Current invoice aging, not period aging.</p>
                   </div>
-                </div>
+                ) : <p className="text-caption text-muted">Current invoice aging unavailable: due dates are incomplete or the safe limit was exceeded.</p>}
               </div>
             </div>
           </CardContent>
@@ -361,24 +274,26 @@ export default async function CustomerStatementPrintPage({
                   <TableHead>Reference</TableHead>
                   <TableHead className="w-[130px] text-right">Debit (₹)</TableHead>
                   <TableHead className="w-[130px] text-right">Credit (₹)</TableHead>
-                  <TableHead className="w-[150px] text-right">Running Balance (₹)</TableHead>
+                  <TableHead className="w-[150px] text-right">Running Balance (₹){qualified ? " classified only" : ""}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {statement.map((r) => {
                   const meta =
-                    r.entry_type === "OPENING_BALANCE"
-                      ? { label: "Opening Balance", variant: "secondary" as const }
-                      : ENTRY_LABELS[r.entry_type] ?? { label: String(r.entry_type), variant: "default" as const };
-                  const balPositive = r.running_balance > 0.001;
-                  const balNegative = r.running_balance < -0.001;
+                    "voucher_type" in r && (r.voucher_type === "Payment refund" || r.voucher_type === "Payment reversal")
+                      ? { label: r.voucher_type, variant: "secondary" as const }
+                      : r.entry_type === "OPENING_BALANCE"
+                      ? { label: qualified ? "Opening Balance (classified entries only)" : "Opening Balance", variant: "secondary" as const }
+                      : ENTRY_LABELS[r.entry_type as LedgerEntryType] ?? { label: r.entry_type, variant: "secondary" };
+                  const balPositive = Number(r.running_balance) > 0;
+                  const balNegative = Number(r.running_balance) < 0;
                   return (
                     <TableRow
                       key={r.id}
                       className={cn(r.kind === "opening" && "bg-surface-soft/30 font-medium")}
                     >
                       <TableCell className="text-body whitespace-nowrap">
-                        {r.entry_date ? formatDate(r.entry_date, "PP") : "—"}
+                        {r.entry_date ? formatBusinessDate(r.entry_date) : "—"}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
@@ -398,10 +313,10 @@ export default async function CustomerStatementPrintPage({
                         )}
                       </TableCell>
                       <TableCell className="text-right font-medium text-body tabular-nums">
-                        {r.debit > 0 ? rupee(r.debit) : <span className="text-muted">—</span>}
+                        {Number(r.debit) > 0 ? rupee(r.debit) : <span className="text-muted">—</span>}
                       </TableCell>
                       <TableCell className="text-right font-medium text-body tabular-nums">
-                        {r.credit > 0 ? rupee(r.credit) : <span className="text-muted">—</span>}
+                        {Number(r.credit) > 0 ? rupee(r.credit) : <span className="text-muted">—</span>}
                       </TableCell>
                       <TableCell
                         className={cn(
@@ -420,7 +335,7 @@ export default async function CustomerStatementPrintPage({
               <TableFooter>
                 <TableRow>
                   <TableCell colSpan={3} className="text-right font-semibold text-ink">
-                    Totals for period
+                    Totals for period{qualified ? " (classified entries only; excluded entries not included)" : ""}
                   </TableCell>
                   <TableCell className="text-right font-bold text-ink tabular-nums">
                     {rupee(totalDebit)}
@@ -431,8 +346,8 @@ export default async function CustomerStatementPrintPage({
                   <TableCell
                     className={cn(
                       "text-right font-bold tabular-nums",
-                      running > 0.001 && "text-semantic-error",
-                      running < -0.001 && "text-semantic-success",
+                      Number(running) > 0 && "text-semantic-error",
+                      Number(running) < 0 && "text-semantic-success",
                     )}
                   >
                     {rupee(running)}

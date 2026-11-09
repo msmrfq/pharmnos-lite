@@ -27,6 +27,7 @@ import SuccessCreatedToast from "@/components/toast/creation-success-toast";
 import ExportCsvButton from "@/components/ui/export-csv-button";
 import { exportSalesRegisterCsvAction } from "@/app/_actions/exports.actions";
 import SaleActionsCell from "./_actions-cell";
+import { LEGACY_INVOICE_DATE_LABEL, resolveInvoiceDisplayDate } from "@/lib/utils/invoice-display-date";
 
 export const metadata: Metadata = {
   title: "Billing",
@@ -162,7 +163,6 @@ export default async function BillingPage({
                     </TableRow>
                   ) : (
                     items.map((p: any) => {
-                      const d = p.invoice_date ? new Date(p.invoice_date) : null;
                       const net = Number(p.net_amount ?? 0);
                       const paid = Number(p.paid_amount ?? 0);
                       return (
@@ -192,13 +192,10 @@ export default async function BillingPage({
                           </TableCell>
                           <TableCell className="text-body text-muted">{p.reference_no ?? "—"}</TableCell>
                           <TableCell className="text-body whitespace-nowrap">
-                            {d
-                              ? d.toLocaleDateString("en-IN", {
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric",
-                                })
-                              : "—"}
+                            {resolveInvoiceDisplayDate(p).text}
+                            {!resolveInvoiceDisplayDate(p).classified && (
+                              <span className="ml-1 text-caption text-muted">({LEGACY_INVOICE_DATE_LABEL})</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right text-body">{rupee(p.gross_amount)}</TableCell>
                           <TableCell className="text-right text-body">{rupee(p.total_tax)}</TableCell>

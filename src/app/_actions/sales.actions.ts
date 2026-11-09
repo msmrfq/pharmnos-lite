@@ -44,6 +44,12 @@ import { normalizeState } from "@/lib/constants/indian-states";
 import { fefoBatchPicker } from "@/domain/services/fefo-batch.service";
 import { validateGstTreatment } from "@/lib/gst/treatment";
 import {
+  businessDateFromPrismaDate,
+  businessDateToPrismaDate,
+  parseBusinessDate,
+  type BusinessDate,
+} from "@/lib/utils/business-date";
+import {
   isApprovedGstClassification,
   resolveApprovedGstRule,
 } from "@/lib/gst/rule-governance";
@@ -54,6 +60,20 @@ import {
   amountInWords,
 } from "@/domain/services/invoice-modernization.service";
 import { allocatePaymentReceiptNo } from "@/repositories/payment.repository";
+import {
+  captureSystemInstant,
+  ledgerTemporalFields,
+  paymentTemporalFields,
+  resolveFinancialTemporal,
+  type CapturedInstant,
+  type ResolvedFinancialTemporal,
+} from "@/lib/utils/financial-temporal";
+
+function deriveSalesDueDate(invoiceDate: Date, paymentTermsDays: number | null | undefined): Date {
+  const dueDate = new Date(invoiceDate);
+  dueDate.setUTCDate(dueDate.getUTCDate() + Number(paymentTermsDays ?? 0));
+  return dueDate;
+}
 
 const __SalesStatusDRAFT: InvoiceStatus = "DRAFT";
 const __SalesStatusFINALIZED: InvoiceStatus = "FINALIZED";
@@ -149,34 +169,52 @@ function salesFinalizationPayloadHash(tenantId: string, saleId: string): string 
   return createHash("sha256").update(canonicalSalesFinalizationPayload(tenantId, saleId), "utf8").digest("hex");
 }
 
-type PaymentRequestData = {
+type PaymentReplayRequest = {
   amount: number;
   payment_method: string;
   reference_no: string | null;
-  entry_date: Date;
   notes: string | null;
+  tenant_id: string;
+  counterparty_type: "customer" | "supplier";
+  counterparty_id: string;
+  entry_date_was_supplied: boolean;
+  explicit_entry_date: Date | null;
 };
 
-type PaymentIdempotencyRecord = Pick<payments, "id" | "amount" | "request_payload_hash">;
+type PaymentIdempotencyRecord = Pick<
+  payments,
+  "id" | "amount" | "request_payload_hash" | "payment_date" | "effective_date" | "effective_date_basis"
+>;
 
-function paymentPayloadHash(
-  tenantId: string,
-  counterpartyType: "customer" | "supplier",
-  counterpartyId: string,
-  data: PaymentRequestData,
+// A user-supplied date is a date-only business date with no instant; otherwise the
+// payment's date derives from the same captured instant shared with its ledger row.
+function resolvePaymentTemporal(
+  explicitBusinessDate: BusinessDate | null,
+  operationInstant: CapturedInstant,
+): ResolvedFinancialTemporal {
+  return explicitBusinessDate
+    ? resolveFinancialTemporal({ businessDate: explicitBusinessDate })
+    : resolveFinancialTemporal({ occurredAt: operationInstant });
+}
+
+function paymentPayloadHashWithDateSource(
+  request: PaymentReplayRequest,
+  effectiveDate: Date,
 ): string {
   return createHash("sha256")
     .update(
       JSON.stringify({
+        version: 2,
         operation: "CREATE_PAYMENT",
-        tenantId,
-        counterpartyType,
-        counterpartyId,
-        amount: decimalOrZero(data.amount).round(2, "HALF_UP").toString(),
-        paymentMethod: data.payment_method,
-        referenceNo: data.reference_no,
-        entryDate: data.entry_date.toISOString(),
-        notes: data.notes,
+        tenantId: request.tenant_id,
+        counterpartyType: request.counterparty_type,
+        counterpartyId: request.counterparty_id,
+        amount: decimalOrZero(request.amount).round(2, "HALF_UP").toString(),
+        paymentMethod: request.payment_method,
+        referenceNo: request.reference_no,
+        entryDate: effectiveDate.toISOString(),
+        entryDateWasSupplied: request.entry_date_was_supplied,
+        notes: request.notes,
       }),
       "utf8",
     )
@@ -185,9 +223,19 @@ function paymentPayloadHash(
 
 function paymentReplay(
   payment: PaymentIdempotencyRecord,
-  requestHash: string,
+  request: PaymentReplayRequest,
 ): { id: string; applied: number } {
-  if (!payment.request_payload_hash || payment.request_payload_hash !== requestHash) {
+  let matches = false;
+  if (payment.effective_date_basis === null || payment.effective_date_basis === undefined) {
+    throw new Error("This legacy payment cannot be replayed because date-source provenance is unknown.");
+  }
+  const effectiveDate = request.entry_date_was_supplied
+    ? request.explicit_entry_date
+    : payment.effective_date;
+  if (effectiveDate) {
+    matches = payment.request_payload_hash === paymentPayloadHashWithDateSource(request, effectiveDate);
+  }
+  if (!matches) {
     throw new Error("This payment idempotency key was already used with a different payment payload.");
   }
   return {
@@ -218,8 +266,7 @@ function isPaymentIdempotencyUniqueViolation(error: unknown): boolean {
 async function findPaymentIdempotencyReplay(
   ctx: TenantContext,
   idempotencyKey: string,
-  requestHash: string,
-  requestedAmount: number,
+  request: PaymentReplayRequest,
   balanceLabel: "dues" | "payables",
 ): Promise<{ id: string; warning: string | null }> {
   const existing = await prisma.$transaction(async (tx) => {
@@ -231,14 +278,21 @@ async function findPaymentIdempotencyReplay(
           idempotency_key: idempotencyKey,
         },
       },
-      select: { id: true, amount: true, request_payload_hash: true },
+      select: {
+        id: true,
+        amount: true,
+        request_payload_hash: true,
+        payment_date: true,
+        effective_date: true,
+        effective_date_basis: true,
+      },
     });
   });
   if (!existing) {
     throw new Error("Payment idempotency conflict could not be resolved; retry with a new key.");
   }
-  const replay = paymentReplay(existing, requestHash);
-  return { id: replay.id, warning: paymentWarning(requestedAmount, replay.applied, balanceLabel) };
+  const replay = paymentReplay(existing, request);
+  return { id: replay.id, warning: paymentWarning(request.amount, replay.applied, balanceLabel) };
 }
 
 async function lockCustomerBalance(
@@ -456,8 +510,10 @@ export async function createSalesDraftAction(
         .round(2, "HALF_UP")
         .toNumber();
       const invoiceDate = data.invoice_date instanceof Date ? data.invoice_date : new Date(data.invoice_date as any);
-      const dueDate = new Date(invoiceDate);
-      dueDate.setDate(dueDate.getDate() + Number(data.payment_terms_days ?? 0));
+      const invoiceTemporal = resolveFinancialTemporal({ businessDate: businessDateFromPrismaDate(invoiceDate) });
+      const invoiceEffectiveDate = invoiceTemporal.effectiveDate;
+      const dueDate = deriveSalesDueDate(invoiceDate, data.payment_terms_days);
+      const createdAt = new Date();
       const created = await tx.sales_invoices.create({
         data: {
           tenant_id: ctx.tenantId,
@@ -465,7 +521,9 @@ export async function createSalesDraftAction(
           customer_id: data.customer_id,
           invoice_no: "",
           invoice_date: invoiceDate,
+          effective_date: invoiceEffectiveDate,
           due_date: dueDate,
+          due_date_business: businessDateToPrismaDate(businessDateFromPrismaDate(dueDate)),
           status: __SalesStatusDRAFT,
           tax_data_status: "UNVERIFIED_DRAFT",
           gst_treatment: treatment.treatment,
@@ -481,8 +539,8 @@ export async function createSalesDraftAction(
           balance_due: gstTotals.grand_total,
           payment_mode: data.is_cash_sale ? paymentMethodToPrismaMode("Cash") : null,
           notes: data.notes ?? null,
-          created_at: new Date(),
-          updated_at: new Date(),
+          created_at: createdAt,
+          updated_at: createdAt,
         },
       });
 
@@ -551,7 +609,7 @@ export async function cancelSalesDraftAction(id: string): Promise<ActionResult<{
       return { ok: false, message: "Only draft invoices can be cancelled." };
     }
     await prisma.sales_invoices.update({
-      where: { id, tenant_id: ctx.tenantId },
+      where: { id, tenant_id: ctx.tenantId, status: __SalesStatusDRAFT },
       data: {
         status: __SalesStatusCANCELLED,
         cancelled_at: new Date(),
@@ -628,6 +686,12 @@ export async function finalizeSalesInvoiceAction(
       if (!existing) throw new Error("Invoice not found.");
       if (existing.status === __SalesStatusFINALIZED) throw new Error("Invoice already finalized.");
       if (existing.status !== __SalesStatusDRAFT) throw new Error("Only draft invoices can be finalized.");
+      if (!existing.effective_date || !existing.due_date_business) {
+        throw new Error("Invoice business dates are unclassified; resolve their provenance before finalization.");
+      }
+      const invoiceTemporal = resolveFinancialTemporal({ businessDate: businessDateFromPrismaDate(existing.effective_date) });
+      const effectiveDate = invoiceTemporal.effectiveDate;
+      const dueDateBusiness = businessDateToPrismaDate(businessDateFromPrismaDate(existing.due_date_business));
       const treatment = validateGstTreatment(existing.gst_treatment);
       if (!treatment.ok) {
         throw new Error(treatment.error ?? "GST treatment must be selected before finalization.");
@@ -655,7 +719,7 @@ export async function finalizeSalesInvoiceAction(
 
       const items: any[] = existing.items as any[] ?? [];
       if (items.length === 0) throw new Error("No line items found.");
-      const governedLines = await resolveSalesLineRules(tx, ctx.tenantId, items, existing.invoice_date);
+      const governedLines = await resolveSalesLineRules(tx, ctx.tenantId, items, invoiceTemporal.effectiveDate);
 
       const profile = await tx.business_profiles.findUnique({ where: { tenant_id: ctx.tenantId } });
       const tenant = await tx.tenants.findUnique({
@@ -876,7 +940,7 @@ export async function finalizeSalesInvoiceAction(
         amountInWords: amountInWords(Number(serverGst.grand_total)),
         renderingVersion: INVOICE_RENDERING_VERSION,
       });
-
+      const finalizedAt = new Date();
       const updated = await tx.sales_invoices.update({
         where: { id: existing.id, tenant_id: ctx.tenantId },
         data: {
@@ -898,7 +962,9 @@ export async function finalizeSalesInvoiceAction(
           customer_state_snapshot: normalizeState(cust.billing_state) ?? cust.billing_state ?? null,
           customer_pincode_snapshot: cust.billing_pincode ?? null,
           customer_gstin_snapshot: cust.gstin ?? null,
-          finalized_at: new Date(),
+          finalized_at: finalizedAt,
+          effective_date: effectiveDate,
+          due_date_business: dueDateBusiness,
           gross_amount: serverGst.total_taxable,
           total_discount: Number(existing.total_discount ?? 0),
           total_tax: serverGst.total_tax,
@@ -909,7 +975,7 @@ export async function finalizeSalesInvoiceAction(
           finalized_snapshot_hash: finalizedSnapshot.hash,
           rendering_version: INVOICE_RENDERING_VERSION,
           pdf_generation_status: "PENDING",
-          updated_at: new Date(),
+          updated_at: finalizedAt,
         },
       });
 
@@ -928,14 +994,14 @@ export async function finalizeSalesInvoiceAction(
           reference_id: existing.id,
           invoice_id: existing.id,
           narration: `Invoice ${finalInvoiceNo}`,
-          entry_date: existing.invoice_date,
-          created_at: new Date(),
+          ...ledgerTemporalFields(invoiceTemporal),
+          created_at: finalizedAt,
         },
       });
 
       await tx.customers.update({
         where: { id: cust.id, tenant_id: ctx.tenantId },
-        data: { receivable_balance: { increment: debit }, updated_at: new Date() },
+        data: { receivable_balance: { increment: debit }, updated_at: finalizedAt },
       });
 
       await tx.audit_logs.create({
@@ -946,7 +1012,7 @@ export async function finalizeSalesInvoiceAction(
           target_type: "sales_invoice",
           target_id: existing.id,
           metadata: { invoice_no: finalInvoiceNo, net_amount: debit },
-          created_at: new Date(),
+          created_at: finalizedAt,
         },
       });
 
@@ -961,7 +1027,7 @@ export async function finalizeSalesInvoiceAction(
           status: "COMPLETED",
           result_invoice_no: finalInvoiceNo,
           result_sales_id: updated.id,
-          updated_at: new Date(),
+          updated_at: finalizedAt,
         },
       });
 
@@ -1032,14 +1098,24 @@ export async function createCustomerPaymentAction(
     const ctx = await requireServerTenantContext();
     requirePermission(ctx, PermissionAction.create_payment);
     const data = parsed.data;
-    const entryDate = data.entry_date ?? new Date();
-    const requestHash = paymentPayloadHash(ctx.tenantId, "customer", data.customer_id, {
+    const entryDateWasSupplied = Object.prototype.hasOwnProperty.call(payload, "entry_date");
+    const explicitBusinessDate = entryDateWasSupplied
+      ? parseBusinessDate(String(payload.entry_date))
+      : null;
+    const explicitEntryDate = explicitBusinessDate
+      ? businessDateToPrismaDate(explicitBusinessDate)
+      : null;
+    const replayRequest: PaymentReplayRequest = {
+      tenant_id: ctx.tenantId,
+      counterparty_type: "customer",
+      counterparty_id: data.customer_id,
       amount: data.amount,
       payment_method: data.payment_method,
       reference_no: data.reference_no,
-      entry_date: entryDate,
       notes: data.notes,
-    });
+      entry_date_was_supplied: entryDateWasSupplied,
+      explicit_entry_date: explicitEntryDate,
+    };
 
     let result: { id: string; warning: string | null };
     try {
@@ -1052,10 +1128,17 @@ export async function createCustomerPaymentAction(
               idempotency_key: data.idempotency_key,
             },
           },
-          select: { id: true, amount: true, request_payload_hash: true },
+          select: {
+            id: true,
+            amount: true,
+            request_payload_hash: true,
+            payment_date: true,
+            effective_date: true,
+            effective_date_basis: true,
+          },
         });
         if (existing) {
-          const replay = paymentReplay(existing, requestHash);
+          const replay = paymentReplay(existing, replayRequest);
           return {
             id: replay.id,
             warning: paymentWarning(data.amount, replay.applied, "dues"),
@@ -1070,10 +1153,17 @@ export async function createCustomerPaymentAction(
               idempotency_key: data.idempotency_key,
             },
           },
-          select: { id: true, amount: true, request_payload_hash: true },
+          select: {
+            id: true,
+            amount: true,
+            request_payload_hash: true,
+            payment_date: true,
+            effective_date: true,
+            effective_date_basis: true,
+          },
         });
         if (committed) {
-          const replay = paymentReplay(committed, requestHash);
+          const replay = paymentReplay(committed, replayRequest);
           return {
             id: replay.id,
             warning: paymentWarning(data.amount, replay.applied, "dues"),
@@ -1084,6 +1174,9 @@ export async function createCustomerPaymentAction(
         const appliedDecimal = credit;
         const clamped = before.subtract(appliedDecimal).round(2, "HALF_UP");
         const applied = appliedDecimal.round(2, "HALF_UP").toNumber();
+        const operationInstant = captureSystemInstant();
+        const temporal = resolvePaymentTemporal(explicitBusinessDate, operationInstant);
+        const requestHash = paymentPayloadHashWithDateSource(replayRequest, temporal.effectiveDate);
 
         const payment = await tx.payments.create({
           data: {
@@ -1094,12 +1187,12 @@ export async function createCustomerPaymentAction(
             payment_mode: paymentMethodToPrismaMode(data.payment_method),
             amount: applied,
             reference_no: data.reference_no,
-            payment_date: entryDate,
+            ...paymentTemporalFields(temporal),
             notes: data.notes,
             idempotency_key: data.idempotency_key,
             request_payload_hash: requestHash,
             created_by: ctx.userId,
-            created_at: new Date(),
+            created_at: operationInstant,
             receipt_no: await allocatePaymentReceiptNo(tx, "PAY", ctx.tenantId),
           },
         });
@@ -1116,13 +1209,13 @@ export async function createCustomerPaymentAction(
             reference_id: payment.id,
             invoice_id: null,
             narration: `Payment received — ${data.payment_method}${data.reference_no ? ` #${data.reference_no}` : ""}${data.notes ? ` — ${data.notes}` : ""}`,
-            entry_date: entryDate,
-            created_at: new Date(),
+            ...ledgerTemporalFields(temporal),
+            created_at: operationInstant,
           },
         });
         await tx.customers.update({
           where: { id: data.customer_id, tenant_id: ctx.tenantId },
-          data: { receivable_balance: clamped.toNumber(), updated_at: new Date() },
+          data: { receivable_balance: clamped.toNumber(), updated_at: operationInstant },
         });
         return { id: payment.id, warning: paymentWarning(data.amount, applied, "dues") };
       });
@@ -1131,8 +1224,7 @@ export async function createCustomerPaymentAction(
       result = await findPaymentIdempotencyReplay(
         ctx,
         data.idempotency_key,
-        requestHash,
-        data.amount,
+        replayRequest,
         "dues",
       );
     }
@@ -1175,14 +1267,24 @@ export async function createSupplierPaymentAction(
     const ctx = await requireServerTenantContext();
     requirePermission(ctx, PermissionAction.create_payment);
     const data = parsed.data;
-    const entryDate = data.entry_date ?? new Date();
-    const requestHash = paymentPayloadHash(ctx.tenantId, "supplier", data.supplier_id, {
+    const entryDateWasSupplied = Object.prototype.hasOwnProperty.call(payload, "entry_date");
+    const explicitBusinessDate = entryDateWasSupplied
+      ? parseBusinessDate(String(payload.entry_date))
+      : null;
+    const explicitEntryDate = explicitBusinessDate
+      ? businessDateToPrismaDate(explicitBusinessDate)
+      : null;
+    const replayRequest: PaymentReplayRequest = {
+      tenant_id: ctx.tenantId,
+      counterparty_type: "supplier",
+      counterparty_id: data.supplier_id,
       amount: data.amount,
       payment_method: data.payment_method,
       reference_no: data.reference_no,
-      entry_date: entryDate,
       notes: data.notes,
-    });
+      entry_date_was_supplied: entryDateWasSupplied,
+      explicit_entry_date: explicitEntryDate,
+    };
 
     let result: { id: string; warning: string | null };
     try {
@@ -1195,10 +1297,17 @@ export async function createSupplierPaymentAction(
               idempotency_key: data.idempotency_key,
             },
           },
-          select: { id: true, amount: true, request_payload_hash: true },
+          select: {
+            id: true,
+            amount: true,
+            request_payload_hash: true,
+            payment_date: true,
+            effective_date: true,
+            effective_date_basis: true,
+          },
         });
         if (existing) {
-          const replay = paymentReplay(existing, requestHash);
+          const replay = paymentReplay(existing, replayRequest);
           return {
             id: replay.id,
             warning: paymentWarning(data.amount, replay.applied, "payables"),
@@ -1213,10 +1322,17 @@ export async function createSupplierPaymentAction(
               idempotency_key: data.idempotency_key,
             },
           },
-          select: { id: true, amount: true, request_payload_hash: true },
+          select: {
+            id: true,
+            amount: true,
+            request_payload_hash: true,
+            payment_date: true,
+            effective_date: true,
+            effective_date_basis: true,
+          },
         });
         if (committed) {
-          const replay = paymentReplay(committed, requestHash);
+          const replay = paymentReplay(committed, replayRequest);
           return {
             id: replay.id,
             warning: paymentWarning(data.amount, replay.applied, "payables"),
@@ -1227,6 +1343,9 @@ export async function createSupplierPaymentAction(
         const appliedDecimal = debit;
         const clamped = before.subtract(appliedDecimal).round(2, "HALF_UP");
         const applied = appliedDecimal.round(2, "HALF_UP").toNumber();
+        const operationInstant = captureSystemInstant();
+        const temporal = resolvePaymentTemporal(explicitBusinessDate, operationInstant);
+        const requestHash = paymentPayloadHashWithDateSource(replayRequest, temporal.effectiveDate);
 
         const payment = await tx.payments.create({
           data: {
@@ -1237,12 +1356,12 @@ export async function createSupplierPaymentAction(
             payment_mode: paymentMethodToPrismaMode(data.payment_method),
             amount: applied,
             reference_no: data.reference_no,
-            payment_date: entryDate,
+            ...paymentTemporalFields(temporal),
             notes: data.notes,
             idempotency_key: data.idempotency_key,
             request_payload_hash: requestHash,
             created_by: ctx.userId,
-            created_at: new Date(),
+            created_at: operationInstant,
             receipt_no: await allocatePaymentReceiptNo(tx, "PAY", ctx.tenantId),
           },
         });
@@ -1259,13 +1378,13 @@ export async function createSupplierPaymentAction(
             reference_id: payment.id,
             purchase_id: null,
             narration: `Payment made — ${data.payment_method}${data.reference_no ? ` #${data.reference_no}` : ""}${data.notes ? ` — ${data.notes}` : ""}`,
-            entry_date: entryDate,
-            created_at: new Date(),
+            ...ledgerTemporalFields(temporal),
+            created_at: operationInstant,
           },
         });
         await tx.suppliers.update({
           where: { id: data.supplier_id, tenant_id: ctx.tenantId },
-          data: { payable_balance: clamped.toNumber(), updated_at: new Date() },
+          data: { payable_balance: clamped.toNumber(), updated_at: operationInstant },
         });
         return { id: payment.id, warning: paymentWarning(data.amount, applied, "payables") };
       });
@@ -1274,8 +1393,7 @@ export async function createSupplierPaymentAction(
       result = await findPaymentIdempotencyReplay(
         ctx,
         data.idempotency_key,
-        requestHash,
-        data.amount,
+        replayRequest,
         "payables",
       );
     }

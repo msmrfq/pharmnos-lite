@@ -16,6 +16,11 @@ import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-c
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
 import { PermissionAction, Prisma } from "@prisma/client";
 import type { products, customers, suppliers } from "@prisma/client";
+import {
+  captureSystemInstant,
+  ledgerTemporalFields,
+  resolveFinancialTemporal,
+} from "@/lib/utils/financial-temporal";
 
 function revalidatePath(path: string): void {
   if (process.env.FINANCIAL_E2E_TEST_MODE === "true") return;
@@ -376,6 +381,8 @@ export async function createCustomerAction(
 
       const obAmount = Number(data.opening_balance ?? 0);
       if (obAmount > 0) {
+        const operationInstant = captureSystemInstant();
+        const temporal = resolveFinancialTemporal({ occurredAt: operationInstant });
         const directionDebit = data.opening_balance_type === "debit";
         const debit = directionDebit ? obAmount : 0;
         const credit = directionDebit ? 0 : obAmount;
@@ -385,13 +392,14 @@ export async function createCustomerAction(
             tenant_id: ctx.tenantId,
             customer_id: created.id,
             entry_type: __LedgerEntryType_OPENING_BALANCE,
-            entry_date: new Date(),
+            ...ledgerTemporalFields(temporal),
             debit,
             credit,
             balance,
             narration: "Opening balance",
             reference_type: "opening_balance",
             reference_id: created.id,
+            created_at: operationInstant,
           },
         });
         if (balance > 0) {
@@ -602,6 +610,8 @@ export async function createSupplierAction(
 
       const obAmount = Number(data.opening_balance ?? 0);
       if (obAmount > 0) {
+        const operationInstant = captureSystemInstant();
+        const temporal = resolveFinancialTemporal({ occurredAt: operationInstant });
         const directionCredit = data.opening_balance_type === "credit";
         const credit = directionCredit ? obAmount : 0;
         const debit = directionCredit ? 0 : obAmount;
@@ -611,13 +621,14 @@ export async function createSupplierAction(
             tenant_id: ctx.tenantId,
             supplier_id: created.id,
             entry_type: __LedgerEntryType_OPENING_BALANCE,
-            entry_date: new Date(),
+            ...ledgerTemporalFields(temporal),
             debit,
             credit,
             balance,
             narration: "Opening balance",
             reference_type: "opening_balance",
             reference_id: created.id,
+            created_at: operationInstant,
           },
         });
         if (balance > 0) {

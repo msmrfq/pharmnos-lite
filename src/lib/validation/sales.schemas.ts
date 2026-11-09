@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
-  dateRequired,
-  dateOptional,
+  financialDateRequired,
+  financialDateOptional,
   decimalFromString,
   decimalFromStringOptional,
   percentageFromStringOptional,
@@ -39,7 +39,7 @@ export const SalesInvoiceCreateSchema = z
     gst_treatment: z.enum(GST_TREATMENT_LABELS, { errorMap: () => ({ message: "Select a valid GST treatment." }) }),
     tax_mode: z.enum(["EXCLUSIVE", "INCLUSIVE"]).default("EXCLUSIVE"),
     place_of_supply_state: z.string().trim().min(1, "Place of supply is required"),
-    invoice_date: dateRequired,
+    invoice_date: financialDateRequired,
     payment_terms_days: integerFromStringGteZero,
     reference_no: z.string().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
     is_cash_sale: z
@@ -67,7 +67,7 @@ export const CustomerPaymentCreateSchema = z.object({
   amount: decimalFromString,
   payment_method: CustomerPaymentMethodSchema,
   reference_no: z.string().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
-  entry_date: dateOptional,
+  entry_date: financialDateOptional,
   notes: z.string().max(500).optional().or(z.literal("")).transform((v) => (v || null)),
 });
 
@@ -79,7 +79,7 @@ export const SupplierPaymentCreateSchema = z.object({
   amount: decimalFromString,
   payment_method: SupplierPaymentMethodSchema,
   reference_no: z.string().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
-  entry_date: dateOptional,
+  entry_date: financialDateOptional,
   notes: z.string().max(500).optional().or(z.literal("")).transform((v) => (v || null)),
 });
 

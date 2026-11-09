@@ -26,6 +26,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Save, Wallet, ArrowUpRight } from "lucide-react";
 import { createSupplierPaymentAction } from "@/app/_actions/sales.actions";
+import { businessDateToday } from "@/lib/utils/business-date";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
 
 type Props = {
@@ -86,7 +87,7 @@ export default function PurchasePaymentNewClientForm({ suppliers, prefillSupplie
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.ok, state.message]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessDateToday();
   const sup = suppliers.find((s: any) => s.id === prefillSupplierId);
   const rupee = (n: number | null | undefined | string) => {
     const num = typeof n === "string" ? Number(n) : Number(n ?? 0);

@@ -27,11 +27,12 @@ import {
   ChevronRight,
   AlertTriangle,
 } from "lucide-react";
-import { isPostgresConfigured, prisma } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
+import { isPostgresConfigured } from "@/lib/db/prisma";
+import { formatBusinessDate } from "@/lib/utils/business-date";
 import ExportCsvButton from "@/components/ui/export-csv-button";
-import { exportCustomerDuesCsvAction } from "@/app/_actions/exports.actions";
+import { exportCustomerDuesCsvAction, loadCustomerAgingReport } from "@/app/_actions/aging-report.actions";
+import type { AgingReport } from "@/domain/services/aging-report.service";
+import { formatRupeeAmount } from "@/domain/services/aging-report.service";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -46,10 +47,10 @@ const rupee = (n: number | null | undefined | string) => {
 
 const agingBucketBadge = (overdueDays: number) => {
   if (overdueDays <= 0) return { label: "Current", variant: "success" as const };
-  if (overdueDays <= 30) return { label: "0-30 days", variant: "success" as const };
+  if (overdueDays <= 30) return { label: "1-30 days", variant: "success" as const };
   if (overdueDays <= 60) return { label: "31-60 days", variant: "warning" as const };
   if (overdueDays <= 90) return { label: "61-90 days", variant: "warning" as const };
-  return { label: "90+ days", variant: "destructive" as const };
+  return { label: ">90 days", variant: "destructive" as const };
 };
 
 const INDIAN_STATES = [
@@ -76,87 +77,36 @@ export default async function CustomerDuesPage({
   const stateFilter = searchParams?.state?.trim() ?? "";
   const minDueRaw = searchParams?.min_due?.trim() ?? "";
   const minDue = minDueRaw ? Number(minDueRaw) : 0;
-  let dbOk = isPostgresConfigured();
+  const dbOk = isPostgresConfigured();
 
-  let items: any[] = [];
-  let total = 0;
-  let distinctStates: string[] = [];
-  const bucketMap = new Map<string, { current: number; d30: number; d60: number; d90: number; over90: number; total: number }>();
-  const agingMap = new Map<string, number>();
+  let report: AgingReport | null = null;
+  let unavailableReason: string | null = null;
 
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      const t = await requireServerTenantContext();
-
-      try {
-        const stateRows = await (prisma as any).customers.findMany({
-          where: { tenant_id: t.tenantId, billing_state: { not: null } },
-          select: { billing_state: true },
-          distinct: ["billing_state"],
-          take: 100,
-        });
-        distinctStates = stateRows
-          .map((r: any) => r.billing_state as string)
-          .filter((s: any) => typeof s === "string" && s.trim().length > 0)
-          .sort();
-      } catch {
-        distinctStates = [];
-      }
-
-      const where: any = {
-        tenant_id: t.tenantId,
-        ...(q
-          ? {
-              OR: [
-                { business_name: { contains: q, mode: "insensitive" } },
-                { code: { contains: q, mode: "insensitive" } },
-                { gstin: { contains: q, mode: "insensitive" } },
-                { phone: { contains: q, mode: "insensitive" } },
-                { mobile: { contains: q, mode: "insensitive" } },
-                { email: { contains: q, mode: "insensitive" } },
-                { contact_person: { contains: q, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-        ...(stateFilter ? { billing_state: { equals: stateFilter, mode: "insensitive" as const } } : {}),
-      };
-
-      const [rawItems, countResult] = await Promise.all([
-        (prisma as any).customers.findMany({
-          where,
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-          orderBy: { business_name: "asc" },
-        }),
-        (prisma as any).customers.count({ where }),
-      ]);
-
-      const filteredItems = Number.isFinite(minDue) && minDue > 0
-        ? rawItems.filter((c: any) => Number(c.receivable_balance ?? 0) >= minDue)
-        : rawItems;
-
-      items = filteredItems;
-      total = countResult;
-
-      for (const c of items) {
-        try {
-          const buckets = await repos.customerLedgers.getAgingBuckets(ctx, c.id);
-          bucketMap.set(c.id, buckets);
-        } catch {
-          bucketMap.set(c.id, { current: 0, d30: 0, d60: 0, d90: 0, over90: 0, total: 0 });
-        }
-        try {
-          const oldestDays = await repos.customerLedgers.getOldestOverdueDays(c.id, ctx);
-          agingMap.set(c.id, Number.isFinite(oldestDays) ? oldestDays : 0);
-        } catch {
-          agingMap.set(c.id, 0);
-        }
-      }
-    } catch {
-      dbOk = false;
+      const loaded = await loadCustomerAgingReport();
+      if (loaded.ok) report = loaded.report;
+      else unavailableReason = loaded.reason;
+    } catch (error) {
+      console.error("Customer dues report failed:", error);
+      unavailableReason = "Customer dues unavailable: access or tenant context could not be verified.";
     }
   }
+  const reportError = dbOk && report === null;
+
+  const needle = q.toLowerCase();
+  const allRows = report?.rows ?? [];
+  const distinctStates = [...new Set(allRows.map((row) => row.party.state).filter((s): s is string => Boolean(s)))].sort();
+  const filteredRows = allRows.filter((row) => {
+    const party = row.party;
+    if (needle && ![party.name, party.code, party.contact, party.phone, party.city, party.state]
+      .some((value) => (value ?? "").toLowerCase().includes(needle))) return false;
+    if (stateFilter && (party.state ?? "").toLowerCase() !== stateFilter.toLowerCase()) return false;
+    if (Number.isFinite(minDue) && minDue > 0 && Number(row.total) < minDue) return false;
+    return true;
+  });
+  const total = filteredRows.length;
+  const items = filteredRows.slice((page - 1) * pageSize, page * pageSize);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const buildHref = (overrides: Record<string, string | number | undefined>) => {
@@ -182,11 +132,11 @@ export default async function CustomerDuesPage({
         <div>
           <CardTitle className="text-display-sm tracking-brand">Customer Dues (Aging)</CardTitle>
           <p className="mt-1 text-body-md text-body">
-            Receivables by customer with 0-30 / 31-60 / 61-90 / 90+ days aging buckets.
+            Receivables by customer with current / 1-30 / 31-60 / 61-90 / &gt;90 days aging buckets.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <ExportCsvButton variant="secondary" action={exportCustomerDuesCsvAction}>
+          <ExportCsvButton variant="secondary" action={exportCustomerDuesCsvAction} disabled={!dbOk || reportError}>
             <Download className="h-4 w-4" /> Export CSV
           </ExportCsvButton>
         </div>
@@ -196,10 +146,26 @@ export default async function CustomerDuesPage({
         <div role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
           <div>
-            <strong className="font-semibold">Showing placeholder numbers until database is connected.</strong>
-            <span className="ml-1">Temporary Supabase pooler timeout — retry in 60 seconds.</span>
+            <strong className="font-semibold">Customer dues unavailable: database is not configured.</strong>
           </div>
         </div>
+      )}
+      {reportError && (
+        <div role="alert" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {unavailableReason ?? "Customer dues unavailable."} No totals are shown.
+        </div>
+      )}
+      {report?.banner && (
+        <div role="alert" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+          {report.banner}
+        </div>
+      )}
+      {report && (
+        <p className="mb-4 text-caption text-muted">
+          As of {formatBusinessDate(report.businessDate)} (Asia/Kolkata) · {report.completeness === "COMPLETE" ? "Complete" : "Qualified"} ·
+          Total classified {rupee(report.totals.classified_total)}
+          {report.unclassifiedCount > 0 && <> · Due date unclassified {formatRupeeAmount(report.totals.unclassified)} ({report.unclassifiedCount} invoices)</>}
+        </p>
       )}
 
       <form action="/reports/customer-dues" method="get" className="mb-5">
@@ -279,76 +245,85 @@ export default async function CustomerDuesPage({
                 <TableHead>Code</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Location</TableHead>
-                <TableHead className="text-right">Current 0-30</TableHead>
+                <TableHead className="text-right">Current</TableHead>
+                <TableHead className="text-right">1-30</TableHead>
                 <TableHead className="text-right">31-60</TableHead>
                 <TableHead className="text-right">61-90</TableHead>
-                <TableHead className="text-right">90+</TableHead>
-                <TableHead className="text-right">Total due</TableHead>
-                <TableHead className="text-right">Receivable balance</TableHead>
+                <TableHead className="text-right">&gt;90</TableHead>
+                <TableHead className="text-right">Due date unclassified</TableHead>
+                <TableHead className="text-right">Total open</TableHead>
+                <TableHead className="text-right">Recorded balance</TableHead>
                 <TableHead>Aging</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {dbOk && items.length === 0 ? (
+              {dbOk && !reportError && items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-10 text-center text-muted text-body-md">
-                    No customers match the current filters.
+                  <TableCell colSpan={12} className="py-10 text-center text-muted text-body-md">
+                    {report && report.rows.length === 0 ? "No customers have open invoices." : "No customers match the current filters."}
                   </TableCell>
                 </TableRow>
-              ) : !dbOk ? (
+              ) : !dbOk || reportError ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-10 text-center text-muted text-body-md">
-                    Showing placeholder rows until database is connected.
+                  <TableCell colSpan={12} className="py-10 text-center text-muted text-body-md">
+                    Customer dues unavailable; no financial results are shown.
                   </TableCell>
                 </TableRow>
               ) : (
-                items.map((c: any) => {
-                  const buckets = bucketMap.get(c.id) ?? { current: 0, d30: 0, d60: 0, d90: 0, over90: 0, total: 0 };
-                  const agingDays = agingMap.get(c.id) ?? 0;
+                items.map((buckets) => {
+                  const c = buckets.party;
+                  const agingDays = buckets.oldestOverdueDays;
                   const bucket = agingBucketBadge(agingDays);
-                  const receivable = Number(c.receivable_balance ?? 0);
-                  const totalDue = buckets.total > 0 ? buckets.total : receivable;
+                  const totalDue = Number(buckets.total);
                   return (
-                    <TableRow key={c.id}>
+                    <TableRow key={`${c.id}`}>
                       <TableCell className="font-medium text-ink">
-                        <Link
-                          href={`/customers/${c.id}`}
-                          className="inline-flex items-center gap-2 hover:underline"
-                        >
-                          <Users className="h-4 w-4 text-muted" />
-                          {c.code ?? "—"}
-                        </Link>
+                        {c.id ? (
+                          <Link
+                            href={`/customers/${c.id}`}
+                            className="inline-flex items-center gap-2 hover:underline"
+                          >
+                            <Users className="h-4 w-4 text-muted" />
+                            {c.code ?? "—"}
+                          </Link>
+                        ) : "—"}
                       </TableCell>
                       <TableCell>
-                        <p className="font-medium text-ink">{c.business_name ?? "—"}</p>
-                        {c.contact_person && (
-                          <p className="text-caption text-body">{c.contact_person}</p>
+                        <p className="font-medium text-ink">{c.name || "—"}</p>
+                        {c.contact && (
+                          <p className="text-caption text-body">{c.contact}</p>
                         )}
-                        {(c.phone || c.mobile) && (
-                          <p className="text-caption text-muted">{c.mobile ?? c.phone}</p>
+                        {c.phone && (
+                          <p className="text-caption text-muted">{c.phone}</p>
                         )}
                       </TableCell>
                       <TableCell className="text-body">
-                        {[c.billing_city, c.billing_state].filter(Boolean).join(", ") || "—"}
+                        {[c.city, c.state].filter(Boolean).join(", ") || "—"}
                       </TableCell>
                       <TableCell className="text-right text-body">{rupee(buckets.current)}</TableCell>
                       <TableCell className="text-right text-body">{rupee(buckets.d30)}</TableCell>
                       <TableCell className="text-right text-body">{rupee(buckets.d60)}</TableCell>
+                      <TableCell className="text-right text-body">{rupee(buckets.d90)}</TableCell>
                       <TableCell className="text-right text-body">{rupee(buckets.over90)}</TableCell>
+                      <TableCell className="text-right text-body">
+                        {rupee(buckets.unclassified)}
+                        {buckets.unclassifiedCount > 0 && (
+                          <p className="text-caption text-muted">{buckets.unclassifiedCount} invoices</p>
+                        )}
+                      </TableCell>
                       <TableCell className={`text-right font-semibold ${totalDue > 0 ? "text-semantic-error" : "text-ink"}`}>
                         {rupee(totalDue)}
                       </TableCell>
-                      <TableCell className={`text-right font-semibold ${receivable > 0 ? "text-semantic-error" : "text-ink"}`}>
-                        {rupee(receivable)}
-                      </TableCell>
+                      <TableCell className="text-right text-body">{c.cachedBalance === null ? "—" : rupee(c.cachedBalance)}</TableCell>
                       <TableCell>
-                        {receivable > 0 ? (
-                          <Badge variant={bucket.variant}>
-                            {agingDays > 0 ? `${agingDays}d · ` : ""}{bucket.label}
-                          </Badge>
-                        ) : (
-                          <Badge variant="success">No dues</Badge>
-                        )}
+                        <div className="flex flex-wrap gap-1">
+                          {Number(buckets.classified_total) > 0 && (
+                            <Badge variant={bucket.variant}>
+                              {agingDays > 0 ? `${agingDays}d · ` : ""}{bucket.label}
+                            </Badge>
+                          )}
+                          {buckets.unclassifiedCount > 0 && <Badge variant="warning">Due date unclassified</Badge>}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -359,7 +334,7 @@ export default async function CustomerDuesPage({
         </CardContent>
       </CardCanvas>
 
-      <div className="mt-6 flex items-center justify-between">
+      {dbOk && !reportError && <div className="mt-6 flex items-center justify-between">
         <p className="text-caption text-muted">
           Showing {dbOk ? Math.min(items.length, total) : 0} of {total} customers · Page {page} / {totalPages}
           {q && <span className="ml-2">· Search: “{q}”</span>}
@@ -392,7 +367,7 @@ export default async function CustomerDuesPage({
             </Link>
           </Button>
         </div>
-      </div>
+      </div>}
     </DashboardLayout>
   );
 }

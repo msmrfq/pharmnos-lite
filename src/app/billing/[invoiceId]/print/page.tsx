@@ -12,6 +12,8 @@ import { isPostgresConfigured } from "@/lib/db/prisma";
 import { cn } from "@/lib/utils";
 import { buildInvoicePrintSnapshot, selectFinalizedInvoiceValue } from "@/domain/services/gst-calculator.service";
 import { loadBillingInvoicePrintData } from "./data";
+import { formatBusinessDate } from "@/lib/utils/business-date";
+import { LEGACY_INVOICE_DATE_LABEL, resolveInvoiceDisplayDate } from "@/lib/utils/invoice-display-date";
 import {
   amountInWords,
   PHARMNOS_PLATFORM_FOOTER,
@@ -38,12 +40,7 @@ const rupee = (n: number | null | undefined | string) => {
 
 const formatDate = (d: Date | string | null | undefined) => {
   if (!d) return "—";
-  const date = typeof d === "string" ? new Date(d) : d;
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return formatBusinessDate(d);
 };
 
 export default async function BillingInvoicePrintPage({
@@ -172,6 +169,7 @@ export default async function BillingInvoicePrintPage({
   if (finalizedSnapshot) {
     businessProfile = null;
   }
+  const invoiceDate = resolveInvoiceDisplayDate(invoice);
   const hasCompleteTaxData = invoice.tax_data_status === "COMPLETE";
   const printSnapshot = buildInvoicePrintSnapshot(
     invoice,
@@ -325,7 +323,10 @@ export default async function BillingInvoicePrintPage({
                 <div className="flex justify-end gap-4">
                   <span className="text-muted">Date</span>
                   <span className="font-medium text-ink">
-                    {formatDate(invoice.invoice_date)}
+                    {invoiceDate.text}
+                    {!invoiceDate.classified && (
+                      <span className="ml-1 text-caption font-normal text-muted">({LEGACY_INVOICE_DATE_LABEL})</span>
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-end gap-4">
@@ -760,7 +761,7 @@ export default async function BillingInvoicePrintPage({
           <div className="border-t border-dashed border-hairline border-b border-dashed px-2 py-2">
             <div className="flex justify-between text-[11px]">
               <span>Bill: {invoice.invoice_no || "DRAFT"}</span>
-              <span>{formatDate(invoice.invoice_date)}</span>
+              <span>{invoiceDate.text}{!invoiceDate.classified && ` (${LEGACY_INVOICE_DATE_LABEL})`}</span>
             </div>
             <div className="mt-1 text-[10px] leading-tight">
               <span className="font-semibold">Customer: </span>

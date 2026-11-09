@@ -482,7 +482,7 @@ export default function HomePage() {
                 </p>
                 <ul className="space-y-3 text-body-md text-body">
                   {[
-                    "Customer aging: 0-30 / 31-60 / 61-90 / 90+ day buckets",
+                    "Customer aging: current / 1-30 / 31-60 / 61-90 / >90 day buckets",
                     "Supplier aging with credit limit monitoring",
                     "Click-through drill down to invoice lines",
                     "Statement-style ledger by date range",
@@ -505,7 +505,7 @@ export default function HomePage() {
                   {[
                     ["MedPlus Pharmacy", "₹ 42,800", "0-30", "success" as const],
                     ["Franklin Medico", "₹ 18,450", "31-60", "warning" as const],
-                    ["Sharda Agencies", "₹ 9,820", "90+", "destructive" as const],
+                    ["Sharda Agencies", "₹ 9,820", ">90", "destructive" as const],
                   ].map(([name, amt, bucket, variant]) => (
                     <div key={name} className="rounded-md border border-hairline p-3">
                       <div className="flex justify-between items-center mb-2">
