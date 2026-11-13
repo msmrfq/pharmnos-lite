@@ -416,6 +416,7 @@ model product_batches {
   tenant_id                          String
   product_id                         String
   batch_no                           String
+  manufacture_date                   DateTime?
   expiry_date                        DateTime?
   mrp                                Decimal?  @db.Decimal(12, 2)
   purchase_rate                      Decimal?  @db.Decimal(12, 2)
@@ -428,6 +429,7 @@ model product_batches {
   supplier_id                        String?
   purchase_id                        String?
   is_blocked                         Boolean   @default(false)
+  created_by                         String?
   created_at                         DateTime  @default(now())
   updated_at                         DateTime  @updatedAt
 

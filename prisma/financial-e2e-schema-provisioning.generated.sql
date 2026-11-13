@@ -183,6 +183,7 @@ CREATE TABLE "product_batches" (
     "tenant_id" TEXT NOT NULL,
     "product_id" TEXT NOT NULL,
     "batch_no" TEXT NOT NULL,
+    "manufacture_date" TIMESTAMP(3),
     "expiry_date" TIMESTAMP(3),
     "mrp" DECIMAL(12,2),
     "purchase_rate" DECIMAL(12,2),
@@ -195,6 +196,7 @@ CREATE TABLE "product_batches" (
     "supplier_id" TEXT,
     "purchase_id" TEXT,
     "is_blocked" BOOLEAN NOT NULL DEFAULT false,
+    "created_by" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 

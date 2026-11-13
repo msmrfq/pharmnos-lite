@@ -315,6 +315,7 @@ test("the CSV applies the same filter, qualifies for excluded invoices and discl
   assert.ok(lines.some(l => l.includes("INCOMPLETE") && l.includes("qualified report") && l.includes("GST HSN summary")));
   assert.ok(lines.some((l) => l.includes("1 invoice excluded") && l.includes("date not classified") && l.includes("taxable INR 250.00") && l.includes("tax INR 30.00") && l.includes("total INR 280.00")));
   assert.ok(lines.includes("Excluded total INR,280.00"));
+  assert.ok(lines.some((l) => l.startsWith("Recording time,") && l.includes("NOT commit-visible")));
   const data = lines.slice(lines.findIndex((l) => l.startsWith("HSN,")) + 1);
   assert.deepEqual(data, ["3004,Paracetamol,12.00,11,100.00,6.00,6.00,0.00,12.00,1,112.00"]);
 });
@@ -326,6 +327,7 @@ test("a fully classified period yields an unqualified CSV with an explicit cover
   assert.equal(result.filename, "gst-hsn-summary-2026-11-09-2026-11-09.csv");
   const lines = csvRows(result.csv);
   assert.ok(lines.includes("Date coverage,All finalized invoices in scope are date-classified"));
+  assert.ok(lines.some((l) => l.startsWith("Recording time,") && l.includes("NOT commit-visible")));
   assert.ok(!lines.some((l) => l.includes("INCOMPLETE")));
   assert.ok(lines.includes("Search,para"));
   assert.doesNotThrow(() => JSON.stringify(result));

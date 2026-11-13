@@ -5,7 +5,11 @@ import {
   type BusinessDate,
 } from "@/lib/utils/business-date";
 import { Decimal } from "@/lib/decimal";
-import { REPORT_ROW_LIMIT, ReportUnavailableError } from "@/domain/services/financial-report-completeness";
+import {
+  REPORT_RECORDING_TIME_DISCLOSURE,
+  REPORT_ROW_LIMIT,
+  ReportUnavailableError,
+} from "@/domain/services/financial-report-completeness";
 
 /**
  * Shared date, party and search filter for the GST HSN summary page and its CSV export.
@@ -185,6 +189,6 @@ export function hsnCsvPreamble(filter: HsnFilter, exclusions: HsnExclusionSummar
   } else {
     rows.push(["Date coverage", "All finalized invoices in scope are date-classified"]);
   }
-  rows.push([""]);
+  rows.push(["Recording time", REPORT_RECORDING_TIME_DISCLOSURE], [""]);
   return rows;
 }

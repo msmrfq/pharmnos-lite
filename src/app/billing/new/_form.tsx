@@ -529,6 +529,7 @@ export default function BillingNewClientForm({
                       <TableHead className="min-w-[140px]">Batch / FEFO</TableHead>
                       <TableHead>Expiry</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Free Qty</TableHead>
                       <TableHead className="text-right">MRP</TableHead>
                       <TableHead className="text-right">Sale rate</TableHead>
                       <TableHead className="text-right">Disc %</TableHead>
@@ -644,6 +645,22 @@ export default function BillingNewClientForm({
                                 </p>
                               )}
                             </div>
+                          </TableCell>
+                          <TableCell data-field-error={!!fieldError(errors, `lines[${idx}].free_qty`)}>
+                            <Input
+                              name={`lines[${idx}].free_qty`}
+                              type="number"
+                              min={0}
+                              step={1}
+                              defaultValue={row.free_qty}
+                              className="h-9 w-20 ml-auto text-right"
+                              onChange={(e) => setLineAt(idx, { free_qty: Number(e.target.value || 0) })}
+                            />
+                            {fieldError(errors, `lines[${idx}].free_qty`) && (
+                              <p className="mt-1 text-caption text-destructive text-right">
+                                {fieldError(errors, `lines[${idx}].free_qty`)}
+                              </p>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Input

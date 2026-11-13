@@ -465,7 +465,7 @@ export default async function InventoryPage({
                     </TableRow>
                   ) : (
                     movementItems.map((m: any) => {
-                      const delta = Number(m.delta_qty ?? 0);
+                      const delta = Number(m.quantity_delta ?? 0);
                       const d = m.created_at ? new Date(m.created_at) : null;
                       const dateStr = d ? d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
                       const mt = m.movement_type as StockMovementType;

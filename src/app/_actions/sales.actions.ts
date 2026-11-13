@@ -778,6 +778,7 @@ export async function finalizeSalesInvoiceAction(
             igst_amount: persistedTax.igst_amount,
             cess_amount: persistedTax.cess_amount,
             line_total: persistedTax.line_total,
+            free_qty: Number(line.free_qty ?? 0),
             hsn_code_snapshot: governedLines[index]?.hsn_code_snapshot ?? null,
             product_name_snapshot: line.product?.name ?? null,
             generic_name_snapshot: line.product?.generic_name ?? null,
@@ -813,11 +814,49 @@ export async function finalizeSalesInvoiceAction(
 
       for (const line of items) {
         const batches = batchesByProduct.get(line.product_id) ?? [];
-        const requiredQty = Number(line.quantity ?? 0);
-        const alloc = computeFefoAllocationForLine(line.product_id, requiredQty, batches);
-        if (alloc.shortfall > 0) {
-          throw new Error(`Insufficient FEFO stock for product line #${items.indexOf(line) + 1}: shortfall ${alloc.shortfall} units.`);
+        const requiredQty = Number(line.quantity ?? 0) + Number(line.free_qty ?? 0);
+        
+        // Check if user selected a specific batch
+        const selectedBatchId = line.batch_id;
+        let alloc;
+        let useSelectedBatch = false;
+        
+        if (selectedBatchId) {
+          // User selected a specific batch - validate it has enough stock
+          const selectedBatch = batches.find((b) => b.id === selectedBatchId);
+          if (!selectedBatch) {
+            throw new Error(`Selected batch not found for product line #${items.indexOf(line) + 1}.`);
+          }
+          const availableInSelected = Number(selectedBatch.available_qty ?? 0);
+          if (availableInSelected < requiredQty) {
+            throw new Error(`Insufficient stock in selected batch (${selectedBatch.batch_no}) for product line #${items.indexOf(line) + 1}: required ${requiredQty}, available ${availableInSelected}.`);
+          }
+          // Use the selected batch
+          alloc = {
+            product_id: line.product_id,
+            requested: requiredQty,
+            fulfilled: requiredQty,
+            shortfall: 0,
+            batches: [{
+              batch_id: selectedBatch.id,
+              batch_no: selectedBatch.batch_no,
+              expiry_date: selectedBatch.expiry_date ?? null,
+              total_available: availableInSelected,
+              allocated_quantity: requiredQty,
+              unit_rate: selectedBatch.sale_rate ?? selectedBatch.purchase_rate ?? null,
+              is_blocked: !!selectedBatch.is_blocked,
+              distance_days: selectedBatch.expiry_date ? Math.floor((new Date(selectedBatch.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : undefined,
+            }],
+          };
+          useSelectedBatch = true;
+        } else {
+          // No batch selected - use FEFO allocation
+          alloc = computeFefoAllocationForLine(line.product_id, requiredQty, batches);
+          if (alloc.shortfall > 0) {
+            throw new Error(`Insufficient FEFO stock for product line #${items.indexOf(line) + 1}: shortfall ${alloc.shortfall} units.`);
+          }
         }
+        
         let runningQty = requiredQty;
         for (const pick of alloc.batches) {
           if (runningQty <= 0) break;
@@ -1423,3 +1462,4 @@ export async function getSaleForEdit(id: string): Promise<sales_invoices | null>
     include: { customer: true, items: { include: { product: true, batch: true } } },
   }) as unknown as Promise<sales_invoices | null>;
 }
+

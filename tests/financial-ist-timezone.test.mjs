@@ -180,8 +180,9 @@ test("customer and supplier aging summaries combine the expected IST buckets", a
       { current: 3, d30: 7, d60: 11, d90: 15, over90: 9, total: 45 },
       `${kind} summary source buckets`,
     );
+    const summary = await repository[summaryMethod](context);
     assert.deepEqual(
-      { ...(await repository[summaryMethod](context)) },
+      { ...summary },
       {
         current_30: 10,
         bucket_31_60: 11,
@@ -190,6 +191,11 @@ test("customer and supplier aging summaries combine the expected IST buckets", a
         total: 45,
       },
       `${kind} aging totals`,
+    );
+    assert.equal(
+      summary.current_30 + summary.bucket_31_60 + summary.bucket_61_90 + summary.bucket_over_90,
+      summary.total,
+      `${kind} aging summary buckets reconcile to the total without overlap`,
     );
   }
 });
