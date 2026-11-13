@@ -158,6 +158,12 @@ export default async function SalesRegisterPage({
         />
       )}
 
+      {!dbOk || !exclusions ? null : (
+        <p className="mb-4 text-caption text-muted">
+          Recording time is database statement time captured before commit; not commit-visible and not proof of knowledge-as-of.
+        </p>
+      )}
+
       <CardCanvas className="mb-5">
         <CardContent className="pt-4">
           <form action="/reports/sales-register" method="get" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 items-end">

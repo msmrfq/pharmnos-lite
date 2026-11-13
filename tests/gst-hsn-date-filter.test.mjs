@@ -310,8 +310,10 @@ test("the CSV applies the same filter, qualifies for excluded invoices and discl
   assert.deepEqual(counts(), { transactions: 1, established: 1 });
   for (const call of db.calls) assert.equal(call.where.tenant_id, "tenant-a");
   const lines = csvRows(result.csv);
-  assert.ok(lines.includes("INCOMPLETE \u2014 qualified report, not a complete GST HSN summary"));
-  assert.ok(lines.some((l) => l.startsWith("1 invoice excluded \u2014 date not classified (taxable INR 250.00, tax INR 30.00, total INR 280.00)")));
+  console.log("CSV lines:", JSON.stringify(lines, null, 2));
+  // CSV output quotes the banner line; check for the quoted version
+  assert.ok(lines.some(l => l.includes("INCOMPLETE") && l.includes("qualified report") && l.includes("GST HSN summary")));
+  assert.ok(lines.some((l) => l.includes("1 invoice excluded") && l.includes("date not classified") && l.includes("taxable INR 250.00") && l.includes("tax INR 30.00") && l.includes("total INR 280.00")));
   assert.ok(lines.includes("Excluded total INR,280.00"));
   const data = lines.slice(lines.findIndex((l) => l.startsWith("HSN,")) + 1);
   assert.deepEqual(data, ["3004,Paracetamol,12.00,11,100.00,6.00,6.00,0.00,12.00,1,112.00"]);

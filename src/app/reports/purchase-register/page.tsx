@@ -152,6 +152,12 @@ export default async function PurchaseRegisterPage({
         />
       )}
 
+      {!dbOk || !exclusions ? null : (
+        <p className="mb-4 text-caption text-muted">
+          Recording time is database statement time captured before commit; not commit-visible and not proof of knowledge-as-of.
+        </p>
+      )}
+
       <CardCanvas className="mb-5">
         <CardContent>
           <form action="" method="get" className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 items-end">

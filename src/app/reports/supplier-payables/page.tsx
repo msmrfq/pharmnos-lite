@@ -162,6 +162,8 @@ export default async function SupplierPayablesPage({
           As of {formatBusinessDate(report.businessDate)} (Asia/Kolkata) · {report.completeness === "COMPLETE" ? "Complete" : "Qualified"} ·
           Total classified {rupee(report.totals.classified_total)}
           {report.unclassifiedCount > 0 && <> · Due date unclassified {formatRupeeAmount(report.totals.unclassified)} ({report.unclassifiedCount} invoices)</>}
+          <br />
+          <span className="text-xs">Recording time is database statement time captured before commit; not commit-visible and not proof of knowledge-as-of.</span>
         </p>
       )}
 

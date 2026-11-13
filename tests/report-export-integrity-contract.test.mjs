@@ -53,6 +53,8 @@ test("aging CSV exports live in the aging actions and enforce the ledger permiss
   assert.match(agingSource, /async function exportAgingCsv[\s\S]*loadCustomerAgingReport\(\) : loadSupplierAgingReport\(\)/);
   assert.doesNotMatch(exportsSource, /exportCustomerDuesCsvAction|exportSupplierPayablesCsvAction/);
 });
+
+test("CSV escaping neutralizes spreadsheet formulas", () => {
   assert.match(exportsSource, /const safe = \/\^\[=\+\\\-@\]\//);
   assert.match(exportsSource, /return safe;/);
 });

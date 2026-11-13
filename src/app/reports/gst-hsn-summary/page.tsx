@@ -238,6 +238,11 @@ export default async function GstHsnSummaryPage({
           </div>
         </div>
       )}
+      {!reportError && (
+        <p className="mb-4 text-caption text-muted">
+          Recording time is database statement time captured before commit; not commit-visible and not proof of knowledge-as-of.
+        </p>
+      )}
 
       {!dbOk && (
         <div

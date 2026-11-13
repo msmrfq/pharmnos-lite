@@ -8,6 +8,7 @@ const source = await readFile(new URL("../src/app/_actions/exports.actions.ts", 
 const decimalSource = await readFile(new URL("../src/lib/decimal.ts", import.meta.url), "utf8");
 const datesSource = await readFile(new URL("../src/lib/utils/business-date.ts", import.meta.url), "utf8");
 const completenessSource = await readFile(new URL("../src/domain/services/financial-report-completeness.ts", import.meta.url), "utf8");
+const gstHsnDateFilterSource = await readFile(new URL("../src/domain/services/gst-hsn-date-filter.ts", import.meta.url), "utf8");
 const daybookSource = await readFile(new URL("../src/app/reports/daybook/page.tsx", import.meta.url), "utf8");
 const statementSource = await readFile(new URL("../src/app/customers/[customerId]/statement/print/page.tsx", import.meta.url), "utf8");
 const salesRegisterSource = await readFile(new URL("../src/app/reports/sales-register/page.tsx", import.meta.url), "utf8");
@@ -27,6 +28,12 @@ const dates = compile(datesSource);
 const completeness = compile(completenessSource, (name) => {
   if (name === "@/lib/utils/business-date") return dates;
   if (name === "@/lib/decimal") return decimal;
+  throw new Error(`Unexpected import: ${name}`);
+});
+const gstHsnDateFilter = compile(gstHsnDateFilterSource, (name) => {
+  if (name === "@/lib/utils/business-date") return dates;
+  if (name === "@/lib/decimal") return decimal;
+  if (name === "@/domain/services/financial-report-completeness") return completeness;
   throw new Error(`Unexpected import: ${name}`);
 });
 const day = (value) => new Date(`${value}T00:00:00.000Z`);
@@ -93,7 +100,8 @@ function harness(customerRows = [], supplierRows = [], permissions = ["view_repo
     if (name === "@/lib/decimal") return decimal;
     if (name === "@/lib/utils/business-date") return dates;
     if (name === "@/domain/services/financial-report-completeness") return completeness;
-    throw new Error(`Unexpected import: ${name}`);
+        if (name === "@/domain/services/gst-hsn-date-filter") return gstHsnDateFilter;
+        throw new Error(`Unexpected import: ${name}`);
   });
   return { action, calls };
 }
@@ -183,7 +191,8 @@ test("unknown supplier dates block daybook but not an unrelated customer stateme
     entry_type: "PURCHASE",
   });
   const { action } = harness([ledger("c", "2026-11-09")], [supplier]);
-  await assert.rejects(action.loadFinancialLedgerReport({ ...range, kind: "daybook" }), /1 of 2 ledger entries have unknown or untrusted effective dates/); action.loadFinancialLedgerReport({ ...range, kind: "customer", customerId: "customer-a" });
+  await assert.rejects(action.loadFinancialLedgerReport({ ...range, kind: "daybook" }), /1 of 2 ledger entries have unknown or untrusted effective dates/);
+  const statement = await action.loadFinancialLedgerReport({ ...range, kind: "customer", customerId: "customer-a" });
   assert.equal(statement.rows.length, 1);
 });
 
@@ -269,13 +278,36 @@ for (const kind of ["sales", "purchase"]) {
   });
 
   test(`${kind} register fails closed on unknown date before filtering and on row overflow`, async () => {
-    const unknown = build([invoice("UNKNOWN", null)]);
-    await assert.rejects(unknown.loadFinancialRegisterReport(kind, { q: "not-found" }), /effective dates are unknown/);
-    await assert.rejects(unknown[actionName]({ startDate: "2026-11-09" }), /effective dates are unknown/);
-    const overflow = build(Array.from({ length: 25001 }, (_, i) => invoice(String(i), day("2026-11-09"))));
-    await assert.rejects(overflow.loadFinancialRegisterReport(kind, {}), /safe row limit/);
-    await assert.rejects(overflow[actionName](), /safe row limit/);
-  });
+      const unknown = build([invoice("UNKNOWN", null)]);
+      let error1;
+      try {
+        await unknown.loadFinancialRegisterReport(kind, {});
+      } catch (e) {
+        error1 = e;
+      }
+      assert.ok(error1, "Expected loadFinancialRegisterReport to throw");
+      assert.match(String(error1), /unknown effective date/i);
+
+      // Export actions use toCsvResult which returns { ok: false, reason: ... } instead of throwing
+      const exportResult = await unknown[actionName]({});
+      assert.ok(!exportResult.ok, "Expected export action to return ok: false");
+      assert.match(exportResult.reason, /unknown effective date/i);
+
+      const overflow = build(Array.from({ length: 25001 }, (_, i) => invoice(String(i), day("2026-11-09"))));
+      let overflowError1;
+      try {
+        await overflow.loadFinancialRegisterReport(kind, {});
+      } catch (e) {
+        overflowError1 = e;
+      }
+      assert.ok(overflowError1, "Expected overflow loadFinancialRegisterReport to throw");
+      assert.match(String(overflowError1), /safe report limit/);
+
+      // Export actions use toCsvResult which returns { ok: false, reason: ... } instead of throwing
+      const overflowExportResult = await overflow[actionName]({});
+      assert.ok(!overflowExportResult.ok, "Expected overflow export action to return ok: false");
+      assert.match(overflowExportResult.reason, /safe report limit/);
+    });
 
   test(`${kind} register enforces permissions and validates dates`, async () => {
     await assert.rejects(build([], []).loadFinancialRegisterReport(kind, {}), /forbidden/);

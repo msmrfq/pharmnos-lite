@@ -146,6 +146,7 @@ export default async function ReportsPage() {
     delta: !stats ? "Monthly total unavailable" : `${stats.invoiceCount} invoices${stats.exclusionNote ? ` · ${stats.exclusionNote}` : ""}`,
     variant: !stats || stats.completeness === "QUALIFIED" ? ("warning" as const) : ("default" as const),
     icon,
+    disclosure: stats ? "Recording time is database statement time captured before commit; not commit-visible and not proof of knowledge-as-of." : null,
   });
   const agingCard = (label: string, report: AgingReport | null, icon: typeof TrendingUp) => ({
     label,
@@ -155,6 +156,7 @@ export default async function ReportsPage() {
       : `${formatRupeeAmount(report.totals.unclassified)} (${report.unclassifiedCount} invoices) due date unclassified`,
     variant: !report || report.completeness === "QUALIFIED" ? ("warning" as const) : ("default" as const),
     icon,
+    disclosure: report ? "Recording time is database statement time captured before commit; not commit-visible and not proof of knowledge-as-of." : null,
   });
   const summaryCards = [
     monthlyCard("Sales this month", salesStats, TrendingUp),
@@ -216,6 +218,9 @@ export default async function ReportsPage() {
                   <p className="text-caption font-medium uppercase tracking-wide text-muted">{k.label}</p>
                   <p className="mt-1 text-display-sm font-display tracking-brand text-ink">{k.value}</p>
                   <div className="mt-2"><Badge variant={k.variant}>{k.delta}</Badge></div>
+                  {k.disclosure && (
+                    <p className="mt-2 text-xs text-muted">{k.disclosure}</p>
+                  )}
                 </div>
                 <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-card border border-hairline text-ink">
                   <Icon className="h-5 w-5" />
