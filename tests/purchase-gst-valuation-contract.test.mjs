@@ -67,6 +67,14 @@ test("valuation decisions and adjustments are append-only and idempotent", () =>
   assert.match(historyMigration, /request_payload_hash/);
   assert.match(valuationAction, /establishTenantContext/);
   assert.match(valuationAction, /pg_advisory_xact_lock/);
+  assert.match(
+    valuationAction,
+    /concat\(CAST\(\$\{tenantId\} AS text\), ':inventory-valuation:', CAST\(\$\{input\.batchId\} AS text\)\)/,
+  );
+  assert.doesNotMatch(
+    valuationAction,
+    /concat\(\$\{tenantId\}, ':inventory-valuation:', \$\{input\.batchId\}\)/,
+  );
   assert.match(valuationAction, /different valuation payload/);
   assert.match(valuationAction, /supersedes_decision_id/);
   assert.match(valuationAction, /An approved valuation already exists/);

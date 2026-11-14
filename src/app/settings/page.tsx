@@ -29,8 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Building2, Users, Settings2, Upload, ShieldCheck, Link2, Pill } from "lucide-react";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 import { getGstCatalogAdminData } from "@/app/_actions/gst-catalog.actions";
 import BusinessProfileForm from "./_business-profile-form";
 import GstCatalogPanel from "./_gst-catalog-panel";
@@ -52,11 +51,11 @@ export default async function SettingsPage() {
   let gstCatalog: Awaited<ReturnType<typeof getGstCatalogAdminData>> | null = null;
   if (isPostgresConfigured()) {
     try {
-      const ctx = await requireServerTenantContext();
-      const [profileResult, tenant] = await Promise.all([
+      const loaded = await withTenantRepositories(async ({ ctx, repos }) => Promise.all([
         repos.businessProfiles.getForTenant(ctx),
         repos.tenants.getById(ctx.tenantId, ctx),
-      ]);
+      ]));
+      const [profileResult, tenant] = loaded;
       profile = profileResult;
       businessName = tenant?.business_name ?? "";
     } catch (_error) {

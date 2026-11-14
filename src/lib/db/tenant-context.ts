@@ -46,13 +46,21 @@ export async function establishTenantContext(
   tx: Prisma.TransactionClient,
   ctx: TenantContext,
 ): Promise<void> {
-  await tx.$executeRaw(Prisma.sql`
-    SELECT set_config(
-      'pharmnos.auth_context',
-      ${createFinancialAuthContext(ctx.subjectId, ctx.tenantId)},
-      true
-    )
-  `);
+  const signedContext = createFinancialAuthContext(ctx.subjectId, ctx.tenantId);
+  // Step 1: Verify context and get tenant/subject IDs
+  const result = await tx.$queryRaw<{ subject_id: string; tenant_id: string }[]>`
+    SELECT subject_id, tenant_id
+    FROM pharmnos_private.verify_auth_context(${signedContext})
+    LIMIT 1
+  `;
+  const row = result[0];
+  if (!row || !row.tenant_id || !row.subject_id) {
+    throw new Error("Failed to establish tenant context: invalid or expired context");
+  }
+  const { tenant_id, subject_id } = row;
+  // Step 2: Set transaction-local GUCs for RLS policies
+  await tx.$executeRaw(Prisma.sql`SET LOCAL pharmnos.auth_context_tenant_id = ${tenant_id}`);
+  await tx.$executeRaw(Prisma.sql`SET LOCAL pharmnos.auth_context_subject_id = ${subject_id}`);
 }
 
 type SessionCtxResult = {
@@ -72,13 +80,21 @@ export async function getServerTenantContext(): Promise<SessionCtxResult> {
     }
     const externalId = session.user.id;
     const user = await prisma.$transaction(async (tx) => {
-      await tx.$executeRaw(Prisma.sql`
-        SELECT set_config(
-          'pharmnos.auth_context',
-          ${createFinancialAuthContext(externalId)},
-          true
-        )
-      `);
+      // Verify context and establish tenant GUCs
+      const signedContext = createFinancialAuthContext(externalId);
+      const result = await tx.$queryRaw<{ subject_id: string; tenant_id: string }[]>`
+        SELECT subject_id, tenant_id
+        FROM pharmnos_private.verify_auth_context(${signedContext})
+        LIMIT 1
+      `;
+      const row = result[0];
+      if (!row || !row.tenant_id || !row.subject_id) {
+        throw new Error("Failed to establish tenant context: invalid or expired context");
+      }
+      const { tenant_id, subject_id } = row;
+      await tx.$executeRaw(Prisma.sql`SET LOCAL pharmnos.auth_context_tenant_id = ${tenant_id}`);
+      await tx.$executeRaw(Prisma.sql`SET LOCAL pharmnos.auth_context_subject_id = ${subject_id}`);
+      
       return tx.users.findUnique({
         where: { external_id: externalId },
         include: {

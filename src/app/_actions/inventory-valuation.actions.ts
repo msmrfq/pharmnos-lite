@@ -77,7 +77,7 @@ async function lockValuationTarget(tx: Prisma.TransactionClient, tenantId: strin
   await tx.$executeRaw(Prisma.sql`
     SELECT pg_advisory_xact_lock(
       hashtextextended(
-        concat(${tenantId}, ':inventory-valuation:', ${input.batchId}),
+        concat(CAST(${tenantId} AS text), ':inventory-valuation:', CAST(${input.batchId} AS text)),
         0
       )
     )

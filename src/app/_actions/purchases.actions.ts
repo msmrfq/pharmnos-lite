@@ -1952,7 +1952,7 @@ export async function createStockAdjustmentAction(
       await tx.$executeRaw(Prisma.sql`
         SELECT pg_advisory_xact_lock(
           hashtextextended(
-            concat(${ctx.tenantId}, ':stock-adjustment:', ${data.idempotency_key}),
+            concat(CAST(${ctx.tenantId} AS text), ':stock-adjustment:', CAST(${data.idempotency_key} AS text)),
             0
           )
         )

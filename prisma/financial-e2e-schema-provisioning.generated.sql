@@ -476,10 +476,10 @@ CREATE TABLE "inventory_valuation_decisions" (
     "eligibility_status" TEXT NOT NULL,
     "accepted_taxable_value" DECIMAL(20,4) NOT NULL,
     "accepted_gst" DECIMAL(20,4) NOT NULL,
-    "recoverable_itc" DECIMAL(65,30),
-    "non_recoverable_gst" DECIMAL(65,30),
+    "recoverable_itc" DECIMAL(20,4),
+    "non_recoverable_gst" DECIMAL(20,4),
     "direct_acquisition_cost" DECIMAL(20,4) NOT NULL DEFAULT 0,
-    "inventory_acquisition_cost" DECIMAL(65,30),
+    "inventory_acquisition_cost" DECIMAL(20,4),
     "policy_version" TEXT NOT NULL,
     "decision_reference" TEXT NOT NULL,
     "rationale" TEXT NOT NULL,
@@ -1152,6 +1152,9 @@ CREATE INDEX "purchase_invoice_items_purchase_id_idx" ON "purchase_invoice_items
 
 -- CreateIndex
 CREATE INDEX "purchase_invoice_items_product_id_idx" ON "purchase_invoice_items"("product_id");
+
+-- CreateIndex
+CREATE INDEX "purchase_invoice_items_accepted_decision_idx" ON "purchase_invoice_items"("tenant_id", "purchase_id", "accepted_decision_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "purchase_invoice_items_tenant_id_purchase_id_id_key" ON "purchase_invoice_items"("tenant_id", "purchase_id", "id");

@@ -12,7 +12,8 @@ import {
   supplierEditSchema,
   __LedgerEntryType_OPENING_BALANCE,
 } from "@/lib/validation/masters.schemas";
-import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
+import { establishTenantContext, requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
+import { withVerifiedTenantTransaction } from "@/lib/db/tenant-read";
 import type { ActionResult } from "@/app/auth/_actions/auth.actions";
 import { PermissionAction, Prisma } from "@prisma/client";
 import type { products, customers, suppliers } from "@prisma/client";
@@ -131,6 +132,7 @@ export async function createProductAction(
     const data = parsed.data;
 
     const product = await prisma.$transaction(async (tx) => {
+      await establishTenantContext(tx, ctx);
       await requireApprovedProductClassification(tx, ctx.tenantId, data.hsn_code);
       const created = await tx.products.create({
         data: {
@@ -166,8 +168,28 @@ export async function createProductAction(
         created_at: new Date(),
         updated_at: new Date(),
       }));
-      if (batchesPayload.length) {
-        await tx.product_batches.createMany({ data: batchesPayload });
+      // Opening stock must be represented in the movement ledger, not only in
+      // the materialized batch counter (PRD 8.7 / 22.1).  Create each batch so
+      // its generated id is available for the matching OPENING_STOCK movement.
+      for (const batch of batchesPayload) {
+        const createdBatch = await tx.product_batches.create({ data: batch });
+        if (batch.received_qty > 0) {
+          await tx.stock_movements.create({
+            data: {
+              tenant_id: ctx.tenantId,
+              product_id: created.id,
+              batch_id: createdBatch.id,
+              movement_type: "OPENING_STOCK",
+              quantity_delta: batch.received_qty,
+              reference_type: "product_opening",
+              reference_id: created.id,
+              unit_rate: null,
+              notes: "Opening stock recorded at product creation",
+              created_by: ctx.userId,
+              created_at: new Date(),
+            },
+          });
+        }
       }
       return created;
     });
@@ -792,23 +814,23 @@ export async function deleteSupplierAction(id: string): Promise<ActionResult<{ i
 export async function getProductForEdit(id: string): Promise<products | null> {
   assertPostgresConfigured("getProductForEdit");
   const ctx = await requireServerTenantContext();
-  return prisma.products.findUnique({
-    where: { id, tenant_id: ctx.tenantId },
-  });
+  return withVerifiedTenantTransaction(ctx, async ({ tx }) =>
+    tx.products.findUnique({ where: { id, tenant_id: ctx.tenantId } }),
+  );
 }
 
 export async function getCustomerForEdit(id: string): Promise<customers | null> {
   assertPostgresConfigured("getCustomerForEdit");
   const ctx = await requireServerTenantContext();
-  return prisma.customers.findUnique({
-    where: { id, tenant_id: ctx.tenantId },
-  });
+  return withVerifiedTenantTransaction(ctx, async ({ tx }) =>
+    tx.customers.findUnique({ where: { id, tenant_id: ctx.tenantId } }),
+  );
 }
 
 export async function getSupplierForEdit(id: string): Promise<suppliers | null> {
   assertPostgresConfigured("getSupplierForEdit");
   const ctx = await requireServerTenantContext();
-  return prisma.suppliers.findUnique({
-    where: { id, tenant_id: ctx.tenantId },
-  });
+  return withVerifiedTenantTransaction(ctx, async ({ tx }) =>
+    tx.suppliers.findUnique({ where: { id, tenant_id: ctx.tenantId } }),
+  );
 }

@@ -1,6 +1,7 @@
 const { Client } = require('pg');
 
-const runtimeUrl = 'postgresql://pharmnos_e2e_runtime:5a7D8NJ9obQGHwZ1fdzVqyl3Ytn0CErh@127.0.0.1:56221/pharmnos_verify_verify-20261113174144?application_name=pharmnos-financial-e2e';
+const runtimeUrl = process.env.FINANCIAL_E2E_RUNTIME_DATABASE_URL;
+if (!runtimeUrl) throw new Error("FINANCIAL_E2E_RUNTIME_DATABASE_URL is required (hardcoded credentials were retired).");
 
 async function checkRuntimeRole() {
   const client = new Client({ connectionString: runtimeUrl });

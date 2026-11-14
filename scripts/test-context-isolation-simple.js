@@ -1,9 +1,16 @@
 const { Client } = require('pg');
 
-const bootstrapUrl = 'postgresql://pharmnos_e2e:ZczIugoskl79BAvF6OtbXKxrNaME80R4@127.0.0.1:56221/pharmnos_verify_verify-20261113174144?application_name=pharmnos-financial-e2e';
-const runtimeUrl = 'postgresql://pharmnos_e2e_runtime:5a7D8NJ9obQGHwZ1fdzVqyl3Ytn0CErh@127.0.0.1:56221/pharmnos_verify_verify-20261113174144?application_name=pharmnos-financial-e2e';
-
-const SIGNING_SECRET = 'zDOuIQVy9U65b8LmsFWaBqeSHdjTJ3khY2RxloEMgAwtGPKir1vZnCpcXN470f';
+const bootstrapUrl = process.env.TEST_DATABASE_URL;
+const runtimeUrl = process.env.FINANCIAL_E2E_RUNTIME_DATABASE_URL;
+const SIGNING_SECRET = process.env.DATABASE_AUTH_CONTEXT_SIGNING_SECRET;
+// Credentials are never committed: supply them through the environment.
+for (const [name, value] of [
+  ["TEST_DATABASE_URL", bootstrapUrl],
+  ["FINANCIAL_E2E_RUNTIME_DATABASE_URL", runtimeUrl],
+  ["DATABASE_AUTH_CONTEXT_SIGNING_SECRET", SIGNING_SECRET],
+]) {
+  if (!value) throw new Error(`${name} is required (hardcoded credentials were retired).`);
+}
 const CRYPTO = require('crypto');
 
 function createContext(subjectId, tenantId) {
@@ -34,7 +41,7 @@ async function runWithoutContext(client, testFn) {
 
 async function testContextIsolation() {
   const client = new Client({ connectionString: runtimeUrl });
-  const bootstrapClient = new Client({ connectionString: 'postgresql://pharmnos_e2e:ZczIugoskl79BAvF6OtbXKxrNaME80R4@127.0.0.1:56221/pharmnos_verify_verify-20261113174144?application_name=pharmnos-financial-e2e' });
+  const bootstrapClient = new Client({ connectionString: bootstrapUrl });
   
   try {
     await client.connect();
@@ -71,7 +78,7 @@ async function testContextIsolation() {
     // Step 3: Verify data visible in new connection with new context
     console.log('\nStep 3: Verifying data visible in NEW connection with NEW context...');
     const client2 = new Client({ 
-      connectionString: 'postgresql://pharmnos_e2e_runtime:5a7D8NJ9obQGHwZ1fdzVqyl3Ytn0CErh@127.0.0.1:56221/pharmnos_verify_verify-20261113174144?application_name=pharmnos-financial-e2e' 
+      connectionString: runtimeUrl 
     });
     await client2.connect();
     

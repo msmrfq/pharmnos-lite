@@ -22,7 +22,7 @@ import { exportNearExpiryCsvAction } from "@/app/_actions/exports.actions";
 import { Clock, Download, AlertTriangle } from "lucide-react";
 import { repos } from "@/repositories";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 
 export const metadata: Metadata = {
   title: "Near expiry",
@@ -56,10 +56,10 @@ export default async function NearExpiryPage() {
   let valAtRisk = 0;
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      // Session ctx wired. Demo fallback active when no Supabase auth session exists or DB membership missing.
       const maxWindow = Math.max(...windows);
-      const rows = await repos.productBatches.listNearExpiry(ctx, maxWindow);
+      const rows = await withTenantRepositories(async ({ ctx, repos }) =>
+        repos.productBatches.listNearExpiry(ctx, maxWindow),
+      );
       items = rows;
       for (const b of rows as any) {
         valAtRisk += Number(b.mrp ?? b.product?.mrp ?? 0) * Number(b.available_qty ?? 0);

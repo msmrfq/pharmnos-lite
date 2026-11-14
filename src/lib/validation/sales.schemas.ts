@@ -19,6 +19,31 @@ export const CustomerPaymentMethodSchema = z.enum([
 ]);
 export const SupplierPaymentMethodSchema = CustomerPaymentMethodSchema;
 
+/**
+ * Owner-accepted S-30 policy (2026-11-14): V1 payments are INR-only.
+ *
+ * The approved V1 contract states that the current scope is single-currency and
+ * that unsupported currency mismatches are rejected with no implicit
+ * conversion. A missing currency therefore remains the existing single-currency
+ * contract (amounts are INR); nothing is invented or converted. Any supplied
+ * currency must be INR, and every other value fails before a transaction opens.
+ */
+export const PaymentCurrencySchema = z.preprocess(
+  (value) => {
+    if (value === undefined || value === null) return undefined;
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    return trimmed === "" ? undefined : trimmed.toUpperCase();
+  },
+  z
+    .enum(["INR"], {
+      errorMap: () => ({
+        message: "Only INR payments are supported. Currency conversion is not available.",
+      }),
+    })
+    .optional(),
+);
+
 export const SalesInvoiceLineCreateSchema = z.object({
   product_id: z.string().min(1, "Product is required"),
   batch_id: z.string().min(1, "Batch is required — use Pick FEFO batches"),
@@ -66,6 +91,7 @@ export const CustomerPaymentCreateSchema = z.object({
   idempotency_key: z.string().trim().min(1, "Payment idempotency key is required").max(200),
   amount: decimalFromString,
   payment_method: CustomerPaymentMethodSchema,
+  currency: PaymentCurrencySchema,
   reference_no: z.string().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
   entry_date: financialDateOptional,
   notes: z.string().max(500).optional().or(z.literal("")).transform((v) => (v || null)),
@@ -78,6 +104,7 @@ export const SupplierPaymentCreateSchema = z.object({
   idempotency_key: z.string().trim().min(1, "Payment idempotency key is required").max(200),
   amount: decimalFromString,
   payment_method: SupplierPaymentMethodSchema,
+  currency: PaymentCurrencySchema,
   reference_no: z.string().max(100).optional().or(z.literal("")).transform((v) => (v || null)),
   entry_date: financialDateOptional,
   notes: z.string().max(500).optional().or(z.literal("")).transform((v) => (v || null)),

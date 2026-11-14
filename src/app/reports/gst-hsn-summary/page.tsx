@@ -29,7 +29,8 @@ import {
   Info,
 } from "lucide-react";
 import { isPostgresConfigured, prisma } from "@/lib/db/prisma";
-import { requirePermission, requireServerTenantContext, establishTenantContext } from "@/lib/db/tenant-context";
+import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
+import { withVerifiedTenantTransaction } from "@/lib/db/tenant-read";
 import { PermissionAction, Prisma } from "@prisma/client";
 import ExportCsvButton from "@/components/ui/export-csv-button";
 import { exportGstHsnSummaryCsvAction } from "@/app/_actions/exports.actions";
@@ -106,8 +107,7 @@ export default async function GstHsnSummaryPage({
       const t = ctx;
       const filter = parseHsnFilter(reportInput);
 
-      const loaded = await prisma.$transaction(async (tx) => {
-        await establishTenantContext(tx, ctx);
+      const loaded = await withVerifiedTenantTransaction(ctx, async ({ ctx, tx }) => {
         return loadHsnInvoices(tx as any, t.tenantId, filter);
       }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
       const invoices = loaded.invoices;

@@ -36,8 +36,7 @@ import {
   FileText,
 } from "lucide-react";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 import { AUDIT_BADGE_MAP, AUDIT_EVENT_LABELS } from "@/lib/constants/audit";
 import type { AuditEventType } from "@prisma/client";
 
@@ -122,8 +121,7 @@ export default async function AuditPage({
 
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      const [result, usersResult] = await Promise.all([
+      const [result, usersResult] = await withTenantRepositories(async ({ ctx, repos }) => Promise.all([
         repos.auditLogs.list(
           {
             skip: (page - 1) * pageSize,
@@ -141,7 +139,7 @@ export default async function AuditPage({
           { skip: 0, take: 500, orderBy: { full_name: "asc" } },
           ctx,
         ),
-      ]);
+      ]));
       items = result.items;
       total = result.total;
       users = usersResult.items;

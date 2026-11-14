@@ -22,7 +22,7 @@ import { exportLowStockCsvAction } from "@/app/_actions/exports.actions";
 import { AlertTriangle, PackagePlus, Download } from "lucide-react";
 import { repos } from "@/repositories";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 
 export const metadata: Metadata = {
   title: "Low stock",
@@ -33,9 +33,9 @@ export default async function LowStockPage() {
   let items: any[] = [];
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      // Session ctx wired. Demo fallback active when no Supabase auth session exists or DB membership missing.
-      const result = await repos.products.listLowStock({ skip: 0, take: 500, orderBy: { name: "asc" } }, ctx);
+      const result = await withTenantRepositories(async ({ ctx, repos }) =>
+        repos.products.listLowStock({ skip: 0, take: 500, orderBy: { name: "asc" } }, ctx),
+      );
       items = result.items ?? [];
     } catch (_err) {
       dbOk = false;

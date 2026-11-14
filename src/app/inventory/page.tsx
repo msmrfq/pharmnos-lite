@@ -22,7 +22,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { repos } from "@/repositories";
 import { describeDatabaseAccessError } from "@/lib/db/database-errors";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 import { ScheduleClass, StockMovementType } from "@prisma/client";
 import ExportCsvButton from "@/components/ui/export-csv-button";
 import { exportInventoryCsvAction } from "@/app/_actions/exports.actions";
@@ -98,14 +98,12 @@ export default async function InventoryPage({
 
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      // Session ctx wired. Demo fallback active when no Supabase auth session exists or DB membership missing.
-      const [result, allCount, batchesResult, movementsResult] = await Promise.all([
+      const [result, allCount, batchesResult, movementsResult] = await withTenantRepositories(async ({ ctx, repos }) => Promise.all([
         repos.products.list({ skip: (page - 1) * pageSize, take: pageSize, orderBy: { name: "asc" } }, ctx),
         repos.products.list({ take: 10000 }, ctx),
         repos.productBatches.list({ skip: 0, take: 50, orderBy: { expiry_date: "asc" } }, ctx),
         repos.stockMovements.list({ skip: 0, take: 50, orderBy: { created_at: "desc" } }, ctx),
-      ]);
+      ]));
       items = (result.items as unknown) as ProductWithBatches[];
       total = result.total;
 

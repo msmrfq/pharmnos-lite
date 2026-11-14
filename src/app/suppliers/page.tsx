@@ -21,7 +21,7 @@ import { Truck, Plus, Download, Filter, ChevronLeft, ChevronRight } from "lucide
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { repos } from "@/repositories";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 import SuccessCreatedToast from "@/components/toast/creation-success-toast";
 import ExportCsvButton from "@/components/ui/export-csv-button";
 import { exportSuppliersCsvAction } from "@/app/_actions/exports.actions";
@@ -55,9 +55,9 @@ export default async function SuppliersPage({
 
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      // Session ctx wired. Demo fallback active when no Supabase auth session exists or DB membership missing.
-      const result = await repos.suppliers.list({ skip: (page - 1) * pageSize, take: pageSize, orderBy: { business_name: "asc" } }, ctx);
+      const result = await withTenantRepositories(async ({ ctx, repos }) =>
+        repos.suppliers.list({ skip: (page - 1) * pageSize, take: pageSize, orderBy: { business_name: "asc" } }, ctx),
+      );
       items = result.items;
       total = result.total;
     } catch (err) {

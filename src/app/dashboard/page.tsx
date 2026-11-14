@@ -31,8 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 import { businessDateToday, formatBusinessDate, formatBusinessInstant } from "@/lib/utils/business-date";
 import { Decimal } from "@/lib/decimal";
 import { formatRupeeAmount, type AgingReport } from "@/domain/services/aging-report.service";
@@ -63,10 +62,6 @@ const quickLinks = [
 
 export default async function DashboardPage() {
   const dbOk = isPostgresConfigured();
-  const ctx = dbOk ? await requireServerTenantContext().catch((error) => {
-    console.error("Dashboard tenant context failed:", error);
-    return null;
-  }) : null;
 
   type Metric = { label: string; value: string; change: string; variant: any; icon: any; href: string };
   let metrics: Metric[] = [];
@@ -76,17 +71,18 @@ export default async function DashboardPage() {
   let invoicesAvailable = false;
   let stockAvailable = false;
   let activityAvailable = false;
+  let contextFailed = false;
 
-  if (dbOk && ctx) {
+  if (dbOk) {
     try {
-      const results = await Promise.allSettled([
+      const results = await withTenantRepositories(async ({ ctx, repos }) => Promise.allSettled([
           repos.productBatches.stockValuation(ctx),
           repos.salesInvoices.list({ take: 6, skip: 0, orderBy: { invoice_date: "desc" } as any, search: undefined } as any, ctx),
           repos.auditLogs.list({ take: 10, skip: 0, orderBy: { created_at: "desc" } as any } as any, ctx),
           loadMonthlySalesStats(),
           loadCustomerAgingReport(),
           loadSupplierAgingReport(),
-        ]);
+        ]));
       for (const result of results) {
         if (result.status === "rejected") console.error("Dashboard query failed:", result.reason);
       }
@@ -186,8 +182,9 @@ export default async function DashboardPage() {
         detail: a.message || a.details ? typeof a.details === "string" ? a.details : String(a.details ?? a.message ?? "") : "",
         variant: (a.event_type === "CREATED" || a.event_type === "Finalized") ? "success" as const : a.event_type === "CANCELLED" || a.event_type?.includes("Adjust") ? "destructive" as const : "default" as const,
       }));
-    } catch (err) {
-      console.error("Dashboard rendering data failed:", err);
+    } catch (error) {
+      console.error("Dashboard tenant context failed:", error);
+      contextFailed = true;
     }
   }
 
@@ -237,7 +234,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {(!dbOk || !ctx) && (
+        {(!dbOk || contextFailed) && (
           <div
             role="status"
             className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2"

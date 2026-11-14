@@ -92,6 +92,13 @@ function harness(customerRows = [], supplierRows = [], permissions = ["view_repo
       establishTenantContext: async (given, active) => { assert.equal(given, tx); assert.equal(active, ctx); contextEstablished = true; },
       requirePermission: (active, permission) => { if (!active.permissions.includes(permission)) throw new Error("forbidden"); },
     };
+    if (name === "@/lib/db/tenant-read") return {
+      withVerifiedTenantTransaction: async (given, fn, options) => {
+        assert.ok(options?.isolationLevel === "RepeatableRead" || options?.isolationLevel === Prisma.TransactionIsolationLevel.RepeatableRead);
+        contextEstablished = true;
+        return fn({ ctx, tx });
+      },
+    };
     if (name === "@prisma/client") return {
       Prisma: { TransactionIsolationLevel: { RepeatableRead: "RepeatableRead" } },
       PermissionAction: { view_reports: "view_reports", view_customer_ledger: "view_customer_ledger",
@@ -100,8 +107,8 @@ function harness(customerRows = [], supplierRows = [], permissions = ["view_repo
     if (name === "@/lib/decimal") return decimal;
     if (name === "@/lib/utils/business-date") return dates;
     if (name === "@/domain/services/financial-report-completeness") return completeness;
-        if (name === "@/domain/services/gst-hsn-date-filter") return gstHsnDateFilter;
-        throw new Error(`Unexpected import: ${name}`);
+    if (name === "@/domain/services/gst-hsn-date-filter") return gstHsnDateFilter;
+    throw new Error(`Unexpected import: ${name}`);
   });
   return { action, calls };
 }

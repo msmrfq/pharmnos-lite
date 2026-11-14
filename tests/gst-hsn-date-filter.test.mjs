@@ -282,6 +282,13 @@ function actionHarness(rows, permissions = ["view_reports"]) {
       establishTenantContext: async (given, active) => { assert.equal(given, db); assert.equal(active, ctx); established += 1; },
       requirePermission: (active, permission) => { if (!active.permissions.includes(permission)) throw new Error("forbidden"); },
     };
+    if (name === "@/lib/db/tenant-read") return {
+      withVerifiedTenantTransaction: async (given, fn, options) => {
+        assert.ok(options?.isolationLevel === "RepeatableRead" || options?.isolationLevel === Prisma.TransactionIsolationLevel.RepeatableRead);
+        established += 1;
+        return fn({ ctx, tx: db });
+      },
+    };
     if (name === "@prisma/client") return {
       Prisma: { TransactionIsolationLevel: { RepeatableRead: "RepeatableRead" } },
       PermissionAction: new Proxy({}, { get: (_target, key) => key }),
@@ -354,11 +361,13 @@ test("page and CSV share one filter helper and neither uses host-local or legacy
   const start = actionsSource.indexOf("export async function exportGstHsnSummaryCsvAction");
   const end = actionsSource.indexOf("\ntype LedgerReportInput", start);
   const actionBody = actionsSource.slice(start, end);
+  // CSV action uses establishTenantContext; page uses withVerifiedTenantTransaction
+  assert.match(actionBody, /establishTenantContext\(/, `CSV action must establish the tenant context`);
+  assert.match(pageSource, /withVerifiedTenantTransaction\(/, `page must establish the tenant context`);
   for (const [label, source] of [["CSV action", actionBody], ["page", pageSource]]) {
     assert.match(source, /parseHsnFilter\(/, `${label} must validate with the shared parser`);
     assert.match(source, /loadHsnInvoices\(/, `${label} must load through the shared query path`);
     assert.match(source, /hsnRowMatchesQuery\(/, `${label} must use the shared search predicate`);
-    assert.match(source, /establishTenantContext\(/, `${label} must establish the tenant context`);
     assert.doesNotMatch(source, /86399999|T23:59:59|T00:00:00|getFullYear|getMonth\(|invoice_date|new Date\(/);
     assert.match(source, /it\.hsn_code_snapshot/);
     assert.match(source, /it\.product_name_snapshot/);

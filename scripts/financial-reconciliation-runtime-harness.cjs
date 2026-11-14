@@ -904,7 +904,7 @@ async function runClassificationCandidates(client, fixture, record) {
       const form = new FormData();
       form.set(partyColumn, party);
       form.set("amount", String(amount));
-      form.set("payment_method", "Cash");
+      form.set("payment_method", "Cheque");
       form.set("entry_date", "2026-11-08");
       form.set("idempotency_key", id(`campaign_${kind}_payment`));
       const action = customer ? actions.createCustomerPaymentAction : actions.createSupplierPaymentAction;
@@ -914,7 +914,7 @@ async function runClassificationCandidates(client, fixture, record) {
       const replay = await action({}, form);
       const sequenceAfterReplay = await sql(client, `SELECT next_value FROM payment_receipt_sequences WHERE tenant_id = $1 AND prefix = 'PAY'`, [fixture.tenants.a]);
       const persisted = await sql(client, `
-        SELECT p.id, p.amount, p.receipt_no, c.${balance} AS balance,
+        SELECT p.id, p.amount, p.payment_mode, p.receipt_no, c.${balance} AS balance,
           (SELECT count(*)::int FROM ${ledgerTable} l WHERE l.tenant_id = p.tenant_id
             AND l.reference_id = p.id AND l.${partyColumn} = $2) AS ledger_rows,
           (SELECT COALESCE(sum(${customer ? "credit" : "debit"}), 0) FROM ${ledgerTable} l
@@ -931,13 +931,13 @@ async function runClassificationCandidates(client, fixture, record) {
       `, [fixture.tenants.a, party, first.data?.id ?? ""]);
       const row = persisted.rows[0];
       const pass = first.ok === true && replay.ok === true && first.data.id === replay.data.id &&
-        Number(row?.amount) === amount && Number(row?.balance) === -amount &&
+        Number(row?.amount) === amount && row?.payment_mode === "CHEQUE" && Number(row?.balance) === -amount &&
         row?.payment_rows === 1 && row?.ledger_rows === 1 && Number(row?.ledger_amount) === amount &&
         row?.allocations === 0 && row?.invoices === 0 && row?.refunds === 0 && row?.reversals === 0 &&
         row?.audits === afterFirst.rows[0].count && Boolean(row?.receipt_no) &&
         JSON.stringify(sequenceAfterFirst.rows) === JSON.stringify(sequenceAfterReplay.rows);
       record(customer ? "S-01" : "S-04", pass ? "PASS" : "FAIL",
-        `${kind} advance creation and idempotent retry`,
+        `${kind} advance creation and idempotent retry with Cheque method`,
         { boundary: "payment action with guarded synthetic session and restricted role; metadata update stubbed",
           fixture: { party, initialBalance: 0, amount }, first, replay, persisted: row ?? null,
           sequenceAfterFirst: sequenceAfterFirst.rows, sequenceAfterReplay: sequenceAfterReplay.rows,

@@ -1,0 +1,1279 @@
+{
+  "runId": "rv20261114055301",
+  "recordedAt": "2026-11-14T01:07:25.528Z",
+  "target": "pharmnos_runtime_verify_rv20261114055301",
+  "totals": {
+    "passed": 69,
+    "failed": 0
+  },
+  "results": [
+    {
+      "phase": 3,
+      "id": "ENV-01",
+      "contract": "Database identity and PostgreSQL version",
+      "status": "PASS",
+      "expected": {
+        "database": "pharmnos_runtime_verify_rv20261114055301",
+        "version": "17.x"
+      },
+      "actual": {
+        "db": "pharmnos_runtime_verify_rv20261114055301",
+        "role": "pharmnos_verify_owner",
+        "version": "17.11"
+      }
+    },
+    {
+      "phase": 2,
+      "id": "ENV-02",
+      "contract": "Runtime role is NOSUPERUSER NOBYPASSRLS with no DDL rights",
+      "status": "PASS",
+      "expected": {
+        "rolsuper": false,
+        "rolbypassrls": false,
+        "rolcreatedb": false,
+        "rolcreaterole": false,
+        "rolcanlogin": true
+      },
+      "actual": {
+        "rolname": "pharmnos_e2e_runtime",
+        "rolsuper": false,
+        "rolbypassrls": false,
+        "rolcreatedb": false,
+        "rolcreaterole": false,
+        "rolcanlogin": true,
+        "rolinherit": false
+      }
+    },
+    {
+      "phase": 3,
+      "id": "ENV-03",
+      "contract": "39 tenant-scoped tables have ENABLE + FORCE RLS and a signed_ctx_select policy",
+      "status": "PASS",
+      "expected": {
+        "protected": 39,
+        "unprotected": [
+          "_prisma_migrations"
+        ]
+      },
+      "actual": {
+        "protected": 39,
+        "unprotected": 1,
+        "unprotected_tables": "{_prisma_migrations}",
+        "policies": 103,
+        "migrations": 31
+      }
+    },
+    {
+      "phase": 3,
+      "id": "ENV-04",
+      "contract": "All 31 migrations are recorded as applied",
+      "status": "PASS",
+      "expected": {
+        "applied": 31
+      },
+      "actual": {
+        "applied": 31
+      }
+    },
+    {
+      "phase": 3,
+      "id": "ENV-05",
+      "contract": "Immutable/audit tables expose no signed-context UPDATE policy",
+      "status": "PASS",
+      "expected": {
+        "unexpectedUpdatePolicies": []
+      },
+      "actual": {
+        "unexpectedUpdatePolicies": []
+      }
+    },
+    {
+      "phase": 3,
+      "id": "ENV-06",
+      "contract": "Runtime role cannot execute the private verifier but can execute the public SECURITY DEFINER wrappers",
+      "status": "PASS",
+      "expected": {
+        "privateVerifyExecute": false,
+        "publicWrapperExecute": true
+      },
+      "actual": {
+        "private_verify": false,
+        "public_wrapper": true,
+        "can_delete": false,
+        "can_update": true
+      }
+    },
+    {
+      "phase": 3,
+      "id": "ENV-07",
+      "contract": "Runtime role has UPDATE but no DELETE privilege (least privilege)",
+      "status": "PASS",
+      "expected": {
+        "delete": false,
+        "update": true
+      },
+      "actual": {
+        "delete": false,
+        "update": true
+      }
+    },
+    {
+      "phase": 3,
+      "id": "ENV-08",
+      "contract": "Partial unique indexes for invoice numbers exist with the expected predicates",
+      "status": "PASS",
+      "expected": {
+        "salesPartial": true,
+        "purchasePartial": true,
+        "supplierTrimmedUnique": true
+      },
+      "actual": {
+        "purchase_invoices_tenant_id_supplier_id_supplier_invoice_no_key": "CREATE UNIQUE INDEX purchase_invoices_tenant_id_supplier_id_supplier_invoice_no_key ON public.purchase_invoices USING btree (tenant_id, supplier_id, btrim(supplier_invoice_no)) WHERE ((supplier_invoice_no IS NOT NULL) AND (btrim(supplier_invoice_no) <> ''::text))",
+        "sales_invoices_tenant_id_invoice_no_key": "CREATE UNIQUE INDEX sales_invoices_tenant_id_invoice_no_key ON public.sales_invoices USING btree (tenant_id, invoice_no) WHERE (invoice_no <> ''::text)",
+        "purchase_invoices_tenant_id_invoice_no_key": "CREATE UNIQUE INDEX purchase_invoices_tenant_id_invoice_no_key ON public.purchase_invoices USING btree (tenant_id, invoice_no) WHERE (invoice_no <> ''::text)"
+      }
+    },
+    {
+      "phase": 3,
+      "id": "ENV-09",
+      "contract": "Immutability and financial-date triggers are installed",
+      "status": "PASS",
+      "expected": {
+        "required": [
+          "sales_invoices::prevent_finalized_sales_mutation",
+          "sales_invoice_items::prevent_finalized_sales_item_mutation",
+          "purchase_invoices::prevent_finalized_purchase_mutation",
+          "sales_invoices::sales_invoices_guard_financial_dates",
+          "purchase_invoices::purchase_invoices_guard_financial_dates",
+          "payments::payments_assign_recorded_at",
+          "customer_ledgers::customer_ledgers_protect_financial_dates",
+          "payment_refunds::payment_refunds_guard_financial_dates"
+        ]
+      },
+      "actual": {
+        "present": [
+          "sales_invoices::prevent_finalized_sales_mutation",
+          "sales_invoice_items::prevent_finalized_sales_item_mutation",
+          "purchase_invoices::prevent_finalized_purchase_mutation",
+          "sales_invoices::sales_invoices_guard_financial_dates",
+          "purchase_invoices::purchase_invoices_guard_financial_dates",
+          "payments::payments_assign_recorded_at",
+          "customer_ledgers::customer_ledgers_protect_financial_dates",
+          "payment_refunds::payment_refunds_guard_financial_dates"
+        ],
+        "missing": []
+      }
+    },
+    {
+      "phase": 3,
+      "id": "ENV-10",
+      "contract": "product_batches.manufacture_date and created_by exist",
+      "status": "PASS",
+      "expected": {
+        "columns": [
+          "created_by",
+          "manufacture_date"
+        ]
+      },
+      "actual": [
+        {
+          "column_name": "created_by",
+          "data_type": "text"
+        },
+        {
+          "column_name": "manufacture_date",
+          "data_type": "timestamp without time zone"
+        }
+      ]
+    },
+    {
+      "phase": 4,
+      "id": "AC-01",
+      "contract": "Valid context resolves subject/tenant and permits same-tenant reads",
+      "status": "PASS",
+      "expected": {
+        "subject": "subject-a-user_a_10b2b22e8e28114a",
+        "tenant": "tenant_a_0cb3fc5831ef7902",
+        "visibleAtLeast": 1
+      },
+      "actual": {
+        "subject": "subject-a-user_a_10b2b22e8e28114a",
+        "tenant": "tenant_a_0cb3fc5831ef7902",
+        "visible": 1
+      }
+    },
+    {
+      "phase": 4,
+      "id": "AC-02",
+      "contract": "Missing context fails closed (no rows, no tenant identity)",
+      "status": "PASS",
+      "expected": {
+        "sales": 0,
+        "tenant": null
+      },
+      "actual": {
+        "sales": 0,
+        "tenant": null
+      }
+    },
+    {
+      "phase": 4,
+      "id": "AC-03",
+      "contract": "Malformed context fails closed",
+      "status": "PASS",
+      "expected": {
+        "tenant": null,
+        "visible": 0
+      },
+      "actual": {
+        "tenant": null,
+        "visible": 0
+      }
+    },
+    {
+      "phase": 4,
+      "id": "AC-04",
+      "contract": "Invalid HMAC signature fails closed",
+      "status": "PASS",
+      "expected": {
+        "tenant": null,
+        "visible": 0
+      },
+      "actual": {
+        "tenant": null,
+        "visible": 0
+      }
+    },
+    {
+      "phase": 4,
+      "id": "AC-05",
+      "contract": "Expired context fails closed",
+      "status": "PASS",
+      "expected": {
+        "tenant": null,
+        "visible": 0
+      },
+      "actual": {
+        "tenant": null,
+        "visible": 0
+      }
+    },
+    {
+      "phase": 4,
+      "id": "AC-06",
+      "contract": "Tenant mismatch (subject A, tenant B) fails closed",
+      "status": "PASS",
+      "expected": {
+        "tenant": null,
+        "visible": 0
+      },
+      "actual": {
+        "tenant": null,
+        "visible": 0
+      }
+    },
+    {
+      "phase": 4,
+      "id": "AC-07",
+      "contract": "Unknown subject fails closed",
+      "status": "PASS",
+      "expected": {
+        "tenant": null,
+        "visible": 0
+      },
+      "actual": {
+        "tenant": null,
+        "visible": 0
+      }
+    },
+    {
+      "phase": 4,
+      "id": "AC-08",
+      "contract": "A context nonce is single-transaction; reuse in another transaction fails closed",
+      "status": "PASS",
+      "expected": {
+        "first": "tenant_a_0cb3fc5831ef7902",
+        "second": null
+      },
+      "actual": {
+        "first": "tenant_a_0cb3fc5831ef7902",
+        "second": null
+      }
+    },
+    {
+      "phase": 4,
+      "id": "AC-09",
+      "contract": "Context does not leak across transactions",
+      "status": "PASS",
+      "expected": {
+        "visible": 0
+      },
+      "actual": {
+        "visible": 0
+      }
+    },
+    {
+      "phase": 4,
+      "id": "AC-10",
+      "contract": "Cross-tenant reads return zero rows under a tenant-A context",
+      "status": "PASS",
+      "expected": {
+        "crossTenant": 0,
+        "ownTenantVisible": ">=1"
+      },
+      "actual": {
+        "crossTenant": 0,
+        "allVisible": 1
+      }
+    },
+    {
+      "phase": 4,
+      "id": "AC-11",
+      "contract": "Cross-tenant UPDATE affects zero rows",
+      "status": "PASS",
+      "expected": {
+        "updated": 0
+      },
+      "actual": {
+        "updated": 0
+      }
+    },
+    {
+      "phase": 4,
+      "id": "AC-12",
+      "contract": "Cross-tenant INSERT is rejected by row-level security (42501)",
+      "status": "PASS",
+      "expected": {
+        "sqlstate": "42501"
+      },
+      "actual": {
+        "message": "new row violates row-level security policy for table \"sales_invoices\"",
+        "code": "42501"
+      }
+    },
+    {
+      "phase": 4,
+      "id": "AC-13",
+      "contract": "Same-tenant INSERT and UPDATE succeed",
+      "status": "PASS",
+      "expected": {
+        "created": 1,
+        "updated": 1
+      },
+      "actual": {
+        "created": 1,
+        "updated": 1
+      }
+    },
+    {
+      "phase": 4,
+      "id": "AC-14",
+      "contract": "Runtime role cannot disable row-level security",
+      "status": "PASS",
+      "expected": {
+        "sqlstate": "42501"
+      },
+      "actual": {
+        "message": "query would be affected by row-level security policy for table \"sales_invoices\"",
+        "code": "42501"
+      }
+    },
+    {
+      "phase": 4,
+      "id": "AC-15",
+      "contract": "Historical 42501 reproduced only for the private verifier; public wrappers are the intended path",
+      "status": "PASS",
+      "expected": {
+        "privateVerifySqlstate": "42501"
+      },
+      "actual": {
+        "message": "permission denied for schema pharmnos_private",
+        "code": "42501"
+      }
+    },
+    {
+      "phase": 4,
+      "id": "APP-01",
+      "contract": "establishTenantContext + Prisma transaction returns only the caller tenant",
+      "status": "PASS",
+      "expected": {
+        "tenants": [
+          "tenant_a_0cb3fc5831ef7902"
+        ]
+      },
+      "actual": {
+        "count": 2,
+        "tenants": [
+          "tenant_a_0cb3fc5831ef7902"
+        ]
+      }
+    },
+    {
+      "phase": 4,
+      "id": "APP-02",
+      "contract": "Cross-tenant Prisma read inside a tenant-A transaction returns null",
+      "status": "PASS",
+      "expected": {
+        "result": null
+      },
+      "actual": {
+        "result": null
+      }
+    },
+    {
+      "phase": 4,
+      "id": "APP-03",
+      "contract": "Prisma query without establishTenantContext returns zero rows",
+      "status": "PASS",
+      "expected": {
+        "rows": 0
+      },
+      "actual": {
+        "rows": 0
+      }
+    },
+    {
+      "phase": 4,
+      "id": "APP-04",
+      "contract": "Cross-tenant Prisma INSERT is rejected",
+      "status": "PASS",
+      "expected": {
+        "rejected": true
+      },
+      "actual": {
+        "message": "\nInvalid `prisma.sales_invoices.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"42501\", message: \"new row violates row-level security policy for table \\\"sales_invoices\\\"\", severity: \"ERROR\", detail: None, column: None, hint: None }), transient: false })",
+        "code": null
+      }
+    },
+    {
+      "phase": 4,
+      "id": "APP-05",
+      "contract": "Same-tenant Prisma INSERT succeeds and persists tenant ownership",
+      "status": "PASS",
+      "expected": {
+        "tenant_id": "tenant_a_0cb3fc5831ef7902"
+      },
+      "actual": {
+        "id": "app_own_8dc940fcfde08465",
+        "tenant_id": "tenant_a_0cb3fc5831ef7902"
+      }
+    },
+    {
+      "phase": 4,
+      "id": "APP-06",
+      "contract": "Established context does not leak to later Prisma transactions",
+      "status": "PASS",
+      "expected": {
+        "rows": 0
+      },
+      "actual": {
+        "rows": 0
+      }
+    },
+    {
+      "phase": 4,
+      "id": "APP-07",
+      "contract": "Subject -> membership -> permissions -> tenant context resolves through RLS",
+      "status": "PASS",
+      "expected": {
+        "tenantId": "tenant_a_0cb3fc5831ef7902",
+        "subjectId": "subject-a-user_a_10b2b22e8e28114a",
+        "hasFinalize": true
+      },
+      "actual": {
+        "tenantId": "tenant_a_0cb3fc5831ef7902",
+        "subjectId": "subject-a-user_a_10b2b22e8e28114a",
+        "permissions": [
+          "create_invoice",
+          "finalize_invoice",
+          "adjust_stock",
+          "manage_batches",
+          "create_payment"
+        ],
+        "membershipId": "membership_a_889e61ee64806318"
+      }
+    },
+    {
+      "phase": 5,
+      "id": "DP-01",
+      "contract": "Finalized sales header cannot be mutated",
+      "status": "PASS",
+      "expected": {
+        "rejected": true
+      },
+      "actual": {
+        "message": "Finalized sales invoice values are immutable",
+        "code": "42501"
+      }
+    },
+    {
+      "phase": 5,
+      "id": "DP-02",
+      "contract": "Finalized sales item cannot be mutated",
+      "status": "PASS",
+      "expected": {
+        "rejected": true
+      },
+      "actual": {
+        "message": "Finalized sales invoice lines are immutable",
+        "code": "42501"
+      }
+    },
+    {
+      "phase": 5,
+      "id": "DP-03",
+      "contract": "Finalized sales header cannot be deleted",
+      "status": "PASS",
+      "expected": {
+        "rejected": true
+      },
+      "actual": {
+        "message": "Finalized sales invoices cannot be deleted",
+        "code": "42501"
+      }
+    },
+    {
+      "phase": 5,
+      "id": "DP-04",
+      "contract": "Legitimately mutable finalized fields (paid_amount/balance_due) remain writable",
+      "status": "PASS",
+      "expected": {
+        "rejected": false
+      },
+      "actual": null
+    },
+    {
+      "phase": 5,
+      "id": "DP-05",
+      "contract": "Draft invoices remain editable and deletable",
+      "status": "PASS",
+      "expected": {
+        "updateRejected": false,
+        "deleteRejected": false
+      },
+      "actual": {
+        "updateError": null,
+        "deleteError": null
+      }
+    },
+    {
+      "phase": 5,
+      "id": "DP-06",
+      "contract": "Finalized purchase header cannot be mutated or deleted",
+      "status": "PASS",
+      "expected": {
+        "updateRejected": true,
+        "deleteRejected": true
+      },
+      "actual": {
+        "updateError": {
+          "message": "Finalized purchase invoice values are immutable",
+          "code": "42501"
+        },
+        "deleteError": {
+          "message": "Finalized purchase invoices cannot be deleted",
+          "code": "42501"
+        }
+      }
+    },
+    {
+      "phase": 5,
+      "id": "DP-07",
+      "contract": "Product batch manufacture_date/created_by persist with tenant ownership",
+      "status": "PASS",
+      "expected": {
+        "manufacture_date": "2025-03-01",
+        "created_by": "user_a_10b2b22e8e28114a",
+        "tenant_id": "tenant_a_0cb3fc5831ef7902"
+      },
+      "actual": {
+        "manufacture_date": "2025-03-01 00:00:00",
+        "created_by": "user_a_10b2b22e8e28114a",
+        "tenant_id": "tenant_a_0cb3fc5831ef7902"
+      }
+    },
+    {
+      "phase": 5,
+      "id": "DP-08",
+      "contract": "Empty draft invoice numbers do not collide within a tenant",
+      "status": "PASS",
+      "expected": {
+        "rejected": false
+      },
+      "actual": null
+    },
+    {
+      "phase": 5,
+      "id": "DP-09",
+      "contract": "Non-empty invoice numbers stay unique per tenant",
+      "status": "PASS",
+      "expected": {
+        "sqlstate": "23505"
+      },
+      "actual": {
+        "message": "duplicate key value violates unique constraint \"sales_invoices_tenant_id_invoice_no_key\"",
+        "code": "23505"
+      }
+    },
+    {
+      "phase": 5,
+      "id": "DP-10",
+      "contract": "The same invoice number is allowed in a different tenant",
+      "status": "PASS",
+      "expected": {
+        "rejected": false
+      },
+      "actual": null
+    },
+    {
+      "phase": 5,
+      "id": "DP-11",
+      "contract": "finalized_recorded_at is database-assigned and immutable",
+      "status": "PASS",
+      "expected": {
+        "sqlstate": "42501"
+      },
+      "actual": {
+        "message": "finalized_recorded_at is database-assigned and immutable",
+        "code": "42501"
+      }
+    },
+    {
+      "phase": 6,
+      "id": "INV-01",
+      "contract": "Explicit batch_id selection overrides FEFO and is honored",
+      "status": "PASS",
+      "expected": {
+        "explicitBatchDelta": -2,
+        "otherBatchDelta": 0,
+        "selectedBatch": "batch_explicit_d65350b093280739"
+      },
+      "actual": {
+        "result": {
+          "ok": true,
+          "redirected": true
+        },
+        "before": {
+          "batch_explicit_d65350b093280739": {
+            "available": 5,
+            "received": 5,
+            "valuation": "PENDING"
+          },
+          "batch_explicit_other_01cfd033b24f7327": {
+            "available": 5,
+            "received": 5,
+            "valuation": "PENDING"
+          }
+        },
+        "after": {
+          "batch_explicit_other_01cfd033b24f7327": {
+            "available": 5,
+            "received": 5,
+            "valuation": "PENDING"
+          },
+          "batch_explicit_d65350b093280739": {
+            "available": 3,
+            "received": 5,
+            "valuation": "PENDING"
+          }
+        },
+        "movements": {
+          "delta": -2,
+          "rows": 1,
+          "selected_delta": -2
+        },
+        "item": {
+          "free_qty": 1,
+          "batch_id": "batch_explicit_d65350b093280739"
+        }
+      }
+    },
+    {
+      "phase": 6,
+      "id": "INV-02",
+      "contract": "Sales depletion consumes quantity + free_qty",
+      "status": "PASS",
+      "expected": {
+        "movementDelta": -2,
+        "movementRows": 1
+      },
+      "actual": {
+        "delta": -2,
+        "rows": 1,
+        "selected_delta": -2
+      }
+    },
+    {
+      "phase": 6,
+      "id": "INV-03",
+      "contract": "Persisted batch balance and stock movement agree",
+      "status": "PASS",
+      "expected": {
+        "balanceEqualsReceivedPlusMovements": true,
+        "status": "FINALIZED"
+      },
+      "actual": {
+        "after": {
+          "available": 3,
+          "received": 5,
+          "valuation": "PENDING"
+        },
+        "movements": {
+          "delta": -2,
+          "rows": 1,
+          "selected_delta": -2
+        },
+        "invoice": {
+          "status": "FINALIZED",
+          "invoice_no": "INV-00041"
+        }
+      }
+    },
+    {
+      "phase": 6,
+      "id": "INV-04",
+      "contract": "FEFO fallback depletes the earliest-expiring batch first",
+      "status": "PASS",
+      "expected": {
+        "earlyDelta": -1,
+        "lateDelta": -1,
+        "movementRows": 2
+      },
+      "actual": {
+        "result": {
+          "ok": true,
+          "redirected": true
+        },
+        "before": {
+          "batch_fefo_early_fb0ef27a14d815c5": {
+            "available": 1,
+            "received": 1,
+            "valuation": "PENDING"
+          },
+          "batch_fefo_late_5f56061f0aa29737": {
+            "available": 5,
+            "received": 5,
+            "valuation": "PENDING"
+          }
+        },
+        "after": {
+          "batch_fefo_early_fb0ef27a14d815c5": {
+            "available": 0,
+            "received": 1,
+            "valuation": "PENDING"
+          },
+          "batch_fefo_late_5f56061f0aa29737": {
+            "available": 4,
+            "received": 5,
+            "valuation": "PENDING"
+          }
+        },
+        "movements": [
+          {
+            "batch_id": "batch_fefo_early_fb0ef27a14d815c5",
+            "quantity_delta": -1
+          },
+          {
+            "batch_id": "batch_fefo_late_5f56061f0aa29737",
+            "quantity_delta": -1
+          }
+        ]
+      }
+    },
+    {
+      "phase": 6,
+      "id": "INV-05",
+      "contract": "Insufficient stock rejects finalization with no partial persistence",
+      "status": "PASS",
+      "expected": {
+        "finalized": false,
+        "status": "DRAFT",
+        "stockUnchanged": true,
+        "movements": 0
+      },
+      "actual": {
+        "result": {
+          "ok": false,
+          "value": {
+            "ok": false,
+            "message": "Insufficient stock in selected batch (SHORT-1) for product line #1: required 2, available 1."
+          }
+        },
+        "status": "DRAFT",
+        "before": {
+          "batch_short_19e560ccab753743": {
+            "available": 1,
+            "received": 1,
+            "valuation": "PENDING"
+          }
+        },
+        "after": {
+          "batch_short_19e560ccab753743": {
+            "available": 1,
+            "received": 1,
+            "valuation": "PENDING"
+          }
+        },
+        "movements": 0
+      }
+    },
+    {
+      "phase": 6,
+      "id": "INV-06",
+      "contract": "Failed finalization rolls back stock, movements, ledger, posting and audit",
+      "status": "PASS",
+      "expected": {
+        "movements": 0,
+        "ledgers": 0,
+        "postings": 0,
+        "audits": 0,
+        "stockRestored": true,
+        "status": "DRAFT"
+      },
+      "actual": {
+        "result": {
+          "ok": false,
+          "value": {
+            "ok": false,
+            "message": "\nInvalid `tx.customer_ledgers.create()` invocation in\nE:\\PharmnosLite\\src\\app\\_actions\\sales.actions.ts:1024:33\n\n  1021 const debit = serverGst.grand_total;\n  1022 const balanceAfter = balanceBefore.add(debit).round(2, \"HALF_UP\").toNumber();\n  1023 \n→ 1024 await tx.customer_ledgers.create(\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"P0001\", message: \"runtime fault injection: ledger failure\", severity: \"ERROR\", detail: None, column: None, hint: None }), transient: false })"
+          }
+        },
+        "state": {
+          "status": "DRAFT",
+          "movements": 0,
+          "ledgers": 0,
+          "postings": 0,
+          "audits": 0
+        },
+        "before": {
+          "batch_rollback_c6cbaf7a29480ffb": {
+            "available": 5,
+            "received": 5,
+            "valuation": "PENDING"
+          }
+        },
+        "after": {
+          "batch_rollback_c6cbaf7a29480ffb": {
+            "available": 5,
+            "received": 5,
+            "valuation": "PENDING"
+          }
+        }
+      }
+    },
+    {
+      "phase": 6,
+      "id": "INV-07",
+      "contract": "Concurrent finalizations cannot oversell stock",
+      "status": "PASS",
+      "expected": {
+        "successes": 1,
+        "available": 0,
+        "finalized": 1,
+        "movementDelta": -6
+      },
+      "actual": {
+        "left": {
+          "ok": true,
+          "redirected": true
+        },
+        "right": {
+          "ok": false,
+          "value": {
+            "ok": false,
+            "message": "Selected batch not found for product line #1."
+          }
+        },
+        "state": {
+          "available": 0,
+          "finalized": 1,
+          "movements": 1,
+          "delta": -6
+        }
+      }
+    },
+    {
+      "phase": 6,
+      "id": "INV-08",
+      "contract": "Valuation deferral refuses a non-finalized purchase without misleading success",
+      "status": "PASS",
+      "expected": {
+        "ok": false,
+        "decisions": 0
+      },
+      "actual": {
+        "result": {
+          "ok": false,
+          "message": "Only a finalized purchase can receive an inventory valuation decision."
+        },
+        "decisions": 0
+      }
+    },
+    {
+      "phase": 6,
+      "id": "INV-09",
+      "contract": "Valuation refuses a batch that does not belong to the finalized purchase line",
+      "status": "PASS",
+      "expected": {
+        "ok": false,
+        "message": "batch mismatch"
+      },
+      "actual": {
+        "ok": false,
+        "message": "Product batch does not match the finalized purchase line."
+      }
+    },
+    {
+      "phase": 6,
+      "id": "INV-10",
+      "contract": "Complete accepted evidence approves valuation exactly once and updates the batch",
+      "status": "PASS",
+      "expected": {
+        "status": "APPROVED",
+        "replaySameDecision": true
+      },
+      "actual": {
+        "approved": {
+          "ok": true,
+          "data": {
+            "decisionId": "cmwfphihz002lqkx39z6uswd7",
+            "status": "APPROVED"
+          },
+          "message": "Inventory valuation decision recorded."
+        },
+        "batch": {
+          "available": 1,
+          "received": 1,
+          "valuation": "APPROVED"
+        },
+        "replay": {
+          "ok": true,
+          "data": {
+            "decisionId": "cmwfphihz002lqkx39z6uswd7",
+            "status": "APPROVED"
+          },
+          "message": "Inventory valuation decision recorded."
+        }
+      }
+    },
+    {
+      "phase": 6,
+      "id": "INV-11",
+      "contract": "Stock adjustment advisory lock executes and applies exactly one idempotent movement",
+      "status": "PASS",
+      "expected": {
+        "delta": -3,
+        "movements": 1,
+        "idempotent": true
+      },
+      "actual": {
+        "first": {
+          "ok": true,
+          "data": {
+            "id": "batch_adjust_1a8fd8472fbc9e23"
+          }
+        },
+        "replay": {
+          "ok": true,
+          "data": {
+            "id": "batch_adjust_1a8fd8472fbc9e23"
+          }
+        },
+        "before": {
+          "batch_adjust_1a8fd8472fbc9e23": {
+            "available": 10,
+            "received": 10,
+            "valuation": "PENDING"
+          }
+        },
+        "after": {
+          "batch_adjust_1a8fd8472fbc9e23": {
+            "available": 7,
+            "received": 10,
+            "valuation": "PENDING"
+          }
+        },
+        "movements": [
+          {
+            "id": "cmwfphijg002tqkx3ud95j1lu",
+            "quantity_delta": -3,
+            "movement_type": "ADJUSTMENT_OUT"
+          }
+        ]
+      }
+    },
+    {
+      "phase": 7,
+      "id": "FIN-01",
+      "contract": "Unallocated customer payment persists once and becomes unapplied credit",
+      "status": "PASS",
+      "expected": {
+        "amount": 300,
+        "unappliedCredit": 300,
+        "ledgerRows": 1,
+        "idempotent": true
+      },
+      "actual": {
+        "first": {
+          "ok": true,
+          "data": {
+            "id": "cmwfphimp0031qkx3mmiwva4d"
+          }
+        },
+        "replay": {
+          "ok": true,
+          "data": {
+            "id": "cmwfphimp0031qkx3mmiwva4d"
+          }
+        },
+        "payment": {
+          "id": "cmwfphimp0031qkx3mmiwva4d",
+          "amount": "300.00",
+          "receipt_no": "PAY-00001"
+        },
+        "ledger": {
+          "credit": "300.00",
+          "rows": 1
+        }
+      }
+    },
+    {
+      "phase": 7,
+      "id": "FIN-02",
+      "contract": "Allocation reduces unapplied credit and updates the invoice balance",
+      "status": "PASS",
+      "expected": {
+        "allocated": 200,
+        "paid": 200,
+        "due": 980,
+        "replayedSameId": true
+      },
+      "actual": {
+        "allocation": {
+          "id": "cmwfphioa0038qkx3ztalvdtr",
+          "replayed": false
+        },
+        "replay": {
+          "id": "cmwfphioa0038qkx3ztalvdtr",
+          "replayed": true
+        },
+        "state": {
+          "allocated": "200.00",
+          "paid": "200.00",
+          "due": "980.00"
+        }
+      }
+    },
+    {
+      "phase": 7,
+      "id": "FIN-03",
+      "contract": "Allocation reversal restores credit exactly once",
+      "status": "PASS",
+      "expected": {
+        "reversed": 200,
+        "paid": 0,
+        "due": 1180,
+        "usable": 300
+      },
+      "actual": {
+        "reversal": {
+          "id": "cmwfphip7003eqkx3j1sqjcfy",
+          "replayed": false
+        },
+        "replay": {
+          "id": "cmwfphip7003eqkx3j1sqjcfy",
+          "replayed": true
+        },
+        "state": {
+          "reversed": "200.00",
+          "paid": "0.00",
+          "due": "1180.00"
+        },
+        "usableAfterReversal": 300
+      }
+    },
+    {
+      "phase": 7,
+      "id": "FIN-04",
+      "contract": "Concurrent allocations cannot over-consume unapplied credit",
+      "status": "PASS",
+      "expected": {
+        "fulfilled": 1,
+        "activeAllocated": 200,
+        "usable": 100
+      },
+      "actual": {
+        "fulfilled": 1,
+        "activeAllocated": 200,
+        "outcomes": [
+          {
+            "id": "cmwfphiq8003lqkx3x5q1dacr"
+          },
+          {
+            "error": "Payment does not have enough usable unapplied funds."
+          }
+        ]
+      }
+    },
+    {
+      "phase": 7,
+      "id": "FIN-05",
+      "contract": "Pending refund does not consume usable payment",
+      "status": "PASS",
+      "expected": {
+        "status": "REQUESTED",
+        "completedConsumption": 0
+      },
+      "actual": {
+        "status": "REQUESTED",
+        "completed": "0"
+      }
+    },
+    {
+      "phase": 7,
+      "id": "FIN-06",
+      "contract": "Completed refund consumes the payment exactly once; repeated completion is idempotent",
+      "status": "PASS",
+      "expected": {
+        "completed": 100,
+        "replaySameId": true,
+        "status": "COMPLETED"
+      },
+      "actual": {
+        "completion": {
+          "id": "cmwfphisn003rqkx3fuwb8pug",
+          "replayed": false
+        },
+        "replay": {
+          "id": "cmwfphisn003rqkx3fuwb8pug",
+          "replayed": true
+        },
+        "state": {
+          "status": "COMPLETED",
+          "completed_date": "2026-11-14",
+          "completed": "100.00"
+        }
+      }
+    },
+    {
+      "phase": 8,
+      "id": "TMP-01",
+      "contract": "Derived effective date must equal the Asia/Kolkata date of occurred_at",
+      "status": "PASS",
+      "expected": {
+        "sqlstate": "23514"
+      },
+      "actual": {
+        "message": "new row for relation \"payments\" violates check constraint \"payments_derived_date_matches_occurred_at_check\"",
+        "code": "23514"
+      }
+    },
+    {
+      "phase": 8,
+      "id": "TMP-02",
+      "contract": "19:30Z derives to the next IST calendar date (2026-11-14)",
+      "status": "PASS",
+      "expected": {
+        "rejected": false,
+        "istDate": "2026-11-14"
+      },
+      "actual": null
+    },
+    {
+      "phase": 8,
+      "id": "TMP-03",
+      "contract": "A populated effective date without provenance is rejected",
+      "status": "PASS",
+      "expected": {
+        "sqlstate": "23514"
+      },
+      "actual": {
+        "message": "new row for relation \"payments\" violates check constraint \"payments_effective_date_basis_check\"",
+        "code": "23514"
+      }
+    },
+    {
+      "phase": 8,
+      "id": "TMP-04",
+      "contract": "Reserved/unverifiable date provenance is rejected",
+      "status": "PASS",
+      "expected": {
+        "sqlstate": "23514"
+      },
+      "actual": {
+        "message": "new row for relation \"payments\" violates check constraint \"payments_effective_date_basis_check\"",
+        "code": "23514"
+      }
+    },
+    {
+      "phase": 8,
+      "id": "TMP-05",
+      "contract": "Caller-supplied recorded_at is rejected",
+      "status": "PASS",
+      "expected": {
+        "sqlstate": "42501"
+      },
+      "actual": {
+        "message": "recorded_at is database-assigned",
+        "code": "42501"
+      }
+    },
+    {
+      "phase": 8,
+      "id": "TMP-06",
+      "contract": "recorded_at is immutable after insert",
+      "status": "PASS",
+      "expected": {
+        "sqlstate": "42501"
+      },
+      "actual": {
+        "message": "Recorded financial event dates and instants are immutable",
+        "code": "42501"
+      }
+    },
+    {
+      "phase": 8,
+      "id": "TMP-07",
+      "contract": "Finalized invoice business date is immutable",
+      "status": "PASS",
+      "expected": {
+        "rejected": true
+      },
+      "actual": {
+        "message": "Finalized invoice business dates are immutable",
+        "code": "42501"
+      }
+    },
+    {
+      "phase": 8,
+      "id": "TMP-08",
+      "contract": "Date-only values must round-trip as UTC midnight markers (no 5h30m shift)",
+      "status": "PASS",
+      "expected": {
+        "timezone": "Asia/Kolkata",
+        "dateOnly": "2026-03-31",
+        "rejectsShiftedInstant": true
+      },
+      "actual": {
+        "timezone": "Asia/Kolkata",
+        "nonMidnightError": "Database business date must be a UTC date-only marker."
+      }
+    },
+    {
+      "phase": 8,
+      "id": "TMP-09",
+      "contract": "IST calendar date derivation matches PostgreSQL for the same instant",
+      "status": "PASS",
+      "expected": {
+        "at1930Z": "2026-11-14",
+        "at1829_59Z": "2026-11-13",
+        "postgres": "2026-11-14"
+      },
+      "actual": {
+        "at1930Z": "2026-11-14",
+        "at1829_59Z": "2026-11-13",
+        "postgres": "2026-11-14"
+      }
+    }
+  ]
+}

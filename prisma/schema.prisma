@@ -584,6 +584,9 @@ model purchase_invoices {
   inventory_valuation_decisions   inventory_valuation_decisions[]
   supplier_documents              purchase_supplier_documents[]
 
+  // The database index for this key is partial (WHERE invoice_no <> ''),
+  // created by migration 0031. Prisma cannot express partial indexes; use
+  // `prisma migrate deploy` and never `migrate dev`/`db push` on existing data.
   @@unique([tenant_id, invoice_no])
   @@unique([tenant_id, id])
   @@unique([tenant_id, id, current_gst_evidence_revision_id])
@@ -790,6 +793,7 @@ model purchase_invoice_items {
   @@index([tenant_id])
   @@index([purchase_id])
   @@index([product_id])
+  @@index([tenant_id, purchase_id, accepted_decision_id], map: "purchase_invoice_items_accepted_decision_idx")
 }
 
 model inventory_valuation_decisions {
@@ -804,10 +808,10 @@ model inventory_valuation_decisions {
   eligibility_status         String
   accepted_taxable_value     Decimal                            @db.Decimal(20, 4)
   accepted_gst               Decimal                            @db.Decimal(20, 4)
-  recoverable_itc            Decimal?
-  non_recoverable_gst        Decimal?
+  recoverable_itc            Decimal?                           @db.Decimal(20, 4)
+  non_recoverable_gst        Decimal?                           @db.Decimal(20, 4)
   direct_acquisition_cost    Decimal                            @default(0) @db.Decimal(20, 4)
-  inventory_acquisition_cost Decimal?
+  inventory_acquisition_cost Decimal?                           @db.Decimal(20, 4)
   policy_version             String
   decision_reference         String
   rationale                  String
@@ -1124,6 +1128,9 @@ model sales_invoices {
   payment_allocations payment_allocations[]
   posting_operations  sales_posting_operations[]
 
+  // The database index for this key is partial (WHERE invoice_no <> ''),
+  // created by migration 0031. Prisma cannot express partial indexes; use
+  // `prisma migrate deploy` and never `migrate dev`/`db push` on existing data.
   @@unique([tenant_id, invoice_no])
   @@unique([tenant_id, id])
   @@index([tenant_id])

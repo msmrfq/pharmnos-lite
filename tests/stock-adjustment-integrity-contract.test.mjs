@@ -41,6 +41,14 @@ test("negative stock adjustments use a guarded update and idempotent replay", ()
   const body = actionBody(actionSource, "createStockAdjustmentAction");
 
   assert.match(body, /pg_advisory_xact_lock/);
+  assert.match(
+    body,
+    /concat\(CAST\(\$\{ctx\.tenantId\} AS text\), ':stock-adjustment:', CAST\(\$\{data\.idempotency_key\} AS text\)\)/,
+  );
+  assert.doesNotMatch(
+    body,
+    /concat\(\$\{ctx\.tenantId\}, ':stock-adjustment:', \$\{data\.idempotency_key\}\)/,
+  );
   assert.match(body, /reference_id: data\.idempotency_key/);
   assert.match(
     body,

@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { isPostgresConfigured, prisma } from "@/lib/db/prisma";
 import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { withVerifiedTenantTransaction } from "@/lib/db/tenant-read";
 import ExportCsvButton from "@/components/ui/export-csv-button";
 import { exportBatchExpiryCsvAction } from "@/app/_actions/exports.actions";
 import { cn } from "@/lib/utils";
@@ -102,12 +103,13 @@ export default async function BatchExpiryPage({
   if (dbOk) {
     try {
       const ctx = await requireServerTenantContext();
-      const t = ctx;
+      await withVerifiedTenantTransaction(ctx, async ({ ctx, tx }) => {
+        const t = ctx;
 
-      const allBatches = await (prisma as any).product_batches.findMany({
-        where: { tenant_id: t.tenantId, is_blocked: false },
-        include: { product: { select: { name: true, sku: true } } },
-      });
+        const allBatches = await (tx as any).product_batches.findMany({
+          where: { tenant_id: t.tenantId, is_blocked: false },
+          include: { product: { select: { name: true, sku: true } } },
+        });
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -159,7 +161,8 @@ export default async function BatchExpiryPage({
       summarySkuAtRisk = atRiskSkus.size;
 
       const startIdx = (page - 1) * pageSize;
-      items = filtered.slice(startIdx, startIdx + pageSize);
+        items = filtered.slice(startIdx, startIdx + pageSize);
+      });
     } catch (_err) {
       dbOk = false;
     }

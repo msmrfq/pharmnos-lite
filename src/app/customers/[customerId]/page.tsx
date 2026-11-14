@@ -16,8 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 import { PrintToolbar } from "@/components/print/print-toolbar";
 import { businessDateToday, formatBusinessDate } from "@/lib/utils/business-date";
 import { loadFinancialLedgerReport } from "@/app/_actions/exports.actions";
@@ -65,8 +64,9 @@ export default async function CustomerDetailPage({
 
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      customer = await repos.customers.getById(customerId, ctx);
+      customer = await withTenantRepositories(async ({ ctx, repos }) =>
+        repos.customers.getById(customerId, ctx),
+      );
     } catch (_err) {
       dbOk = false;
     }

@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { Prisma } from "@prisma/client";
 import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
+import { withVerifiedTenantTransaction } from "@/lib/db/tenant-read";
 import { storageAdapter } from "@/adapters/storage";
 import {
   buildInvoiceArtifactKey,
@@ -29,18 +30,20 @@ export async function generateSalesInvoicePdfAction(invoiceId: string): Promise<
 }> {
   const ctx = await requireServerTenantContext();
   requirePermission(ctx, "view_invoice");
-  const invoice = await prisma.sales_invoices.findFirst({
-    where: { id: invoiceId, tenant_id: ctx.tenantId },
-    select: {
-      id: true,
-      status: true,
-      finalized_snapshot: true,
-      pdf_artifact_key: true,
-      pdf_generation_status: true,
-      pdf_checksum_sha256: true,
-      pdf_byte_size: true,
-    },
-  });
+  const invoice = await withVerifiedTenantTransaction(ctx, async ({ ctx, tx }) =>
+    tx.sales_invoices.findFirst({
+      where: { id: invoiceId, tenant_id: ctx.tenantId },
+      select: {
+        id: true,
+        status: true,
+        finalized_snapshot: true,
+        pdf_artifact_key: true,
+        pdf_generation_status: true,
+        pdf_checksum_sha256: true,
+        pdf_byte_size: true,
+      },
+    }),
+  );
   if (!invoice || invoice.status !== "FINALIZED" || !invoice.finalized_snapshot || typeof invoice.finalized_snapshot !== "object") {
     return { ok: false, error: "Only finalized invoices with an immutable snapshot can generate a PDF." };
   }
@@ -100,14 +103,16 @@ export async function getSalesInvoicePdfUrlAction(invoiceId: string): Promise<{
 }> {
   const ctx = await requireServerTenantContext();
   requirePermission(ctx, "view_invoice");
-  const invoice = await prisma.sales_invoices.findFirst({
-    where: { id: invoiceId, tenant_id: ctx.tenantId, status: "FINALIZED", pdf_generation_status: "READY" },
-    select: {
-      pdf_artifact_key: true,
-      pdf_checksum_sha256: true,
-      pdf_byte_size: true,
-    },
-  });
+  const invoice = await withVerifiedTenantTransaction(ctx, async ({ ctx, tx }) =>
+    tx.sales_invoices.findFirst({
+      where: { id: invoiceId, tenant_id: ctx.tenantId, status: "FINALIZED", pdf_generation_status: "READY" },
+      select: {
+        pdf_artifact_key: true,
+        pdf_checksum_sha256: true,
+        pdf_byte_size: true,
+      },
+    }),
+  );
   if (!invoice?.pdf_artifact_key) return { ok: false, error: "Invoice PDF is not ready." };
   const expectedKey = buildInvoiceArtifactKey(ctx, invoiceId);
   if (invoice.pdf_artifact_key !== expectedKey) return { ok: false, error: "Invoice PDF metadata is invalid." };
@@ -240,10 +245,12 @@ export async function getSupplierInvoiceDocumentUrlAction(documentId: string): P
 }> {
   const ctx = await requireServerTenantContext();
   requirePermission(ctx, "view_purchase");
-  const document = await prisma.purchase_supplier_documents.findFirst({
-    where: { id: documentId, tenant_id: ctx.tenantId },
-    select: { storage_key: true },
-  });
+  const document = await withVerifiedTenantTransaction(ctx, async ({ ctx, tx }) =>
+    tx.purchase_supplier_documents.findFirst({
+      where: { id: documentId, tenant_id: ctx.tenantId },
+      select: { storage_key: true },
+    }),
+  );
   if (!document) return { ok: false, error: "Supplier invoice document not found." };
   try {
     return {

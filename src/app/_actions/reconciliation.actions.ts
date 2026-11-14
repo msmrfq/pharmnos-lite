@@ -20,6 +20,7 @@ import {
 import { assertPostgresConfigured } from "@/lib/db/prisma";
 import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
 import { repos } from "@/repositories";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 
 function required(value: unknown, name: string): string {
   if (typeof value !== "string" || value.trim() === "") throw new Error(`${name} is required.`);
@@ -40,9 +41,10 @@ async function financialContext() {
 }
 
 export async function listCustomerUnappliedCreditsAction(customerId: string) {
-  const ctx = await requireServerTenantContext();
-  requirePermission(ctx, PermissionAction.view_customer_ledger);
-  return repos.payments.listCustomerUnappliedCredits(required(customerId, "Customer"), ctx);
+  return withTenantRepositories(async ({ ctx, repos }) => {
+    requirePermission(ctx, PermissionAction.view_customer_ledger);
+    return repos.payments.listCustomerUnappliedCredits(required(customerId, "Customer"), ctx);
+  });
 }
 
 export async function allocatePaymentAction(input: Omit<AllocationInput, "tenantId" | "actorId">) {
@@ -82,9 +84,10 @@ export async function applyCustomerCreditAction(
 }
 
 export async function listSupplierUnappliedAdvancesAction(supplierId: string) {
-  const ctx = await requireServerTenantContext();
-  requirePermission(ctx, PermissionAction.view_supplier_ledger);
-  return repos.payments.listSupplierUnappliedAdvances(required(supplierId, "Supplier"), ctx);
+  return withTenantRepositories(async ({ ctx, repos }) => {
+    requirePermission(ctx, PermissionAction.view_supplier_ledger);
+    return repos.payments.listSupplierUnappliedAdvances(required(supplierId, "Supplier"), ctx);
+  });
 }
 
 export async function applySupplierAdvanceAction(

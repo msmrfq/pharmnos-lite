@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { isPostgresConfigured, prisma } from "@/lib/db/prisma";
 import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { withVerifiedTenantTransaction } from "@/lib/db/tenant-read";
 import ExportCsvButton from "@/components/ui/export-csv-button";
 import { exportStockValuationCsvAction } from "@/app/_actions/exports.actions";
 import { cn } from "@/lib/utils";
@@ -125,29 +126,30 @@ export default async function StockValuationPage({
   if (dbOk) {
     try {
       const ctx = await requireServerTenantContext();
-      const t = ctx;
+      await withVerifiedTenantTransaction(ctx, async ({ ctx, tx }) => {
+        const t = ctx;
 
-      try {
-        const schedRows = await (prisma as any).products.findMany({
-          where: { tenant_id: t.tenantId, schedule_classification: { not: null } },
-          select: { schedule_classification: true },
-          distinct: ["schedule_classification"],
-          take: 100,
-        });
-        distinctSchedules = schedRows
-          .map((r: any) => r.schedule_classification as string)
-          .filter((s: any) => typeof s === "string" && s.trim().length > 0)
-          .sort();
-      } catch {
-        distinctSchedules = [];
-      }
+        try {
+          const schedRows = await (tx as any).products.findMany({
+            where: { tenant_id: t.tenantId, schedule_classification: { not: null } },
+            select: { schedule_classification: true },
+            distinct: ["schedule_classification"],
+            take: 100,
+          });
+          distinctSchedules = schedRows
+            .map((r: any) => r.schedule_classification as string)
+            .filter((s: any) => typeof s === "string" && s.trim().length > 0)
+            .sort();
+        } catch {
+          distinctSchedules = [];
+        }
 
-      const allProducts = await (prisma as any).products.findMany({
-        where: { tenant_id: t.tenantId },
-        include: {
-          batches: {
-            orderBy: { expiry_date: "asc" },
-          },
+        const allProducts = await (tx as any).products.findMany({
+          where: { tenant_id: t.tenantId },
+          include: {
+            batches: {
+              orderBy: { expiry_date: "asc" },
+            },
         },
         orderBy: { name: "asc" },
       });
@@ -226,7 +228,8 @@ export default async function StockValuationPage({
       }
 
       const startIdx = (page - 1) * pageSize;
-      items = filtered.slice(startIdx, startIdx + pageSize);
+        items = filtered.slice(startIdx, startIdx + pageSize);
+      });
     } catch (_err) {
       dbOk = false;
     }

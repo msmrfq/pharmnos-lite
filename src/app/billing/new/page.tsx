@@ -10,8 +10,7 @@ import {
 } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 import BillingNewClientForm from "./_form";
 
 export const metadata: Metadata = {
@@ -27,13 +26,13 @@ export default async function NewBillingPage() {
 
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      const [custRes, prodRes, batchRes, businessProfile] = await Promise.all([
+      const loaded = await withTenantRepositories(async ({ ctx, repos }) => Promise.all([
         repos.customers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx),
         repos.products.list({ skip: 0, take: 25000, orderBy: { name: "asc" } }, ctx),
         repos.productBatches.list({ skip: 0, take: 25000, orderBy: { expiry_date: "asc" } }, ctx),
         repos.businessProfiles.getForTenant(ctx),
-      ]);
+      ]));
+      const [custRes, prodRes, batchRes, businessProfile] = loaded;
       customers = (custRes.items as any[]) ?? [];
       products = (prodRes.items as any[]) ?? [];
       batches = (batchRes.items as any[]) ?? [];

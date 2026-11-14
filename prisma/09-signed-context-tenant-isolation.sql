@@ -71,6 +71,7 @@ DECLARE
   accepted_transaction_id bigint;
   context_subject text;
   context_tenant text;
+  current_txid bigint;
 BEGIN
   IF context IS NULL OR split_part(context, '.', 2) = '' THEN RETURN; END IF;
   payload := split_part(context, '.', 1);
@@ -108,37 +109,68 @@ BEGIN
   ) THEN RETURN; END IF;
   subject_id := context_subject;
   tenant_id := context_tenant;
+  current_txid := txid_current();
   INSERT INTO pharmnos_private.auth_context_replays (nonce, first_transaction_id)
-  VALUES (context_nonce, txid_current())
+  VALUES (context_nonce, current_txid)
   ON CONFLICT (nonce) DO NOTHING;
   SELECT r.first_transaction_id INTO accepted_transaction_id
   FROM pharmnos_private.auth_context_replays AS r
   WHERE r.nonce = context_nonce;
-  IF accepted_transaction_id <> txid_current() THEN RETURN; END IF;
+  IF accepted_transaction_id <> current_txid THEN RETURN; END IF;
   RETURN NEXT;
 EXCEPTION WHEN OTHERS THEN
   RETURN;
 END;
 $function$;
 
-CREATE OR REPLACE FUNCTION public.financial_context_subject()
+-- establish_tenant_context verifies the signed context and sets transaction-local GUCs
+-- that RLS policies can read directly. Returns the bound tenant_id.
+CREATE OR REPLACE FUNCTION public.establish_tenant_context(context text)
 RETURNS text
-LANGUAGE sql
+LANGUAGE plpgsql
 VOLATILE
 SECURITY DEFINER
 SET search_path = pg_catalog, pharmnos_private
 AS $function$
-  SELECT subject_id FROM pharmnos_private.verify_auth_context(current_setting('pharmnos.auth_context', true)) LIMIT 1
+DECLARE
+  v_subject_id text;
+  v_tenant_id text;
+BEGIN
+  SELECT subject_id, tenant_id INTO v_subject_id, v_tenant_id
+  FROM pharmnos_private.verify_auth_context(context)
+  LIMIT 1;
+  
+  IF v_subject_id IS NULL OR v_tenant_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+  
+  -- Use EXECUTE with SET LOCAL to set transaction-scoped GUCs
+  -- that are visible to RLS policies in the same transaction
+  EXECUTE format('SET LOCAL pharmnos.auth_context_tenant_id = %L', v_tenant_id);
+  EXECUTE format('SET LOCAL pharmnos.auth_context_subject_id = %L', v_subject_id);
+  
+  RETURN v_tenant_id;
+END;
 $function$;
 
+-- financial_context_tenant_id reads the local GUC set by establish_tenant_context
 CREATE OR REPLACE FUNCTION public.financial_context_tenant_id()
 RETURNS text
 LANGUAGE sql
 VOLATILE
-SECURITY DEFINER
-SET search_path = pg_catalog, pharmnos_private
+SET search_path = pg_catalog
 AS $function$
-  SELECT tenant_id FROM pharmnos_private.verify_auth_context(current_setting('pharmnos.auth_context', true)) LIMIT 1
+  SELECT current_setting('pharmnos.auth_context_tenant_id', true)
+$function$;
+
+-- financial_context_subject_id reads the local GUC set by establish_tenant_context
+CREATE OR REPLACE FUNCTION public.financial_context_subject_id()
+RETURNS text
+LANGUAGE sql
+VOLATILE
+SET search_path = pg_catalog
+AS $function$
+  SELECT current_setting('pharmnos.auth_context_subject_id', true)
 $function$;
 
 CREATE OR REPLACE FUNCTION public.financial_context_is_admin()
@@ -152,9 +184,11 @@ DECLARE
   context_subject text;
   context_tenant text;
 BEGIN
-  SELECT subject_id, tenant_id INTO context_subject, context_tenant
-  FROM pharmnos_private.verify_auth_context(current_setting('pharmnos.auth_context', true)) LIMIT 1;
-  IF context_subject IS NULL OR context_tenant IS NULL THEN RETURN false; END IF;
+  context_tenant := current_setting('pharmnos.auth_context_tenant_id', true);
+  context_subject := current_setting('pharmnos.auth_context_subject_id', true);
+  IF context_tenant IS NULL OR context_subject IS NULL OR context_tenant = '' OR context_subject = '' THEN
+    RETURN false;
+  END IF;
   RETURN EXISTS (
     SELECT 1
     FROM public.memberships AS m
@@ -193,9 +227,9 @@ ALTER TABLE public.users FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "signed_ctx_select" ON public.users;
 DROP POLICY IF EXISTS "signed_ctx_insert" ON public.users;
 DROP POLICY IF EXISTS "signed_ctx_update" ON public.users;
-CREATE POLICY "signed_ctx_select" ON public.users FOR SELECT USING (external_id = public.financial_context_subject());
-CREATE POLICY "signed_ctx_insert" ON public.users FOR INSERT WITH CHECK (external_id = public.financial_context_subject());
-CREATE POLICY "signed_ctx_update" ON public.users FOR UPDATE USING (external_id = public.financial_context_subject()) WITH CHECK (external_id = public.financial_context_subject());
+CREATE POLICY "signed_ctx_select" ON public.users FOR SELECT USING (external_id = public.financial_context_subject_id());
+CREATE POLICY "signed_ctx_insert" ON public.users FOR INSERT WITH CHECK (external_id = public.financial_context_subject_id());
+CREATE POLICY "signed_ctx_update" ON public.users FOR UPDATE USING (external_id = public.financial_context_subject_id()) WITH CHECK (external_id = public.financial_context_subject_id());
 
 -- roles / role_permissions / memberships: admin-gated writes; subject-aware reads.
 ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
@@ -210,7 +244,7 @@ CREATE POLICY "signed_ctx_select" ON public.roles FOR SELECT USING (
     JOIN public.users AS u ON u.id = m.user_id
     WHERE m.role_id = roles.id
       AND m.status = 'active'
-      AND u.external_id = public.financial_context_subject()
+      AND u.external_id = public.financial_context_subject_id()
       AND m.tenant_id::text = public.financial_context_tenant_id()
   )
 );
@@ -238,7 +272,7 @@ CREATE POLICY "signed_ctx_select" ON public.role_permissions FOR SELECT USING (
     JOIN public.users AS u ON u.id = m.user_id
     WHERE r.id = role_permissions.role_id
       AND m.status = 'active'
-      AND u.external_id = public.financial_context_subject()
+      AND u.external_id = public.financial_context_subject_id()
       AND m.tenant_id::text = public.financial_context_tenant_id()
   )
 );
@@ -280,7 +314,7 @@ CREATE POLICY "signed_ctx_select" ON public.memberships FOR SELECT USING (
     AND EXISTS (
       SELECT 1 FROM public.users AS u
       WHERE u.id = memberships.user_id
-        AND u.external_id = public.financial_context_subject()
+        AND u.external_id = public.financial_context_subject_id()
         AND memberships.tenant_id::text = public.financial_context_tenant_id()
     )
   )

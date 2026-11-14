@@ -10,8 +10,7 @@ import {
 } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 import PurchasesNewClientForm from "./_form";
 
 export const metadata: Metadata = {
@@ -25,11 +24,10 @@ export default async function NewPurchasePage() {
 
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      const [supRes, prodRes] = await Promise.all([
+      const [supRes, prodRes] = await withTenantRepositories(async ({ ctx, repos }) => Promise.all([
         repos.suppliers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx),
         repos.products.list({ skip: 0, take: 25000, orderBy: { name: "asc" } }, ctx),
-      ]);
+      ]));
       suppliers = (supRes.items as any[]) ?? [];
       products = (prodRes.items as any[]) ?? [];
     } catch (_err) {

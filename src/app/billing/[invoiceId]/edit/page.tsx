@@ -5,8 +5,7 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { CardCanvas, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 import { PrintToolbar } from "@/components/print/print-toolbar";
 
 export const metadata: Metadata = {
@@ -22,8 +21,9 @@ export default async function BillingInvoiceEditPage({
   let invoice: any = null;
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      invoice = await repos.salesInvoices.getById(params.invoiceId, ctx);
+      invoice = await withTenantRepositories(async ({ ctx, repos }) =>
+        repos.salesInvoices.getById(params.invoiceId, ctx),
+      );
     } catch {
       dbOk = false;
     }

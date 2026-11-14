@@ -3,6 +3,7 @@
 import { assertPostgresConfigured, prisma } from "@/lib/db/prisma";
 import { repos } from "@/repositories";
 import { establishTenantContext, requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
+import { withTenantRepositories, withVerifiedTenantTransaction } from "@/lib/db/tenant-read";
 import { PermissionAction, Prisma } from "@prisma/client";
 import { businessDateFromPrismaDate, businessDateToday, businessDateToPrismaDate, formatBusinessDate, formatBusinessInstant, parseBusinessDate } from "@/lib/utils/business-date";
 import { Decimal } from "@/lib/decimal";
@@ -44,134 +45,139 @@ function respondCsv(filename: string, rows: string[][]): Response {
 
 export async function exportInventoryCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportInventoryCsvAction");
-  const ctx = await requireServerTenantContext();
-  requirePermission(ctx, PermissionAction.view_inventory);
-  const result = await repos.products.list({ skip: 0, take: 25000, orderBy: { name: "asc" } }, ctx);
-  const rows: string[][] = [
-    ["SKU", "Product", "Schedule", "HSN", "MRP", "PTR", "Pack", "Reorder level", "Available", "FEFO expiry"],
-  ];
-  for (const p of (result.items as any) ?? []) {
-    const batches = p.batches ?? [];
-    const avail = batches.reduce((s: number, b: any) => s + Number(b.available_qty ?? 0), 0);
-    const fefo = batches.find((b: any) => Number(b.available_qty ?? 0) > 0)?.expiry_date;
-    const fefoStr = fefo ? new Date(fefo).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "";
-    rows.push([
-      p.sku ?? "",
-      p.name ?? "",
-      p.schedule_classification ?? "",
-      p.hsn_code ?? "",
-      String(p.mrp ?? ""),
-      String(p.standard_sale_rate ?? ""),
-      p.pack_size ?? "",
-      String(p.reorder_level ?? ""),
-      String(avail),
-      fefoStr,
-    ]);
-  }
-  return respondCsv(`inventory-products-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  return withTenantRepositories(async ({ ctx, repos }) => {
+    requirePermission(ctx, PermissionAction.view_inventory);
+    const result = await repos.products.list({ skip: 0, take: 25000, orderBy: { name: "asc" } }, ctx);
+    const rows: string[][] = [
+      ["SKU", "Product", "Schedule", "HSN", "MRP", "PTR", "Pack", "Reorder level", "Available", "FEFO expiry"],
+    ];
+    for (const p of (result.items as any) ?? []) {
+      const batches = p.batches ?? [];
+      const avail = batches.reduce((s: number, b: any) => s + Number(b.available_qty ?? 0), 0);
+      const fefo = batches.find((b: any) => Number(b.available_qty ?? 0) > 0)?.expiry_date;
+      const fefoStr = fefo ? new Date(fefo).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "";
+      rows.push([
+        p.sku ?? "",
+        p.name ?? "",
+        p.schedule_classification ?? "",
+        p.hsn_code ?? "",
+        String(p.mrp ?? ""),
+        String(p.standard_sale_rate ?? ""),
+        p.pack_size ?? "",
+        String(p.reorder_level ?? ""),
+        String(avail),
+        fefoStr,
+      ]);
+    }
+    return respondCsv(`inventory-products-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  });
 }
 
 export async function exportLowStockCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportLowStockCsvAction");
-  const ctx = await requireServerTenantContext();
-  requirePermission(ctx, PermissionAction.view_inventory);
-  const result = await repos.products.listLowStock({ skip: 0, take: 25000, orderBy: { name: "asc" } }, ctx);
-  const rows: string[][] = [
-    ["SKU", "Product", "Available total", "Reorder level", "Schedule", "HSN", "MRP", "Pack"],
-  ];
-  for (const p of (result.items as any) ?? []) {
-    rows.push([
-      p.sku ?? "",
-      p.name ?? "",
-      String(p.total_available ?? 0),
-      String(p.reorder_level ?? ""),
-      p.schedule_classification ?? "",
-      p.hsn_code ?? "",
-      String(p.mrp ?? ""),
-      p.pack_size ?? "",
-    ]);
-  }
-  return respondCsv(`low-stock-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  return withTenantRepositories(async ({ ctx, repos }) => {
+    requirePermission(ctx, PermissionAction.view_inventory);
+    const result = await repos.products.listLowStock({ skip: 0, take: 25000, orderBy: { name: "asc" } }, ctx);
+    const rows: string[][] = [
+      ["SKU", "Product", "Available total", "Reorder level", "Schedule", "HSN", "MRP", "Pack"],
+    ];
+    for (const p of (result.items as any) ?? []) {
+      rows.push([
+        p.sku ?? "",
+        p.name ?? "",
+        String(p.total_available ?? 0),
+        String(p.reorder_level ?? ""),
+        p.schedule_classification ?? "",
+        p.hsn_code ?? "",
+        String(p.mrp ?? ""),
+        p.pack_size ?? "",
+      ]);
+    }
+    return respondCsv(`low-stock-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  });
 }
 
 export async function exportNearExpiryCsvAction(windowDays = 180): Promise<Response> {
   assertPostgresConfigured("exportNearExpiryCsvAction");
-  const ctx = await requireServerTenantContext();
-  requirePermission(ctx, PermissionAction.view_inventory);
-  const items = await repos.productBatches.listNearExpiry(ctx, windowDays);
-  const rows: string[][] = [
-    ["Product", "SKU", "Schedule", "Batch no.", "Expiry date", "Available qty", "MRP", "Stock value (MRP)"],
-  ];
-  for (const b of (items as any) ?? []) {
-    const exp = b.expiry_date ? new Date(b.expiry_date) : null;
-    const expStr = exp ? exp.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "";
-    const mrp = Number(b.mrp ?? b.product?.mrp ?? 0);
-    const val = mrp * Number(b.available_qty ?? 0);
-    rows.push([
-      b.product?.name ?? "",
-      b.product?.sku ?? "",
-      b.product?.schedule_classification ?? "",
-      b.batch_no ?? "",
-      expStr,
-      String(b.available_qty ?? 0),
-      String(mrp),
-      String(val),
-    ]);
-  }
-  return respondCsv(`near-expiry-${windowDays}d-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  return withTenantRepositories(async ({ ctx, repos }) => {
+    requirePermission(ctx, PermissionAction.view_inventory);
+    const items = await repos.productBatches.listNearExpiry(ctx, windowDays);
+    const rows: string[][] = [
+      ["Product", "SKU", "Schedule", "Batch no.", "Expiry date", "Available qty", "MRP", "Stock value (MRP)"],
+    ];
+    for (const b of (items as any) ?? []) {
+      const exp = b.expiry_date ? new Date(b.expiry_date) : null;
+      const expStr = exp ? exp.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "";
+      const mrp = Number(b.mrp ?? b.product?.mrp ?? 0);
+      const val = mrp * Number(b.available_qty ?? 0);
+      rows.push([
+        b.product?.name ?? "",
+        b.product?.sku ?? "",
+        b.product?.schedule_classification ?? "",
+        b.batch_no ?? "",
+        expStr,
+        String(b.available_qty ?? 0),
+        String(mrp),
+        String(val),
+      ]);
+    }
+    return respondCsv(`near-expiry-${windowDays}d-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  });
 }
 
 export async function exportCustomersCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportCustomersCsvAction");
-  const ctx = await requireServerTenantContext();
-  requirePermission(ctx, PermissionAction.view_customer);
-  const result = await repos.customers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx);
-  const rows: string[][] = [
-    ["Code", "Business", "Contact person", "Phone", "Mobile", "Email", "City", "State", "GSTIN", "Credit limit", "Receivable", "Active"],
-  ];
-  for (const c of (result.items as any) ?? []) {
-    rows.push([
-      c.code ?? "",
-      c.business_name ?? "",
-      c.contact_person ?? "",
-      c.phone ?? "",
-      c.mobile ?? "",
-      c.email ?? "",
-      c.billing_city ?? "",
-      c.billing_state ?? "",
-      c.gstin ?? "",
-      String(c.credit_limit ?? ""),
-      String(c.receivable_balance ?? 0),
-      c.is_active === false ? "No" : "Yes",
-    ]);
-  }
-  return respondCsv(`customers-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  return withTenantRepositories(async ({ ctx, repos }) => {
+    requirePermission(ctx, PermissionAction.view_customer);
+    const result = await repos.customers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx);
+    const rows: string[][] = [
+      ["Code", "Business", "Contact person", "Phone", "Mobile", "Email", "City", "State", "GSTIN", "Credit limit", "Receivable", "Active"],
+    ];
+    for (const c of (result.items as any) ?? []) {
+      rows.push([
+        c.code ?? "",
+        c.business_name ?? "",
+        c.contact_person ?? "",
+        c.phone ?? "",
+        c.mobile ?? "",
+        c.email ?? "",
+        c.billing_city ?? "",
+        c.billing_state ?? "",
+        c.gstin ?? "",
+        String(c.credit_limit ?? ""),
+        String(c.receivable_balance ?? 0),
+        c.is_active === false ? "No" : "Yes",
+      ]);
+    }
+    return respondCsv(`customers-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  });
 }
 
 export async function exportSuppliersCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportSuppliersCsvAction");
-  const ctx = await requireServerTenantContext();
-  requirePermission(ctx, PermissionAction.view_supplier);
-  const result = await repos.suppliers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx);
-  const rows: string[][] = [
-    ["Code", "Business", "Contact person", "Phone", "Mobile", "Email", "City", "State", "GSTIN", "Payable", "Active"],
-  ];
-  for (const s of (result.items as any) ?? []) {
-    rows.push([
-      s.code ?? "",
-      s.business_name ?? "",
-      s.contact_person ?? "",
-      s.phone ?? "",
-      s.mobile ?? "",
-      s.email ?? "",
-      s.city ?? "",
-      s.state ?? "",
-      s.gstin ?? "",
-      String(s.payable_balance ?? 0),
-      s.is_active === false ? "No" : "Yes",
-    ]);
-  }
-  return respondCsv(`suppliers-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  return withTenantRepositories(async ({ ctx, repos }) => {
+    requirePermission(ctx, PermissionAction.view_supplier);
+    const result = await repos.suppliers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx);
+    const rows: string[][] = [
+      ["Code", "Business", "Contact person", "Phone", "Mobile", "Email", "City", "State", "GSTIN", "Payable", "Active"],
+    ];
+    for (const s of (result.items as any) ?? []) {
+      rows.push([
+        s.code ?? "",
+        s.business_name ?? "",
+        s.contact_person ?? "",
+        s.phone ?? "",
+        s.mobile ?? "",
+        s.email ?? "",
+        s.city ?? "",
+        s.state ?? "",
+        s.gstin ?? "",
+        String(s.payable_balance ?? 0),
+        s.is_active === false ? "No" : "Yes",
+      ]);
+    }
+    return respondCsv(`suppliers-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  });
 }
 
 type RegisterInput = { q?: string; partyId?: string; startDate?: string; endDate?: string; mode?: string };
@@ -327,121 +333,125 @@ export async function exportSalesRegisterCsvAction(input: RegisterInput = {}): P
 export async function exportStockValuationCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportStockValuationCsvAction");
   const ctx = await requireServerTenantContext();
-  requirePermission(ctx, PermissionAction.view_inventory);
-  const t = ctx;
-  const items = await (prisma as any).products.findMany({
-    where: { tenant_id: t.tenantId },
-    include: {
-      batches: {
-        orderBy: { expiry_date: "asc" },
+  return withVerifiedTenantTransaction(ctx, async ({ ctx, tx }) => {
+    requirePermission(ctx, PermissionAction.view_inventory);
+    const t = ctx;
+    const items = await (tx as any).products.findMany({
+      where: { tenant_id: t.tenantId },
+      include: {
+        batches: {
+          orderBy: { expiry_date: "asc" },
+        },
       },
-    },
-    take: 25000,
-    orderBy: { name: "asc" },
-  });
+      take: 25000,
+      orderBy: { name: "asc" },
+    });
 
-  const nearCutoff = new Date();
-  nearCutoff.setDate(nearCutoff.getDate() + 60);
+    const nearCutoff = new Date();
+    nearCutoff.setDate(nearCutoff.getDate() + 60);
 
-  const rows: string[][] = [
-    ["SKU", "Product", "Schedule", "HSN", "MRP", "Approved avg acquisition cost", "Total available qty", "Total batches", "Total value (₹)", "Near expiry batches"],
-  ];
+    const rows: string[][] = [
+      ["SKU", "Product", "Schedule", "HSN", "MRP", "Approved avg acquisition cost", "Total available qty", "Total batches", "Total value (₹)", "Near expiry batches"],
+    ];
 
-  for (const p of items as any[]) {
-    const batches = p.batches ?? [];
-    const avail = batches.reduce((s: number, b: any) => s + Number(b.available_qty ?? 0), 0);
-    const batchesCount = batches.length;
-    let weightedSum = 0;
-    let approvedAvail = 0;
-    let valuationPending = false;
-    for (const b of batches) {
-      if (b.inventory_valuation_status !== "APPROVED" || b.inventory_acquisition_cost === null) {
-        valuationPending = valuationPending || Number(b.available_qty ?? 0) > 0;
-        continue;
+    for (const p of items as any[]) {
+      const batches = p.batches ?? [];
+      const avail = batches.reduce((s: number, b: any) => s + Number(b.available_qty ?? 0), 0);
+      const batchesCount = batches.length;
+      let weightedSum = 0;
+      let approvedAvail = 0;
+      let valuationPending = false;
+      for (const b of batches) {
+        if (b.inventory_valuation_status !== "APPROVED" || b.inventory_acquisition_cost === null) {
+          valuationPending = valuationPending || Number(b.available_qty ?? 0) > 0;
+          continue;
+        }
+        const available = Number(b.available_qty ?? 0);
+        approvedAvail += available;
+        weightedSum += available * Number(b.inventory_acquisition_cost ?? 0);
       }
-      const available = Number(b.available_qty ?? 0);
-      approvedAvail += available;
-      weightedSum += available * Number(b.inventory_acquisition_cost ?? 0);
-    }
-    const avgRate = approvedAvail > 0 ? weightedSum / approvedAvail : 0;
-    const totalValue = weightedSum;
-    let nearExpireCount = 0;
-    for (const b of batches) {
-      if (b.expiry_date && Number(b.available_qty ?? 0) > 0) {
-        const exp = new Date(b.expiry_date);
-        if (exp.getTime() <= nearCutoff.getTime()) {
-          nearExpireCount++;
+      const avgRate = approvedAvail > 0 ? weightedSum / approvedAvail : 0;
+      const totalValue = weightedSum;
+      let nearExpireCount = 0;
+      for (const b of batches) {
+        if (b.expiry_date && Number(b.available_qty ?? 0) > 0) {
+          const exp = new Date(b.expiry_date);
+          if (exp.getTime() <= nearCutoff.getTime()) {
+            nearExpireCount++;
+          }
         }
       }
+      rows.push([
+        p.sku ?? "",
+        p.name ?? "",
+        p.schedule_classification ?? "",
+        p.hsn_code ?? "",
+        String(p.mrp ?? ""),
+        String(Number.isFinite(avgRate) ? avgRate.toFixed(2) : ""),
+        String(avail),
+        String(batchesCount),
+        valuationPending ? "PENDING" : String(Number.isFinite(totalValue) ? totalValue.toFixed(2) : ""),
+        String(nearExpireCount),
+      ]);
     }
-    rows.push([
-      p.sku ?? "",
-      p.name ?? "",
-      p.schedule_classification ?? "",
-      p.hsn_code ?? "",
-      String(p.mrp ?? ""),
-      String(Number.isFinite(avgRate) ? avgRate.toFixed(2) : ""),
-      String(avail),
-      String(batchesCount),
-      valuationPending ? "PENDING" : String(Number.isFinite(totalValue) ? totalValue.toFixed(2) : ""),
-      String(nearExpireCount),
-    ]);
-  }
 
-  return respondCsv(`stock-valuation-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+    return respondCsv(`stock-valuation-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  });
 }
 
 export async function exportBatchExpiryCsvAction(): Promise<Response> {
   assertPostgresConfigured("exportBatchExpiryCsvAction");
   const ctx = await requireServerTenantContext();
-  requirePermission(ctx, PermissionAction.view_inventory);
-  const t = ctx;
-  const batches = await (prisma as any).product_batches.findMany({
-    where: { tenant_id: t.tenantId, is_blocked: false },
-    include: {
-      product: { select: { name: true, sku: true } },
-      supplier: { select: { business_name: true } },
-    },
-    orderBy: { expiry_date: "asc" },
-    take: 25000,
-  });
+  return withVerifiedTenantTransaction(ctx, async ({ ctx, tx }) => {
+    requirePermission(ctx, PermissionAction.view_inventory);
+    const t = ctx;
+    const batches = await (tx as any).product_batches.findMany({
+      where: { tenant_id: t.tenantId, is_blocked: false },
+      include: {
+        product: { select: { name: true, sku: true } },
+        supplier: { select: { business_name: true } },
+      },
+      orderBy: { expiry_date: "asc" },
+      take: 25000,
+    });
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  const rows: string[][] = [
-    ["Batch no.", "Product", "SKU", "Supplier", "Expiry date", "Days left", "MRP", "Purchase rate", "Received qty", "Available qty", "Status"],
-  ];
+    const rows: string[][] = [
+      ["Batch no.", "Product", "SKU", "Supplier", "Expiry date", "Days left", "MRP", "Purchase rate", "Received qty", "Available qty", "Status"],
+    ];
 
-  for (const b of batches as any[]) {
-    const exp = b.expiry_date ? new Date(b.expiry_date) : null;
-    const expStr = exp ? exp.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "";
-    let daysLeft: number | null = null;
-    let status = "Healthy";
-    if (exp) {
-      daysLeft = Math.ceil((exp.getTime() - today.getTime()) / 86400000);
-      if (daysLeft < 0) status = "Expired";
-      else if (daysLeft <= 30) status = "\u226430 days";
-      else if (daysLeft <= 60) status = "\u226460 days";
-      else if (daysLeft <= 90) status = "\u226490 days";
-      else status = "Healthy";
+    for (const b of batches as any[]) {
+      const exp = b.expiry_date ? new Date(b.expiry_date) : null;
+      const expStr = exp ? exp.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "";
+      let daysLeft: number | null = null;
+      let status = "Healthy";
+      if (exp) {
+        daysLeft = Math.ceil((exp.getTime() - today.getTime()) / 86400000);
+        if (daysLeft < 0) status = "Expired";
+        else if (daysLeft <= 30) status = "\u226430 days";
+        else if (daysLeft <= 60) status = "\u226460 days";
+        else if (daysLeft <= 90) status = "\u226490 days";
+        else status = "Healthy";
+      }
+      rows.push([
+        b.batch_no ?? "",
+        b.product?.name ?? "",
+        b.product?.sku ?? "",
+        b.supplier?.business_name ?? "",
+        expStr,
+        daysLeft === null ? "" : String(daysLeft),
+        String(b.mrp ?? ""),
+        String(b.purchase_rate ?? ""),
+        String(b.received_qty ?? 0),
+        String(b.available_qty ?? 0),
+        status,
+      ]);
     }
-    rows.push([
-      b.batch_no ?? "",
-      b.product?.name ?? "",
-      b.product?.sku ?? "",
-      b.supplier?.business_name ?? "",
-      expStr,
-      daysLeft === null ? "" : String(daysLeft),
-      String(b.mrp ?? ""),
-      String(b.purchase_rate ?? ""),
-      String(b.received_qty ?? 0),
-      String(b.available_qty ?? 0),
-      status,
-    ]);
-  }
 
-  return respondCsv(`batch-expiry-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+    return respondCsv(`batch-expiry-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  });
 }
 
 type GstHsnExportInput = { from?: string; to?: string; party?: string; q?: string };

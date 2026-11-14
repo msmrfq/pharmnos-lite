@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma, type PrismaClient } from "@/lib/db/prisma";
 import { TenantRepository } from "./tenant.repository";
 import { UserRepository } from "./user.repository";
@@ -35,7 +36,9 @@ export type Repositories = {
   auditLogs: AuditLogRepository;
 };
 
-export function createRepositories(client: PrismaClient = prisma): Repositories {
+export type RepositoryClient = PrismaClient | Prisma.TransactionClient;
+
+export function createRepositories(client: RepositoryClient = prisma): Repositories {
   return {
     tenants: new TenantRepository(client),
     users: new UserRepository(client),

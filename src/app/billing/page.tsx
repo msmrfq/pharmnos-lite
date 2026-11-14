@@ -20,8 +20,7 @@ import {
 import { Receipt, Plus, Download, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 import { describeDatabaseAccessError } from "@/lib/db/database-errors";
 import SuccessCreatedToast from "@/components/toast/creation-success-toast";
 import ExportCsvButton from "@/components/ui/export-csv-button";
@@ -61,10 +60,8 @@ export default async function BillingPage({
 
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      const result = await repos.salesInvoices.list(
-        { skip: (page - 1) * pageSize, take: pageSize, orderBy: { invoice_date: "desc" } },
-        ctx,
+      const result = await withTenantRepositories(async ({ ctx, repos }) =>
+        repos.salesInvoices.list({ skip: (page - 1) * pageSize, take: pageSize, orderBy: { invoice_date: "desc" } }, ctx),
       );
       items = result.items;
       total = result.total;

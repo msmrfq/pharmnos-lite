@@ -14,7 +14,7 @@ import { getProductForEdit, updateProductAction } from "@/app/_actions/masters.a
 import ProductEditForm from "./_form";
 import { repos } from "@/repositories";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 
 export const metadata: Metadata = {
   title: "Edit product",
@@ -35,8 +35,9 @@ export default async function EditProductPage({
   let dbOk = isPostgresConfigured() && product !== null;
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      batches = await repos.productBatches.listForProduct(params.id, ctx, true);
+      batches = await withTenantRepositories(async ({ ctx, repos }) =>
+        repos.productBatches.listForProduct(params.id, ctx, true),
+      );
     } catch (_e) {
       batches = [];
     }

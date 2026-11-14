@@ -1,9 +1,10 @@
 const { Client } = require('pg');
 
-const bootstrapUrl = 'postgresql://pharmnos_e2e:ZczIugoskl79BAvF6OtbXKxrNaME80R4@127.0.0.1:56221/pharmnos_verify_verify-20261113174144?application_name=pharmnos-financial-e2e';
+const bootstrapUrl = process.env.TEST_DATABASE_URL;
+if (!bootstrapUrl) throw new Error("TEST_DATABASE_URL is required (hardcoded credentials were retired).");
 
 async function seedRoles() {
-  const client = new Client({ connectionString: 'postgresql://pharmnos_e2e:ZczIugoskl79BAvF6OtbXKxrNaME80R4@127.0.0.1:56221/pharmnos_verify_verify-20261113174144?application_name=pharmnos-financial-e2e' });
+  const client = new Client({ connectionString: bootstrapUrl });
   try {
     await client.connect();
     

@@ -1,18 +1,18 @@
 {
   "manifestVersion": 1,
-  "packageVersion": "0.1.6",
+  "packageVersion": "0.1.7",
   "approved": true,
   "status": "APPROVED_EXECUTABLE_LOCAL_ONLY",
   "sourceSchema": {
     "path": "prisma/schema.prisma",
     "generation": "node scripts/generate-financial-e2e-schema.mjs --write",
-    "sha256": "8dbdf256c0a29ef335dfcff55c295ec385784095d67a729a832a8686b5919010"
+    "sha256": "15b36273be66a7ffc79238376f83e0e5a105892fd1e374f9b137d863edd77a32"
   },
   "artifacts": [
     {
       "order": 1,
       "path": "prisma/financial-e2e-schema-provisioning.generated.sql",
-      "sha256": "921fad813378aa2280393040b66a1e33ed127b8426a856cfdfad7cc6a1f237b0",
+      "sha256": "151e9766dd34148ca93dd50c1dddbb9ff78c638e34ad800a1055a44d1463785f",
       "classification": "executable"
     },
     {

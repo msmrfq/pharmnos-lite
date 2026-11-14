@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { prisma, assertPostgresConfigured } from "@/lib/db/prisma";
 import { requirePermission, requireServerTenantContext } from "@/lib/db/tenant-context";
+import { withVerifiedTenantTransaction } from "@/lib/db/tenant-read";
 import type { PermissionAction } from "@prisma/client";
 
 type CatalogInput = {
@@ -49,29 +50,31 @@ export async function getGstCatalogAdminData() {
   assertPostgresConfigured("getGstCatalogAdminData");
   const ctx = await requireServerTenantContext();
   requirePermission(ctx, "manage_hsn_catalog" as PermissionAction);
-  const [catalog, rules] = await Promise.all([
-    prisma.hsn_sac_catalog.findMany({
-      where: { tenant_id: ctx.tenantId },
-      orderBy: { code: "asc" },
-    }),
-    prisma.gst_rate_rules.findMany({
-      where: { tenant_id: ctx.tenantId },
-      orderBy: { effective_from: "desc" },
-    }),
-  ]);
-  return {
-    catalog: catalog.map((record) => ({
-      ...record,
-      effective_from: record.effective_from?.toISOString() ?? null,
-      effective_to: record.effective_to?.toISOString() ?? null,
-    })),
-    rules: rules.map((rule) => ({
-      ...rule,
-      tax_rate: rule.tax_rate === null ? null : Number(rule.tax_rate),
-      effective_from: rule.effective_from.toISOString(),
-      effective_to: rule.effective_to?.toISOString() ?? null,
-    })),
-  };
+  return withVerifiedTenantTransaction(ctx, async ({ ctx, tx }) => {
+    const [catalog, rules] = await Promise.all([
+      tx.hsn_sac_catalog.findMany({
+        where: { tenant_id: ctx.tenantId },
+        orderBy: { code: "asc" },
+      }),
+      tx.gst_rate_rules.findMany({
+        where: { tenant_id: ctx.tenantId },
+        orderBy: { effective_from: "desc" },
+      }),
+    ]);
+    return {
+      catalog: catalog.map((record) => ({
+        ...record,
+        effective_from: record.effective_from?.toISOString() ?? null,
+        effective_to: record.effective_to?.toISOString() ?? null,
+      })),
+      rules: rules.map((rule) => ({
+        ...rule,
+        tax_rate: rule.tax_rate === null ? null : Number(rule.tax_rate),
+        effective_from: rule.effective_from.toISOString(),
+        effective_to: rule.effective_to?.toISOString() ?? null,
+      })),
+    };
+  });
 }
 
 async function activeMembershipId(tenantId: string, userId: string): Promise<string> {

@@ -16,8 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 import { formatBusinessDate } from "@/lib/utils/business-date";
 import { LEGACY_INVOICE_DATE_LABEL, resolveInvoiceDisplayDate } from "@/lib/utils/invoice-display-date";
 import { PrintToolbar } from "@/components/print/print-toolbar";
@@ -47,8 +46,9 @@ export default async function BillingInvoiceDetailPage({
 
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      invoice = await repos.salesInvoices.getById(params.invoiceId, ctx);
+      invoice = await withTenantRepositories(async ({ ctx, repos }) =>
+        repos.salesInvoices.getById(params.invoiceId, ctx),
+      );
     } catch (_err) {
       dbOk = false;
     }

@@ -10,8 +10,7 @@ import {
 } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { isPostgresConfigured } from "@/lib/db/prisma";
-import { requireServerTenantContext } from "@/lib/db/tenant-context";
-import { repos } from "@/repositories";
+import { withTenantRepositories } from "@/lib/db/tenant-read";
 import BillingPaymentNewClientForm from "./_form";
 
 export const metadata: Metadata = {
@@ -32,10 +31,8 @@ export default async function NewBillingPaymentPage({
 
   if (dbOk) {
     try {
-      const ctx = await requireServerTenantContext();
-      const res = await repos.customers.list(
-        { skip: 0, take: 25000, orderBy: { business_name: "asc" } },
-        ctx,
+      const res = await withTenantRepositories(async ({ ctx, repos }) =>
+        repos.customers.list({ skip: 0, take: 25000, orderBy: { business_name: "asc" } }, ctx),
       );
       customers = (res.items as any[]) ?? [];
     } catch (_err) {
