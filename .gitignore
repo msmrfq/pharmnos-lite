@@ -27,3 +27,20 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+.opencode/plugins/
+
+# Local dev tooling (machine-specific, contains no shared config)
+git-monitor.js
+
+# git-monitor launchers (local-only; never commit)
+git-monitor/
+.env.local
+git-monitor.env
+git-monitor.log
+*.pid
+start-git-monitor.ps1
+start-git-monitor.bat
+start-git-monitor.sh
+stop-git-monitor.ps1
+README-git-monitor.md

@@ -134,7 +134,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 > **Update this section EVERY SESSION before you stop working. Thirty seconds here saves five minutes of re-orientation next time.**
 
-**Last updated:** `Date: 2026-11-09  Time: 03-07-31 (IST)`
+**Last updated:** `Date: 2026-11-09  Time: 04-15-41 (IST)`
 
 ### Verified working
 - Asia/Kolkata is the explicit business-timezone policy. Financial invoice date defaults and selected displays and both aging paths have offline multi-timezone verification; mixed date-marker/instant ledger `entry_date` leaves daybook and app-wide IST correctness unresolved. See `.obsidian-vault/specs/financial-reconciliation/ist-business-timezone-and-due-date-integrity-2026-11-09.md`. No database was accessed.
@@ -183,8 +183,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - Financial reconciliation is **PARTIALLY VERIFIED — NOT ACCEPTED**: the current-source matrix is 3 PASS / 0 FAIL / 35 BLOCKED; 15 additional passes are historical on changed schema/service/harness sources. The 13 disputed policies are owner-approved; commercial S-18 and S-38 workflows remain missing. Final-source generated-baseline and replay receipt evidence exists, but supplier-cache regressions remain unverified after the timeout. Genuine Supabase Auth remains unverified. Recovery work is halted, including provider backup/PITR investigation.
 
 ### Focus right now
-- Financial date semantics and ledger-date design is documented for owner review in `.obsidian-vault/specs/financial-reconciliation/financial-date-semantics-and-ledger-date-model-design-2026-11-09.md`. Design only: no schema, migration, historical updates, or database access are authorized.
-- Do not claim app-wide IST correctness: existing ledger rows mix business-date markers and instants without reliable per-row provenance. A separate owner-approved design and authorized historical-evidence policy is needed before changing daybook interpretation or historical records.
+- Financial date implementation is partially implemented offline but stopped at the explicit condition that the generic ledger producer accepts a `Date` without reliable date-only/instant provenance and derives balances from mixed legacy timestamps. The additive `0028` migration and partial application changes are not database-runtime verified. Customer-dues and supplier-payables pages and CSVs intentionally fail closed pending a verified consistent snapshot. See `.obsidian-vault/specs/financial-reconciliation/financial-date-semantics-and-ledger-date-model-implementation-2026-11-09.md`.
+- Do not claim app-wide IST correctness: existing ledger rows mix business-date markers and instants without reliable per-row provenance. Historical data rewrites and any runtime database target require separate authorization.
 - Aging and due-date application corrections are offline verified only. Historical timezone-shifted due dates and direct database writes outside the traced application paths remain limitations; do not treat this as full reconciliation or production acceptance.
 - Signed direct-database authentication context remediation under `decisions/0010-signed-database-auth-context.md` has scoped disposable restricted-role evidence; independent acceptance and broader adversarial coverage remain separate.
 - Preserve the approved scenario resolutions; separately plan generated-baseline/migration structural reconciliation and the remaining financial workflows and exact fixtures without claiming unexecuted verification.
@@ -303,4 +303,11 @@ Add rules BELOW the two permanent meta-rules as you lock in decisions. Format ea
 - Do not deploy or commit/push as part of GST remediation without the applicable explicit authorization.
 - Do not remove connected-initialization safety gates without fresh target-bound authorization and evidence.
 - Do not treat bootstrap or superuser application tests as restricted-role RLS evidence.
+- Never expose, hardcode, commit, or log secrets or credentials.
+- Never reuse signing keys across environments or mix local authentication with production authentication.
+- Never assume RLS, tenant isolation, or localhost-only access is secure without runtime verification.
+- Never treat mocked or unit tests as proof of database security or production readiness.
+- Never modify production or shared infrastructure without explicit authorization.
+- Never leave plaintext credentials in temporary scripts, environment files, or debug artifacts.
+- Never claim data was not transmitted when external transmission remains unverified.
 ---

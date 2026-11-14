@@ -324,4 +324,11 @@ Add rules BELOW the two permanent meta-rules as you lock in decisions. Format ea
 - Do not deploy or commit/push as part of GST remediation without the applicable explicit authorization.
 - Do not remove connected-initialization safety gates without fresh target-bound authorization and evidence.
 - Do not treat bootstrap or superuser application tests as restricted-role RLS evidence.
+- Never expose, hardcode, commit, or log secrets or credentials.
+- Never reuse signing keys across environments or mix local authentication with production authentication.
+- Never assume RLS, tenant isolation, or localhost-only access is secure without runtime verification.
+- Never treat mocked or unit tests as proof of database security or production readiness.
+- Never modify production or shared infrastructure without explicit authorization.
+- Never leave plaintext credentials in temporary scripts, environment files, or debug artifacts.
+- Never claim data was not transmitted when external transmission remains unverified.
 ---
